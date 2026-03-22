@@ -1,0 +1,105 @@
+name: ai_voice_genie
+description: AI Voice Genie - Multi-model AI assistant with voice, image, and PDF capabilities.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # ── State Management ──────────────────────────────────────────────────────
+  provider: ^6.1.2
+
+  # ── Firebase ─────────────────────────────────────────────────────────────
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  firebase_analytics: ^11.3.3
+
+  # ── Google Sign-In ────────────────────────────────────────────────────────
+  google_sign_in: ^6.2.1
+
+  # ── Local Storage ─────────────────────────────────────────────────────────
+  # Hive for local caching of conversations and settings
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+
+  # Secure storage for session tokens
+  flutter_secure_storage: ^9.2.2
+
+  # ── Networking ────────────────────────────────────────────────────────────
+  # Dio for AI provider HTTP calls with interceptors and timeout support
+  dio: ^5.7.0
+  http: ^1.2.2
+
+  # ── Voice Features ────────────────────────────────────────────────────────
+  # Device-native speech-to-text (free, no API key needed)
+  speech_to_text: ^7.0.0
+  # Device-native text-to-speech (free, works offline)
+  flutter_tts: ^4.2.0
+
+  # ── File & Media Handling ─────────────────────────────────────────────────
+  file_picker: ^8.1.2
+  image_picker: ^1.1.2
+  # PDF text extraction (client-side, no server needed)
+  syncfusion_flutter_pdf: ^32.2.9
+
+  # ── UI & Animations ───────────────────────────────────────────────────────
+  lottie: ^3.1.2
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  # For smooth page transitions
+  animations: ^2.0.11
+
+  # ── Utilities ─────────────────────────────────────────────────────────────
+  # UUID generation for conversation and message IDs
+  uuid: ^4.5.1
+  # Intl for date formatting and localization support
+  intl: ^0.20.2
+  # Connectivity check before API calls
+  connectivity_plus: ^6.1.0
+  # App version info
+  package_info_plus: ^8.1.1
+  # URL launcher for external links (AI provider dashboards)
+  url_launcher: ^6.3.1
+  # Clipboard for copying AI responses
+#  flutter_clipboard_manager: ^0.0.2
+  # Markdown rendering for AI responses
+  flutter_markdown: ^0.7.3
+  # Share AI responses
+  share_plus: ^10.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  # Hive code generation
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.12
+
+flutter:
+  uses-material-design: true
+
+  # ── Fonts ─────────────────────────────────────────────────────────────────
+  # Poppins — single source of truth for all typography (matches existing arch)
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+
+  # ── Assets ────────────────────────────────────────────────────────────────
+  assets:
+    - assets/images/
+    - assets/fonts/

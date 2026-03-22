@@ -1,0 +1,496 @@
+import 'package:flutter/material.dart';
+
+/// Localization system for AI Voice Genie.
+///
+/// Supported languages: English (en), Hindi (hi).
+/// All user-facing strings must be retrieved via this class.
+/// Never hardcode strings in widgets.
+///
+/// Usage:
+/// ```dart
+/// // Via named getter (preferred for common strings)
+/// AppLocalizations.of(context)!.appName
+///
+/// // Via translate key (for dynamic or feature-specific strings)
+/// AppLocalizations.of(context)!.translate('ai_thinking')
+/// ```
+class AppLocalizations {
+  final Locale locale;
+
+  AppLocalizations(this.locale);
+
+  static AppLocalizations? of(BuildContext context) {
+    return Localizations.of<AppLocalizations>(context, AppLocalizations);
+  }
+
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+  _AppLocalizationsDelegate();
+
+  // ==========================================================================
+  // LOCALIZED STRING MAPS
+  // ==========================================================================
+
+  static final Map<String, Map<String, String>> _strings = {
+    // ── ENGLISH ──────────────────────────────────────────────────────────────
+    'en': {
+      // ── App General ────────────────────────────────────────────────────────
+      'app_name': 'AI Voice Genie',
+      'app_tagline': 'Your intelligent AI assistant',
+      'ok': 'OK',
+      'cancel': 'Cancel',
+      'save': 'Save',
+      'delete': 'Delete',
+      'edit': 'Edit',
+      'close': 'Close',
+      'retry': 'Retry',
+      'skip': 'Skip',
+      'next': 'Next',
+      'back': 'Back',
+      'done': 'Done',
+      'confirm': 'Confirm',
+      'yes': 'Yes',
+      'no': 'No',
+      'loading': 'Loading...',
+      'please_wait': 'Please wait...',
+      'something_went_wrong': 'Something went wrong. Please try again.',
+      'no_internet_connection': 'No internet connection. Please check your network.',
+      'request_timed_out': 'Request timed out. Please try again.',
+
+      // ── Auth ───────────────────────────────────────────────────────────────
+      'sign_in_with_google': 'Continue with Google',
+      'sign_out': 'Sign Out',
+      'sign_out_confirm': 'Are you sure you want to sign out?',
+      'welcome_back': 'Welcome back',
+      'signing_in': 'Signing you in...',
+      'sign_in_failed': 'Sign in failed. Please try again.',
+      'sign_out_success': 'Signed out successfully.',
+
+      // ── Onboarding ─────────────────────────────────────────────────────────
+      'onboarding_title_1': 'Chat with AI',
+      'onboarding_desc_1': 'Have intelligent conversations with ChatGPT, Gemini, and Claude.',
+      'onboarding_title_2': 'Voice Powered',
+      'onboarding_desc_2': 'Speak your prompts and hear AI responses in natural voice.',
+      'onboarding_title_3': 'Images & Documents',
+      'onboarding_desc_3': 'Generate images, analyze photos, and get answers from PDFs.',
+      'get_started': 'Get Started',
+
+      // ── API Key Setup ──────────────────────────────────────────────────────
+      'setup_title': 'Connect Your AI',
+      'setup_subtitle': 'Add your API keys to start using AI models.',
+      'add_key': 'Add API Key',
+      'update_key': 'Update API Key',
+      'remove_key': 'Remove Key',
+      'key_added_success': 'API key added successfully.',
+      'key_removed_success': 'API key removed.',
+      'key_invalid': 'Invalid API key. Please check and try again.',
+      'key_validating': 'Validating key...',
+      'key_valid': 'Key is valid',
+      'api_key_required': 'API key is required',
+      'api_key_too_short': 'This doesn\'t look like a valid API key',
+      'api_key_hint': 'Paste your API key here',
+      'get_openai_key': 'Get your OpenAI key at platform.openai.com',
+      'get_gemini_key': 'Get your Gemini key at aistudio.google.com',
+      'get_claude_key': 'Get your Claude key at console.anthropic.com',
+      'no_key_added': 'No key added',
+      'key_added': 'Key added',
+
+      // ── Chat / Conversation ────────────────────────────────────────────────
+      'new_conversation': 'New Conversation',
+      'type_message': 'Type a message...',
+      'send': 'Send',
+      'copy_response': 'Copy',
+      'copied_to_clipboard': 'Copied to clipboard',
+      'delete_conversation': 'Delete Conversation',
+      'delete_conversation_confirm': 'Are you sure you want to delete this conversation? This cannot be undone.',
+      'conversation_deleted': 'Conversation deleted.',
+      'no_conversations': 'No conversations yet',
+      'no_conversations_subtitle': 'Start a conversation with your AI assistant.',
+      'conversation_history': 'History',
+      'today': 'Today',
+      'yesterday': 'Yesterday',
+      'ai_thinking': 'Generating response...',
+      'prompt_required': 'Please enter a message',
+      'prompt_too_long': 'Message is too long (max 10,000 characters)',
+      'response_failed': 'Failed to get a response. Please try again.',
+
+      // ── AI Model Selection ─────────────────────────────────────────────────
+      'select_model': 'Select AI Model',
+      'current_model': 'Current model',
+      'switch_model': 'Switch Model',
+      'model_switched': 'Switched to',
+      'no_key_for_model': 'You haven\'t added an API key for this model.',
+      'add_key_for_model': 'Add Key',
+
+      // ── Capability Gap Messages ────────────────────────────────────────────
+      'capability_gap_title': 'Not supported',
+      'capability_gap_image_gen':
+      'Claude doesn\'t support image generation. Switch to ChatGPT or Gemini.',
+      'capability_gap_stt':
+      'Claude doesn\'t support voice input. Switch to ChatGPT or Gemini.',
+      'capability_gap_tts':
+      'Claude doesn\'t support voice output. Switch to ChatGPT or Gemini.',
+      'use_another_model': 'Use another model',
+      'available_models': 'Available models for this feature',
+
+      // ── Image Generation ───────────────────────────────────────────────────
+      'image_generator': 'Image Generator',
+      'describe_image': 'Describe the image you want...',
+      'generate_image': 'Generate Image',
+      'generating_image': 'Creating your image...',
+      'image_generated': 'Image generated successfully.',
+      'image_generation_failed': 'Failed to generate image. Please try again.',
+      'save_image': 'Save Image',
+      'image_saved': 'Image saved to gallery.',
+      'image_prompt_required': 'Please describe the image you want to generate',
+      'image_prompt_too_short': 'Please provide a more detailed description',
+      'image_prompt_too_long': 'Description is too long (max 4,000 characters)',
+
+      // ── Image Reading ──────────────────────────────────────────────────────
+      'attach_image': 'Attach Image',
+      'take_photo': 'Take Photo',
+      'choose_from_gallery': 'Choose from Gallery',
+      'analyzing_image': 'Analyzing image...',
+      'image_attached': 'Image attached',
+      'remove_image': 'Remove image',
+
+      // ── PDF Reader ─────────────────────────────────────────────────────────
+      'pdf_reader': 'PDF Reader',
+      'upload_pdf': 'Upload PDF',
+      'choose_pdf': 'Choose PDF File',
+      'pdf_uploaded': 'PDF uploaded.',
+      'reading_pdf': 'Reading PDF...',
+      'ask_about_pdf': 'Ask anything about this PDF...',
+      'pdf_too_large': 'PDF is too large. Maximum size is 10MB.',
+      'pdf_read_failed': 'Could not read this PDF. Please try another file.',
+      'pdf_attached': 'PDF attached',
+      'remove_pdf': 'Remove PDF',
+      'no_pdf_uploaded': 'No PDF uploaded yet',
+      'upload_pdf_subtitle': 'Upload a PDF to ask questions about its content.',
+
+      // ── Voice ──────────────────────────────────────────────────────────────
+      'tap_to_speak': 'Tap to speak',
+      'listening': 'Listening...',
+      'processing_voice': 'Processing...',
+      'voice_input_failed': 'Could not understand. Please try again.',
+      'voice_output_playing': 'Playing response...',
+      'voice_output_stopped': 'Stopped.',
+      'microphone_permission_denied': 'Microphone permission is required for voice input.',
+      'open_settings': 'Open Settings',
+
+      // ── Settings ───────────────────────────────────────────────────────────
+      'settings': 'Settings',
+      'appearance': 'Appearance',
+      'theme': 'Theme',
+      'theme_light': 'Light',
+      'theme_dark': 'Dark',
+      'theme_system': 'System Default',
+      'language': 'Language',
+      'language_en': 'English',
+      'language_hi': 'हिंदी',
+      'notifications': 'Notifications',
+      'notifications_enabled': 'Enable notifications',
+      'ai_models': 'AI Models',
+      'manage_api_keys': 'Manage API Keys',
+      'voice_settings': 'Voice Settings',
+      'use_ai_tts': 'Use AI Voice (higher quality)',
+      'use_ai_stt': 'Use AI Speech Recognition',
+      'tts_speed': 'Speech Speed',
+      'about': 'About',
+      'app_version': 'App Version',
+      'privacy_policy': 'Privacy Policy',
+      'terms_of_service': 'Terms of Service',
+
+      // ── Profile ────────────────────────────────────────────────────────────
+      'profile': 'Profile',
+      'account': 'Account',
+      'delete_account': 'Delete Account',
+      'delete_account_confirm': 'This will permanently delete your account and all conversations. This cannot be undone.',
+      'account_deleted': 'Account deleted.',
+
+      // ── Validation ─────────────────────────────────────────────────────────
+      'field_required': 'This field is required',
+      'email_required': 'Email is required',
+      'invalid_email': 'Please enter a valid email address',
+      'title_required': 'Title is required',
+      'title_too_long': 'Title must not exceed 100 characters',
+      'date_required': 'Date is required',
+
+      // ── Empty States ───────────────────────────────────────────────────────
+      'no_results': 'No results found',
+      'no_images': 'No generated images yet',
+      'no_images_subtitle': 'Use the Image Generator to create AI images.',
+
+      // ── Error Messages ─────────────────────────────────────────────────────
+      'error_rate_limit': 'Rate limit reached. Trying another model...',
+      'error_invalid_key': 'Invalid API key. Please update it in Settings.',
+      'error_all_models_failed': 'All AI models are currently unavailable. Please try again later.',
+      'error_pdf_too_large': 'PDF exceeds the 10MB size limit.',
+      'error_image_too_large': 'Image exceeds the 5MB size limit.',
+      'error_no_models_with_key': 'Please add at least one API key in Settings to use AI features.',
+      'error_microphone': 'Microphone is not available on this device.',
+    },
+
+    // ── HINDI ─────────────────────────────────────────────────────────────────
+    'hi': {
+      // ── App General ────────────────────────────────────────────────────────
+      'app_name': 'AI वॉयस जीनी',
+      'app_tagline': 'आपका बुद्धिमान AI सहायक',
+      'ok': 'ठीक है',
+      'cancel': 'रद्द करें',
+      'save': 'सहेजें',
+      'delete': 'हटाएं',
+      'edit': 'संपादित करें',
+      'close': 'बंद करें',
+      'retry': 'पुनः प्रयास करें',
+      'skip': 'छोड़ें',
+      'next': 'अगला',
+      'back': 'वापस',
+      'done': 'हो गया',
+      'confirm': 'पुष्टि करें',
+      'yes': 'हाँ',
+      'no': 'नहीं',
+      'loading': 'लोड हो रहा है...',
+      'please_wait': 'कृपया प्रतीक्षा करें...',
+      'something_went_wrong': 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।',
+      'no_internet_connection': 'इंटरनेट कनेक्शन नहीं है। अपना नेटवर्क जांचें।',
+      'request_timed_out': 'अनुरोध का समय समाप्त हो गया। पुनः प्रयास करें।',
+
+      // ── Auth ───────────────────────────────────────────────────────────────
+      'sign_in_with_google': 'Google से जारी रखें',
+      'sign_out': 'साइन आउट',
+      'sign_out_confirm': 'क्या आप साइन आउट करना चाहते हैं?',
+      'welcome_back': 'वापस आपका स्वागत है',
+      'signing_in': 'साइन इन हो रहा है...',
+      'sign_in_failed': 'साइन इन विफल। कृपया पुनः प्रयास करें।',
+      'sign_out_success': 'सफलतापूर्वक साइन आउट हो गए।',
+
+      // ── Onboarding ─────────────────────────────────────────────────────────
+      'onboarding_title_1': 'AI से बातचीत करें',
+      'onboarding_desc_1': 'ChatGPT, Gemini और Claude के साथ बुद्धिमान बातचीत करें।',
+      'onboarding_title_2': 'आवाज़ से चलाएं',
+      'onboarding_desc_2': 'अपने सवाल बोलें और AI के जवाब प्राकृतिक आवाज़ में सुनें।',
+      'onboarding_title_3': 'चित्र और दस्तावेज़',
+      'onboarding_desc_3': 'चित्र बनाएं, फ़ोटो विश्लेषण करें, और PDF से जवाब पाएं।',
+      'get_started': 'शुरू करें',
+
+      // ── API Key Setup ──────────────────────────────────────────────────────
+      'setup_title': 'अपना AI कनेक्ट करें',
+      'setup_subtitle': 'AI मॉडल उपयोग करने के लिए API key जोड़ें।',
+      'add_key': 'API Key जोड़ें',
+      'update_key': 'API Key अपडेट करें',
+      'remove_key': 'Key हटाएं',
+      'key_added_success': 'API key सफलतापूर्वक जोड़ी गई।',
+      'key_removed_success': 'API key हटाई गई।',
+      'key_invalid': 'अमान्य API key। कृपया जांचें और पुनः प्रयास करें।',
+      'key_validating': 'Key सत्यापित हो रही है...',
+      'key_valid': 'Key वैध है',
+      'api_key_required': 'API key आवश्यक है',
+      'api_key_too_short': 'यह एक वैध API key नहीं लगती',
+      'api_key_hint': 'अपनी API key यहाँ पेस्ट करें',
+      'get_openai_key': 'OpenAI key: platform.openai.com',
+      'get_gemini_key': 'Gemini key: aistudio.google.com',
+      'get_claude_key': 'Claude key: console.anthropic.com',
+      'no_key_added': 'Key नहीं जोड़ी गई',
+      'key_added': 'Key जोड़ी गई',
+
+      // ── Chat / Conversation ────────────────────────────────────────────────
+      'new_conversation': 'नई बातचीत',
+      'type_message': 'संदेश लिखें...',
+      'send': 'भेजें',
+      'copy_response': 'कॉपी करें',
+      'copied_to_clipboard': 'क्लिपबोर्ड में कॉपी हो गया',
+      'delete_conversation': 'बातचीत हटाएं',
+      'delete_conversation_confirm': 'क्या आप इस बातचीत को हटाना चाहते हैं?',
+      'conversation_deleted': 'बातचीत हटाई गई।',
+      'no_conversations': 'अभी कोई बातचीत नहीं',
+      'no_conversations_subtitle': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
+      'conversation_history': 'इतिहास',
+      'today': 'आज',
+      'yesterday': 'कल',
+      'ai_thinking': 'जवाब बन रहा है...',
+      'prompt_required': 'कृपया एक संदेश दर्ज करें',
+      'prompt_too_long': 'संदेश बहुत लंबा है (अधिकतम 10,000 अक्षर)',
+      'response_failed': 'जवाब नहीं मिला। पुनः प्रयास करें।',
+
+      // ── AI Model Selection ─────────────────────────────────────────────────
+      'select_model': 'AI मॉडल चुनें',
+      'current_model': 'वर्तमान मॉडल',
+      'switch_model': 'मॉडल बदलें',
+      'model_switched': 'बदल गया',
+      'no_key_for_model': 'इस मॉडल के लिए API key नहीं जोड़ी गई।',
+      'add_key_for_model': 'Key जोड़ें',
+
+      // ── Capability Gap Messages ────────────────────────────────────────────
+      'capability_gap_title': 'समर्थित नहीं',
+      'capability_gap_image_gen':
+      'Claude चित्र नहीं बना सकता। ChatGPT या Gemini का उपयोग करें।',
+      'capability_gap_stt':
+      'Claude वॉयस इनपुट नहीं करता। ChatGPT या Gemini का उपयोग करें।',
+      'capability_gap_tts':
+      'Claude वॉयस आउटपुट नहीं करता। ChatGPT या Gemini का उपयोग करें।',
+      'use_another_model': 'दूसरा मॉडल उपयोग करें',
+      'available_models': 'इस सुविधा के लिए उपलब्ध मॉडल',
+
+      // ── Image Generation ───────────────────────────────────────────────────
+      'image_generator': 'इमेज जनरेटर',
+      'describe_image': 'जो चित्र चाहिए उसका वर्णन करें...',
+      'generate_image': 'चित्र बनाएं',
+      'generating_image': 'आपका चित्र बन रहा है...',
+      'image_generated': 'चित्र सफलतापूर्वक बन गया।',
+      'image_generation_failed': 'चित्र नहीं बन सका। पुनः प्रयास करें।',
+      'save_image': 'चित्र सहेजें',
+      'image_saved': 'चित्र गैलरी में सहेजा गया।',
+      'image_prompt_required': 'कृपया चित्र का वर्णन करें',
+      'image_prompt_too_short': 'कृपया अधिक विस्तृत वर्णन दें',
+      'image_prompt_too_long': 'वर्णन बहुत लंबा है (अधिकतम 4,000 अक्षर)',
+
+      // ── Image Reading ──────────────────────────────────────────────────────
+      'attach_image': 'चित्र जोड़ें',
+      'take_photo': 'फ़ोटो लें',
+      'choose_from_gallery': 'गैलरी से चुनें',
+      'analyzing_image': 'चित्र विश्लेषण हो रहा है...',
+      'image_attached': 'चित्र जोड़ा गया',
+      'remove_image': 'चित्र हटाएं',
+
+      // ── PDF Reader ─────────────────────────────────────────────────────────
+      'pdf_reader': 'PDF रीडर',
+      'upload_pdf': 'PDF अपलोड करें',
+      'choose_pdf': 'PDF फ़ाइल चुनें',
+      'pdf_uploaded': 'PDF अपलोड हो गई।',
+      'reading_pdf': 'PDF पढ़ी जा रही है...',
+      'ask_about_pdf': 'इस PDF के बारे में कुछ भी पूछें...',
+      'pdf_too_large': 'PDF बहुत बड़ी है। अधिकतम आकार 10MB है।',
+      'pdf_read_failed': 'यह PDF नहीं पढ़ी जा सकी।',
+      'pdf_attached': 'PDF जोड़ी गई',
+      'remove_pdf': 'PDF हटाएं',
+      'no_pdf_uploaded': 'अभी कोई PDF अपलोड नहीं हुई',
+      'upload_pdf_subtitle': 'PDF अपलोड करें और उसकी सामग्री के बारे में प्रश्न पूछें।',
+
+      // ── Voice ──────────────────────────────────────────────────────────────
+      'tap_to_speak': 'बोलने के लिए टैप करें',
+      'listening': 'सुन रहा हूं...',
+      'processing_voice': 'प्रोसेस हो रहा है...',
+      'voice_input_failed': 'समझ नहीं आया। पुनः प्रयास करें।',
+      'voice_output_playing': 'जवाब सुनाया जा रहा है...',
+      'voice_output_stopped': 'रुक गया।',
+      'microphone_permission_denied': 'वॉयस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
+      'open_settings': 'सेटिंग खोलें',
+
+      // ── Settings ───────────────────────────────────────────────────────────
+      'settings': 'सेटिंग',
+      'appearance': 'दिखावट',
+      'theme': 'थीम',
+      'theme_light': 'हल्का',
+      'theme_dark': 'गहरा',
+      'theme_system': 'सिस्टम डिफ़ॉल्ट',
+      'language': 'भाषा',
+      'language_en': 'English',
+      'language_hi': 'हिंदी',
+      'notifications': 'सूचनाएं',
+      'notifications_enabled': 'सूचनाएं सक्षम करें',
+      'ai_models': 'AI मॉडल',
+      'manage_api_keys': 'API Keys प्रबंधित करें',
+      'voice_settings': 'वॉयस सेटिंग',
+      'use_ai_tts': 'AI आवाज़ उपयोग करें (बेहतर गुणवत्ता)',
+      'use_ai_stt': 'AI स्पीच रिकग्निशन उपयोग करें',
+      'tts_speed': 'बोलने की गति',
+      'about': 'के बारे में',
+      'app_version': 'ऐप संस्करण',
+      'privacy_policy': 'गोपनीयता नीति',
+      'terms_of_service': 'सेवा की शर्तें',
+
+      // ── Profile ────────────────────────────────────────────────────────────
+      'profile': 'प्रोफ़ाइल',
+      'account': 'खाता',
+      'delete_account': 'खाता हटाएं',
+      'delete_account_confirm': 'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा।',
+      'account_deleted': 'खाता हटा दिया गया।',
+
+      // ── Validation ─────────────────────────────────────────────────────────
+      'field_required': 'यह फ़ील्ड आवश्यक है',
+      'email_required': 'ईमेल आवश्यक है',
+      'invalid_email': 'कृपया एक वैध ईमेल पता दर्ज करें',
+      'title_required': 'शीर्षक आवश्यक है',
+      'title_too_long': 'शीर्षक 100 अक्षरों से अधिक नहीं होना चाहिए',
+      'date_required': 'तारीख आवश्यक है',
+
+      // ── Empty States ───────────────────────────────────────────────────────
+      'no_results': 'कोई परिणाम नहीं मिला',
+      'no_images': 'अभी कोई चित्र नहीं',
+      'no_images_subtitle': 'AI चित्र बनाने के लिए इमेज जनरेटर उपयोग करें।',
+
+      // ── Error Messages ─────────────────────────────────────────────────────
+      'error_rate_limit': 'दर सीमा पहुंच गई। दूसरा मॉडल आज़मा रहे हैं...',
+      'error_invalid_key': 'अमान्य API key। सेटिंग में अपडेट करें।',
+      'error_all_models_failed': 'सभी AI मॉडल अभी उपलब्ध नहीं हैं। बाद में प्रयास करें।',
+      'error_pdf_too_large': 'PDF 10MB की सीमा से अधिक है।',
+      'error_image_too_large': 'चित्र 5MB की सीमा से अधिक है।',
+      'error_no_models_with_key': 'AI सुविधाएं उपयोग करने के लिए सेटिंग में कम से कम एक API key जोड़ें।',
+      'error_microphone': 'इस डिवाइस पर माइक्रोफ़ोन उपलब्ध नहीं है।',
+    },
+  };
+
+  // ==========================================================================
+  // PUBLIC TRANSLATE METHOD
+  // ==========================================================================
+
+  /// Translate a key to the current locale's string.
+  ///
+  /// Returns the key itself if no translation found —
+  /// never returns null so the UI always has something to display.
+  String translate(String key) {
+    return _strings[locale.languageCode]?[key] ?? key;
+  }
+
+  // ==========================================================================
+  // NAMED GETTERS — for the most commonly used strings
+  // ==========================================================================
+
+  String get appName => translate('app_name');
+  String get appTagline => translate('app_tagline');
+  String get ok => translate('ok');
+  String get cancel => translate('cancel');
+  String get save => translate('save');
+  String get loading => translate('loading');
+  String get pleaseWait => translate('please_wait');
+  String get somethingWentWrong => translate('something_went_wrong');
+  String get noInternet => translate('no_internet_connection');
+  String get signInWithGoogle => translate('sign_in_with_google');
+  String get signOut => translate('sign_out');
+  String get settings => translate('settings');
+  String get newConversation => translate('new_conversation');
+  String get typeMessage => translate('type_message');
+  String get send => translate('send');
+  String get aiThinking => translate('ai_thinking');
+  String get tapToSpeak => translate('tap_to_speak');
+  String get listening => translate('listening');
+  String get fieldRequired => translate('field_required');
+  String get emailRequired => translate('email_required');
+  String get invalidEmail => translate('invalid_email');
+  String get apiKeyRequired => translate('api_key_required');
+  String get promptRequired => translate('prompt_required');
+  String get getStarted => translate('get_started');
+  String get manageApiKeys => translate('manage_api_keys');
+  String get selectModel => translate('select_model');
+  String get noKeyForModel => translate('no_key_for_model');
+}
+
+// ==========================================================================
+// DELEGATE
+// ==========================================================================
+
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
+  const _AppLocalizationsDelegate();
+
+  @override
+  bool isSupported(Locale locale) =>
+      ['en', 'hi'].contains(locale.languageCode);
+
+  @override
+  Future<AppLocalizations> load(Locale locale) async =>
+      AppLocalizations(locale);
+
+  @override
+  bool shouldReload(_AppLocalizationsDelegate old) => false;
+}
