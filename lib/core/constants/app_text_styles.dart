@@ -21,21 +21,19 @@ class AppTextStyles {
   static const TextTheme lightTextTheme = TextTheme(
     // Display — app name, onboarding hero text, splash screen
     displayLarge: TextStyle(
+      fontSize: 36,
+      fontWeight: FontWeight.w700,
+      color: AppColors.primaryLight,
+      fontFamily: fontFamily,
+    ),
+    displayMedium: TextStyle(
       fontSize: 32,
       fontWeight: FontWeight.w700,
       color: AppColors.primaryLight,
       fontFamily: fontFamily,
-      letterSpacing: -0.5,
-    ),
-    displayMedium: TextStyle(
-      fontSize: 28,
-      fontWeight: FontWeight.w700,
-      color: AppColors.primaryLight,
-      fontFamily: fontFamily,
-      letterSpacing: -0.5,
     ),
     displaySmall: TextStyle(
-      fontSize: 24,
+      fontSize: 28,
       fontWeight: FontWeight.w700,
       color: AppColors.primaryLight,
       fontFamily: fontFamily,
@@ -56,8 +54,8 @@ class AppTextStyles {
     ),
     headlineSmall: TextStyle(
       fontSize: 16,
-      fontWeight: FontWeight.w400,
-      color: AppColors.lightTextSecondary,
+      fontWeight: FontWeight.w600,
+      color: AppColors.lightTextTertiary,
       fontFamily: fontFamily,
     ),
 
@@ -99,7 +97,7 @@ class AppTextStyles {
     bodySmall: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w400,
-      color: AppColors.lightTextSecondary,
+      color: AppColors.lightTextPrimary,
       fontFamily: fontFamily,
       height: 1.4,
     ),
@@ -130,21 +128,19 @@ class AppTextStyles {
   static const TextTheme darkTextTheme = TextTheme(
     // Display
     displayLarge: TextStyle(
+      fontSize: 36,
+      fontWeight: FontWeight.w700,
+      color: AppColors.primaryDark,
+      fontFamily: fontFamily,
+    ),
+    displayMedium: TextStyle(
       fontSize: 32,
       fontWeight: FontWeight.w700,
       color: AppColors.primaryDark,
       fontFamily: fontFamily,
-      letterSpacing: -0.5,
-    ),
-    displayMedium: TextStyle(
-      fontSize: 28,
-      fontWeight: FontWeight.w700,
-      color: AppColors.primaryDark,
-      fontFamily: fontFamily,
-      letterSpacing: -0.5,
     ),
     displaySmall: TextStyle(
-      fontSize: 24,
+      fontSize: 28,
       fontWeight: FontWeight.w700,
       color: AppColors.primaryDark,
       fontFamily: fontFamily,
@@ -166,7 +162,7 @@ class AppTextStyles {
     headlineSmall: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextSecondary,
+      color: AppColors.darkTextTertiary,
       fontFamily: fontFamily,
     ),
 
@@ -208,7 +204,7 @@ class AppTextStyles {
     bodySmall: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextSecondary,
+      color: AppColors.darkTextPrimary,
       fontFamily: fontFamily,
       height: 1.4,
     ),

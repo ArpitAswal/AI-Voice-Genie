@@ -7,39 +7,61 @@ import 'package:flutter/material.dart';
 /// Supports full light/dark mode theming.
 class AppColors {
   // ── Brand Colors ──────────────────────────────────────────────────────────
-  // Primary brand color for AI Voice Genie (deep violet-blue — intelligent, premium)
-  static const Color primaryLight = Color(0xFF5C6BC0);
-  static const Color primaryDark = Color(0xFF7986CB);
-  static const Color primaryLightColor = Color(0xFF5C6BC0);
-  static const Color primaryDarkColor = Color(0xFF7986CB);
 
-  // Accent colors (electric teal — voice/AI pulse energy)
-  static const Color accentLight = Color(0xFF00BCD4);
+  // Primary brand color
+  static const Color primaryLight = Color(0xFF7C9CFF);
+  static const Color primaryDark = Color(0xFF7986CB);
+
+  // Secondary Colors (Soft Cyan)
+  static const Color secondaryLight = Color(0xFF6EE7F9);
+  static const Color secondaryDark = Color(0xFF6EE7F9);
+
+  // Accent Glow
+  static const Color accentLight = Color(0xFF7C9CFF);
   static const Color accentDark = Color(0xFF4DD0E1);
-  static const Color accentLightColor = Color(0xFF00BCD4);
-  static const Color accentDarkColor = Color(0xFF4DD0E1);
 
   // ── Background Colors ─────────────────────────────────────────────────────
-  static const Color lightBackground = Color(0xFFF5F6FA);
-  static const Color darkBackground = Color(0xFF0F0F14);
-  static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color darkSurface = Color(0xFF1A1A24);
-  static const Color lightCardBackground = Color(0xFFFFFFFF);
-  static const Color darkCardBackground = Color(0xFF1E1E2E);
+  static const Color scaffoldLight = Color(0xFFE5E5E5);
+  static const Color cardLight = Color(0xFFF7F8FA);
+  static const Color containerLight = Color(0xFFF7F8FA);
+
+  static const Color scaffoldDark = Color(0xFF0B1220);
+  static const Color cardDark = Color(0xFF111827);
+  static const Color containerDark = Color(0xFF1F2937);
+
+  // ── AppBar Colors ─────────────────────────────────────────────────────
+  static const Color appBarLight = Color(0xFFFFFFFF);
+  static const Color appBarTextLight = Color(0xFF0F172A);
+
+  static const Color appBarDark = Color(0xFF0B1220);
+  static const Color appBarTextDark = Color(0xFFFFFFFF);
 
   // ── Text Colors ───────────────────────────────────────────────────────────
-  static const Color lightTextPrimary = Color(0xFF1A1A2E);
-  static const Color lightTextSecondary = Color(0xFF6B7280);
-  static const Color darkTextPrimary = Color(0xFFF0F0F5);
-  static const Color darkTextSecondary = Color(0xFF9CA3AF);
+  static const Color lightTextPrimary = Color(0xFF040404);
+  static const Color lightTextSecondary = Color(0xFFFFFFFF);
+  static const Color lightTextTertiary = Color(0xFF9E9E9E);
 
-  // ── Button Text Colors ────────────────────────────────────────────────────
-  static const Color lightTextBtnColor = primaryLight;
-  static const Color darkTextBtnColor = primaryDark;
+  static const Color darkTextPrimary = Color(0xFFFFFFFF);
+  static const Color darkTextSecondary = Color(0xFF000000);
+  static const Color darkTextTertiary = Color(0xFF9E9E9E);
+
+  // ── Button Colors ─────────────────────────────────────────────────────────
+  static const Color buttonPrimaryLight = Color(0xFF4DA6FF);
+  static const Color buttonTextLight = Color(0xFFFFFFFF);
+  static const Color buttonSecondaryLight = Color(0xFFE2E8F0);
+  static const Color buttonSecondaryTextLight = Color(0xFF0F172A);
+
+  static const Color buttonPrimaryDark = Color(0xFF4DA6FF);
+  static const Color buttonTextDark = Color(0xFFFFFFFF);
+  static const Color buttonSecondaryDark = Color(0xFF1F2937);
+  static const Color buttonSecondaryTextDark = Color(0xFFFFFFFF);
 
   // ── Border Colors ─────────────────────────────────────────────────────────
-  static const Color lightBorder = Color(0xFFE5E7EB);
-  static const Color darkBorder = Color(0xFF2D2D3F);
+  static const Color lightBorder = Color(0xFFE2E8F0);
+  static const Color darkBorder = Color(0xFF1F2937);
+
+  static const Color dividerLight = Color(0xFFE5E7EB);
+  static const Color dividerDark = Color(0xFF374151);
 
   // ── Common Colors ─────────────────────────────────────────────────────────
   static const Color white = Color(0xFFFFFFFF);
@@ -103,20 +125,14 @@ class AppColors {
   // ── Gradient Definitions ──────────────────────────────────────────────────
   // Used for hero sections and loading shimmer effects
   static const LinearGradient primaryGradientLight = LinearGradient(
-    colors: [Color(0xFF5C6BC0), Color(0xFF00BCD4)],
+    colors: [Color(0xFF4DA6FF), Color(0xFF6EE7F9)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient primaryGradientDark = LinearGradient(
-    colors: [Color(0xFF7986CB), Color(0xFF4DD0E1)],
+    colors: [Color(0xFF1B2A4A), Color(0xFF4DA6FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-  );
-
-  // Voice pulse gradient (used on recording animation)
-  static const RadialGradient voicePulseGradient = RadialGradient(
-    colors: [Color(0x44EF4444), Color(0x00EF4444)],
-    radius: 1.0,
   );
 }
