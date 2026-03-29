@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/storage_keys.dart';
-import '../../core/enums/app_enums.dart';
-import '../../core/services/storage_service.dart';
+import '../constants/storage_keys.dart';
+import '../enums/app_enums.dart';
+import '../services/storage_service.dart';
 
 /// Theme provider for AI Voice Genie.
 ///
