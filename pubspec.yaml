@@ -20,9 +20,14 @@ dependencies:
   firebase_auth: ^5.3.1
   cloud_firestore: ^5.4.4
   firebase_analytics: ^11.3.3
+  firebase_crashlytics: ^4.3.0
 
-  # ── Google Sign-In ────────────────────────────────────────────────────────
+  # ── Google/Apple Sign-In ────────────────────────────────────────────────────────
   google_sign_in: ^6.2.1
+  sign_in_with_apple: ^7.0.1
+
+  # ── Awesome Icons ─────────────────────────────────────────────────────────
+  font_awesome_flutter: ^11.0.0
 
   # ── Local Storage ─────────────────────────────────────────────────────────
   # Hive for local caching of conversations and settings
@@ -55,6 +60,8 @@ dependencies:
   shimmer: ^3.0.0
   # For smooth page transitions
   animations: ^2.0.11
+  # For native splash
+  flutter_native_splash: ^2.4.7
 
   # ── Utilities ─────────────────────────────────────────────────────────────
   # UUID generation for conversation and message IDs
@@ -103,3 +110,4 @@ flutter:
   assets:
     - assets/images/
     - assets/fonts/
+    - assets/lottie/

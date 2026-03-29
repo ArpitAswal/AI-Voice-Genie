@@ -36,6 +36,7 @@ class AppLocalizations {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI Voice Genie',
       'app_tagline': 'Your intelligent AI assistant',
+      'welcome_message': "Welcome to",
       'ok': 'OK',
       'cancel': 'Cancel',
       'save': 'Save',
@@ -55,9 +56,11 @@ class AppLocalizations {
       'something_went_wrong': 'Something went wrong. Please try again.',
       'no_internet_connection': 'No internet connection. Please check your network.',
       'request_timed_out': 'Request timed out. Please try again.',
+      'privacy_note': 'By continuing, you agree to our Terms of Service\nand Privacy Policy.',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'Continue with Google',
+      'sign_in_with_apple' : 'Continue with Apple',
       'sign_out': 'Sign Out',
       'sign_out_confirm': 'Are you sure you want to sign out?',
       'welcome_back': 'Welcome back',
@@ -235,6 +238,7 @@ class AppLocalizations {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI वॉयस जीनी',
       'app_tagline': 'आपका बुद्धिमान AI सहायक',
+      'welcome_message' : 'आपका स्वागत है',
       'ok': 'ठीक है',
       'cancel': 'रद्द करें',
       'save': 'सहेजें',
@@ -254,9 +258,11 @@ class AppLocalizations {
       'something_went_wrong': 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।',
       'no_internet_connection': 'इंटरनेट कनेक्शन नहीं है। अपना नेटवर्क जांचें।',
       'request_timed_out': 'अनुरोध का समय समाप्त हो गया। पुनः प्रयास करें।',
+      'privacy_note': 'आगे बढ़ने पर, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत होते हैं।',
 
       // ── Auth ───────────────────────────────────────────────────────────────
-      'sign_in_with_google': 'Google से जारी रखें',
+      'sign_in_with_google': 'गूगल के साथ जारी रखें',
+      'sign_in_with_apple': 'एप्पल के साथ जारी रखें',
       'sign_out': 'साइन आउट',
       'sign_out_confirm': 'क्या आप साइन आउट करना चाहते हैं?',
       'welcome_back': 'वापस आपका स्वागत है',
@@ -446,6 +452,7 @@ class AppLocalizations {
   // NAMED GETTERS — for the most commonly used strings
   // ==========================================================================
 
+  String get welcome => translate('welcome_message');
   String get appName => translate('app_name');
   String get appTagline => translate('app_tagline');
   String get ok => translate('ok');
@@ -456,6 +463,7 @@ class AppLocalizations {
   String get somethingWentWrong => translate('something_went_wrong');
   String get noInternet => translate('no_internet_connection');
   String get signInWithGoogle => translate('sign_in_with_google');
+  String get signInWithApple => translate('sign_in_with_apple');
   String get signOut => translate('sign_out');
   String get settings => translate('settings');
   String get newConversation => translate('new_conversation');
@@ -473,6 +481,7 @@ class AppLocalizations {
   String get manageApiKeys => translate('manage_api_keys');
   String get selectModel => translate('select_model');
   String get noKeyForModel => translate('no_key_for_model');
+  String get privacyNote => translate('privacy_note');
 }
 
 // ==========================================================================
@@ -493,4 +502,13 @@ class _AppLocalizationsDelegate
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
+}
+
+
+// =============================================================================
+// EXTENSION — convenience l10n access on BuildContext
+// =============================================================================
+
+extension L10nExtension on BuildContext {
+  AppLocalizations get l10n => AppLocalizations.of(this)!;
 }

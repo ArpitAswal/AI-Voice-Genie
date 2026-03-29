@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/localization/app_localizations.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../shared/widgets/image_view.dart';
@@ -37,6 +38,7 @@ class _AuthScreenState extends State<AuthScreen> {
   // ── Sign-In Handlers ───────────────────────────────────────────────────────
 
   Future<void> _handleGoogleSignIn() async {
+    debugPrint("### _handleGoogleSignIn...");
     final authProvider = context.read<AuthProvider>();
 
     // Show loading before async gap — context is valid here
@@ -51,7 +53,15 @@ class _AuthScreenState extends State<AuthScreen> {
 
     // Show error if one was set — check mounted before using context
     if (!mounted) return;
-    _consumeError();
+
+    // If sign-in succeeded, navigate to the correct screen
+    if (authProvider.authState == AuthState.authenticated) {
+      _navigateAfterAuth(authProvider);
+      return;
+    }
+
+    // Otherwise show the error message
+    _consumeError(authProvider);
   }
 
   Future<void> _handleAppleSignIn() async {
@@ -61,24 +71,64 @@ class _AuthScreenState extends State<AuthScreen> {
 
     await authProvider.signInWithApple();
 
+    // Hide loading — always safe, even if sign-in failed
     if (mounted) {
       context.hideLoading();
     }
 
     if (!mounted) return;
-    _consumeError();
+
+    if (authProvider.authState == AuthState.authenticated) {
+      _navigateAfterAuth(authProvider);
+      return;
+    }
+
+    _consumeError(authProvider);
   }
 
   /// Check if AuthProvider has an error, show it, then clear it.
-  void _consumeError() {
-    final authProvider = context.read<AuthProvider>();
+  /// Show and clear any auth error set by AuthProvider.
+  ///
+  /// Not called on cancellation — cancelled sign-in sets no error.
+  void _consumeError(AuthProvider authProvider) {
     final error = authProvider.authError;
-
     if (error != null && error.isNotEmpty) {
       context.showError(error);
       authProvider.clearAuthError();
     }
   }
+
+  // ── Navigation After Successful Auth ───────────────────────────────────────
+
+  /// Routes to the correct screen based on the user's setup flags.
+  ///
+  /// This mirrors the same logic in SplashScreen._navigateAuthenticated()
+  /// and is intentionally duplicated here — SplashScreen is no longer
+  /// mounted when LoginScreen is on screen.
+  ///
+  /// Stack is cleared so the user cannot press back into LoginScreen.
+  void _navigateAfterAuth(AuthProvider authProvider) {
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      // Safety guard — authenticated state with no user model is unexpected
+      // Stay on LoginScreen and show a generic error
+      context.showError('something_went_wrong');
+      return;
+    }
+
+    if (!user.onboardingDone) {
+      // Brand new user — show onboarding first
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.onboarding);
+    } else if (!user.keySetupDone) {
+      // Onboarding done but no AI keys configured yet
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.keySetup);
+    } else {
+      // Fully set up returning user
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +190,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             authType: SocialAuthProvider.google),
 
                         // Apple Sign-In — iOS only
-                        if (Platform.isAndroid) ...[
+                        if (Platform.isIOS) ...[
                           SizedBox(height: isTablet ? 16 : 12),
                           AuthButtons(
                               isTablet: isTablet,

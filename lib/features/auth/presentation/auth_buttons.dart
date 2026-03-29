@@ -23,7 +23,7 @@ class AuthButtons extends StatelessWidget {
     return (authType.name == SocialAuthProvider.google.name)
         ? context.themedElevatedButton(
             label: label,
-            onPressed: () => onTap,
+            onPressed: () => onTap(),
             background: AppColors.white,
             foreground: AppColors.black,
             imgIcon: AppAssets.googleLogo)

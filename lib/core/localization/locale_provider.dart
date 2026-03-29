@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../core/constants/storage_keys.dart';
-import '../../core/services/storage_service.dart';
+import '../constants/storage_keys.dart';
+import '../services/storage_service.dart';
 
 /// Locale provider for AI Voice Genie.
 ///

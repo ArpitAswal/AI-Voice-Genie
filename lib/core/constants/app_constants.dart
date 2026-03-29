@@ -4,9 +4,7 @@
 /// Never hardcode strings, numbers, or paths in feature code.
 class AppConstants {
   // ── App Info ───────────────────────────────────────────────────────────────
-  static const String appName = 'AI Voice Genie';
   static const String appVersion = '1.0.0';
-  static const String appTagline = 'Your intelligent AI assistant';
 
   // ── Validation ────────────────────────────────────────────────────────────
   static const int minPasswordLength = 8;
@@ -41,23 +39,6 @@ class AppConstants {
   static const String settingsBox = 'settings_box';
   static const String conversationCacheBox = 'conversation_cache_box';
   static const String messageCacheBox = 'message_cache_box';
-
-  // ── Image Assets ──────────────────────────────────────────────────────────
-  static const String appLogo = 'assets/images/app_logo.png';
-  static const String onboardingFirst = 'assets/images/onboarding_first.png';
-  static const String onboardingSecond = 'assets/images/onboarding_second.png';
-  static const String onboardingThird = 'assets/images/onboarding_third.png';
-  static const String emptyConversation =
-      'assets/images/empty_conversation.png';
-  static const String emptyHistory = 'assets/images/empty_history.png';
-
-  // ── Lottie Assets ─────────────────────────────────────────────────────────
-  static const String splashLottie = 'assets/lottie/splash.json';
-  static const String aiThinkingLottie = 'assets/lottie/ai_thinking.json';
-  static const String voiceRecordingLottie =
-      'assets/lottie/voice_recording.json';
-  static const String successLottie = 'assets/lottie/success.json';
-  static const String emptyLottie = 'assets/lottie/empty.json';
 
   // ── Pagination ────────────────────────────────────────────────────────────
   // Number of conversations fetched per page in history screen
