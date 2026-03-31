@@ -98,7 +98,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryLight,
-            foregroundColor: AppColors.lightTextPrimary,
+            foregroundColor: AppColors.lightTextSecondary,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
             elevation: 0,
             shape: RoundedRectangleBorder(

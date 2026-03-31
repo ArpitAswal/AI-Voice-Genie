@@ -1,3 +1,6 @@
+import 'package:ai_voice_genie/features/auth/presentation/auth_screen.dart';
+import 'package:ai_voice_genie/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 
 /// Centralized route management for AI Voice Genie.
@@ -24,11 +27,11 @@ import 'package:flutter/material.dart';
 // =============================================================================
 
 enum TransitionType {
-  slide,    // Right-to-left (default for most screens)
-  slideUp,  // Bottom-to-top (bottom sheets, modals)
-  fade,     // Cross-fade (splash, auth root)
-  scale,    // Scale + fade (dialogs, celebratory screens)
-  none,     // Instant (no animation)
+  slide, // Right-to-left (default for most screens)
+  slideUp, // Bottom-to-top (bottom sheets, modals)
+  fade, // Cross-fade (splash, auth root)
+  scale, // Scale + fade (dialogs, celebratory screens)
+  none, // Instant (no animation)
 }
 
 // =============================================================================
@@ -87,10 +90,10 @@ class AppRoutes {
   ///
   /// User can go back to the previous screen.
   static Future<T?> navigateTo<T>(
-      BuildContext context,
-      String routeName, {
-        Object? arguments,
-      }) {
+    BuildContext context,
+    String routeName, {
+    Object? arguments,
+  }) {
     return Navigator.of(context).pushNamed<T>(
       routeName,
       arguments: arguments,
@@ -101,11 +104,11 @@ class AppRoutes {
   ///
   /// User cannot go back to the replaced screen.
   static Future<T?> navigateAndReplace<T, TO>(
-      BuildContext context,
-      String routeName, {
-        Object? arguments,
-        TO? result,
-      }) {
+    BuildContext context,
+    String routeName, {
+    Object? arguments,
+    TO? result,
+  }) {
     return Navigator.of(context).pushReplacementNamed<T, TO>(
       routeName,
       arguments: arguments,
@@ -117,24 +120,24 @@ class AppRoutes {
   ///
   /// Used for: login → home, splash → home.
   static Future<T?> navigateAndRemoveUntil<T>(
-      BuildContext context,
-      String routeName, {
-        Object? arguments,
-      }) {
+    BuildContext context,
+    String routeName, {
+    Object? arguments,
+  }) {
     return Navigator.of(context).pushNamedAndRemoveUntil<T>(
       routeName,
-          (route) => false,
+      (route) => false,
       arguments: arguments,
     );
   }
 
   /// Pop back to a specific route in the stack.
   static Future<T?> navigateAndRemoveUntilRoute<T>(
-      BuildContext context,
-      String routeName, {
-        required String untilRoute,
-        Object? arguments,
-      }) {
+    BuildContext context,
+    String routeName, {
+    required String untilRoute,
+    Object? arguments,
+  }) {
     return Navigator.of(context).pushNamedAndRemoveUntil<T>(
       routeName,
       ModalRoute.withName(untilRoute),
@@ -171,33 +174,32 @@ class AppRoutes {
     final arguments = settings.arguments;
 
     switch (settings.name) {
-
-    // ── Splash ─────────────────────────────────────────────────────────────
+      // ── Splash ─────────────────────────────────────────────────────────────
       case splash:
-      // Lazy import — screen will be created in Phase 1
+        // Lazy import — screen will be created in Phase 1
         return _buildRoute(
-          const _PlaceholderScreen(label: 'SplashScreen'),
+          const SplashScreen(),
           settings,
           TransitionType.fade,
         );
 
-    // ── Auth ───────────────────────────────────────────────────────────────
+      // ── Auth ───────────────────────────────────────────────────────────────
       case login:
         return _buildRoute(
-          const _PlaceholderScreen(label: 'LoginScreen'),
+          const AuthScreen(),
           settings,
           TransitionType.fade,
         );
 
-    // ── Onboarding ─────────────────────────────────────────────────────────
+      // ── Onboarding ─────────────────────────────────────────────────────────
       case onboarding:
         return _buildRoute(
-          const _PlaceholderScreen(label: 'OnboardingScreen'),
+          const OnboardingScreen(),
           settings,
           TransitionType.slide,
         );
 
-    // ── Key Setup ──────────────────────────────────────────────────────────
+      // ── Key Setup ──────────────────────────────────────────────────────────
       case keySetup:
         return _buildRoute(
           const _PlaceholderScreen(label: 'KeySetupScreen'),
@@ -205,7 +207,7 @@ class AppRoutes {
           TransitionType.slideUp,
         );
 
-    // ── Home ───────────────────────────────────────────────────────────────
+      // ── Home ───────────────────────────────────────────────────────────────
       case home:
         return _buildRoute(
           const _PlaceholderScreen(label: 'HomeScreen'),
@@ -213,7 +215,7 @@ class AppRoutes {
           TransitionType.fade,
         );
 
-    // ── Chat ───────────────────────────────────────────────────────────────
+      // ── Chat ───────────────────────────────────────────────────────────────
       case chat:
         return _buildRoute(
           const _PlaceholderScreen(label: 'ChatScreen'),
@@ -237,7 +239,7 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-    // ── Image Generator ────────────────────────────────────────────────────
+      // ── Image Generator ────────────────────────────────────────────────────
       case imageGenerator:
         return _buildRoute(
           const _PlaceholderScreen(label: 'ImageGeneratorScreen'),
@@ -245,7 +247,7 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-    // ── Image Reader ───────────────────────────────────────────────────────
+      // ── Image Reader ───────────────────────────────────────────────────────
       case imageReader:
         return _buildRoute(
           const _PlaceholderScreen(label: 'ImageReaderScreen'),
@@ -253,7 +255,7 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-    // ── PDF Reader ─────────────────────────────────────────────────────────
+      // ── PDF Reader ─────────────────────────────────────────────────────────
       case pdfReader:
         return _buildRoute(
           const _PlaceholderScreen(label: 'PdfReaderScreen'),
@@ -261,7 +263,7 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-    // ── Conversation History ───────────────────────────────────────────────
+      // ── Conversation History ───────────────────────────────────────────────
       case conversationHistory:
         return _buildRoute(
           const _PlaceholderScreen(label: 'ConversationHistoryScreen'),
@@ -269,7 +271,7 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-    // ── Settings ───────────────────────────────────────────────────────────
+      // ── Settings ───────────────────────────────────────────────────────────
       case settingsScreen:
         return _buildRoute(
           const _PlaceholderScreen(label: 'SettingsScreen'),
@@ -277,7 +279,7 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-    // ── API Key Management ─────────────────────────────────────────────────
+      // ── API Key Management ─────────────────────────────────────────────────
       case apiKeyManagement:
         return _buildRoute(
           const _PlaceholderScreen(label: 'ApiKeyManagementScreen'),
@@ -285,7 +287,7 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-    // ── Profile ────────────────────────────────────────────────────────────
+      // ── Profile ────────────────────────────────────────────────────────────
       case profile:
         return _buildRoute(
           const _PlaceholderScreen(label: 'ProfileScreen'),
@@ -293,7 +295,7 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-    // ── Exception / 404 ────────────────────────────────────────────────────
+      // ── Exception / 404 ────────────────────────────────────────────────────
       default:
         return _buildErrorRoute(settings);
     }
@@ -303,10 +305,10 @@ class AppRoutes {
 
   /// Build a route with the specified transition type.
   static Route<dynamic> _buildRoute(
-      Widget screen, [
-        RouteSettings? settings,
-        TransitionType transition = TransitionType.slide,
-      ]) {
+    Widget screen, [
+    RouteSettings? settings,
+    TransitionType transition = TransitionType.slide,
+  ]) {
     // Default slide uses MaterialPageRoute for standard platform feel
     if (transition == TransitionType.slide) {
       return MaterialPageRoute(builder: (_) => screen, settings: settings);
@@ -316,11 +318,11 @@ class AppRoutes {
 
   /// Build a custom animated route.
   static PageRouteBuilder _buildCustomRoute(
-      Widget screen,
-      RouteSettings? settings,
-      TransitionType transition, {
-        Duration duration = const Duration(milliseconds: 300),
-      }) {
+    Widget screen,
+    RouteSettings? settings,
+    TransitionType transition, {
+    Duration duration = const Duration(milliseconds: 300),
+  }) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => screen,
       transitionDuration: duration,

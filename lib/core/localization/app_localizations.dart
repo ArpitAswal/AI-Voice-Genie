@@ -69,12 +69,12 @@ class AppLocalizations {
       'sign_out_success': 'Signed out successfully.',
 
       // ── Onboarding ─────────────────────────────────────────────────────────
-      'onboarding_title_1': 'Chat with AI',
-      'onboarding_desc_1': 'Have intelligent conversations with ChatGPT, Gemini, and Claude.',
-      'onboarding_title_2': 'Voice Powered',
-      'onboarding_desc_2': 'Speak your prompts and hear AI responses in natural voice.',
-      'onboarding_title_3': 'Images & Documents',
-      'onboarding_desc_3': 'Generate images, analyze photos, and get answers from PDFs.',
+      'onboarding_title_1': 'Generate Text & Answer Questions',
+      'onboarding_desc_1': 'Have intelligent conversations with ChatGPT, Gemini, & Claude.',
+      'onboarding_title_2': 'Generate & Describe Images',
+      'onboarding_desc_2': 'Generate images, analyze photos, & get answers from PDFs.',
+      'onboarding_title_3': 'Speech To Text & Text To Speech',
+      'onboarding_desc_3': 'Speak your prompts & hear AI responses in natural voice.',
       'get_started': 'Get Started',
 
       // ── API Key Setup ──────────────────────────────────────────────────────
@@ -482,6 +482,14 @@ class AppLocalizations {
   String get selectModel => translate('select_model');
   String get noKeyForModel => translate('no_key_for_model');
   String get privacyNote => translate('privacy_note');
+  String get skip => translate('skip');
+  String get onboardTitle1 => translate('onboarding_title_1');
+  String get onboardDesc1 => translate('onboarding_desc_1');
+  String get onboardTitle2 => translate('onboarding_title_2');
+  String get onboardDesc2 => translate('onboarding_desc_2');
+  String get onboardTitle3 => translate('onboarding_title_3');
+  String get onboardDesc3 => translate('onboarding_desc_3');
+  String get next => translate('next');
 }
 
 // ==========================================================================

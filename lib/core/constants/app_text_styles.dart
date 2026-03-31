@@ -55,7 +55,7 @@ class AppTextStyles {
     headlineSmall: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
-      color: AppColors.lightTextTertiary,
+      color: AppColors.lightTextPrimary,
       fontFamily: fontFamily,
     ),
 
@@ -69,13 +69,13 @@ class AppTextStyles {
     titleMedium: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
-      color: AppColors.lightTextPrimary,
+      color: AppColors.primaryLight,
       fontFamily: fontFamily,
     ),
     titleSmall: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w600,
-      color: AppColors.lightTextPrimary,
+      color: AppColors.primaryLight,
       fontFamily: fontFamily,
     ),
 
@@ -83,23 +83,20 @@ class AppTextStyles {
     bodyLarge: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
-      color: AppColors.lightTextPrimary,
+      color: AppColors.lightTextTertiary,
       fontFamily: fontFamily,
-      height: 1.5,
     ),
     bodyMedium: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
-      color: AppColors.lightTextPrimary,
+      color: AppColors.lightTextTertiary,
       fontFamily: fontFamily,
-      height: 1.5,
     ),
     bodySmall: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w400,
-      color: AppColors.lightTextPrimary,
+      color: AppColors.lightTextTertiary,
       fontFamily: fontFamily,
-      height: 1.4,
     ),
 
     // Label — chips, badges, timestamps, metadata, model indicators
@@ -112,7 +109,7 @@ class AppTextStyles {
     labelMedium: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w500,
-      color: AppColors.lightTextPrimary,
+      color: AppColors.lightTextSecondary,
       fontFamily: fontFamily,
     ),
     labelSmall: TextStyle(
@@ -120,7 +117,6 @@ class AppTextStyles {
       fontWeight: FontWeight.w500,
       color: AppColors.lightTextSecondary,
       fontFamily: fontFamily,
-      letterSpacing: 0.4,
     ),
   );
 
@@ -162,7 +158,7 @@ class AppTextStyles {
     headlineSmall: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextTertiary,
+      color: AppColors.darkTextPrimary,
       fontFamily: fontFamily,
     ),
 
@@ -176,13 +172,13 @@ class AppTextStyles {
     titleMedium: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
-      color: AppColors.darkTextPrimary,
+      color: AppColors.primaryDark,
       fontFamily: fontFamily,
     ),
     titleSmall: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w600,
-      color: AppColors.darkTextPrimary,
+      color: AppColors.primaryDark,
       fontFamily: fontFamily,
     ),
 
@@ -190,23 +186,20 @@ class AppTextStyles {
     bodyLarge: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextPrimary,
+      color: AppColors.darkTextTertiary,
       fontFamily: fontFamily,
-      height: 1.5,
     ),
     bodyMedium: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextPrimary,
+      color: AppColors.darkTextTertiary,
       fontFamily: fontFamily,
-      height: 1.5,
     ),
     bodySmall: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextPrimary,
+      color: AppColors.darkTextTertiary,
       fontFamily: fontFamily,
-      height: 1.4,
     ),
 
     // Label
@@ -219,7 +212,7 @@ class AppTextStyles {
     labelMedium: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w500,
-      color: AppColors.darkTextPrimary,
+      color: AppColors.darkTextSecondary,
       fontFamily: fontFamily,
     ),
     labelSmall: TextStyle(
@@ -227,7 +220,6 @@ class AppTextStyles {
       fontWeight: FontWeight.w500,
       color: AppColors.darkTextSecondary,
       fontFamily: fontFamily,
-      letterSpacing: 0.4,
     ),
   );
 }

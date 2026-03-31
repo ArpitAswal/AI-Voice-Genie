@@ -119,7 +119,7 @@ extension WidgetExtensions on BuildContext {
       String? imgIcon,
       Color? imgColor}) {
     final theme = Theme.of(this);
-    height = height ?? (isTablet ? 62 : 60);
+    height = height ?? (isTablet ? 62 : 44);
 
     return SizedBox(
       width: width ?? double.infinity,
