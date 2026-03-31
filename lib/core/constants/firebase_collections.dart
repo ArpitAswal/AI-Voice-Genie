@@ -23,7 +23,7 @@ class FirebaseCollections {
   static const String userModel = 'User_Model';
   static const String conversations = 'conversations';
   static const String messages = 'messages';
-  static const String apiKeys = 'apiKeys';
+  static const String apiKeys = 'Users_API_Keys';
 
   // ── Firestore Path Builders ───────────────────────────────────────────────
   // Use these everywhere instead of manually constructing paths.
@@ -31,9 +31,9 @@ class FirebaseCollections {
   /// AI_Voice_Genie/users/{uid}
   static String userDoc(String uid) => '$root/$users/$userModel/$uid';
 
-  /// AI_Voice_Genie/users/{uid}/apiKeys/{providerId}
+  /// AI_Voice_Genie/apiKeys/{uid}/{providerId}
   static String apiKeyDoc(String uid, String providerId) =>
-      '$root/$users/$uid/$apiKeys/$providerId';
+      '$root/$apiKeys/$uid/$providerId';
 
   /// AI_Voice_Genie/users/{uid}/conversations/{conversationId}
   static String conversationDoc(String uid, String conversationId) =>
@@ -53,6 +53,7 @@ class FirebaseCollections {
   static const String fieldAuthProvider = 'authProvider';
   static const String fieldCreatedAt = 'createdAt';
   static const String fieldLastLoginAt = 'lastLoginAt';
+  static const String fieldLastUpdatedAt = 'lastUpdatedAt';
   static const String fieldOnboardingDone = 'onboardingDone';
   static const String fieldKeySetupDone = 'keySetupDone';
   static const String fieldPreferredProvider = 'preferredProvider';
@@ -100,6 +101,7 @@ class FirebaseCollections {
   static const String eventAiRequestFailed = 'ai_request_failed';
   static const String eventAiFallbackTriggered = 'ai_fallback_triggered';
   static const String eventAiCapabilityGap = 'ai_capability_gap';
+  static const String eventAiKeyAdded = 'ai_key_added';
   static const String eventFeatureUsed = 'feature_used';
   static const String eventModelKeyAdded = 'model_key_added';
   static const String eventModelKeyRemoved = 'model_key_removed';
@@ -121,4 +123,6 @@ class FirebaseCollections {
   static const String paramFeature = 'feature';
   static const String paramResponseTimeMs = 'response_time_ms';
   static const String paramTokenCount = 'token_count';
+  static const String paramModelName = 'model_name';
+  static const String paramModelFeatures = 'model_features';
 }

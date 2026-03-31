@@ -86,9 +86,7 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.error, width: 2),
         ),
         labelStyle: AppTextStyles.lightTextTheme.labelLarge,
-        hintStyle: AppTextStyles.lightTextTheme.bodyMedium?.copyWith(
-          color: AppColors.lightTextSecondary.withValues(alpha: 0.6),
-        ),
+        hintStyle: AppTextStyles.lightTextTheme.bodyMedium,
         errorStyle: AppTextStyles.lightTextTheme.labelSmall?.copyWith(
           color: AppColors.error,
         ),
@@ -270,9 +268,7 @@ class AppTheme {
           borderSide: const BorderSide(color: AppColors.error, width: 2),
         ),
         labelStyle: AppTextStyles.darkTextTheme.labelLarge,
-        hintStyle: AppTextStyles.darkTextTheme.bodyMedium?.copyWith(
-          color: AppColors.darkTextSecondary.withValues(alpha: 0.6),
-        ),
+        hintStyle: AppTextStyles.darkTextTheme.bodyMedium,
         errorStyle: AppTextStyles.darkTextTheme.labelSmall?.copyWith(
           color: AppColors.error,
         ),

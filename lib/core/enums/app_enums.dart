@@ -2,9 +2,9 @@
 ///
 /// These match the provider IDs stored in Firestore and fired in analytics.
 enum AiProviderId {
-  openAi('openai', 'ChatGPT'),
-  gemini('gemini', 'Gemini'),
-  claude('claude', 'Claude');
+  openAi('openai', 'ChatGPT', 'GPT-4o • DALL-E 3 • Whisper'),
+  gemini('gemini', 'Gemini', 'Gemini 2.0 Flash • Image Gen'),
+  claude('claude', 'Claude', 'Claude Sonnet • Vision • PDF');
 
   /// Internal ID used in Firestore, analytics, and API routing
   final String id;
@@ -12,7 +12,10 @@ enum AiProviderId {
   /// Human-readable display name shown in the UI
   final String displayName;
 
-  const AiProviderId(this.id, this.displayName);
+  /// AI Model features
+  final String features;
+
+  const AiProviderId(this.id, this.displayName, this.features);
 
   /// Convert a string ID back to the enum (used when reading from Firestore)
   static AiProviderId fromId(String id) {
@@ -210,4 +213,46 @@ enum VoiceRecordingState {
 
   /// Error occurred during recording or processing
   error,
+}
+
+/// Social authentication provider used to sign in.
+///
+/// Stored in Firestore user document and used in analytics.
+/// Determines which sign-in flow is triggered in AuthRepositoryImpl.
+enum SocialAuthProvider {
+  google('google', 'Google'),
+  apple('apple', 'Apple');
+
+  /// Internal ID stored in Firestore and sent to analytics
+  final String id;
+
+  /// Human-readable display name
+  final String displayName;
+
+  const SocialAuthProvider(this.id, this.displayName);
+
+  static SocialAuthProvider fromId(String id) {
+    return SocialAuthProvider.values.firstWhere(
+          (e) => e.id == id,
+      orElse: () => SocialAuthProvider.google,
+    );
+  }
+}
+
+/// Authentication state — drives navigation from SplashScreen.
+///
+/// SplashScreen observes this enum via AuthProvider.
+/// Never navigate manually — always react to state changes.
+enum AuthState {
+  /// App just launched — auth check not yet complete
+  initial,
+
+  /// Auth check in progress — sign-in API call running
+  authenticating,
+
+  /// User is fully authenticated — navigate to correct screen
+  authenticated,
+
+  /// No active session — navigate to LoginScreen
+  unauthenticated,
 }

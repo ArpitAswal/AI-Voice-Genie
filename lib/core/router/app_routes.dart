@@ -3,6 +3,8 @@ import 'package:ai_voice_genie/features/onboarding/presentation/onboarding_scree
 import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/key_setup/presentation/key_setup_screen.dart';
+
 /// Centralized route management for AI Voice Genie.
 ///
 /// All navigation must go through this class.
@@ -202,7 +204,7 @@ class AppRoutes {
       // ── Key Setup ──────────────────────────────────────────────────────────
       case keySetup:
         return _buildRoute(
-          const _PlaceholderScreen(label: 'KeySetupScreen'),
+          const KeySetupScreen(),
           settings,
           TransitionType.slideUp,
         );

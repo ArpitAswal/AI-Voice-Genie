@@ -27,6 +27,11 @@ class AnalyticsService {
 
   final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
+  /// Returns the analytics observer to track page navigation
+  FirebaseAnalyticsObserver getAnalyticsObserver() {
+    return FirebaseAnalyticsObserver(analytics: _analytics);
+  }
+
   // ── AI Request Events ─────────────────────────────────────────────────────
 
   /// Log when a user initiates an AI request (before the API call)
@@ -157,7 +162,17 @@ class AnalyticsService {
 
   // ── Auth Events ───────────────────────────────────────────────────────────
 
-  /// Log when a returning user signs in
+  /// Log which sign-in button the user tapped — fires BEFORE the auth flow.
+  ///
+  /// This tracks button preference independently of whether auth succeeds.
+  /// Even a cancelled sign-in is counted — tells us which provider users try.
+  Future<void> logSignInButtonTapped(SocialAuthProvider provider) async {
+    await _safeLog(FirebaseCollections.eventSignInButtonTapped, {
+      FirebaseCollections.paramAuthProvider: provider.id,
+    });
+  }
+
+  /// Log when a returning user signs in successfully
   Future<void> logUserSignedIn() async {
     await _safeLog(FirebaseCollections.eventUserSignedIn, {});
   }
@@ -194,10 +209,17 @@ class AnalyticsService {
       ) async {
     try {
       await _analytics.logEvent(name: eventName, parameters: parameters);
-      debugPrint('📊 Analytics: $eventName → $parameters');
+      debugPrint('📊 Analytics Success: $eventName → $parameters');
     } catch (e) {
       // Analytics failures are silent — never interrupt the user flow
       debugPrint('⚠️ Analytics log failed [$eventName]: $e');
     }
+  }
+
+  Future<void> addAPIKeyTapped(AiProviderId providerId) async {
+      await _safeLog(FirebaseCollections.eventAiKeyAdded, {
+        FirebaseCollections.paramModelName: providerId.displayName,
+        FirebaseCollections.paramModelFeatures: providerId.features,
+      });
   }
 }

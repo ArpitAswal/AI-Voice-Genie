@@ -142,16 +142,18 @@ extension WidgetExtensions on BuildContext {
           children: [
             if (icon != null) ...[
               Icon(icon, size: isTablet ? 32 : 28),
+              SizedBox(width: horizontalPadding),
             ] else if (faIcon != null) ...[
-              FaIcon(faIcon, size: isTablet ? 32 : 28)
+              FaIcon(faIcon, size: isTablet ? 32 : 28),
+              SizedBox(width: horizontalPadding),
             ] else if (imgIcon != null) ...[
               ImageView(
                   image: ImageViewData.asset(imgIcon),
                   height: isTablet ? 32 : 28,
                   width: isTablet ? 32 : 28,
-                  color: imgColor)
+                  color: imgColor),
+              SizedBox(width: horizontalPadding),
             ],
-            SizedBox(width: horizontalPadding),
             Text(
               label,
               overflow: TextOverflow.ellipsis,

@@ -23,11 +23,9 @@ class AppColors {
   // ── Background Colors ─────────────────────────────────────────────────────
   static const Color scaffoldLight = Color(0xFFE5E5E5);
   static const Color cardLight = Color(0xFFF7F8FA);
-  static const Color containerLight = Color(0xFFF7F8FA);
 
   static const Color scaffoldDark = Color(0xFF0B1220);
   static const Color cardDark = Color(0xFF111827);
-  static const Color containerDark = Color(0xFF1F2937);
 
   // ── AppBar Colors ─────────────────────────────────────────────────────
   static const Color appBarLight = Color(0xFFFFFFFF);

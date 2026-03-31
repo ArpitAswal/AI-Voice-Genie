@@ -271,12 +271,12 @@ class AppLocalizations {
       'sign_out_success': 'सफलतापूर्वक साइन आउट हो गए।',
 
       // ── Onboarding ─────────────────────────────────────────────────────────
-      'onboarding_title_1': 'AI से बातचीत करें',
-      'onboarding_desc_1': 'ChatGPT, Gemini और Claude के साथ बुद्धिमान बातचीत करें।',
-      'onboarding_title_2': 'आवाज़ से चलाएं',
-      'onboarding_desc_2': 'अपने सवाल बोलें और AI के जवाब प्राकृतिक आवाज़ में सुनें।',
-      'onboarding_title_3': 'चित्र और दस्तावेज़',
-      'onboarding_desc_3': 'चित्र बनाएं, फ़ोटो विश्लेषण करें, और PDF से जवाब पाएं।',
+      'onboarding_title_1': 'पाठ उत्पन्न करें और प्रश्नों के उत्तर दें',
+      'onboarding_desc_1': 'ChatGPT, Gemini और Claude के साथ सार्थक बातचीत करें।',
+      'onboarding_title_2': 'चित्र बनाएं और उनका वर्णन करें',
+      'onboarding_desc_2': 'चित्र बनाएं, तस्वीरों का विश्लेषण करें और पीडीएफ से उत्तर प्राप्त करें।',
+      'onboarding_title_3': 'चस्पीच टू टेक्स्ट और टेक्स्ट टू स्पीच',
+      'onboarding_desc_3': 'अपने प्रॉम्प्ट बोलें और AI के जवाब स्वाभाविक आवाज में सुनें।',
       'get_started': 'शुरू करें',
 
       // ── API Key Setup ──────────────────────────────────────────────────────
@@ -490,6 +490,31 @@ class AppLocalizations {
   String get onboardTitle3 => translate('onboarding_title_3');
   String get onboardDesc3 => translate('onboarding_desc_3');
   String get next => translate('next');
+  String get manageKeys => translate('manage_api_keys');
+  String get keySetupTitle => translate('setup_title');
+  String get keySetupSubTitle => translate('setup_subtitle');
+  String get keyValid => translate('key_valid');
+  String get keyInvalid => translate('key_invalid');
+  String get keyValidating => translate('key_validating');
+  String get noKeyAdded => translate('no_key_added');
+  String get removeKey => translate('remove_key');
+  String get paste => translate('paste');
+  String get openAIKey => translate('get_openai_key');
+  String get geminiAIKey => translate('get_gemini_key');
+  String get claudeAIkey => translate('get_claude_key');
+  String get keyHint => translate('api_key_hint');
+  String get addKey => translate('add_key');
+  String get keySecureNote => translate('api_keys_secure_note');
+  String get done => translate('done');
+  String get noModelKey => translate('error_no_models_with_key');
+  String get promptTooLong => translate('prompt_too_long');
+  String get apiKeyTooShort => translate('api_key_too_short');
+  String get imagePromptRequired => translate('image_prompt_required');
+  String get imagePromptTooShort => translate('image_prompt_too_short');
+  String get imagePromptTooLong => translate('image_prompt_too_long');
+  String get titleRequired => translate('title_required');
+  String get titleTooLong => translate('title_too_long');
+  String get dateRequired => translate('date_required');
 }
 
 // ==========================================================================
