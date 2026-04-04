@@ -137,8 +137,9 @@ class AnalyticsService {
 
   /// Log when user successfully adds an API key for a provider
   Future<void> logModelKeyAdded(AiProviderId provider) async {
-    await _safeLog(FirebaseCollections.eventModelKeyAdded, {
-      FirebaseCollections.paramModelUsed: provider.id,
+    await _safeLog(FirebaseCollections.eventAiKeyAdded, {
+      FirebaseCollections.paramModelName: provider.displayName,
+      FirebaseCollections.paramModelFeatures: provider.features,
     });
   }
 
@@ -214,12 +215,5 @@ class AnalyticsService {
       // Analytics failures are silent — never interrupt the user flow
       debugPrint('⚠️ Analytics log failed [$eventName]: $e');
     }
-  }
-
-  Future<void> addAPIKeyTapped(AiProviderId providerId) async {
-      await _safeLog(FirebaseCollections.eventAiKeyAdded, {
-        FirebaseCollections.paramModelName: providerId.displayName,
-        FirebaseCollections.paramModelFeatures: providerId.features,
-      });
   }
 }

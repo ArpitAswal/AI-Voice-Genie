@@ -85,7 +85,7 @@ class AppLocalizations {
       'remove_key': 'Remove Key',
       'key_added_success': 'API key added successfully.',
       'key_removed_success': 'API key removed.',
-      'key_invalid': 'Invalid API key. Please check and try again.',
+      'key_invalid': 'Invalid API key.',
       'key_validating': 'Validating key...',
       'key_valid': 'Key is valid',
       'api_key_required': 'API key is required',
@@ -96,6 +96,7 @@ class AppLocalizations {
       'get_claude_key': 'Get your Claude key at console.anthropic.com',
       'no_key_added': 'No key added',
       'key_added': 'Key added',
+      'key_fetch_error': 'Loading AI Keys failed, Please restart the app.',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'new_conversation': 'New Conversation',
@@ -123,6 +124,7 @@ class AppLocalizations {
       'model_switched': 'Switched to',
       'no_key_for_model': 'You haven\'t added an API key for this model.',
       'add_key_for_model': 'Add Key',
+      'api_keys_secure_note': 'Your API key is secure. Only the company has the authority to save and manage your personal keys.',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'Not supported',
@@ -287,7 +289,7 @@ class AppLocalizations {
       'remove_key': 'Key हटाएं',
       'key_added_success': 'API key सफलतापूर्वक जोड़ी गई।',
       'key_removed_success': 'API key हटाई गई।',
-      'key_invalid': 'अमान्य API key। कृपया जांचें और पुनः प्रयास करें।',
+      'key_invalid': 'अमान्य API key।',
       'key_validating': 'Key सत्यापित हो रही है...',
       'key_valid': 'Key वैध है',
       'api_key_required': 'API key आवश्यक है',
@@ -298,6 +300,7 @@ class AppLocalizations {
       'get_claude_key': 'Claude key: console.anthropic.com',
       'no_key_added': 'Key नहीं जोड़ी गई',
       'key_added': 'Key जोड़ी गई',
+      'key_fetch_error': 'एआई कुंजी लोड करने में विफलता, कृपया ऐप को पुनः आरंभ करें।',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'new_conversation': 'नई बातचीत',
@@ -325,6 +328,7 @@ class AppLocalizations {
       'model_switched': 'बदल गया',
       'no_key_for_model': 'इस मॉडल के लिए API key नहीं जोड़ी गई।',
       'add_key_for_model': 'Key जोड़ें',
+      'api_keys_secure_note': 'आपकी API की (key) सुरक्षित है। केवल कंपनी को ही आपकी व्यक्तिगत की (key) सहेजने का अधिकार है।',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'समर्थित नहीं',

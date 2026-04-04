@@ -3,6 +3,7 @@ import 'package:ai_voice_genie/features/onboarding/presentation/onboarding_scree
 import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/home/presentation/home_screen.dart';
 import '../../features/key_setup/presentation/key_setup_screen.dart';
 
 /// Centralized route management for AI Voice Genie.
@@ -212,7 +213,7 @@ class AppRoutes {
       // ── Home ───────────────────────────────────────────────────────────────
       case home:
         return _buildRoute(
-          const _PlaceholderScreen(label: 'HomeScreen'),
+          const HomeScreen(),
           settings,
           TransitionType.fade,
         );

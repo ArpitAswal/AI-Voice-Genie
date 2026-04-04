@@ -10,7 +10,7 @@ class AppColors {
 
   // Primary brand color
   static const Color primaryLight = Color(0xFF7C9CFF);
-  static const Color primaryDark = Color(0xFF7986CB);
+  static const Color primaryDark = Color(0xFF475DAF);
 
   // Secondary Colors (Soft Cyan)
   static const Color secondaryLight = Color(0xFF6EE7F9);

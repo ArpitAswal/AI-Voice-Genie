@@ -213,4 +213,7 @@ After writing code, you must:
 
 Every feature must feel like a **well-engineered system**, not just working code.
 
+After you are done with the testing -
+Now prioritize the top 10 most critical test cases I should run first.
+
 ---
