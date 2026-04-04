@@ -1,5 +1,7 @@
+import 'package:ai_voice_genie/features/auth/presentation/auth_provider.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
@@ -64,8 +66,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _handleGetStarted() {
-    AppRoutes.navigateAndReplace(context, AppRoutes.keySetup);
+  Future<void> _handleGetStarted() async {
+    // Write onboardingDone = true to Firestore + Hive
+    // This is non-blocking for the user — navigate immediately after
+
+    await context.read<AuthProvider>().markBoardingComplete();
+
+    if (!mounted) return;
+    // Navigate to KeySetupScreen — back stack cleared so user cannot
+    // press back to Onboarding
+
+    AppRoutes.navigateAndRemoveUntil(context, AppRoutes.keySetup);
+
   }
 
   @override
@@ -136,7 +148,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                           child: SizedBox(
                             width: double.infinity,
-                            height: isTablet ? 58 : 52,
+                            height: isTablet ? 58 : 44,
                             child: ElevatedButton(
                               onPressed: _handleNext,
                               child: Text(

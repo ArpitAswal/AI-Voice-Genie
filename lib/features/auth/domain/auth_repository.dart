@@ -39,6 +39,11 @@ abstract class AuthRepository {
   /// Returns true only on iOS. Always false on Android.
   /// Use this in UI to conditionally render the Apple Sign-In button.
   bool get isAppleSignInAvailable;
+
+  /// Updating the field in the firestore
+  ///
+  /// User the user id or FirebaseAuth.currentUser to update only auth user
+  Future<bool> updateUser(UserModel? currentUser, {required String field, required bool value});
 }
 
 // =============================================================================

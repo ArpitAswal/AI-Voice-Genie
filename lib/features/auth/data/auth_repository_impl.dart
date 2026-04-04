@@ -320,7 +320,7 @@ class AuthRepositoryImpl implements AuthRepository {
         // Read the stored values from Firestore instead
         resolvedDisplayName =
             existingData[FirebaseCollections.fieldDisplayName] as String? ??
-                'User';
+                '';
         resolvedEmail =
             existingData[FirebaseCollections.fieldEmail] as String? ?? '';
         resolvedPhotoUrl =
@@ -475,5 +475,47 @@ class AuthRepositoryImpl implements AuthRepository {
     final bytes = utf8.encode(input);
     final digest = sha256.convert(bytes);
     return digest.toString();
+  }
+
+  @override
+  Future<bool> updateUser(UserModel? currentUser, {required String field, required bool value}) async{
+
+    if(currentUser == null){
+      return false;
+    }
+
+    try {
+      final uid = _firebaseAuth.currentUser?.uid ?? '';
+      final docRef = _firestore.doc(FirebaseCollections.userDoc(uid));
+
+      // Update only lastUpdatedAt and given field — preserve all other fields
+      await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
+        FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
+        field: value,
+      });
+
+      // Re-hydrate Hive with latest data from Firestore
+      await _persistSession(currentUser);
+
+      // Write to Hive — makes SplashScreen routing instant on next cold start
+      await _storage.setBool(StorageKeys.onboardingCompleted, true);
+      debugPrint("return true");
+      return true;
+    } on FirebaseException catch (e) {
+      // Non-fatal — if Firestore fails, Hive still has the flag.
+      // On next sign-in, Firestore will re-fetch and may show Onboarding again.
+      // Acceptable edge case — much less disruptive than blocking the user.
+      debugPrint(
+        '⚠️ AuthRepository: markOnboardingComplete Firestore failed — '
+            '${e.code}: ${e.message}',
+      );
+      // Still write Hive so the current session routes correctly
+      await _storage.setBool(StorageKeys.onboardingCompleted, true);
+      return false;
+    } catch (e) {
+      debugPrint('❌ AuthRepository: markOnboardingComplete error : $e');
+      await _storage.setBool(StorageKeys.onboardingCompleted, true);
+      return false;
+    }
   }
 }

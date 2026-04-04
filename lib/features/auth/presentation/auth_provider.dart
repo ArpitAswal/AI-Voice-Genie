@@ -1,3 +1,4 @@
+import 'package:ai_voice_genie/core/constants/firebase_collections.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/enums/app_enums.dart';
@@ -215,5 +216,30 @@ class AuthProvider extends ChangeNotifier {
     if (_authState == newState) return;
     _authState = newState;
     notifyListeners();
+  }
+
+  // Updating: Fields Value
+
+  /// Set onboarding complete and notify listeners.
+
+  Future<void> markBoardingComplete() async{
+    if(currentUser == null) {
+      return;
+    }
+
+    try {
+
+      // Update the in-memory UserModel so _navigateAfterAuth (and SplashScreen)
+      // read the correct value without fetching from Firestore again
+      _currentUser = _currentUser?.copyWith(onboardingDone: true);
+
+      await _repository.updateUser(
+          _currentUser, field: FirebaseCollections.fieldOnboardingDone,
+          value: currentUser?.onboardingDone ?? false);
+
+    } catch (e){
+      debugPrint('❌ AuthProvider onboarding error: $e');
+      _authError = 'something_went_wrong';
+    }
   }
 }
