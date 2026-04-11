@@ -101,7 +101,6 @@ class FirebaseCollections {
   static const String eventAiRequestFailed = 'ai_request_failed';
   static const String eventAiFallbackTriggered = 'ai_fallback_triggered';
   static const String eventAiCapabilityGap = 'ai_capability_gap';
-  static const String eventAiKeyAdded = 'ai_key_added';
   static const String eventFeatureUsed = 'feature_used';
   static const String eventModelKeyAdded = 'model_key_added';
   static const String eventModelKeyRemoved = 'model_key_removed';

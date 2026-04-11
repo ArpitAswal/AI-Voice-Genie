@@ -69,17 +69,19 @@ extension WidgetExtensions on BuildContext {
         fillColor: isDark ? AppColors.cardDark : AppColors.cardLight,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(
+            color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+            color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+          borderSide: BorderSide(color: theme.colorScheme.primary),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -87,11 +89,10 @@ extension WidgetExtensions on BuildContext {
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.error, width: 2),
+          borderSide: const BorderSide(color: AppColors.error),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 16,
         ),
       ),
     );
@@ -119,11 +120,9 @@ extension WidgetExtensions on BuildContext {
       String? imgIcon,
       Color? imgColor}) {
     final theme = Theme.of(this);
-    height = height ?? (isTablet ? 62 : 44);
 
     return SizedBox(
       width: width ?? double.infinity,
-      height: height,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: (padding != null ||
@@ -141,10 +140,10 @@ extension WidgetExtensions on BuildContext {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: isTablet ? 32 : 28),
+              Icon(icon),
               SizedBox(width: horizontalPadding),
             ] else if (faIcon != null) ...[
-              FaIcon(faIcon, size: isTablet ? 32 : 28),
+              FaIcon(faIcon),
               SizedBox(width: horizontalPadding),
             ] else if (imgIcon != null) ...[
               ImageView(

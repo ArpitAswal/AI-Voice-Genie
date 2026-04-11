@@ -1,3 +1,4 @@
+import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:ai_voice_genie/features/auth/presentation/auth_provider.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:flutter/material.dart';
@@ -70,14 +71,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // Write onboardingDone = true to Firestore + Hive
     // This is non-blocking for the user — navigate immediately after
 
-    await context.read<AuthProvider>().markBoardingComplete();
+    context.read<AuthProvider>().markBoardingComplete();
 
     if (!mounted) return;
     // Navigate to KeySetupScreen — back stack cleared so user cannot
     // press back to Onboarding
 
     AppRoutes.navigateAndRemoveUntil(context, AppRoutes.keySetup);
-
   }
 
   @override
@@ -131,8 +131,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 color: _currentPage == index
                                     ? AppColors.primaryLight
                                     : (context.isDark
-                                        ? AppColors.darkBorder
-                                        : AppColors.lightBorder),
+                                        ? AppColors.darkDivider
+                                        : AppColors.lightDivider),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),
@@ -143,22 +143,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
                         // ── Next / Get Started Button ────────────────────────────────────
                         Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: context.horizontalPadding,
-                          ),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: isTablet ? 58 : 44,
-                            child: ElevatedButton(
-                              onPressed: _handleNext,
-                              child: Text(
-                                _currentPage == _totalPages - 1
+                            padding: EdgeInsets.symmetric(
+                              horizontal: context.horizontalPadding,
+                            ),
+                            child: context.themedElevatedButton(
+                                label: _currentPage == _totalPages - 1
                                     ? context.l10n.getStarted
                                     : context.l10n.next,
-                              ),
-                            ),
-                          ),
-                        ),
+                                onPressed: () => _handleNext())),
 
                         SizedBox(
                           height: context.bottomPadding + (isTablet ? 32 : 24),
@@ -222,7 +214,10 @@ class _OnboardingPage extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: isTablet ? 16 : 12),
+          SizedBox(
+              height: isTablet
+                  ? context.screenHeight * 0.1
+                  : context.screenHeight * 0.01),
 
           // ── Title ─────────────────────────────────────────────────────────
           Padding(
@@ -235,7 +230,7 @@ class _OnboardingPage extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: isTablet ? 16 : 12),
+          SizedBox(height: isTablet ? 16 : 8),
 
           // ── Description ───────────────────────────────────────────────────
           Padding(
@@ -243,7 +238,8 @@ class _OnboardingPage extends StatelessWidget {
                 EdgeInsets.symmetric(horizontal: context.horizontalPadding * 3),
             child: Text(
               data.descKey,
-              style: context.textTheme.bodyLarge,
+              style:
+                  context.textTheme.bodyLarge?.copyWith(color: AppColors.grey),
               textAlign: TextAlign.center,
             ),
           ),

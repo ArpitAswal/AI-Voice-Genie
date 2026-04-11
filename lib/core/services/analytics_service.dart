@@ -137,7 +137,8 @@ class AnalyticsService {
 
   /// Log when user successfully adds an API key for a provider
   Future<void> logModelKeyAdded(AiProviderId provider) async {
-    await _safeLog(FirebaseCollections.eventAiKeyAdded, {
+    await _safeLog(FirebaseCollections.eventModelKeyAdded, {
+      FirebaseCollections.paramModelUsed: provider.id,
       FirebaseCollections.paramModelName: provider.displayName,
       FirebaseCollections.paramModelFeatures: provider.features,
     });
@@ -147,6 +148,8 @@ class AnalyticsService {
   Future<void> logModelKeyRemoved(AiProviderId provider) async {
     await _safeLog(FirebaseCollections.eventModelKeyRemoved, {
       FirebaseCollections.paramModelUsed: provider.id,
+      FirebaseCollections.paramModelName: provider.displayName,
+      FirebaseCollections.paramModelFeatures: provider.features,
     });
   }
 

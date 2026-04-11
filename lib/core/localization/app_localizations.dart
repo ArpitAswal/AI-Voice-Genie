@@ -36,9 +36,14 @@ class AppLocalizations {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI Voice Genie',
       'app_tagline': 'Your intelligent AI assistant',
+      'ai_assist': 'Your AI assistant is ready to assist you.',
       'welcome_message': "Welcome to",
+      'morning': 'Good Morning',
+      'evening': 'Good Evening',
+      'afternoon': 'Good Afternoon',
       'ok': 'OK',
       'cancel': 'Cancel',
+      'user': 'User',
       'save': 'Save',
       'delete': 'Delete',
       'edit': 'Edit',
@@ -57,6 +62,9 @@ class AppLocalizations {
       'no_internet_connection': 'No internet connection. Please check your network.',
       'request_timed_out': 'Request timed out. Please try again.',
       'privacy_note': 'By continuing, you agree to our Terms of Service\nand Privacy Policy.',
+      'ask_user_todo': 'WHAT WOULD YOU LIKE TO DO?',
+      'ask_question': 'Ask a question',
+      'intelligent_models': 'INTELLIGENT AI MODELS',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'Continue with Google',
@@ -125,6 +133,10 @@ class AppLocalizations {
       'no_key_for_model': 'You haven\'t added an API key for this model.',
       'add_key_for_model': 'Add Key',
       'api_keys_secure_note': 'Your API key is secure. Only the company has the authority to save and manage your personal keys.',
+      'gpt_model_message': 'Master of conversational flow and complex text generation.',
+      'gemini_model_message': 'Multimodal powerhouse for advanced image and data synthesis.',
+      'claude_model_message': 'Expert analytical reasoning and long-form PDF understanding.',
+
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'Not supported',
@@ -183,6 +195,7 @@ class AppLocalizations {
       'open_settings': 'Open Settings',
 
       // ── Settings ───────────────────────────────────────────────────────────
+      'home': 'Home',
       'settings': 'Settings',
       'appearance': 'Appearance',
       'theme': 'Theme',
@@ -240,9 +253,14 @@ class AppLocalizations {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI वॉयस जीनी',
       'app_tagline': 'आपका बुद्धिमान AI सहायक',
+      'ai_assist': 'आपका एआई सहायक आपकी सहायता के लिए तैयार है।',
       'welcome_message' : 'आपका स्वागत है',
+      'morning': 'शुभ प्रभात',
+      'evening': 'शुभ संध्या',
+      'afternoon': 'शुभ दोपहर',
       'ok': 'ठीक है',
       'cancel': 'रद्द करें',
+      'user': 'User',
       'save': 'सहेजें',
       'delete': 'हटाएं',
       'edit': 'संपादित करें',
@@ -261,6 +279,9 @@ class AppLocalizations {
       'no_internet_connection': 'इंटरनेट कनेक्शन नहीं है। अपना नेटवर्क जांचें।',
       'request_timed_out': 'अनुरोध का समय समाप्त हो गया। पुनः प्रयास करें।',
       'privacy_note': 'आगे बढ़ने पर, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत होते हैं।',
+      'ask_user_todo': 'आप क्या करना चाहेंगे?',
+      'ask_question': 'प्रश्न पूछें',
+      'intelligent_models': 'INTELLIGENT AI MODELS',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'गूगल के साथ जारी रखें',
@@ -329,6 +350,9 @@ class AppLocalizations {
       'no_key_for_model': 'इस मॉडल के लिए API key नहीं जोड़ी गई।',
       'add_key_for_model': 'Key जोड़ें',
       'api_keys_secure_note': 'आपकी API की (key) सुरक्षित है। केवल कंपनी को ही आपकी व्यक्तिगत की (key) सहेजने का अधिकार है।',
+      'gpt_model_message': 'संवादात्मक प्रवाह और जटिल पाठ निर्माण में निपुण।',
+      'gemini_model_message': 'उन्नत छवि और डेटा संश्लेषण के लिए मल्टीमॉडल पावरहाउस।',
+      'claude_model_message': 'उत्कृष्ट विश्लेषणात्मक तर्क क्षमता और पीडीएफ फॉर्मेट को समझने की क्षमता।',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'समर्थित नहीं',
@@ -387,6 +411,7 @@ class AppLocalizations {
       'open_settings': 'सेटिंग खोलें',
 
       // ── Settings ───────────────────────────────────────────────────────────
+      'home': 'होम',
       'settings': 'सेटिंग',
       'appearance': 'दिखावट',
       'theme': 'थीम',
@@ -459,6 +484,7 @@ class AppLocalizations {
   String get welcome => translate('welcome_message');
   String get appName => translate('app_name');
   String get appTagline => translate('app_tagline');
+  String get aiAssist => translate('ai_assist');
   String get ok => translate('ok');
   String get cancel => translate('cancel');
   String get save => translate('save');
@@ -519,6 +545,20 @@ class AppLocalizations {
   String get titleRequired => translate('title_required');
   String get titleTooLong => translate('title_too_long');
   String get dateRequired => translate('date_required');
+  String get home => translate('home');
+  String get history => translate('history');
+  String get morning => translate('morning');
+  String get evening => translate('evening');
+  String get afternoon => translate('afternoon');
+  String get askTodo => translate('ask_user_todo');
+  String get askQuestion => translate('ask_question');
+  String get generateImage => translate('generate_image');
+  String get uploadPdf => translate('upload_pdf');
+  String get intelligentModels => translate('intelligent_models');
+  String get chatGPTModelMessage => translate('gpt_model_message');
+  String get geminiModelMessage => translate('gemini_model_message');
+  String get claudeModelMessage => translate('claude_model_message');
+  String get user => translate('user');
 }
 
 // ==========================================================================

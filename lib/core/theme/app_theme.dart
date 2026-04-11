@@ -59,14 +59,14 @@ class AppTheme {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
-            color: AppColors.lightBorder,
+            color: AppColors.lightDivider,
             width: 1.5,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(
-            color: AppColors.lightBorder,
+            color: AppColors.lightDivider,
             width: 1.5,
           ),
         ),
@@ -100,9 +100,8 @@ class AppTheme {
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
             elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(26),
-                side: const BorderSide(color: Colors.transparent)
-            ),
+                borderRadius: BorderRadius.circular(26),
+                side: const BorderSide(color: Colors.transparent)),
             textStyle: AppTextStyles.lightTextTheme.titleLarge,
             alignment: Alignment.center),
       ),
@@ -136,10 +135,9 @@ class AppTheme {
         color: AppColors.cardLight,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.lightBorder, width: 1),
+          borderRadius: BorderRadius.circular(context.isTablet ? 30 : 20),
+          side: const BorderSide(color: AppColors.lightDivider, width: 1),
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
 
       // Checkbox
@@ -150,7 +148,7 @@ class AppTheme {
           }
           return AppColors.white;
         }),
-        side: const BorderSide(color: AppColors.lightBorder, width: 1.5),
+        side: const BorderSide(color: AppColors.lightDivider, width: 1.5),
         checkColor: WidgetStateProperty.all(AppColors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
@@ -163,14 +161,14 @@ class AppTheme {
 
       // Divider
       dividerTheme: const DividerThemeData(
-        color: AppColors.lightBorder,
+        color: AppColors.lightDivider,
         thickness: 1,
         space: 1,
       ),
 
       // Bottom Navigation Bar
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.scaffoldLight,
+        backgroundColor: AppColors.cardLight,
         selectedItemColor: AppColors.primaryLight,
         unselectedItemColor: AppColors.lightTextSecondary,
         elevation: 0,
@@ -182,7 +180,7 @@ class AppTheme {
         backgroundColor: AppColors.cardLight,
         selectedColor: AppColors.primaryLight.withValues(alpha: 0.15),
         labelStyle: AppTextStyles.lightTextTheme.labelMedium,
-        side: const BorderSide(color: AppColors.lightBorder),
+        side: const BorderSide(color: AppColors.lightDivider),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),
@@ -246,11 +244,13 @@ class AppTheme {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkBorder, width: 1.5),
+          borderSide:
+              const BorderSide(color: AppColors.darkDivider, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkBorder, width: 1.5),
+          borderSide:
+              const BorderSide(color: AppColors.darkDivider, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -280,9 +280,8 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(26),
-            side: const BorderSide(color: Colors.transparent)
-          ),
+              borderRadius: BorderRadius.circular(26),
+              side: const BorderSide(color: Colors.transparent)),
           textStyle: AppTextStyles.darkTextTheme.titleLarge,
         ),
       ),
@@ -310,10 +309,9 @@ class AppTheme {
         color: AppColors.cardDark,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.darkBorder, width: 1),
+          borderRadius: BorderRadius.circular(context.isTablet ? 30 : 20),
+          side: const BorderSide(color: AppColors.darkDivider, width: 1),
         ),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -322,7 +320,7 @@ class AppTheme {
           }
           return AppColors.cardDark;
         }),
-        side: const BorderSide(color: AppColors.darkBorder, width: 1.5),
+        side: const BorderSide(color: AppColors.darkDivider, width: 1.5),
         checkColor: WidgetStateProperty.all(AppColors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
@@ -331,7 +329,7 @@ class AppTheme {
         size: context.isTablet ? 32 : 28,
       ),
       dividerTheme: const DividerThemeData(
-        color: AppColors.darkBorder,
+        color: AppColors.darkDivider,
         thickness: 1,
         space: 1,
       ),
@@ -346,7 +344,7 @@ class AppTheme {
         backgroundColor: AppColors.cardDark,
         selectedColor: AppColors.primaryDark.withValues(alpha: 0.25),
         labelStyle: AppTextStyles.darkTextTheme.labelMedium,
-        side: const BorderSide(color: AppColors.darkBorder),
+        side: const BorderSide(color: AppColors.darkDivider),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       ),

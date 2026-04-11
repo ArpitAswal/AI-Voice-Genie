@@ -10,22 +10,18 @@ class AppColors {
 
   // Primary brand color
   static const Color primaryLight = Color(0xFF7C9CFF);
-  static const Color primaryDark = Color(0xFF475DAF);
-
-  // Secondary Colors (Soft Cyan)
-  static const Color secondaryLight = Color(0xFF6EE7F9);
-  static const Color secondaryDark = Color(0xFF6EE7F9);
+  static const Color primaryDark = Color(0xFF5571D1);
 
   // Accent Glow
-  static const Color accentLight = Color(0xFF7C9CFF);
-  static const Color accentDark = Color(0xFF4DD0E1);
+  static const Color accentLight = Color(0xFFC1D4FB);
+  static const Color accentDark = Color(0xFF0B1220);
 
   // ── Background Colors ─────────────────────────────────────────────────────
   static const Color scaffoldLight = Color(0xFFE5E5E5);
   static const Color cardLight = Color(0xFFF7F8FA);
 
   static const Color scaffoldDark = Color(0xFF0B1220);
-  static const Color cardDark = Color(0xFF111827);
+  static const Color cardDark = Color(0xFF091328);
 
   // ── AppBar Colors ─────────────────────────────────────────────────────
   static const Color appBarLight = Color(0xFFFFFFFF);
@@ -37,36 +33,22 @@ class AppColors {
   // ── Text Colors ───────────────────────────────────────────────────────────
   static const Color lightTextPrimary = Color(0xFF040404);
   static const Color lightTextSecondary = Color(0xFFFFFFFF);
-  static const Color lightTextTertiary = Color(0xFF9E9E9E);
+  static const Color lightTextTertiary = Color(0xFF838383);
 
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
   static const Color darkTextSecondary = Color(0xFF000000);
-  static const Color darkTextTertiary = Color(0xFF9E9E9E);
-
-  // ── Button Colors ─────────────────────────────────────────────────────────
-  static const Color buttonPrimaryLight = Color(0xFF4DA6FF);
-  static const Color buttonTextLight = Color(0xFFFFFFFF);
-  static const Color buttonSecondaryLight = Color(0xFFE2E8F0);
-  static const Color buttonSecondaryTextLight = Color(0xFF0F172A);
-
-  static const Color buttonPrimaryDark = Color(0xFF4DA6FF);
-  static const Color buttonTextDark = Color(0xFFFFFFFF);
-  static const Color buttonSecondaryDark = Color(0xFF1F2937);
-  static const Color buttonSecondaryTextDark = Color(0xFFFFFFFF);
+  static const Color darkTextTertiary = Color(0xFF6D758C);
 
   // ── Border Colors ─────────────────────────────────────────────────────────
-  static const Color lightBorder = Color(0xFFE2E8F0);
-  static const Color darkBorder = Color(0xFF1F2937);
-
-  static const Color dividerLight = Color(0xFFE5E7EB);
-  static const Color dividerDark = Color(0xFF374151);
+  static const Color lightDivider = Color(0xFFD1D1D1);
+  static const Color darkDivider = Color(0xFF2B364C);
 
   // ── Common Colors ─────────────────────────────────────────────────────────
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
   static const Color grey = Color(0xFF9CA3AF);
-  static const Color greyLight = Color(0xFFE5E7EB);
-  static const Color greyDark = Color(0xFF374151);
+  static const Color purpleAccent = Color(0xFFC3B4FC);
+  static const Color tealAccent = Color(0xFF6EE7F9);
   static const Color transparent = Colors.transparent;
 
   // ── Status / Feedback Colors ──────────────────────────────────────────────
@@ -85,12 +67,10 @@ class AppColors {
 
   // Google Gemini brand color (their multi-color blue is the dominant hue)
   static const Color geminiBrand = Color(0xFF1A73E8);
-  static const Color geminiBrandLight = Color(0xFFE8F0FE);
   static const Color geminiBrandDark = Color(0xFF1557B0);
 
   // Anthropic Claude brand color (their signature amber/warm orange)
   static const Color claudeBrand = Color(0xFFD97706);
-  static const Color claudeBrandLight = Color(0xFFFEF3C7);
   static const Color claudeBrandDark = Color(0xFFB45309);
 
   // ── Chat Bubble Colors ────────────────────────────────────────────────────
@@ -122,14 +102,44 @@ class AppColors {
 
   // ── Gradient Definitions ──────────────────────────────────────────────────
   // Used for hero sections and loading shimmer effects
-  static const LinearGradient primaryGradientLight = LinearGradient(
-    colors: [Color(0xFF4DA6FF), Color(0xFF6EE7F9)],
+  static final LinearGradient primaryGradientLight = LinearGradient(
+    colors: [
+      purpleAccent.withValues(alpha: 0.3),
+      scaffoldLight.withValues(alpha: 0.1)
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  static final LinearGradient primaryGradientDark = LinearGradient(
+    colors: [tealAccent.withValues(alpha: 0.3), Colors.transparent],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+  );
+
+  static const LinearGradient openAIGradient = LinearGradient(
+      colors: [openAiBrand, openAiBrandDark],
+      begin: AlignmentGeometry.topLeft,
+      end: AlignmentGeometry.bottomRight);
+
+  static const LinearGradient geminiGradient = LinearGradient(
+      colors: [geminiBrand, geminiBrandDark],
+      begin: AlignmentGeometry.topLeft,
+      end: AlignmentGeometry.bottomRight);
+
+  static const LinearGradient claudeGradient = LinearGradient(
+      colors: [claudeBrand, claudeBrandDark],
+      begin: AlignmentGeometry.topLeft,
+      end: AlignmentGeometry.bottomRight);
+
+  static const LinearGradient lightVoiceGradient = LinearGradient(
+    colors: [primaryLight, tealAccent],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient primaryGradientDark = LinearGradient(
-    colors: [Color(0xFF1B2A4A), Color(0xFF4DA6FF)],
+  static const LinearGradient darkVoiceGradient = LinearGradient(
+    colors: [primaryDark, tealAccent],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

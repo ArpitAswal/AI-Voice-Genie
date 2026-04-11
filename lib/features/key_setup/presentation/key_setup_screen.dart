@@ -83,7 +83,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
             return SingleChildScrollView(
               padding: EdgeInsets.symmetric(
                 horizontal: context.horizontalPadding,
-                vertical: isTablet ? 32 : 24,
+                vertical: isTablet ? 32 : 12,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,7 +151,7 @@ class _SetupHeader extends StatelessWidget {
         SizedBox(height: isTablet ? 8 : 6),
         Text(
           context.l10n.keySetupSubTitle,
-          style: context.textTheme.headlineSmall,
+          style: context.textTheme.bodyLarge,
         ),
       ],
     );
@@ -266,7 +266,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                   children: [
                     _ProviderLogo(
                       provider: widget.provider,
-                      size: widget.isTablet ? 40 : 32,
+                      size: widget.isTablet ? 40 : 36,
                     ),
                     SizedBox(width: widget.isTablet ? 14 : 10),
                     Expanded(
@@ -297,37 +297,35 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
 
                   Form(
                     key: _formKey,
-                    child: TextFormField(
+                    child: context.themedTextField(
                       controller: _keyController,
                       obscureText: _obscureKey,
                       enabled: !isValidating,
-                      decoration: InputDecoration(
-                        hintText: context.l10n.keyHint,
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Toggle visibility
-                            IconButton(
-                              icon: Icon(
-                                _obscureKey
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 20,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _obscureKey = !_obscureKey),
+                      hint: context.l10n.keyHint,
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Toggle visibility
+                          IconButton(
+                            icon: Icon(
+                              _obscureKey
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 20,
                             ),
-                            // Paste button
-                            IconButton(
-                              icon: const Icon(
-                                Icons.content_paste_rounded,
-                                size: 20,
-                              ),
-                              onPressed: isValidating ? null : _handlePaste,
-                              tooltip: context.l10n.paste,
+                            onPressed: () =>
+                                setState(() => _obscureKey = !_obscureKey),
+                          ),
+                          // Paste button
+                          IconButton(
+                            icon: const Icon(
+                              Icons.content_paste_rounded,
+                              size: 20,
                             ),
-                          ],
-                        ),
+                            onPressed: isValidating ? null : _handlePaste,
+                            tooltip: context.l10n.paste,
+                          ),
+                        ],
                       ),
                       validator: (value) {
                         return Validators.validateApiKey(
@@ -368,11 +366,12 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                     ),
                   ],
                   if (error == null || error.isEmpty) ...[
-                    SizedBox(height: widget.isTablet ? 8 : 6)
+                    SizedBox(height: widget.isTablet ? 8 : 2)
                   ],
 
                   // ── Provider link + Validate button row ─────────────────
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // Link to get a key
                       Expanded(
@@ -383,38 +382,37 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                           ),
                         ),
                       ),
-                      SizedBox(
-                        height: widget.isTablet ? 44 : 38,
-                        child: ElevatedButton(
-                          onPressed: isValidating ? null : _handleValidate,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _providerColor(widget.provider),
-                            foregroundColor: AppColors.white,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: widget.isTablet ? 24 : 18,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
+                      SizedBox(width: context.isTablet ? 16 : 6),
+                      ElevatedButton(
+                        onPressed: isValidating ? null : _handleValidate,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _providerColor(widget.provider),
+                          foregroundColor: AppColors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: widget.isTablet ? 24 : 10,
+                            vertical: 0
                           ),
-                          child: isValidating
-                              ? SizedBox(
-                                  height: widget.isTablet ? 34 : 28,
-                                  width: widget.isTablet ? 34 : 28,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.white,
-                                  ),
-                                )
-                              : Text(
-                                  context.l10n.addKey,
-                                  style:
-                                      context.textTheme.labelMedium?.copyWith(
-                                    color: AppColors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
+                        child: isValidating
+                            ? SizedBox(
+                                height: widget.isTablet ? 34 : 28,
+                                width: widget.isTablet ? 34 : 28,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.white,
+                                ),
+                              )
+                            : Text(
+                                context.l10n.addKey,
+                                style:
+                                    context.textTheme.labelMedium?.copyWith(
+                                  color: AppColors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ],
                   ),
@@ -464,9 +462,9 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
       case ApiKeyStatus.invalid:
         return AppColors.error;
       case ApiKeyStatus.validating:
-        return _providerColor(widget.provider);
+        return AppColors.warning;
       case ApiKeyStatus.notAdded:
-        return context.isDark ? AppColors.darkBorder : AppColors.lightBorder;
+        return context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
     }
   }
 
@@ -505,21 +503,17 @@ class _ProviderLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color bgColor;
-    Color fgColor;
+    Gradient gradColor;
 
     switch (provider) {
       case AiProviderId.openAi:
-        bgColor = AppColors.openAiBrandLight;
-        fgColor = AppColors.openAiBrand;
+        gradColor = AppColors.openAIGradient;
         break;
       case AiProviderId.gemini:
-        bgColor = AppColors.geminiBrandLight;
-        fgColor = AppColors.geminiBrand;
+        gradColor = AppColors.geminiGradient;
         break;
       case AiProviderId.claude:
-        bgColor = AppColors.claudeBrandLight;
-        fgColor = AppColors.claudeBrand;
+        gradColor = AppColors.claudeGradient;
         break;
     }
 
@@ -527,14 +521,14 @@ class _ProviderLogo extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(size * 0.25),
+        gradient: gradColor,
+        borderRadius: BorderRadius.circular(size * 0.5),
       ),
       child: Center(
         child: FaIcon(
           _providerIcon(provider),
-          color: fgColor,
-          size: size * 0.55,
+          color: AppColors.white,
+          size: size * 0.6
         ),
       ),
     );
