@@ -26,7 +26,7 @@ import 'ai_provider_adapter.dart';
 ///
 /// Authentication: x-api-key header + anthropic-version header
 /// All errors are mapped to typed AiException subclasses.
-class ClaudeAdapter implements AiProviderAdapter {
+class ClaudeAdapter extends AiProviderAdapter {
   final http.Client _client;
 
   ClaudeAdapter({http.Client? client}) : _client = client ?? http.Client();
@@ -47,9 +47,9 @@ class ClaudeAdapter implements AiProviderAdapter {
       // Claude uses 'user' / 'assistant' roles — same as our MessageRole values
       final messages = [
         ...request.conversationHistory.map((msg) => {
-          'role': msg['role'],
-          'content': msg['content'] ?? '',
-        }),
+              'role': msg['role'],
+              'content': msg['content'] ?? '',
+            }),
         {'role': 'user', 'content': request.prompt},
       ];
 
@@ -58,19 +58,16 @@ class ClaudeAdapter implements AiProviderAdapter {
         body: {
           'model': AppConstants.claudeTextModel,
           'max_tokens': 2048,
-          'system':
-          'You are a helpful, accurate, and concise AI assistant. '
+          'system': 'You are a helpful, accurate, and concise AI assistant. '
               'Format responses clearly using markdown where appropriate.',
           'messages': messages,
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = _parseResponse(response, request.requestId);
-      final text =
-          data['content']?[0]?['text'] as String? ?? '';
-      final tokenCount =
-          (data['usage']?['input_tokens'] as int? ?? 0) +
-              (data['usage']?['output_tokens'] as int? ?? 0);
+      final text = data['content']?[0]?['text'] as String? ?? '';
+      final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
+          (data['usage']?['output_tokens'] as int? ?? 0);
 
       stopwatch.stop();
       return AiResponse.text(
@@ -100,7 +97,7 @@ class ClaudeAdapter implements AiProviderAdapter {
     // Defensive guard in case of incorrect direct instantiation.
     throw UnsupportedError(
       'Claude does not support image generation. '
-          'This method should never be called — check ProviderRegistry.',
+      'This method should never be called — check ProviderRegistry.',
     );
   }
 
@@ -144,9 +141,8 @@ class ClaudeAdapter implements AiProviderAdapter {
 
       final data = _parseResponse(response, request.requestId);
       final text = data['content']?[0]?['text'] as String? ?? '';
-      final tokenCount =
-          (data['usage']?['input_tokens'] as int? ?? 0) +
-              (data['usage']?['output_tokens'] as int? ?? 0);
+      final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
+          (data['usage']?['output_tokens'] as int? ?? 0);
 
       stopwatch.stop();
       return AiResponse.text(
@@ -173,8 +169,7 @@ class ClaudeAdapter implements AiProviderAdapter {
   }) async {
     final stopwatch = Stopwatch()..start();
 
-    final systemPrompt =
-        'You are a document analysis assistant. '
+    final systemPrompt = 'You are a document analysis assistant. '
         'The following is extracted text from a PDF titled '
         '"${request.pdfFileName ?? "document"}".\n\n'
         'Document content:\n\n${request.pdfText ?? ""}\n\n'
@@ -196,9 +191,8 @@ class ClaudeAdapter implements AiProviderAdapter {
 
       final data = _parseResponse(response, request.requestId);
       final text = data['content']?[0]?['text'] as String? ?? '';
-      final tokenCount =
-          (data['usage']?['input_tokens'] as int? ?? 0) +
-              (data['usage']?['output_tokens'] as int? ?? 0);
+      final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
+          (data['usage']?['output_tokens'] as int? ?? 0);
 
       stopwatch.stop();
       return AiResponse.text(
@@ -236,9 +230,9 @@ class ClaudeAdapter implements AiProviderAdapter {
 
   /// Parse HTTP response and map to typed AiExceptions.
   Map<String, dynamic> _parseResponse(
-      http.Response response,
-      String requestId,
-      ) {
+    http.Response response,
+    String requestId,
+  ) {
     debugPrint('🟠 Claude: ${response.statusCode}');
 
     if (response.statusCode == 200) {
@@ -269,11 +263,5 @@ class ClaudeAdapter implements AiProviderAdapter {
       message: 'Unexpected Claude error: $error',
       provider: AiProviderId.claude,
     );
-  }
-
-  @override
-  Future<AiResponse> execute({required AiRequest request, required String apiKey}) {
-    // TODO: implement execute
-    throw UnimplementedError();
   }
 }

@@ -21,7 +21,7 @@ class FirebaseCollections {
   // ── Subcollection/Document Names ───────────────────────────────────────────────────
   static const String users = 'Users';
   static const String userModel = 'User_Model';
-  static const String conversations = 'conversations';
+  static const String conversations = 'AI_Conversations';
   static const String messages = 'messages';
   static const String apiKeys = 'Users_API_Keys';
 
@@ -37,7 +37,7 @@ class FirebaseCollections {
 
   /// AI_Voice_Genie/users/{uid}/conversations/{conversationId}
   static String conversationDoc(String uid, String conversationId) =>
-      '$root/$users/$uid/$conversations/$conversationId';
+      '$root/$conversations/$uid/$conversationId';
 
   /// AI_Voice_Genie/users/{uid}/conversations/{conversationId}/messages/{messageId}
   static String messageDoc(

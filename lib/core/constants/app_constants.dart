@@ -74,8 +74,8 @@ class AppConstants {
   static const String openAiTtsVoice = 'alloy'; // default voice
 
   // ── Gemini Model Names ────────────────────────────────────────────────────
-  static const String geminiTextModel = 'gemini-2.0-flash';
-  static const String geminiVisionModel = 'gemini-2.0-flash'; // multimodal
+  static const String geminiTextModel = 'gemini-2.5-flash';
+  static const String geminiVisionModel = 'gemini-2.5-flash'; // multimodal
   static const String geminiImageGenModel = 'gemini-2.0-flash-exp-image-generation';
 
   // ── Claude Model Names ────────────────────────────────────────────────────

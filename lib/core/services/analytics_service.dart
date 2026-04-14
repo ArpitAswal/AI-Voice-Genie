@@ -71,7 +71,7 @@ class AnalyticsService {
       FirebaseCollections.paramModelAttempted: modelAttempted.id,
       FirebaseCollections.paramCapability: capability.id,
       FirebaseCollections.paramFailureType: failureType.value,
-      FirebaseCollections.paramFallbackTriggered: fallbackTriggered,
+      FirebaseCollections.paramFallbackTriggered: fallbackTriggered.toString(),
     });
   }
 
@@ -122,14 +122,14 @@ class AnalyticsService {
   /// Log when user uses voice-to-text input
   Future<void> logVoiceInputUsed({required bool usedAiStt}) async {
     await _safeLog(FirebaseCollections.eventVoiceInputUsed, {
-      'used_ai_stt': usedAiStt,
+      'used_ai_stt': usedAiStt.toString(),
     });
   }
 
   /// Log when user plays a voice response
   Future<void> logVoiceOutputUsed({required bool usedAiTts}) async {
     await _safeLog(FirebaseCollections.eventVoiceOutputUsed, {
-      'used_ai_tts': usedAiTts,
+      'used_ai_tts': usedAiTts.toString(),
     });
   }
 

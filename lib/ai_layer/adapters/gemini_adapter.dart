@@ -21,7 +21,7 @@ import 'ai_provider_adapter.dart';
 ///
 /// Authentication: API key passed as query parameter (?key=...)
 /// All errors are mapped to typed AiException subclasses.
-class GeminiAdapter implements AiProviderAdapter {
+class GeminiAdapter extends AiProviderAdapter {
   final http.Client _client;
 
   GeminiAdapter({http.Client? client}) : _client = client ?? http.Client();
@@ -43,11 +43,11 @@ class GeminiAdapter implements AiProviderAdapter {
       final contents = [
         // Previous conversation history
         ...request.conversationHistory.map((msg) => {
-          'role': msg['role'] == 'assistant' ? 'model' : 'user',
-          'parts': [
-            {'text': msg['content'] ?? ''},
-          ],
-        }),
+              'role': msg['role'] == 'assistant' ? 'model' : 'user',
+              'parts': [
+                {'text': msg['content'] ?? ''},
+              ],
+            }),
         // Current user prompt
         {
           'role': 'user',
@@ -110,7 +110,9 @@ class GeminiAdapter implements AiProviderAdapter {
               ],
             },
           ],
-          'generationConfig': {'responseModalities': ['IMAGE', 'TEXT']},
+          'generationConfig': {
+            'responseModalities': ['IMAGE', 'TEXT']
+          },
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
@@ -217,8 +219,7 @@ class GeminiAdapter implements AiProviderAdapter {
   }) async {
     final stopwatch = Stopwatch()..start();
 
-    final systemContext =
-        'You are a document analysis assistant. '
+    final systemContext = 'You are a document analysis assistant. '
         'The following is extracted text from a PDF titled '
         '"${request.pdfFileName ?? "document"}".\n\n'
         'Document:\n${request.pdfText ?? ""}\n\n'
@@ -282,9 +283,9 @@ class GeminiAdapter implements AiProviderAdapter {
 
   /// Parse HTTP response and map to typed AiExceptions.
   Map<String, dynamic> _parseResponse(
-      http.Response response,
-      String requestId,
-      ) {
+    http.Response response,
+    String requestId,
+  ) {
     debugPrint('🔷 Gemini: ${response.statusCode}');
 
     if (response.statusCode == 200) {
@@ -313,8 +314,7 @@ class GeminiAdapter implements AiProviderAdapter {
 
   /// Extract text from Gemini's nested response structure.
   String _extractTextFromResponse(Map<String, dynamic> data) {
-    final parts =
-    data['candidates']?[0]?['content']?['parts'] as List?;
+    final parts = data['candidates']?[0]?['content']?['parts'] as List?;
     if (parts == null || parts.isEmpty) return '';
 
     return parts
@@ -340,11 +340,5 @@ class GeminiAdapter implements AiProviderAdapter {
       message: 'Unexpected Gemini error: $error',
       provider: AiProviderId.gemini,
     );
-  }
-
-  @override
-  Future<AiResponse> execute({required AiRequest request, required String apiKey}) {
-    // TODO: implement execute
-    throw UnimplementedError();
   }
 }

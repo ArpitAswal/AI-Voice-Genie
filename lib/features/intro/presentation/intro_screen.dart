@@ -1,6 +1,7 @@
 import 'package:ai_voice_genie/core/constants/app_constants.dart';
 import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
 import 'package:ai_voice_genie/core/localization/app_localizations.dart';
+import 'package:ai_voice_genie/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -217,28 +218,44 @@ class IntroScreen extends StatelessWidget {
           ),
         ),
         SizedBox(width: context.isTablet ? 16 : 8),
-        Flexible(
+        Expanded(
           child: Text(
             userName,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: context.isDark ? AppColors.primaryLight : AppColors.primaryDark
-            ),
+                color: context.isDark
+                    ? AppColors.primaryLight
+                    : AppColors.primaryDark),
           ),
         ),
+        Container(
+          decoration: BoxDecoration(
+              gradient: context.isDark
+                  ? AppColors.darkVoiceGradient
+                  : AppColors.lightVoiceGradient,
+              shape: BoxShape.circle),
+          child: IconButton(
+              onPressed: () {
+                AppRoutes.navigateTo(context, AppRoutes.chat);
+              },
+              icon: const FaIcon(
+                FontAwesomeIcons.message,
+                color: Colors.white,
+              )),
+        )
       ],
     );
   }
 
   String _getGreeting(BuildContext context) {
-      final hour = DateTime.now().hour;
+    final hour = DateTime.now().hour;
 
-      if (hour < 12) {
-        return context.l10n.morning;
-      } else if (hour < 17) {
-        return context.l10n.afternoon;
-      } else {
-        return context.l10n.evening;
-      }
+    if (hour < 12) {
+      return context.l10n.morning;
+    } else if (hour < 17) {
+      return context.l10n.afternoon;
+    } else {
+      return context.l10n.evening;
+    }
   }
 }
 

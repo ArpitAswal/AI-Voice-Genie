@@ -62,7 +62,6 @@ class AppColors {
 
   // OpenAI / ChatGPT brand color (their official green)
   static const Color openAiBrand = Color(0xFF10A37F);
-  static const Color openAiBrandLight = Color(0xFFE6F7F4);
   static const Color openAiBrandDark = Color(0xFF0D8A6B);
 
   // Google Gemini brand color (their multi-color blue is the dominant hue)

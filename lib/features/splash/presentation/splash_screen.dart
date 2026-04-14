@@ -10,6 +10,7 @@ import 'package:ai_voice_genie/core/router/app_routes.dart';
 import 'package:ai_voice_genie/features/auth/presentation/auth_provider.dart';
 
 import '../../../core/extensions/build_context_extensions.dart';
+import '../../key_setup/presentation/api_key_provider.dart';
 
 /// Splash screen for AI Voice Genie.
 ///
@@ -94,6 +95,8 @@ class _SplashScreenState extends State<SplashScreen> {
       // Authenticated state but no user model — safety fallback
       _navigateUnauthenticated();
       return;
+    } else{
+     context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
     }
 
     if (!user.onboardingDone) {

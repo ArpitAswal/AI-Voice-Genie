@@ -1,4 +1,5 @@
 import 'package:ai_voice_genie/features/auth/presentation/auth_screen.dart';
+import 'package:ai_voice_genie/features/chat_prompt/presentation/chat_screen.dart';
 import 'package:ai_voice_genie/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
@@ -221,7 +222,7 @@ class AppRoutes {
       // ── Chat ───────────────────────────────────────────────────────────────
       case chat:
         return _buildRoute(
-          const _PlaceholderScreen(label: 'ChatScreen'),
+          const ChatScreen(),
           settings,
           TransitionType.slide,
         );

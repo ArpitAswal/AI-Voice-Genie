@@ -21,7 +21,7 @@ import 'ai_provider_adapter.dart';
 ///
 /// All errors are mapped to typed AiException subclasses.
 /// Raw HTTP/provider errors never escape this class.
-class OpenAiAdapter implements AiProviderAdapter {
+class OpenAiAdapter extends AiProviderAdapter {
   final http.Client _client;
 
   OpenAiAdapter({http.Client? client}) : _client = client ?? http.Client();
@@ -44,8 +44,7 @@ class OpenAiAdapter implements AiProviderAdapter {
         // System prompt — sets the assistant's behavior
         {
           'role': 'system',
-          'content':
-          'You are a helpful, accurate, and concise AI assistant. '
+          'content': 'You are a helpful, accurate, and concise AI assistant. '
               'Format responses clearly using markdown where appropriate.',
         },
         // Include previous conversation messages for context
@@ -67,10 +66,8 @@ class OpenAiAdapter implements AiProviderAdapter {
 
       final data = _parseResponse(response, request.requestId);
 
-      final text =
-          data['choices'][0]['message']['content'] as String? ?? '';
-      final tokenCount =
-          data['usage']?['total_tokens'] as int? ?? 0;
+      final text = data['choices'][0]['message']['content'] as String? ?? '';
+      final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -167,8 +164,7 @@ class OpenAiAdapter implements AiProviderAdapter {
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = _parseResponse(response, request.requestId);
-      final text =
-          data['choices'][0]['message']['content'] as String? ?? '';
+      final text = data['choices'][0]['message']['content'] as String? ?? '';
       final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
 
       stopwatch.stop();
@@ -220,8 +216,7 @@ class OpenAiAdapter implements AiProviderAdapter {
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = _parseResponse(response, request.requestId);
-      final text =
-          data['choices'][0]['message']['content'] as String? ?? '';
+      final text = data['choices'][0]['message']['content'] as String? ?? '';
       final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
 
       stopwatch.stop();
@@ -260,9 +255,9 @@ class OpenAiAdapter implements AiProviderAdapter {
 
   /// Parse HTTP response and map status codes to typed AiExceptions.
   Map<String, dynamic> _parseResponse(
-      http.Response response,
-      String requestId,
-      ) {
+    http.Response response,
+    String requestId,
+  ) {
     debugPrint(
       '🤖 OpenAI [${response.request?.url.path}]: ${response.statusCode}',
     );
@@ -296,11 +291,5 @@ class OpenAiAdapter implements AiProviderAdapter {
       message: 'Unexpected OpenAI error: $error',
       provider: AiProviderId.openAi,
     );
-  }
-
-  @override
-  Future<AiResponse> execute({required AiRequest request, required String apiKey}) {
-    // TODO: implement execute
-    throw UnimplementedError();
   }
 }
