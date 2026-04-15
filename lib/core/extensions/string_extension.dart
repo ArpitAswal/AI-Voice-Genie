@@ -36,6 +36,55 @@ extension StringExtension on String {
     if (length <= 8) return '****';
     return '${substring(0, 4)}...${substring(length - 4)}';
   }
+
+  ///automatic conversation title generation,
+  ///similar to what systems like ChatGPT or Anthropic’s Claude do.
+  String generateConversationTitle(String input) {
+    if (input.trim().isEmpty) return "New Chat";
+
+    // Normalize
+    String text = input.toLowerCase();
+
+    // Remove common filler phrases
+    final fillers = [
+      "please",
+      "can you",
+      "could you",
+      "i want to",
+      "i need",
+      "help me",
+      "how to",
+    ];
+
+    for (var filler in fillers) {
+      text = text.replaceAll(filler, "");
+    }
+
+    // Remove punctuation
+    text = text.replaceAll(RegExp(r'[^\w\s]'), '');
+
+    // Split words
+    List<String> words = text.split(RegExp(r'\s+'));
+
+    // Remove stop words
+    final stopWords = [
+      "the", "is", "a", "an", "to", "of", "for", "and", "in", "on", "with"
+    ];
+
+    words.removeWhere((word) => stopWords.contains(word));
+
+    // Take first 5–6 meaningful words
+    List<String> selected = words.take(6).toList();
+
+    if (selected.isEmpty) return "New Chat";
+
+    // Convert to Title Case
+    String title = selected.map((word) {
+      return word[0].toUpperCase() + word.substring(1);
+    }).join(" ");
+
+    return title;
+  }
 }
 
 /// DateTime formatting extensions for conversation timestamps.
@@ -67,7 +116,7 @@ extension DateTimeExtension on DateTime {
     final date = DateTime(year, month, day);
 
     if (date == today) return toTimeString;
-    return '${toConversationDate} $toTimeString';
+    return '$toConversationDate $toTimeString';
   }
 
   /// Returns true if this date is today

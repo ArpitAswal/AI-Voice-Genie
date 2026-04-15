@@ -56,10 +56,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final results = await _repository.getConversations(
-        uid: uid,
-        limit: 15,
-      );
+      final results = <ConversationModel>[];
 
       setState(() {
         _conversations.addAll(results);
@@ -87,10 +84,10 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     if (uid == null) return;
 
     try {
-      await _repository.deleteConversation(
-        uid: uid,
-        conversationId: conversation.id,
-      );
+      // await _repository.deleteConversation(
+      //   uid: uid,
+      //   conversationId: conversation.id,
+      // );
 
       setState(
           () => _conversations.removeWhere((c) => c.id == conversation.id));

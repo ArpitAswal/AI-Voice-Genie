@@ -6,8 +6,12 @@ import '../../../core/enums/app_enums.dart';
 
 /// Immutable entity representing a single message in a conversation.
 ///
-/// Stored in Firestore at:
-///   AI_Voice_Genie/users/{uid}/conversations/{conversationId}/messages/{messageId}
+/// In Firestore, messages are stored as prompt+response pairs:
+///   AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}/messages/{messageId}
+///   Each document contains both the user prompt and AI response.
+///
+/// In the UI, each pair is split back into two MessageModel instances
+/// (one user, one assistant) for display in the chat list.
 ///
 /// Supports all content types: text, image URL, PDF summary, voice transcript.
 class MessageModel {
@@ -126,6 +130,53 @@ class MessageModel {
     };
   }
 
+  /// Serialize for Hive/JSON cache — uses ISO 8601 string instead of FieldValue.
+  Map<String, dynamic> toCacheMap() {
+    return {
+      'id': id,
+      FirebaseCollections.fieldMessageRole: role.value,
+      FirebaseCollections.fieldMessageContent: content,
+      FirebaseCollections.fieldMessageContentType: contentType.value,
+      FirebaseCollections.fieldMessageTimestamp: timestamp.toIso8601String(),
+      FirebaseCollections.fieldMessageTokenCount: tokenCount,
+      FirebaseCollections.fieldMessageStatus: status.value,
+      if (modelUsed != null)
+        FirebaseCollections.fieldMessageModelUsed: modelUsed!.id,
+      if (imageUrl != null) FirebaseCollections.fieldMessageImageUrl: imageUrl,
+      if (pdfName != null) FirebaseCollections.fieldMessagePdfName: pdfName,
+    };
+  }
+
+  /// Deserialize from Hive/JSON cache — reads ISO 8601 timestamp string.
+  factory MessageModel.fromCacheMap(Map<String, dynamic> data) {
+    return MessageModel(
+      id: data['id'] as String? ?? '',
+      role: MessageRole.fromValue(
+        data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
+      ),
+      content: data[FirebaseCollections.fieldMessageContent] as String? ?? '',
+      contentType: MessageContentType.fromValue(
+        data[FirebaseCollections.fieldMessageContentType] as String? ?? 'text',
+      ),
+      timestamp: DateTime.tryParse(
+            data[FirebaseCollections.fieldMessageTimestamp] as String? ?? '',
+          ) ??
+          DateTime.now(),
+      modelUsed: data[FirebaseCollections.fieldMessageModelUsed] is String
+          ? AiProviderId.fromId(
+              data[FirebaseCollections.fieldMessageModelUsed] as String,
+            )
+          : null,
+      tokenCount:
+          data[FirebaseCollections.fieldMessageTokenCount] as int? ?? 0,
+      status: MessageStatus.fromValue(
+        data[FirebaseCollections.fieldMessageStatus] as String? ?? 'delivered',
+      ),
+      imageUrl: data[FirebaseCollections.fieldMessageImageUrl] as String?,
+      pdfName: data[FirebaseCollections.fieldMessagePdfName] as String?,
+    );
+  }
+
   // ── Context history format ────────────────────────────────────────────────
 
   /// Convert to the format expected by AI provider adapters for history.
@@ -134,6 +185,79 @@ class MessageModel {
       'role': role.value,
       'content': content,
     };
+  }
+
+  // ── Paired Firestore Serialization ────────────────────────────────────────
+  //
+  // Firestore stores each prompt + response as ONE document.
+  // The pairId is the user message's UUID.
+  // When reading back, we split into two MessageModels with deterministic IDs:
+  //   user    → '{pairId}_user'
+  //   assistant → '{pairId}_ai'
+
+  /// Combine a user prompt and AI response into a single Firestore document.
+  ///
+  /// Uses [userMessage.id] as the Firestore document ID (the pair ID).
+  static Map<String, dynamic> pairToFirestore({
+    required MessageModel userMessage,
+    required MessageModel aiMessage,
+  }) {
+    return {
+      FirebaseCollections.fieldPrompt: userMessage.content,
+      FirebaseCollections.fieldResponse: aiMessage.content,
+      FirebaseCollections.fieldModelUsed: aiMessage.modelUsed?.id,
+      FirebaseCollections.fieldTokenCount: aiMessage.tokenCount,
+      FirebaseCollections.fieldContentType: aiMessage.contentType.value,
+      FirebaseCollections.fieldStatus: aiMessage.status.value,
+      FirebaseCollections.fieldTimestamp: FieldValue.serverTimestamp(),
+      if (aiMessage.imageUrl != null)
+        FirebaseCollections.fieldImageUrl: aiMessage.imageUrl,
+      if (aiMessage.pdfName != null)
+        FirebaseCollections.fieldPdfName: aiMessage.pdfName,
+    };
+  }
+
+  /// Split a Firestore paired document back into two MessageModels.
+  ///
+  /// Returns [userMessage, aiMessage] in chronological order.
+  static List<MessageModel> pairFromFirestore(
+    String docId,
+    Map<String, dynamic> data,
+  ) {
+    final timestamp =
+        (data[FirebaseCollections.fieldTimestamp] as Timestamp?)?.toDate() ??
+            DateTime.now();
+
+    final userMsg = MessageModel(
+      id: '${docId}_user',
+      role: MessageRole.user,
+      content: data[FirebaseCollections.fieldPrompt] as String? ?? '',
+      timestamp: timestamp,
+      status: MessageStatus.delivered,
+    );
+
+    final aiMsg = MessageModel(
+      id: '${docId}_ai',
+      role: MessageRole.assistant,
+      content: data[FirebaseCollections.fieldResponse] as String? ?? '',
+      contentType: MessageContentType.fromValue(
+        data[FirebaseCollections.fieldContentType] as String? ?? 'text',
+      ),
+      timestamp: timestamp,
+      modelUsed: data[FirebaseCollections.fieldModelUsed] is String
+          ? AiProviderId.fromId(
+              data[FirebaseCollections.fieldModelUsed] as String,
+            )
+          : null,
+      tokenCount: data[FirebaseCollections.fieldTokenCount] as int? ?? 0,
+      status: MessageStatus.fromValue(
+        data[FirebaseCollections.fieldStatus] as String? ?? 'delivered',
+      ),
+      imageUrl: data[FirebaseCollections.fieldImageUrl] as String?,
+      pdfName: data[FirebaseCollections.fieldPdfName] as String?,
+    );
+
+    return [userMsg, aiMsg];
   }
 
   // ── copyWith ──────────────────────────────────────────────────────────────

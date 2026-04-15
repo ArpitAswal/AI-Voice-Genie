@@ -235,10 +235,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       return const SizedBox.shrink();
                     }
 
-                    return MessageBubble(
-                      message: messages[adjustedIndex],
-                      isTablet: isTablet,
-                    );
+                    return SizedBox();
+                    // return MessageBubble(
+                    //   message: messages[adjustedIndex],
+                    //   isTablet: isTablet,
+                    // );
                   },
                 );
               },

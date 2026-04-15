@@ -11,62 +11,20 @@ import 'message_model.dart';
 ///
 /// Implementation: ChatRepositoryImpl
 abstract class ChatRepository {
-  // ── Conversation Operations ───────────────────────────────────────────────
-
-  /// Create a new conversation document in Firestore.
-  ///
-  /// Called when the user sends their very first message.
-  /// Returns the newly created ConversationModel with its Firestore ID.
-  Future<ConversationModel> createConversation({
-    required String uid,
-    required String firstMessagePreview,
-    required ConversationCapability capability,
-    required AiProviderId firstProvider,
-  });
-
-  /// Update conversation metadata after a new message exchange.
-  ///
-  /// Updates: lastMessage, lastMessageAt, messageCount, lastProvider.
-  Future<void> updateConversationMetadata({
-    required String uid,
-    required String conversationId,
-    required String lastMessage,
-    required AiProviderId lastProvider,
-    required int newMessageCount,
-  });
-
-  /// Load a single conversation by ID.
-  ///
-  /// Checks Hive cache first, falls back to Firestore.
-  Future<ConversationModel?> getConversation({
-    required String uid,
-    required String conversationId,
-  });
-
-  /// Delete a conversation and all its messages.
-  Future<void> deleteConversation({
-    required String uid,
-    required String conversationId,
-  });
-
-  /// Load a paginated list of conversations, newest first.
-  ///
-  /// [afterDocument] — Firestore cursor for pagination.
-  Future<List<ConversationModel>> getConversations({
-    required String uid,
-    int limit = 15,
-    DocumentSnapshot? afterDocument,
-  });
 
   // ── Message Operations ────────────────────────────────────────────────────
 
-  /// Save a list of messages (user + AI pair) to Firestore.
+  /// Save a prompt + response pair as a single Firestore document.
   ///
-  /// Uses a batch write for atomicity — both messages written together.
-  Future<void> saveMessages({
+  /// The [userMessage.id] is used as the Firestore document ID.
+  /// Both the prompt and AI response are stored in one document.
+  Future<void> saveMessagePair({
     required String uid,
     required String conversationId,
-    required List<MessageModel> messages,
+    required MessageModel userMessage,
+    required MessageModel aiMessage,
+    bool isFirstMessage = false,
+    ConversationModel? conversationModel, // only required when isFirstMessage = true
   });
 
   /// Load the most recent [limit] messages for a conversation.

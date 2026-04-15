@@ -1,4 +1,6 @@
+import 'package:ai_voice_genie/core/extensions/string_extension.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../ai_layer/models/ai_request.dart';
 import '../../../ai_layer/orchestrator/ai_orchestrator.dart';
@@ -91,10 +93,10 @@ class ChatProvider extends ChangeNotifier {
       }
 
       // Load conversation metadata
-      _activeConversation = await _repository.getConversation(
-        uid: uid,
-        conversationId: conversationId,
-      );
+      // _activeConversation = await _repository.getConversation(
+      //   uid: uid,
+      //   conversationId: conversationId,
+      // );
 
       // Fresh path: load from Firestore
       final fresh = await _repository.getMessages(
@@ -172,6 +174,7 @@ class ChatProvider extends ChangeNotifier {
     _errorMessage = null;
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
+    // final userMessage = MessageModel.userMessage(prompt.trim());
     final userMessage = MessageModel.userMessage(prompt.trim());
     _messages.add(userMessage);
     _isGenerating = true;
@@ -179,9 +182,9 @@ class ChatProvider extends ChangeNotifier {
 
     // ── Step 2: Create conversation if this is the first message ──────────────
     final isNewConversation = _activeConversation == null;
+    ConversationModel? newConversation;
     if (isNewConversation) {
       try {
-
         await _analytics.logConversationStarted(
           capability: capability,
           provider: validProviders.isNotEmpty
@@ -189,17 +192,23 @@ class ChatProvider extends ChangeNotifier {
               : AiProviderId.openAi,
         );
 
-        _activeConversation = await _repository.createConversation(
-          uid: uid,
-          firstMessagePreview: prompt.trim(),
+        // Build the conversation model in memory — written to Firestore
+        // together with the first message pair in one batch (Step 6)
+        final conversationId = const Uuid().v4();
+        final title = prompt.trim().generateConversationTitle.toString();
+        newConversation = ConversationModel(
+          id: conversationId,
+          title: title,
+          lastMessage: prompt.trim(),
           capability: capability,
-          firstProvider: validProviders.isNotEmpty
+          lastProvider: validProviders.isNotEmpty
               ? validProviders.first
               : AiProviderId.openAi,
         );
+        _activeConversation = newConversation;
       } catch (e) {
         // Conversation creation failed — roll back and show error
-        _messages.remove(userMessage);
+        // _messages.remove(userMessage);
         _isGenerating = false;
         _errorMessage = 'something_went_wrong';
         notifyListeners();
@@ -244,22 +253,13 @@ class ChatProvider extends ChangeNotifier {
       // ── Step 6: Persist to Firestore (non-blocking side effect) ──────────
       final conversationId = _activeConversation!.id;
       await EffectBus.instance.safeEffect(() async {
-        await _repository.saveMessages(
+        await _repository.saveMessagePair(
           uid: uid,
           conversationId: conversationId,
-          messages: [
-            _messages[
-                optimisticIndex != -1 ? optimisticIndex : _messages.length - 2],
-            aiMessage,
-          ],
-        );
-
-        await _repository.updateConversationMetadata(
-          uid: uid,
-          conversationId: conversationId,
-          lastMessage: aiMessage.content,
-          lastProvider: aiResponse.modelUsed,
-          newMessageCount: _messages.length,
+          userMessage: userMessage,
+          aiMessage: aiMessage,
+          isFirstMessage: isNewConversation,
+          conversationModel: isNewConversation ? _activeConversation : null,
         );
       });
 
@@ -306,10 +306,10 @@ class ChatProvider extends ChangeNotifier {
     if (conversationId == null) return false;
 
     try {
-      await _repository.deleteConversation(
-        uid: uid,
-        conversationId: conversationId,
-      );
+      // await _repository.deleteConversation(
+      //   uid: uid,
+      //   conversationId: conversationId,
+      // );
       clearConversation();
       return true;
     } on ChatException {

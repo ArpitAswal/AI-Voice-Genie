@@ -4,15 +4,18 @@
 /// Prevents typos in collection names across the codebase.
 ///
 /// Schema:
-///   AI_Voice_Genie/           ← root collection (app name — MUST NOT change)
-///     users/                  ← subcollection
-///       {uid}/                ← document per user
-///         conversations/      ← subcollection
-///           {conversationId}/
-///             messages/
-///               {messageId}
-///         apiKeys/
-///           {providerId}
+///   AI_Voice_Genie/                             ← root collection
+///     AI_Conversations/                          ← namespace document
+///       {uid}/                                   ← user's conversations (collection)
+///         {conversationId}/                      ← conversation metadata (document)
+///           messages/                            ← messages subcollection
+///             {messageId}                        ← prompt + response pair (document)
+///     Users/
+///       User_Model/
+///         {uid}                                  ← user profile (document)
+///     Users_API_Keys/
+///       {uid}/
+///         {providerId}                           ← API key (document)
 class FirebaseCollections {
   // ── Root Collection ───────────────────────────────────────────────────────
   // MUST be the app name — defined once here, never hardcoded elsewhere
@@ -22,27 +25,46 @@ class FirebaseCollections {
   static const String users = 'Users';
   static const String userModel = 'User_Model';
   static const String conversations = 'AI_Conversations';
-  static const String messages = 'messages';
+  static const String messages = 'Model_Messages';
   static const String apiKeys = 'Users_API_Keys';
 
   // ── Firestore Path Builders ───────────────────────────────────────────────
   // Use these everywhere instead of manually constructing paths.
+  //
+  // Firestore requires strictly alternating collection/document segments:
+  //   collection / document / collection / document / ...
+  //
+  // Schema:
+  //   AI_Voice_Genie (collection) → Users (doc) → User_Model (collection) → {uid} (doc)
+  //   AI_Voice_Genie (collection) → Users_API_Keys (doc) → {uid} (collection) → {providerId} (doc)
+  //   AI_Voice_Genie (collection) → AI_Conversations (doc) → {uid} (collection) → {conversationId} (doc)
+  //     → messages (collection) → {messageId} (doc)
 
-  /// AI_Voice_Genie/users/{uid}
+  /// Path: AI_Voice_Genie/Users/User_Model/{uid}
   static String userDoc(String uid) => '$root/$users/$userModel/$uid';
 
-  /// AI_Voice_Genie/apiKeys/{uid}/{providerId}
+  /// Path: AI_Voice_Genie/Users_API_Keys/{uid}/{providerId}
   static String apiKeyDoc(String uid, String providerId) =>
       '$root/$apiKeys/$uid/$providerId';
 
-  /// AI_Voice_Genie/users/{uid}/conversations/{conversationId}
-  static String conversationDoc(String uid, String conversationId) =>
-      '$root/$conversations/$uid/$conversationId';
+  /// Collection path for all conversations of a user:
+  /// AI_Voice_Genie/AI_Conversations/{uid}
+  static String conversationsCollection(String uid) =>
+      '$root/$conversations/$uid';
 
-  /// AI_Voice_Genie/users/{uid}/conversations/{conversationId}/messages/{messageId}
+  /// Path: AI_Voice_Genie/{uid}/AI_Conversations/{conversationId}
+  static String conversationDoc(String uid, String conversationId) =>
+      '$root/$uid/$conversations/$conversationId';
+
+  /// Collection path for messages within a conversation:
+  /// AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}/messages
+  static String messagesCollection(String uid, String conversationId) =>
+      '$root/$conversations/$uid/$conversationId/$messages';
+
+  /// Path: AI_Voice_Genie/{uid}/AI_Conversations/{conversationId}/messages/{message/response Id}
   static String messageDoc(
       String uid, String conversationId, String messageId) =>
-      '$root/$users/$uid/$conversations/$conversationId/$messages/$messageId';
+      '$root/$uid/$conversations/$conversationId/$messages/$messageId';
 
   // ── User Document Field Names ─────────────────────────────────────────────
   static const String fieldUid = 'uid';
@@ -78,16 +100,31 @@ class FirebaseCollections {
   static const String fieldConversationCapability = 'capability';
   static const String fieldConversationLastProvider = 'lastProvider';
 
-  // ── Message Document Field Names ──────────────────────────────────────────
-  // Value: 'user' | 'assistant'
+  // ── Message Pair Document Field Names ─────────────────────────────────────
+  // Each message document stores a prompt + response pair together.
+  //
+  // Document layout:
+  //   { prompt, response, modelUsed, tokenCount, contentType,
+  //     status, timestamp, imageUrl?, pdfName? }
+  static const String fieldPrompt = 'prompt';
+  static const String fieldResponse = 'response';
+  static const String fieldModelUsed = 'modelUsed';
+  static const String fieldTokenCount = 'tokenCount';
+  // Value: 'text' | 'image_url' | 'pdf_summary' | 'voice_transcript'
+  static const String fieldContentType = 'contentType';
+  // Value: 'delivered' | 'failed'
+  static const String fieldStatus = 'status';
+  static const String fieldTimestamp = 'timestamp';
+  static const String fieldImageUrl = 'imageUrl';
+  static const String fieldPdfName = 'pdfName';
+
+  // ── Legacy Message Field Names (used by Hive cache serialization) ─────────
   static const String fieldMessageRole = 'role';
   static const String fieldMessageContent = 'content';
-  // Value: 'text' | 'image_url' | 'pdf_summary' | 'voice_transcript'
   static const String fieldMessageContentType = 'contentType';
   static const String fieldMessageTimestamp = 'timestamp';
   static const String fieldMessageModelUsed = 'modelUsed';
   static const String fieldMessageTokenCount = 'tokenCount';
-  // Value: 'sent' | 'delivered' | 'failed' | 'partial'
   static const String fieldMessageStatus = 'status';
   static const String fieldMessageImageUrl = 'imageUrl';
   static const String fieldMessagePdfName = 'pdfName';

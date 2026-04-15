@@ -2,11 +2,8 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/firebase_collections.dart';
-import '../../../../core/constants/storage_keys.dart';
-import '../../../../core/enums/app_enums.dart';
 import '../../../../core/services/storage_service.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
@@ -15,12 +12,16 @@ import '../domain/message_model.dart';
 /// Concrete implementation of ChatRepository.
 ///
 /// Firestore structure:
-///   AI_Voice_Genie/users/{uid}/conversations/{id}       ← conversation metadata
-///   AI_Voice_Genie/users/{uid}/conversations/{id}/messages/{id}  ← messages
+///   AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}          ← conversation metadata
+///   AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}/messages/{id}  ← prompt + response pair
+///
+/// Each message document stores both the user's prompt and the AI's response
+/// together. When reading, each pair is split into two MessageModels for
+/// the UI (one user, one assistant).
 ///
 /// Hive cache:
 ///   Key: 'messages_{conversationId}' → JSON-encoded List<MessageModel>
-///   Used for instant load on conversation re-open.
+///   Uses individual message format (not paired) for fast UI rendering.
 class ChatRepositoryImpl implements ChatRepository {
   final FirebaseFirestore _firestore;
   final StorageService _storage;
@@ -31,217 +32,66 @@ class ChatRepositoryImpl implements ChatRepository {
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _storage = storage ?? StorageService();
 
-  // ── Conversation Operations ───────────────────────────────────────────────
-
-  @override
-  Future<ConversationModel> createConversation({
-    required String uid,
-    required String firstMessagePreview,
-    required ConversationCapability capability,
-    required AiProviderId firstProvider,
-  }) async {
-    try {
-      final conversationId = const Uuid().v4();
-      final docRef = _firestore.doc(
-        FirebaseCollections.conversationDoc(uid, conversationId),
-      );
-
-      // Truncate preview to 80 chars for title
-      final title = firstMessagePreview.length > 80
-          ? '${firstMessagePreview.substring(0, 80)}...'
-          : firstMessagePreview;
-
-      final model = ConversationModel(
-        id: conversationId,
-        title: title,
-        lastMessage: firstMessagePreview,
-        messageCount: 0,
-        capability: capability,
-        lastProvider: firstProvider,
-      );
-
-      await docRef.set({
-        ...model.toFirestore(),
-        FirebaseCollections.fieldConversationCreatedAt:
-            FieldValue.serverTimestamp(),
-        FirebaseCollections.fieldConversationLastMessageAt:
-            FieldValue.serverTimestamp(),
-        FirebaseCollections.fieldConversationUpdatedAt:
-            FieldValue.serverTimestamp(),
-      });
-
-      debugPrint('✅ Conversation created: $conversationId');
-      return model;
-    } on FirebaseException catch (e) {
-      throw ChatException(
-        ChatErrorCodes.saveFailed,
-        technicalMessage: 'createConversation failed: ${e.code}',
-      );
-    }
-  }
-
-  @override
-  Future<void> updateConversationMetadata({
-    required String uid,
-    required String conversationId,
-    required String lastMessage,
-    required AiProviderId lastProvider,
-    required int newMessageCount,
-  }) async {
-    try {
-      await _firestore
-          .doc(FirebaseCollections.conversationDoc(uid, conversationId))
-          .update({
-        FirebaseCollections.fieldConversationLastMessage:
-            lastMessage.length > 100
-                ? '${lastMessage.substring(0, 100)}...'
-                : lastMessage,
-        FirebaseCollections.fieldConversationLastProvider: lastProvider.id,
-        FirebaseCollections.fieldConversationMessageCount: newMessageCount,
-        FirebaseCollections.fieldConversationLastMessageAt:
-            FieldValue.serverTimestamp(),
-        FirebaseCollections.fieldConversationUpdatedAt:
-            FieldValue.serverTimestamp(),
-      });
-    } on FirebaseException catch (e) {
-      debugPrint('⚠️ updateConversationMetadata failed: ${e.code}');
-      // Non-fatal — metadata update failure does not affect the user experience
-    }
-  }
-
-  @override
-  Future<ConversationModel?> getConversation({
-    required String uid,
-    required String conversationId,
-  }) async {
-    try {
-      final doc = await _firestore
-          .doc(FirebaseCollections.conversationDoc(uid, conversationId))
-          .get();
-
-      if (!doc.exists || doc.data() == null) return null;
-      return ConversationModel.fromFirestore(doc.id, doc.data()!);
-    } catch (e) {
-      debugPrint('⚠️ getConversation error: $e');
-      return null;
-    }
-  }
-
-  @override
-  Future<void> deleteConversation({
-    required String uid,
-    required String conversationId,
-  }) async {
-    try {
-      // Delete all messages in the subcollection first
-      final messagesRef = _firestore
-          .collection(FirebaseCollections.conversationDoc(uid, conversationId))
-          .doc(FirebaseCollections.messages);
-
-      // Firestore does not auto-delete subcollections — batch delete messages
-      final messagesSnap = await _firestore
-          .collection(
-            '${FirebaseCollections.conversationDoc(uid, conversationId)}'
-            '/${FirebaseCollections.messages}',
-          )
-          .get();
-
-      final batch = _firestore.batch();
-      for (final doc in messagesSnap.docs) {
-        batch.delete(doc.reference);
-      }
-
-      // Delete the conversation document itself
-      batch.delete(
-        _firestore.doc(
-          FirebaseCollections.conversationDoc(uid, conversationId),
-        ),
-      );
-
-      await batch.commit();
-
-      // Clear Hive cache for this conversation
-      await _storage.setConversationCache(
-        '${StorageKeys.lastOpenConversationId}_$conversationId',
-        null,
-      );
-
-      debugPrint('🗑️ Conversation deleted: $conversationId');
-    } on FirebaseException catch (e) {
-      throw ChatException(
-        ChatErrorCodes.deleteFailed,
-        technicalMessage: 'deleteConversation failed: ${e.code}',
-      );
-    }
-  }
-
-  @override
-  Future<List<ConversationModel>> getConversations({
-    required String uid,
-    int limit = 15,
-    DocumentSnapshot? afterDocument,
-  }) async {
-    try {
-      // Build paginated query — newest first
-      Query query = _firestore
-          .collection(
-            '${FirebaseCollections.root}/${FirebaseCollections.users}'
-            '/$uid/${FirebaseCollections.conversations}',
-          )
-          .orderBy(
-            FirebaseCollections.fieldConversationLastMessageAt,
-            descending: true,
-          )
-          .limit(limit);
-
-      // Apply cursor for pagination
-      if (afterDocument != null) {
-        query = query.startAfterDocument(afterDocument);
-      }
-
-      final snapshot = await query.get();
-      return snapshot.docs
-          .map(
-            (doc) => ConversationModel.fromFirestore(
-              doc.id,
-              doc.data() as Map<String, dynamic>,
-            ),
-          )
-          .toList();
-    } on FirebaseException catch (e) {
-      throw ChatException(
-        ChatErrorCodes.loadFailed,
-        technicalMessage: 'getConversations failed: ${e.code}',
-      );
-    }
-  }
-
   // ── Message Operations ────────────────────────────────────────────────────
 
   @override
-  Future<void> saveMessages({
+  Future<void> saveMessagePair({
     required String uid,
     required String conversationId,
-    required List<MessageModel> messages,
+    required MessageModel userMessage,
+    required MessageModel aiMessage,
+    bool isFirstMessage = false,
+    ConversationModel? conversationModel,
   }) async {
     try {
       final batch = _firestore.batch();
 
-      for (final message in messages) {
-        final docRef = _firestore.doc(
-          FirebaseCollections.messageDoc(uid, conversationId, message.id),
+      // If first message: write the conversation document in the same batch
+      if (isFirstMessage && conversationModel != null) {
+        final convRef = _firestore.doc(
+          FirebaseCollections.conversationDoc(uid, conversationId),
         );
-        batch.set(docRef, message.toFirestore());
+        batch.set(convRef, {
+          ...conversationModel.toFirestore(),
+          FirebaseCollections.fieldConversationCreatedAt:
+              FieldValue.serverTimestamp(),
+          FirebaseCollections.fieldConversationLastMessageAt:
+              FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Subsequent messages: just update lastMessage preview + timestamp
+        final convRef = _firestore.doc(
+          FirebaseCollections.conversationDoc(uid, conversationId),
+        );
+        batch.update(convRef, {
+          FirebaseCollections.fieldConversationLastMessage: aiMessage.content,
+          FirebaseCollections.fieldConversationLastMessageAt:
+              FieldValue.serverTimestamp(),
+          FirebaseCollections.fieldConversationLastProvider:
+              aiMessage.modelUsed?.id,
+        });
       }
 
+      // Always: write user message + AI message together
+      final userRef = _firestore.doc(
+        FirebaseCollections.messageDoc(uid, conversationId, userMessage.id),
+      );
+      final aiRef = _firestore.doc(
+        FirebaseCollections.messageDoc(uid, conversationId, aiMessage.id),
+      );
+
+      batch.set(userRef, userMessage.toFirestore());
+      batch.set(aiRef, aiMessage.toFirestore());
+
       await batch.commit();
+
       debugPrint(
-        '✅ Saved ${messages.length} messages to conversation $conversationId',
+        '✅ Saved message pair to conversation $conversationId',
       );
     } on FirebaseException catch (e) {
       throw ChatException(
         ChatErrorCodes.saveFailed,
-        technicalMessage: 'saveMessages failed: ${e.code}',
+        technicalMessage: 'saveMessagePair failed: ${e.code}',
       );
     }
   }
@@ -256,10 +106,9 @@ class ChatRepositoryImpl implements ChatRepository {
     try {
       Query query = _firestore
           .collection(
-            '${FirebaseCollections.conversationDoc(uid, conversationId)}'
-            '/${FirebaseCollections.messages}',
+            FirebaseCollections.messagesCollection(uid, conversationId),
           )
-          .orderBy(FirebaseCollections.fieldMessageTimestamp, descending: true)
+          .orderBy(FirebaseCollections.fieldTimestamp, descending: true)
           .limit(limit);
 
       if (beforeDocument != null) {
@@ -268,17 +117,16 @@ class ChatRepositoryImpl implements ChatRepository {
 
       final snapshot = await query.get();
 
-      // Reverse to chronological order (oldest first for display)
-      final messages = snapshot.docs
-          .map(
-            (doc) => MessageModel.fromFirestore(
-              doc.id,
-              doc.data() as Map<String, dynamic>,
-            ),
-          )
-          .toList()
-          .reversed
-          .toList();
+      // Each doc is a prompt+response pair — split into individual messages
+      // Documents come newest-first, so reverse to chronological order
+      final messages = <MessageModel>[];
+      for (final doc in snapshot.docs.reversed) {
+        final pair = MessageModel.pairFromFirestore(
+          doc.id,
+          doc.data() as Map<String, dynamic>,
+        );
+        messages.addAll(pair); // [userMsg, aiMsg]
+      }
 
       return messages;
     } on FirebaseException catch (e) {
@@ -298,8 +146,11 @@ class ChatRepositoryImpl implements ChatRepository {
   }) async {
     try {
       // Serialize messages to JSON for Hive storage
+      // Uses toCacheMap() instead of toFirestore() to avoid FieldValue
+      // serialization errors (FieldValue.serverTimestamp() is a Firestore
+      // sentinel that cannot be JSON-encoded).
       final encoded = jsonEncode(
-        messages.map((m) => m.toFirestore()..['id'] = m.id).toList(),
+        messages.map((m) => m.toCacheMap()).toList(),
       );
       await _storage.setConversationCache(
         'messages_$conversationId',
@@ -324,8 +175,7 @@ class ChatRepositoryImpl implements ChatRepository {
       final list = jsonDecode(encoded) as List<dynamic>;
       return list
           .map(
-            (item) => MessageModel.fromFirestore(
-              item['id'] as String? ?? '',
+            (item) => MessageModel.fromCacheMap(
               item as Map<String, dynamic>,
             ),
           )
