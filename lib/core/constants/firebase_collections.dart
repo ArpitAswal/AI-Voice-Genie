@@ -52,22 +52,21 @@ class FirebaseCollections {
   static String conversationsCollection(String uid) =>
       '$root/$conversations/$uid';
 
-  /// Path: AI_Voice_Genie/{uid}/AI_Conversations/{conversationId}
+  /// Path: AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}
   static String conversationDoc(String uid, String conversationId) =>
-      '$root/$uid/$conversations/$conversationId';
+      '$root/$conversations/$uid/$conversationId';
 
   /// Collection path for messages within a conversation:
   /// AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}/messages
   static String messagesCollection(String uid, String conversationId) =>
       '$root/$conversations/$uid/$conversationId/$messages';
 
-  /// Path: AI_Voice_Genie/{uid}/AI_Conversations/{conversationId}/messages/{message/response Id}
+  /// Path: AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}/messages/{message/response Id}
   static String messageDoc(
           String uid, String conversationId, String messageId) =>
-      '$root/$uid/$conversations/$conversationId/$messages/$messageId';
+      '$root/$conversations/$uid/$conversationId/$messages/$messageId';
 
   // ── User Document Field Names ─────────────────────────────────────────────
-  static const String fieldUid = 'uid';
   static const String fieldDisplayName = 'displayName';
   static const String fieldEmail = 'email';
   static const String fieldPhotoUrl = 'photoUrl';

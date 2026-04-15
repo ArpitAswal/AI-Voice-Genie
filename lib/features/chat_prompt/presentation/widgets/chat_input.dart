@@ -1,7 +1,7 @@
+import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_validators.dart';
 
@@ -39,6 +39,7 @@ class ChatInputBar extends StatefulWidget {
 class _ChatInputBarState extends State<ChatInputBar> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   bool _canSend = false;
 
   @override
@@ -56,6 +57,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -74,103 +76,49 @@ class _ChatInputBarState extends State<ChatInputBar> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        context.horizontalPadding,
-        8,
-        context.horizontalPadding,
-        context.bottomPadding + 8,
-      ),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color:
-                context.isDark ? AppColors.darkDivider : AppColors.lightDivider,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // ── Attach Button (stubbed until Phase 5/6) ────────────────────────
-          _ActionButton(
-            icon: Icons.attach_file_rounded,
-            onTap: widget.onAttachTap,
-            tooltip: 'Attach',
-            isTablet: widget.isTablet,
-          ),
-
-          const SizedBox(width: 8),
-
-          // ── Text Input Field ───────────────────────────────────────────────
-          Expanded(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: widget.isTablet ? 160 : 120,
-              ),
-              child: TextField(
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        Expanded(
+          child: Scrollbar(
+            controller: _scrollController,
+            thumbVisibility: false, // Show when scrolling
+            child: context.themedTextField(
                 controller: _controller,
-                focusNode: _focusNode,
+                scrollController: _scrollController,
+                // focusNode: _focusNode,
                 enabled: !widget.isGenerating,
                 maxLines: null, // Expands with content
                 keyboardType: TextInputType.multiline,
                 textCapitalization: TextCapitalization.sentences,
-                style: context.textTheme.bodyMedium?.copyWith(
-                  fontSize: widget.isTablet ? 16 : 14,
-                ),
-                decoration: InputDecoration(
-                  hintText: l10n.translate('type_message'),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  // fillColor: context.isDark
-                  //     ? AppColors.darkCardBackground
-                  //     : AppColors.greyLight.withValues(alpha: 0.6),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: widget.isTablet ? 20 : 16,
-                    vertical: widget.isTablet ? 14 : 10,
-                  ),
-                ),
-              ),
-            ),
+                hint: l10n.translate('type_message'),
+                border: InputBorder.none,
+                contentPad: EdgeInsets.all(8.0)), // Add subtle padding
           ),
+        ),
 
-          const SizedBox(width: 8),
-
-          // ── Voice or Send Button ───────────────────────────────────────────
-          // When text is empty: show voice button (stub)
-          // When text has content: show send button
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _canSend
-                ? _SendButton(
-                    key: const ValueKey('send'),
-                    onTap: widget.isGenerating ? null : _handleSend,
-                    isGenerating: widget.isGenerating,
-                    isTablet: widget.isTablet,
-                  )
-                : _ActionButton(
-                    key: const ValueKey('voice'),
-                    icon: Icons.mic_rounded,
-                    onTap: widget.onVoiceTap,
-                    tooltip: l10n.translate('tap_to_speak'),
-                    isTablet: widget.isTablet,
-                    color: AppColors.primaryLight,
-                  ),
-          ),
-        ],
-      ),
+        // ── Voice or Send Button ───────────────────────────────────────────
+        // When text is empty: show voice button (stub)
+        // When text has content: show send button
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: _canSend
+              ? _SendButton(
+                  key: const ValueKey('send'),
+                  onTap: widget.isGenerating ? null : _handleSend,
+                  isGenerating: widget.isGenerating,
+                  isTablet: widget.isTablet,
+                )
+              : _ActionButton(
+                  key: const ValueKey('voice'),
+                  icon: Icons.mic_rounded,
+                  onTap: widget.onVoiceTap,
+                  tooltip: l10n.translate('tap_to_speak'),
+                  isTablet: widget.isTablet,
+                  color: AppColors.primaryLight,
+                ),
+        ),
+      ],
     );
   }
 }
@@ -207,8 +155,8 @@ class _SendButton extends StatelessWidget {
               : AppColors.primaryLight,
         ),
         child: isGenerating
-            ? Padding(
-                padding: const EdgeInsets.all(12),
+            ? const Padding(
+                padding: EdgeInsets.all(12),
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: AppColors.white,
@@ -246,21 +194,17 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = color ??
-        (context.isDark
-            ? AppColors.darkTextSecondary
-            : AppColors.lightTextSecondary);
+    final size = isTablet ? 48.0 : 42.0;
 
-    return IconButton(
-      icon: Icon(icon,
-          color: onTap != null ? iconColor : iconColor.withValues(alpha: 0.4)),
-      onPressed: onTap,
-      tooltip: tooltip,
-      iconSize: isTablet ? 26 : 22,
-      padding: EdgeInsets.zero,
-      constraints: BoxConstraints(
-        minWidth: isTablet ? 40 : 36,
-        minHeight: isTablet ? 40 : 36,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primaryLight.withValues(alpha: 0.5)),
+        child: Icon(icon),
       ),
     );
   }

@@ -24,7 +24,7 @@ class AppLocalizations {
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
-  _AppLocalizationsDelegate();
+      _AppLocalizationsDelegate();
 
   // ==========================================================================
   // LOCALIZED STRING MAPS
@@ -59,16 +59,21 @@ class AppLocalizations {
       'loading': 'Loading...',
       'please_wait': 'Please wait...',
       'something_went_wrong': 'Something went wrong. Please try again.',
-      'no_internet_connection': 'No internet connection. Please check your network.',
+      'no_internet_connection':
+          'No internet connection. Please check your network.',
       'request_timed_out': 'Request timed out. Please try again.',
-      'privacy_note': 'By continuing, you agree to our Terms of Service\nand Privacy Policy.',
+      'privacy_note':
+          'By continuing, you agree to our Terms of Service\nand Privacy Policy.',
       'ask_user_todo': 'WHAT WOULD YOU LIKE TO DO?',
       'ask_question': 'Ask a question',
       'intelligent_models': 'INTELLIGENT AI MODELS',
+      'create_image': 'Create image',
+      'generate_code': 'Generate code',
+      'pdf_summarize': 'Summarize pdf',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'Continue with Google',
-      'sign_in_with_apple' : 'Continue with Apple',
+      'sign_in_with_apple': 'Continue with Apple',
       'sign_out': 'Sign Out',
       'sign_out_confirm': 'Are you sure you want to sign out?',
       'welcome_back': 'Welcome back',
@@ -78,11 +83,14 @@ class AppLocalizations {
 
       // ── Onboarding ─────────────────────────────────────────────────────────
       'onboarding_title_1': 'Generate Text & Answer Questions',
-      'onboarding_desc_1': 'Have intelligent conversations with ChatGPT, Gemini, & Claude.',
+      'onboarding_desc_1':
+          'Have intelligent conversations with ChatGPT, Gemini, & Claude.',
       'onboarding_title_2': 'Generate & Describe Images',
-      'onboarding_desc_2': 'Generate images, analyze photos, & get answers from PDFs.',
+      'onboarding_desc_2':
+          'Generate images, analyze photos, & get answers from PDFs.',
       'onboarding_title_3': 'Speech To Text & Text To Speech',
-      'onboarding_desc_3': 'Speak your prompts & hear AI responses in natural voice.',
+      'onboarding_desc_3':
+          'Speak your prompts & hear AI responses in natural voice.',
       'get_started': 'Get Started',
 
       // ── API Key Setup ──────────────────────────────────────────────────────
@@ -113,10 +121,11 @@ class AppLocalizations {
       'copy_response': 'Copy',
       'copied_to_clipboard': 'Copied to clipboard',
       'delete_conversation': 'Delete Conversation',
-      'delete_conversation_confirm': 'Are you sure you want to delete this conversation? This cannot be undone.',
+      'delete_conversation_confirm':
+          'Are you sure you want to delete this conversation? This cannot be undone.',
       'conversation_deleted': 'Conversation deleted.',
       'no_conversations': 'No conversations yet',
-      'no_conversations_subtitle': 'Start a conversation with your AI assistant.',
+      'start_conversation': 'Start a conversation with your AI assistant.',
       'conversation_history': 'History',
       'today': 'Today',
       'yesterday': 'Yesterday',
@@ -132,20 +141,23 @@ class AppLocalizations {
       'model_switched': 'Switched to',
       'no_key_for_model': 'You haven\'t added an API key for this model.',
       'add_key_for_model': 'Add Key',
-      'api_keys_secure_note': 'Your API key is secure. Only the company has the authority to save and manage your personal keys.',
-      'gpt_model_message': 'Master of conversational flow and complex text generation.',
-      'gemini_model_message': 'Multimodal powerhouse for advanced image and data synthesis.',
-      'claude_model_message': 'Expert analytical reasoning and long-form PDF understanding.',
-
+      'api_keys_secure_note':
+          'Your API key is secure. Only the company has the authority to save and manage your personal keys.',
+      'gpt_model_message':
+          'Master of conversational flow and complex text generation.',
+      'gemini_model_message':
+          'Multimodal powerhouse for advanced image and data synthesis.',
+      'claude_model_message':
+          'Expert analytical reasoning and long-form PDF understanding.',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'Not supported',
       'capability_gap_image_gen':
-      'Claude doesn\'t support image generation. Switch to ChatGPT or Gemini.',
+          'Claude doesn\'t support image generation. Switch to ChatGPT or Gemini.',
       'capability_gap_stt':
-      'Claude doesn\'t support voice input. Switch to ChatGPT or Gemini.',
+          'Claude doesn\'t support voice input. Switch to ChatGPT or Gemini.',
       'capability_gap_tts':
-      'Claude doesn\'t support voice output. Switch to ChatGPT or Gemini.',
+          'Claude doesn\'t support voice output. Switch to ChatGPT or Gemini.',
       'use_another_model': 'Use another model',
       'available_models': 'Available models for this feature',
 
@@ -191,7 +203,8 @@ class AppLocalizations {
       'voice_input_failed': 'Could not understand. Please try again.',
       'voice_output_playing': 'Playing response...',
       'voice_output_stopped': 'Stopped.',
-      'microphone_permission_denied': 'Microphone permission is required for voice input.',
+      'microphone_permission_denied':
+          'Microphone permission is required for voice input.',
       'open_settings': 'Open Settings',
 
       // ── Settings ───────────────────────────────────────────────────────────
@@ -222,7 +235,8 @@ class AppLocalizations {
       'profile': 'Profile',
       'account': 'Account',
       'delete_account': 'Delete Account',
-      'delete_account_confirm': 'This will permanently delete your account and all conversations. This cannot be undone.',
+      'delete_account_confirm':
+          'This will permanently delete your account and all conversations. This cannot be undone.',
       'account_deleted': 'Account deleted.',
 
       // ── Validation ─────────────────────────────────────────────────────────
@@ -241,10 +255,12 @@ class AppLocalizations {
       // ── Error Messages ─────────────────────────────────────────────────────
       'error_rate_limit': 'Rate limit reached. Trying another model...',
       'error_invalid_key': 'Invalid API key. Please update it in Settings.',
-      'error_all_models_failed': 'All AI models are currently unavailable. Please try again later.',
+      'error_all_models_failed':
+          'All AI models are currently unavailable. Please try again later.',
       'error_pdf_too_large': 'PDF exceeds the 10MB size limit.',
       'error_image_too_large': 'Image exceeds the 5MB size limit.',
-      'error_no_models_with_key': 'Please add at least one API key in Settings to use AI features.',
+      'error_no_models_with_key':
+          'Please add at least one API key in Settings to use AI features.',
       'error_microphone': 'Microphone is not available on this device.',
     },
 
@@ -254,7 +270,7 @@ class AppLocalizations {
       'app_name': 'AI वॉयस जीनी',
       'app_tagline': 'आपका बुद्धिमान AI सहायक',
       'ai_assist': 'आपका एआई सहायक आपकी सहायता के लिए तैयार है।',
-      'welcome_message' : 'आपका स्वागत है',
+      'welcome_message': 'आपका स्वागत है',
       'morning': 'शुभ प्रभात',
       'evening': 'शुभ संध्या',
       'afternoon': 'शुभ दोपहर',
@@ -278,10 +294,14 @@ class AppLocalizations {
       'something_went_wrong': 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।',
       'no_internet_connection': 'इंटरनेट कनेक्शन नहीं है। अपना नेटवर्क जांचें।',
       'request_timed_out': 'अनुरोध का समय समाप्त हो गया। पुनः प्रयास करें।',
-      'privacy_note': 'आगे बढ़ने पर, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत होते हैं।',
+      'privacy_note':
+          'आगे बढ़ने पर, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत होते हैं।',
       'ask_user_todo': 'आप क्या करना चाहेंगे?',
       'ask_question': 'प्रश्न पूछें',
       'intelligent_models': 'INTELLIGENT AI MODELS',
+      'create_image': 'चित्र बनाएं',
+      'generate_code': 'कोड जनरेट करें',
+      'pdf_summarize': 'पीडीएफ का सारांश प्रस्तुत करेंं',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'गूगल के साथ जारी रखें',
@@ -295,11 +315,14 @@ class AppLocalizations {
 
       // ── Onboarding ─────────────────────────────────────────────────────────
       'onboarding_title_1': 'पाठ उत्पन्न करें और प्रश्नों के उत्तर दें',
-      'onboarding_desc_1': 'ChatGPT, Gemini और Claude के साथ सार्थक बातचीत करें।',
+      'onboarding_desc_1':
+          'ChatGPT, Gemini और Claude के साथ सार्थक बातचीत करें।',
       'onboarding_title_2': 'चित्र बनाएं और उनका वर्णन करें',
-      'onboarding_desc_2': 'चित्र बनाएं, तस्वीरों का विश्लेषण करें और पीडीएफ से उत्तर प्राप्त करें।',
+      'onboarding_desc_2':
+          'चित्र बनाएं, तस्वीरों का विश्लेषण करें और पीडीएफ से उत्तर प्राप्त करें।',
       'onboarding_title_3': 'चस्पीच टू टेक्स्ट और टेक्स्ट टू स्पीच',
-      'onboarding_desc_3': 'अपने प्रॉम्प्ट बोलें और AI के जवाब स्वाभाविक आवाज में सुनें।',
+      'onboarding_desc_3':
+          'अपने प्रॉम्प्ट बोलें और AI के जवाब स्वाभाविक आवाज में सुनें।',
       'get_started': 'शुरू करें',
 
       // ── API Key Setup ──────────────────────────────────────────────────────
@@ -321,7 +344,8 @@ class AppLocalizations {
       'get_claude_key': 'Claude key: console.anthropic.com',
       'no_key_added': 'Key नहीं जोड़ी गई',
       'key_added': 'Key जोड़ी गई',
-      'key_fetch_error': 'एआई कुंजी लोड करने में विफलता, कृपया ऐप को पुनः आरंभ करें।',
+      'key_fetch_error':
+          'एआई कुंजी लोड करने में विफलता, कृपया ऐप को पुनः आरंभ करें।',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'new_conversation': 'नई बातचीत',
@@ -333,7 +357,7 @@ class AppLocalizations {
       'delete_conversation_confirm': 'क्या आप इस बातचीत को हटाना चाहते हैं?',
       'conversation_deleted': 'बातचीत हटाई गई।',
       'no_conversations': 'अभी कोई बातचीत नहीं',
-      'no_conversations_subtitle': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
+      'start_conversation': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
       'conversation_history': 'इतिहास',
       'today': 'आज',
       'yesterday': 'कल',
@@ -349,19 +373,22 @@ class AppLocalizations {
       'model_switched': 'बदल गया',
       'no_key_for_model': 'इस मॉडल के लिए API key नहीं जोड़ी गई।',
       'add_key_for_model': 'Key जोड़ें',
-      'api_keys_secure_note': 'आपकी API की (key) सुरक्षित है। केवल कंपनी को ही आपकी व्यक्तिगत की (key) सहेजने का अधिकार है।',
+      'api_keys_secure_note':
+          'आपकी API की (key) सुरक्षित है। केवल कंपनी को ही आपकी व्यक्तिगत की (key) सहेजने का अधिकार है।',
       'gpt_model_message': 'संवादात्मक प्रवाह और जटिल पाठ निर्माण में निपुण।',
-      'gemini_model_message': 'उन्नत छवि और डेटा संश्लेषण के लिए मल्टीमॉडल पावरहाउस।',
-      'claude_model_message': 'उत्कृष्ट विश्लेषणात्मक तर्क क्षमता और पीडीएफ फॉर्मेट को समझने की क्षमता।',
+      'gemini_model_message':
+          'उन्नत छवि और डेटा संश्लेषण के लिए मल्टीमॉडल पावरहाउस।',
+      'claude_model_message':
+          'उत्कृष्ट विश्लेषणात्मक तर्क क्षमता और पीडीएफ फॉर्मेट को समझने की क्षमता।',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'समर्थित नहीं',
       'capability_gap_image_gen':
-      'Claude चित्र नहीं बना सकता। ChatGPT या Gemini का उपयोग करें।',
+          'Claude चित्र नहीं बना सकता। ChatGPT या Gemini का उपयोग करें।',
       'capability_gap_stt':
-      'Claude वॉयस इनपुट नहीं करता। ChatGPT या Gemini का उपयोग करें।',
+          'Claude वॉयस इनपुट नहीं करता। ChatGPT या Gemini का उपयोग करें।',
       'capability_gap_tts':
-      'Claude वॉयस आउटपुट नहीं करता। ChatGPT या Gemini का उपयोग करें।',
+          'Claude वॉयस आउटपुट नहीं करता। ChatGPT या Gemini का उपयोग करें।',
       'use_another_model': 'दूसरा मॉडल उपयोग करें',
       'available_models': 'इस सुविधा के लिए उपलब्ध मॉडल',
 
@@ -398,7 +425,8 @@ class AppLocalizations {
       'pdf_attached': 'PDF जोड़ी गई',
       'remove_pdf': 'PDF हटाएं',
       'no_pdf_uploaded': 'अभी कोई PDF अपलोड नहीं हुई',
-      'upload_pdf_subtitle': 'PDF अपलोड करें और उसकी सामग्री के बारे में प्रश्न पूछें।',
+      'upload_pdf_subtitle':
+          'PDF अपलोड करें और उसकी सामग्री के बारे में प्रश्न पूछें।',
 
       // ── Voice ──────────────────────────────────────────────────────────────
       'tap_to_speak': 'बोलने के लिए टैप करें',
@@ -407,7 +435,8 @@ class AppLocalizations {
       'voice_input_failed': 'समझ नहीं आया। पुनः प्रयास करें।',
       'voice_output_playing': 'जवाब सुनाया जा रहा है...',
       'voice_output_stopped': 'रुक गया।',
-      'microphone_permission_denied': 'वॉयस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
+      'microphone_permission_denied':
+          'वॉयस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
       'open_settings': 'सेटिंग खोलें',
 
       // ── Settings ───────────────────────────────────────────────────────────
@@ -438,7 +467,8 @@ class AppLocalizations {
       'profile': 'प्रोफ़ाइल',
       'account': 'खाता',
       'delete_account': 'खाता हटाएं',
-      'delete_account_confirm': 'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा।',
+      'delete_account_confirm':
+          'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा।',
       'account_deleted': 'खाता हटा दिया गया।',
 
       // ── Validation ─────────────────────────────────────────────────────────
@@ -457,10 +487,12 @@ class AppLocalizations {
       // ── Error Messages ─────────────────────────────────────────────────────
       'error_rate_limit': 'दर सीमा पहुंच गई। दूसरा मॉडल आज़मा रहे हैं...',
       'error_invalid_key': 'अमान्य API key। सेटिंग में अपडेट करें।',
-      'error_all_models_failed': 'सभी AI मॉडल अभी उपलब्ध नहीं हैं। बाद में प्रयास करें।',
+      'error_all_models_failed':
+          'सभी AI मॉडल अभी उपलब्ध नहीं हैं। बाद में प्रयास करें।',
       'error_pdf_too_large': 'PDF 10MB की सीमा से अधिक है।',
       'error_image_too_large': 'चित्र 5MB की सीमा से अधिक है।',
-      'error_no_models_with_key': 'AI सुविधाएं उपयोग करने के लिए सेटिंग में कम से कम एक API key जोड़ें।',
+      'error_no_models_with_key':
+          'AI सुविधाएं उपयोग करने के लिए सेटिंग में कम से कम एक API key जोड़ें।',
       'error_microphone': 'इस डिवाइस पर माइक्रोफ़ोन उपलब्ध नहीं है।',
     },
   };
@@ -559,6 +591,10 @@ class AppLocalizations {
   String get geminiModelMessage => translate('gemini_model_message');
   String get claudeModelMessage => translate('claude_model_message');
   String get user => translate('user');
+  String get startConversation => translate('start_conversation');
+  String get createImage => translate('create_image');
+  String get generateCode => translate('generate_code');
+  String get summarizePdf => translate('pdf_summarize');
 }
 
 // ==========================================================================
@@ -570,8 +606,7 @@ class _AppLocalizationsDelegate
   const _AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) =>
-      ['en', 'hi'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => ['en', 'hi'].contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) async =>
@@ -580,7 +615,6 @@ class _AppLocalizationsDelegate
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
-
 
 // =============================================================================
 // EXTENSION — convenience l10n access on BuildContext

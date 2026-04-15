@@ -29,19 +29,25 @@ extension WidgetExtensions on BuildContext {
     String? Function(String?)? validator,
     void Function(String)? onChanged,
     int? maxLength,
-    int maxLines = 1,
+    int? maxLines = 1,
     bool obscureText = false,
     Widget? suffixIcon,
     TextCapitalization textCapitalization = TextCapitalization.none,
     List<TextInputFormatter>? inputFormatters,
     bool enabled = true,
     String? errorText,
+    InputBorder? border,
+    EdgeInsets? contentPad,
+    ScrollController? scrollController,
+    ScrollPhysics? scrollPhysics,
   }) {
     final theme = Theme.of(this);
     final isDark = theme.brightness == Brightness.dark;
 
     return TextFormField(
       controller: controller,
+      scrollController: scrollController,
+      scrollPhysics: scrollPhysics,
       keyboardType: keyboardType,
       validator: validator,
       onChanged: onChanged,
@@ -67,33 +73,39 @@ extension WidgetExtensions on BuildContext {
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: isDark ? AppColors.cardDark : AppColors.cardLight,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: theme.colorScheme.primary),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.error),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-        ),
+        border: border ??
+            OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
+              ),
+            ),
+        enabledBorder: border ??
+            OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
+              ),
+            ),
+        focusedBorder: border ??
+            OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: theme.colorScheme.primary),
+            ),
+        errorBorder: border ??
+            OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.error),
+            ),
+        focusedErrorBorder: border ??
+            OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.error),
+            ),
+        contentPadding: contentPad ??
+            const EdgeInsets.symmetric(
+              horizontal: 16,
+            ),
       ),
     );
   }
