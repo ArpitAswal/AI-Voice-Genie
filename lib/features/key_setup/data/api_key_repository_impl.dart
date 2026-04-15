@@ -27,6 +27,10 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
   final StorageService _storage;
   final http.Client _httpClient;
 
+  /// In-memory cache for API keys loaded during the current session.
+  /// Minimizes Firestore reads during AI orchestration and fallbacks.
+  final Map<AiProviderId, ApiKeyModel> _memoryCache = {};
+
   ApiKeyRepositoryImpl({
     FirebaseFirestore? firestore,
     StorageService? storage,
@@ -155,6 +159,9 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
         FirebaseCollections.fieldKeyAddedAt: FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+      // Update memory cache
+      _memoryCache[providerId] = model;
+
       debugPrint('✅ Key saved [${providerId.id}] for user $uid');
     } on FirebaseException catch (e) {
       throw ApiKeyException(
@@ -192,7 +199,11 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
         }
       }
 
-      debugPrint('📦 Loaded ${result.length} keys for user $uid');
+      // Sync memory cache
+      _memoryCache.clear();
+      _memoryCache.addAll(result);
+
+      debugPrint('📦 Loaded ${result.length} keys for user $uid (and cached locally)');
       return result;
     } on FirebaseException catch (e) {
       debugPrint('⚠️ loadKeys Firestore error: ${e.code}');
@@ -209,13 +220,24 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
     required String uid,
     required AiProviderId providerId,
   }) async {
+    // Check memory cache first
+    if (_memoryCache.containsKey(providerId)) {
+      debugPrint('🚀 KeyRepository: memory cache hit [${providerId.id}]');
+      return _memoryCache[providerId];
+    }
+
     try {
       final doc = await _firestore
           .doc(FirebaseCollections.apiKeyDoc(uid, providerId.id))
           .get();
 
       if (!doc.exists || doc.data() == null) return null;
-      return ApiKeyModel.fromFirestore(doc.data()!);
+      final model = ApiKeyModel.fromFirestore(doc.data()!);
+
+      // Update memory cache
+      _memoryCache[providerId] = model;
+
+      return model;
     } catch (e) {
       debugPrint('⚠️ loadKey [${providerId.id}] error: $e');
       return null;
@@ -232,7 +254,11 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
     try {
       await _firestore
           .doc(FirebaseCollections.apiKeyDoc(uid, providerId.id))
-          .delete();
+          .get()
+          .then((doc) => doc.reference.delete());
+
+      // Update memory cache
+      _memoryCache.remove(providerId);
 
       debugPrint('🗑️ Key deleted [${providerId.id}] for user $uid');
     } on FirebaseException catch (e) {

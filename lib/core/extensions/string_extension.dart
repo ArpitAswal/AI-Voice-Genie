@@ -39,11 +39,11 @@ extension StringExtension on String {
 
   ///automatic conversation title generation,
   ///similar to what systems like ChatGPT or Anthropic’s Claude do.
-  String generateConversationTitle(String input) {
-    if (input.trim().isEmpty) return "New Chat";
+  String generateConversationTitle() {
+    if (trim().isEmpty) return "New Chat";
 
     // Normalize
-    String text = input.toLowerCase();
+    String text = toLowerCase();
 
     // Remove common filler phrases
     final fillers = [
@@ -68,7 +68,17 @@ extension StringExtension on String {
 
     // Remove stop words
     final stopWords = [
-      "the", "is", "a", "an", "to", "of", "for", "and", "in", "on", "with"
+      "the",
+      "is",
+      "a",
+      "an",
+      "to",
+      "of",
+      "for",
+      "and",
+      "in",
+      "on",
+      "with"
     ];
 
     words.removeWhere((word) => stopWords.contains(word));

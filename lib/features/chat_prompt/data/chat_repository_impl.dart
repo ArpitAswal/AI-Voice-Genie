@@ -46,27 +46,43 @@ class ChatRepositoryImpl implements ChatRepository {
     try {
       final batch = _firestore.batch();
 
+      // Determine the effective last message and its timestamp based on AI vs User content
+      final hasAiContent = aiMessage.content.trim().isNotEmpty;
+      final effectiveLastMessage =
+          hasAiContent ? aiMessage.content : userMessage.content;
+      final effectiveLastMessageAt =
+          hasAiContent ? aiMessage.timestamp : userMessage.timestamp;
+
       // If first message: write the conversation document in the same batch
       if (isFirstMessage && conversationModel != null) {
         final convRef = _firestore.doc(
           FirebaseCollections.conversationDoc(uid, conversationId),
         );
+
+        // Update the model locally (fields are final, so use copyWith)
+        final updatedModel = conversationModel.copyWith(
+          lastMessage: effectiveLastMessage,
+          lastMessageAt: effectiveLastMessageAt,
+          lastProvider: aiMessage.modelUsed,
+        );
+
         batch.set(convRef, {
-          ...conversationModel.toFirestore(),
+          ...updatedModel.toFirestore(),
           FirebaseCollections.fieldConversationCreatedAt:
               FieldValue.serverTimestamp(),
           FirebaseCollections.fieldConversationLastMessageAt:
-              FieldValue.serverTimestamp(),
+              effectiveLastMessageAt,
         });
       } else {
-        // Subsequent messages: just update lastMessage preview + timestamp
+        // Subsequent messages: update lastMessage preview, timestamp, and provider
         final convRef = _firestore.doc(
           FirebaseCollections.conversationDoc(uid, conversationId),
         );
         batch.update(convRef, {
-          FirebaseCollections.fieldConversationLastMessage: aiMessage.content,
+          FirebaseCollections.fieldConversationLastMessage:
+              effectiveLastMessage,
           FirebaseCollections.fieldConversationLastMessageAt:
-              FieldValue.serverTimestamp(),
+              effectiveLastMessageAt,
           FirebaseCollections.fieldConversationLastProvider:
               aiMessage.modelUsed?.id,
         });
@@ -74,10 +90,12 @@ class ChatRepositoryImpl implements ChatRepository {
 
       // Always: write user message + AI message together
       final userRef = _firestore.doc(
-        FirebaseCollections.messageDoc(uid, conversationId, userMessage.id),
+        FirebaseCollections.messageDoc(
+            uid, conversationId, "UserRef-${userMessage.id}"),
       );
       final aiRef = _firestore.doc(
-        FirebaseCollections.messageDoc(uid, conversationId, aiMessage.id),
+        FirebaseCollections.messageDoc(
+            uid, conversationId, "AIRef-${aiMessage.id}"),
       );
 
       batch.set(userRef, userMessage.toFirestore());

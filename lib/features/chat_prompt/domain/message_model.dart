@@ -33,6 +33,9 @@ class MessageModel {
   /// Whether this message is a temporary optimistic insert (not yet in Firestore)
   final bool isOptimistic;
 
+  /// List of valid providers available when this message was sent
+  final List<AiProviderId> validProviders;
+
   const MessageModel({
     required this.id,
     required this.role,
@@ -45,11 +48,15 @@ class MessageModel {
     this.imageUrl,
     this.pdfName,
     this.isOptimistic = false,
+    this.validProviders = const [],
   });
 
   // ── Factory: New user message (optimistic) ────────────────────────────────
 
-  factory MessageModel.userMessage(String content) {
+  factory MessageModel.userMessage(
+    String content, {
+    List<AiProviderId> validProviders = const [],
+  }) {
     return MessageModel(
       id: const Uuid().v4(),
       role: MessageRole.user,
@@ -57,6 +64,7 @@ class MessageModel {
       timestamp: DateTime.now(),
       status: MessageStatus.sending,
       isOptimistic: true,
+      validProviders: validProviders,
     );
   }
 
@@ -110,6 +118,11 @@ class MessageModel {
       ),
       imageUrl: data[FirebaseCollections.fieldMessageImageUrl] as String?,
       pdfName: data[FirebaseCollections.fieldMessagePdfName] as String?,
+      validProviders: (data[FirebaseCollections.fieldMessageValidProviders]
+                  as List<dynamic>?)
+              ?.map((e) => AiProviderId.fromId(e as String))
+              .toList() ??
+          [],
     );
   }
 
@@ -127,6 +140,9 @@ class MessageModel {
         FirebaseCollections.fieldMessageModelUsed: modelUsed!.id,
       if (imageUrl != null) FirebaseCollections.fieldMessageImageUrl: imageUrl,
       if (pdfName != null) FirebaseCollections.fieldMessagePdfName: pdfName,
+      if (validProviders.isNotEmpty)
+        FirebaseCollections.fieldMessageValidProviders:
+            validProviders.map((e) => e.id).toList(),
     };
   }
 
@@ -144,6 +160,7 @@ class MessageModel {
         FirebaseCollections.fieldMessageModelUsed: modelUsed!.id,
       if (imageUrl != null) FirebaseCollections.fieldMessageImageUrl: imageUrl,
       if (pdfName != null) FirebaseCollections.fieldMessagePdfName: pdfName,
+      'validProviders': validProviders.map((e) => e.id).toList(),
     };
   }
 
@@ -167,13 +184,16 @@ class MessageModel {
               data[FirebaseCollections.fieldMessageModelUsed] as String,
             )
           : null,
-      tokenCount:
-          data[FirebaseCollections.fieldMessageTokenCount] as int? ?? 0,
+      tokenCount: data[FirebaseCollections.fieldMessageTokenCount] as int? ?? 0,
       status: MessageStatus.fromValue(
         data[FirebaseCollections.fieldMessageStatus] as String? ?? 'delivered',
       ),
       imageUrl: data[FirebaseCollections.fieldMessageImageUrl] as String?,
       pdfName: data[FirebaseCollections.fieldMessagePdfName] as String?,
+      validProviders: (data['validProviders'] as List<dynamic>?)
+              ?.map((e) => AiProviderId.fromId(e as String))
+              .toList() ??
+          [],
     );
   }
 
@@ -214,6 +234,8 @@ class MessageModel {
         FirebaseCollections.fieldImageUrl: aiMessage.imageUrl,
       if (aiMessage.pdfName != null)
         FirebaseCollections.fieldPdfName: aiMessage.pdfName,
+      FirebaseCollections.fieldValidProviders:
+          userMessage.validProviders.map((e) => e.id).toList(),
     };
   }
 
@@ -234,6 +256,11 @@ class MessageModel {
       content: data[FirebaseCollections.fieldPrompt] as String? ?? '',
       timestamp: timestamp,
       status: MessageStatus.delivered,
+      validProviders:
+          (data[FirebaseCollections.fieldValidProviders] as List<dynamic>?)
+                  ?.map((e) => AiProviderId.fromId(e as String))
+                  .toList() ??
+              [],
     );
 
     final aiMsg = MessageModel(
@@ -274,6 +301,7 @@ class MessageModel {
     String? imageUrl,
     String? pdfName,
     bool? isOptimistic,
+    List<AiProviderId>? validProviders,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -287,6 +315,7 @@ class MessageModel {
       imageUrl: imageUrl ?? this.imageUrl,
       pdfName: pdfName ?? this.pdfName,
       isOptimistic: isOptimistic ?? this.isOptimistic,
+      validProviders: validProviders ?? this.validProviders,
     );
   }
 

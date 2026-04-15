@@ -73,6 +73,7 @@ class ConversationModel {
 
   Map<String, dynamic> toFirestore() {
     return {
+      FirebaseCollections.fieldConversationID: id,
       FirebaseCollections.fieldConversationTitle: title,
       FirebaseCollections.fieldConversationLastMessage: lastMessage,
       FirebaseCollections.fieldConversationMessageCount: messageCount,

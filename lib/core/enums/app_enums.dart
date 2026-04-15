@@ -20,7 +20,7 @@ enum AiProviderId {
   /// Convert a string ID back to the enum (used when reading from Firestore)
   static AiProviderId fromId(String id) {
     return AiProviderId.values.firstWhere(
-          (e) => e.id == id,
+      (e) => e.id == id,
       orElse: () => AiProviderId.openAi,
     );
   }
@@ -68,7 +68,7 @@ enum MessageRole {
 
   static MessageRole fromValue(String value) {
     return MessageRole.values.firstWhere(
-          (e) => e.value == value,
+      (e) => e.value == value,
       orElse: () => MessageRole.user,
     );
   }
@@ -76,7 +76,7 @@ enum MessageRole {
 
 /// Content type of a message — determines how the UI renders it.
 enum MessageContentType {
-  text('text'),
+  text('prompt_text'),
   imageUrl('image_url'),
   pdfSummary('pdf_summary'),
   voiceTranscript('voice_transcript');
@@ -86,7 +86,7 @@ enum MessageContentType {
 
   static MessageContentType fromValue(String value) {
     return MessageContentType.values.firstWhere(
-          (e) => e.value == value,
+      (e) => e.value == value,
       orElse: () => MessageContentType.text,
     );
   }
@@ -104,7 +104,7 @@ enum MessageStatus {
 
   static MessageStatus fromValue(String value) {
     return MessageStatus.values.firstWhere(
-          (e) => e.value == value,
+      (e) => e.value == value,
       orElse: () => MessageStatus.delivered,
     );
   }
@@ -144,7 +144,7 @@ enum ThemeType {
 
   static ThemeType fromValue(String value) {
     return ThemeType.values.firstWhere(
-          (e) => e.value == value,
+      (e) => e.value == value,
       orElse: () => ThemeType.system,
     );
   }
@@ -169,8 +169,8 @@ enum AppFeature {
 
 /// Conversation type — determines which feature screen opened it.
 enum ConversationCapability {
-  textChat('text'),
-  imageGeneration('image_gen'),
+  textChat('text_generate'),
+  imageGeneration('image_generate'),
   imageReading('image_read'),
   pdfReader('pdf_reader');
 
@@ -179,7 +179,7 @@ enum ConversationCapability {
 
   static ConversationCapability fromValue(String value) {
     return ConversationCapability.values.firstWhere(
-          (e) => e.value == value,
+      (e) => e.value == value,
       orElse: () => ConversationCapability.textChat,
     );
   }
@@ -233,7 +233,7 @@ enum SocialAuthProvider {
 
   static SocialAuthProvider fromId(String id) {
     return SocialAuthProvider.values.firstWhere(
-          (e) => e.id == id,
+      (e) => e.id == id,
       orElse: () => SocialAuthProvider.google,
     );
   }

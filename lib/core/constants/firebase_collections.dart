@@ -63,7 +63,7 @@ class FirebaseCollections {
 
   /// Path: AI_Voice_Genie/{uid}/AI_Conversations/{conversationId}/messages/{message/response Id}
   static String messageDoc(
-      String uid, String conversationId, String messageId) =>
+          String uid, String conversationId, String messageId) =>
       '$root/$uid/$conversations/$conversationId/$messages/$messageId';
 
   // ── User Document Field Names ─────────────────────────────────────────────
@@ -90,6 +90,7 @@ class FirebaseCollections {
   static const String fieldKeyLastValidated = 'lastValidated';
 
   // ── Conversation Document Field Names ─────────────────────────────────────
+  static const String fieldConversationID = 'conversationID';
   static const String fieldConversationTitle = 'title';
   static const String fieldConversationCreatedAt = 'createdAt';
   static const String fieldConversationUpdatedAt = 'updatedAt';
@@ -117,6 +118,7 @@ class FirebaseCollections {
   static const String fieldTimestamp = 'timestamp';
   static const String fieldImageUrl = 'imageUrl';
   static const String fieldPdfName = 'pdfName';
+  static const String fieldValidProviders = 'validProviders';
 
   // ── Legacy Message Field Names (used by Hive cache serialization) ─────────
   static const String fieldMessageRole = 'role';
@@ -128,6 +130,7 @@ class FirebaseCollections {
   static const String fieldMessageStatus = 'status';
   static const String fieldMessageImageUrl = 'imageUrl';
   static const String fieldMessagePdfName = 'pdfName';
+  static const String fieldMessageValidProviders = 'validProviders';
 
   // ── Analytics Event Names ─────────────────────────────────────────────────
   static const String eventSignInButtonTapped = 'sign_in_button_tapped';

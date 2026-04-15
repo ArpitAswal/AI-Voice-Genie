@@ -174,8 +174,10 @@ class ChatProvider extends ChangeNotifier {
     _errorMessage = null;
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
-    // final userMessage = MessageModel.userMessage(prompt.trim());
-    final userMessage = MessageModel.userMessage(prompt.trim());
+    final userMessage = MessageModel.userMessage(
+      prompt.trim(),
+      validProviders: validProviders,
+    );
     _messages.add(userMessage);
     _isGenerating = true;
     notifyListeners();
@@ -195,7 +197,7 @@ class ChatProvider extends ChangeNotifier {
         // Build the conversation model in memory — written to Firestore
         // together with the first message pair in one batch (Step 6)
         final conversationId = const Uuid().v4();
-        final title = prompt.trim().generateConversationTitle.toString();
+        final title = prompt.trim().generateConversationTitle();
         newConversation = ConversationModel(
           id: conversationId,
           title: title,

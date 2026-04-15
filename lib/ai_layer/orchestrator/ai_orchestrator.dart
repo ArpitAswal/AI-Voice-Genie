@@ -80,12 +80,14 @@ class AiOrchestrator {
           '[requestId: ${request.requestId}]',
     );
 
-    // Step 1: Check capability availability before any network calls
-    if (!ModelSelector.isCapabilityAvailable(
+    // Step 1: Get ordered provider list for this capability (filters by user keys)
+    final orderedProviders = ModelSelector.select(
       capability: request.capability,
       userKeyedProviders: userKeyedProviders,
-    )) {
-      // User has no provider with this capability
+    );
+
+    // Step 2: Handle capability gap (no provider available for this request)
+    if (orderedProviders.isEmpty) {
       final supportedBy = ModelSelector.providerNamesFor(request.capability);
       const error = AiExhaustedException(
         message: 'error_no_models_with_key',
@@ -107,12 +109,6 @@ class AiOrchestrator {
       EffectBus.instance.emit(error, StackTrace.current);
       throw error;
     }
-
-    // Step 2: Get ordered provider list for this capability
-    final orderedProviders = ModelSelector.select(
-      capability: request.capability,
-      userKeyedProviders: userKeyedProviders,
-    );
 
     debugPrint(
       '📋 Orchestrator: trying providers: '
