@@ -4,6 +4,7 @@ import 'package:ai_voice_genie/features/onboarding/presentation/onboarding_scree
 import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/chat_prompt/presentation/chat_detail_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/key_setup/presentation/key_setup_screen.dart';
 
@@ -230,19 +231,18 @@ class AppRoutes {
       case chatDetail:
         if (arguments is ChatDetailArguments) {
           return _buildRoute(
-            _PlaceholderScreen(
-              label: 'ChatDetailScreen: ${arguments.conversationId}',
-            ),
+            ChatDetailScreen(conversationId: arguments.conversationId,
+                initialTitle: arguments.initialTitle),
             settings,
-            TransitionType.slide,
+            TransitionType.fade,
+          );
+        } else{
+          return _buildRoute(
+            const ChatDetailScreen(conversationId: ''),
+            settings,
+            TransitionType.fade,
           );
         }
-        return _buildRoute(
-          const _PlaceholderScreen(label: 'ChatDetailScreen'),
-          settings,
-          TransitionType.slide,
-        );
-
       // ── Image Generator ────────────────────────────────────────────────────
       case imageGenerator:
         return _buildRoute(
@@ -325,7 +325,7 @@ class AppRoutes {
     Widget screen,
     RouteSettings? settings,
     TransitionType transition, {
-    Duration duration = const Duration(milliseconds: 300),
+    Duration duration = const Duration(milliseconds: 3000),
   }) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => screen,

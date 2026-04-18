@@ -1,7 +1,9 @@
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_input.dart';
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/message_bubble.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -44,7 +46,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadConversation();
+    if(widget.initialTitle != null) {
+      _loadConversation();
+    }
     _scrollController.addListener(_onScroll);
   }
 
@@ -162,17 +166,38 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 0,
+        automaticallyImplyLeading: true,
         title: Consumer<ChatProvider>(
-          builder: (_, chatProvider, __) => Text(
-            chatProvider.activeConversation?.title ??
-                widget.initialTitle ??
-                l10n.translate('new_conversation'),
-            overflow: TextOverflow.ellipsis,
-          ),
+          builder: (_, chatProvider, __) {
+            final titleStr = chatProvider.activeConversation?.title ??
+            widget.initialTitle ?? '';
+
+            if (titleStr.isEmpty) {
+              return Shimmer.fromColors(
+                baseColor: context.isDark ? Colors.grey[400]! : Colors.grey[200]!,
+                highlightColor: context.isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                child: Container(
+                  height: context.topPadding / 1.5,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+              );
+            }
+
+            return Text(
+              titleStr.isEmpty ? l10n.translate('new_conversation') : titleStr,
+              overflow: TextOverflow.ellipsis,
+              style: context.textTheme.titleLarge,
+            );
+          },
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_outline_rounded),
+            icon: const Icon(Icons.delete_forever_rounded),
             onPressed: _handleDelete,
             tooltip: l10n.translate('delete_conversation'),
           ),
@@ -185,7 +210,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             child: Consumer<ChatProvider>(
               builder: (context, chatProvider, _) {
                 final messages = chatProvider.messages;
-
                 if (chatProvider.isLoadingMessages && messages.isEmpty) {
                   return const Center(
                     child: CircularProgressIndicator(),
@@ -205,6 +229,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       (chatProvider.isGenerating ? 1 : 0) +
                       (chatProvider.isLoadingMessages ? 1 : 0),
                   itemBuilder: (context, index) {
+
                     // Load more indicator at top
                     if (index == 0 && chatProvider.isLoadingMessages) {
                       return const Padding(
@@ -235,11 +260,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       return const SizedBox.shrink();
                     }
 
-                    return SizedBox();
-                    // return MessageBubble(
-                    //   message: messages[adjustedIndex],
-                    //   isTablet: isTablet,
-                    // );
+                    return MessageBubble(
+                      message: messages[adjustedIndex],
+                      isTablet: isTablet,
+                    );
                   },
                 );
               },

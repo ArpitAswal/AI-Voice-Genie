@@ -57,59 +57,54 @@ class MessageBubble extends StatelessWidget {
           // Message bubble
           GestureDetector(
             onLongPress: () => _copyToClipboard(context),
-            child: ConstrainedBox(
+            child: Container(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width *
-                    (isTablet ? 0.65 : 0.78),
+                    (isTablet ? 0.65 : 0.85),
               ),
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isTablet ? 18 : 14,
-                  vertical: isTablet ? 14 : 10,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _isUser
+                    ? (context.isDark
+                        ? AppColors.userBubbleDark
+                        : AppColors.userBubbleLight)
+                    : (context.isDark
+                        ? AppColors.aiBubbleDark
+                        : AppColors.aiBubbleLight),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(_isUser ? 16 : 4),
+                  topRight: Radius.circular(_isUser ? 4 : 16),
+                  bottomLeft: const Radius.circular(16),
+                  bottomRight: const Radius.circular(16),
                 ),
-                decoration: BoxDecoration(
+                // border: _isUser
+                //     ? null
+                //     : Border.all(
+                //         color: context.isDark
+                //             ? AppColors.darkDivider
+                //             : AppColors.lightDivider,
+                //         width: 1,
+                //       ),
+                // boxShadow: [
+                //   BoxShadow(
+                //     color: AppColors.black.withValues(alpha: 0.06),
+                //     blurRadius: 4,
+                //     offset: const Offset(0, 2),
+                //   ),
+                // ],
+              ),
+              child: Text(
+                message.content,
+                style: context.textTheme.bodyMedium?.copyWith(
                   color: _isUser
-                      ? (context.isDark
-                          ? AppColors.userBubbleDark
-                          : AppColors.userBubbleLight)
+                      ? (_isUser
+                          ? AppColors.userBubbleTextLight
+                          : AppColors.userBubbleTextDark)
                       : (context.isDark
-                          ? AppColors.aiBubbleDark
-                          : AppColors.aiBubbleLight),
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(16),
-                    topRight: const Radius.circular(16),
-                    bottomLeft: Radius.circular(_isUser ? 16 : 4),
-                    bottomRight: Radius.circular(_isUser ? 4 : 16),
-                  ),
-                  border: _isUser
-                      ? null
-                      : Border.all(
-                          color: context.isDark
-                              ? AppColors.darkDivider
-                              : AppColors.lightDivider,
-                          width: 1,
-                        ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.black.withValues(alpha: 0.06),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  message.content,
-                  style: context.textTheme.bodyMedium?.copyWith(
-                    color: _isUser
-                        ? (_isUser
-                            ? AppColors.userBubbleTextLight
-                            : AppColors.userBubbleTextDark)
-                        : (context.isDark
-                            ? AppColors.aiBubbleTextDark
-                            : AppColors.aiBubbleTextLight),
-                    height: 1.5,
-                    fontSize: isTablet ? 16 : 14,
-                  ),
+                          ? AppColors.aiBubbleTextDark
+                          : AppColors.aiBubbleTextLight),
+                  height: 1.5,
+                  fontSize: isTablet ? 16 : 14,
                 ),
               ),
             ),
@@ -123,12 +118,7 @@ class MessageBubble extends StatelessWidget {
               children: [
                 Text(
                   message.timestamp.toTimeString,
-                  style: context.textTheme.labelSmall?.copyWith(
-                    color: context.isDark
-                        ? AppColors.darkTextSecondary
-                        : AppColors.lightTextSecondary,
-                    fontSize: isTablet ? 11 : 10,
-                  ),
+                  style: context.textTheme.bodySmall,
                 ),
                 // Sending status indicator for user messages
                 if (_isUser) ...[
@@ -168,25 +158,25 @@ class _StatusIcon extends StatelessWidget {
           height: 12,
           child: CircularProgressIndicator(
             strokeWidth: 1.5,
-            color: AppColors.white.withValues(alpha: 0.7),
+            color: context.theme.primaryColor,
           ),
         );
       case MessageStatus.delivered:
         return const Icon(
           Icons.done_rounded,
-          size: 12,
-          color: AppColors.white,
+          size: 16,
+          color: AppColors.success,
         );
       case MessageStatus.failed:
         return const Icon(
           Icons.error_outline_rounded,
-          size: 12,
+          size: 16,
           color: AppColors.error,
         );
       case MessageStatus.partial:
         return const Icon(
           Icons.schedule_rounded,
-          size: 12,
+          size: 16,
           color: AppColors.warning,
         );
     }
@@ -240,14 +230,6 @@ class _TypingIndicatorState extends State<TypingIndicator>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.provider != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: ModelIndicatorChip(
-                provider: widget.provider!,
-                isTablet: widget.isTablet,
-              ),
-            ),
           Container(
             padding: EdgeInsets.symmetric(
               horizontal: widget.isTablet ? 18 : 14,
@@ -314,8 +296,8 @@ class _AnimatedDot extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: (context.isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.lightTextSecondary)
+                    ? AppColors.primaryDark
+                    : AppColors.primaryLight)
                 .withValues(alpha: opacity),
           ),
         );

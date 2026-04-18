@@ -11,7 +11,6 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
-import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import 'chat_provider.dart';
@@ -46,38 +45,27 @@ class _ChatScreenState extends State<ChatScreen> {
     if (uid == null) return;
 
     final validProviders = context.read<ApiKeyProvider>().validProviders;
+    final chatProvider = context.read<ChatProvider>();
 
-    // ChatProvider.sendMessage creates the conversation and first message
-    final success = await context.read<ChatProvider>().sendMessage(
-          uid: uid,
-          prompt: prompt,
-          validProviders: validProviders,
-          capability: ConversationCapability.textChat,
-        );
+    // Start sending message without awaiting its completion.
+    // This allows synchronous state setup inside ChatProvider to complete,
+    // and then execution yields back to navigate immediately.
+    chatProvider.sendMessage(
+      uid: uid,
+      prompt: prompt,
+      validProviders: validProviders,
+      capability: ConversationCapability.textChat,
+    );
+
 
     if (!mounted) return;
 
-    if (success) {
-      final conversationId =
-          context.read<ChatProvider>().activeConversation?.id;
-
-      if (conversationId != null) {
-        // Navigate to ChatDetailScreen — replaces this screen so back goes to Home
-        AppRoutes.navigateAndReplace(
-          context,
-          AppRoutes.chatDetail,
-          arguments: ChatDetailArguments(
-            conversationId: conversationId,
-          ),
-        );
-      }
-    } else {
-      final error = context.read<ChatProvider>().errorMessage;
-      if (error != null) {
-        context.showError(error);
-        context.read<ChatProvider>().clearError();
-      }
-    }
+    final conversationID = chatProvider.activeConversation?.id;
+    AppRoutes.navigateAndReplace(context, AppRoutes.chatDetail,
+      arguments: ChatDetailArguments(
+        conversationId: conversationID ?? '',
+        initialTitle: null
+      ),);
   }
 
   @override
@@ -242,9 +230,10 @@ class _WelcomeContent extends StatelessWidget {
             ),
           ),
 
+          SizedBox(height: context.isTablet ? 24 : 12),
           Text(
             l10n.startConversation,
-            style: context.textTheme.titleMedium?.copyWith(
+            style: context.textTheme.titleMedium?.copyWith(color: context.theme.dividerColor,
                 fontWeight: FontWeight.w400, fontStyle: FontStyle.italic),
             textAlign: TextAlign.center,
           ),
@@ -314,7 +303,7 @@ class _SuggestionActionCard extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight:FontWeight.w400),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

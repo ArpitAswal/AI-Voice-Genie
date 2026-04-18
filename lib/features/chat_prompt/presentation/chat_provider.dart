@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:ai_voice_genie/core/extensions/string_extension.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
@@ -92,12 +94,6 @@ class ChatProvider extends ChangeNotifier {
         notifyListeners();
       }
 
-      // Load conversation metadata
-      // _activeConversation = await _repository.getConversation(
-      //   uid: uid,
-      //   conversationId: conversationId,
-      // );
-
       // Fresh path: load from Firestore
       final fresh = await _repository.getMessages(
         uid: uid,
@@ -187,20 +183,12 @@ class ChatProvider extends ChangeNotifier {
     ConversationModel? newConversation;
     if (isNewConversation) {
       try {
-        await _analytics.logConversationStarted(
-          capability: capability,
-          provider: validProviders.isNotEmpty
-              ? validProviders.first
-              : AiProviderId.openAi,
-        );
-
         // Build the conversation model in memory — written to Firestore
         // together with the first message pair in one batch (Step 6)
         final conversationId = const Uuid().v4();
-        final title = prompt.trim().generateConversationTitle();
         newConversation = ConversationModel(
           id: conversationId,
-          title: title,
+          title: '', // Empty initially to show shimmer
           lastMessage: prompt.trim(),
           capability: capability,
           lastProvider: validProviders.isNotEmpty
@@ -208,9 +196,14 @@ class ChatProvider extends ChangeNotifier {
               : AiProviderId.openAi,
         );
         _activeConversation = newConversation;
+        unawaited(_analytics.logConversationStarted(
+          capability: capability,
+          provider: validProviders.isNotEmpty
+              ? validProviders.first
+              : AiProviderId.openAi,
+        ));
       } catch (e) {
         // Conversation creation failed — roll back and show error
-        // _messages.remove(userMessage);
         _isGenerating = false;
         _errorMessage = 'something_went_wrong';
         notifyListeners();
@@ -223,6 +216,16 @@ class ChatProvider extends ChangeNotifier {
 
     // ── Step 4: Execute via orchestrator ─────────────────────────────────────
     try {
+      // Replace optimistic user message with confirmed version
+      final optimisticIndex =
+      _messages.indexWhere((m) => m.id == userMessage.id);
+      if (optimisticIndex != -1) {
+        _messages[optimisticIndex] = userMessage.copyWith(
+          status: MessageStatus.delivered,
+          isOptimistic: false,
+        );
+      }
+
       final aiResponse = await _orchestrator.execute(
         request: AiRequest(
           capability: AiCapability.textGeneration,
@@ -240,17 +243,13 @@ class ChatProvider extends ChangeNotifier {
         tokenCount: aiResponse.tokenCount,
       );
 
-      // Replace optimistic user message with confirmed version
-      final optimisticIndex =
-          _messages.indexWhere((m) => m.id == userMessage.id);
-      if (optimisticIndex != -1) {
-        _messages[optimisticIndex] = userMessage.copyWith(
-          status: MessageStatus.delivered,
-          isOptimistic: false,
-        );
+      if(isNewConversation){
+        final actualTitle = prompt.trim().generateConversationTitle();
+        _activeConversation = _activeConversation!.copyWith(title: actualTitle);
       }
 
       _messages.add(aiMessage);
+      notifyListeners();
 
       // ── Step 6: Persist to Firestore (non-blocking side effect) ──────────
       final conversationId = _activeConversation!.id;

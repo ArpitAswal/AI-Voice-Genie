@@ -34,14 +34,14 @@ class ModelIndicatorChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: isTablet ? 13 : 11, color: color),
+          Icon(icon, size: isTablet ? 18 : 12, color: color),
           const SizedBox(width: 4),
           Text(
             provider.displayName,
-            style: context.textTheme.labelSmall?.copyWith(
+            style: context.textTheme.bodySmall?.copyWith(
               color: color,
               fontWeight: FontWeight.w600,
-              fontSize: isTablet ? 11 : 10,
+              fontSize: isTablet ? 14 : 10,
             ),
           ),
         ],
@@ -60,7 +60,7 @@ class ModelIndicatorChip extends StatelessWidget {
       case AiProviderId.gemini:
         return (
           AppColors.geminiBrand,
-          AppColors.geminiBrand,
+          AppColors.white,
           Icons.diamond_outlined,
         );
       case AiProviderId.claude:
