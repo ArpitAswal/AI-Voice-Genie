@@ -4,15 +4,16 @@ import 'package:ai_voice_genie/features/intro/presentation/intro_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../chat_prompt/presentation/chat_history_screen.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class TabBarScreen extends StatefulWidget {
+  const TabBarScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<TabBarScreen> createState() => _TabBarScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _TabBarScreenState extends State<TabBarScreen> {
   int _currentIndex = 0;
 
   @override
@@ -39,11 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBody() {
     switch (_currentIndex) {
       case 0:
+        debugPrint('🔀 Route: /intro_home');
         return const IntroScreen();
       case 1:
-        return const Center(
-            child: Text("History Tab", style: TextStyle(color: Colors.white)));
-      case 2:
+        debugPrint('🔀 Route: /conversation_history');
+        return const ConversationHistoryScreen();
+        case 2:
         return const Center(
             child: Text("Settings Tab", style: TextStyle(color: Colors.white)));
       default:

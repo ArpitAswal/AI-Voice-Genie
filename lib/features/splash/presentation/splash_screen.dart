@@ -23,7 +23,7 @@ import '../../key_setup/presentation/api_key_provider.dart';
 /// Navigation logic:
 ///   authenticated + onboardingDone=false → OnboardingScreen
 ///   authenticated + keySetupDone=false   → KeySetupScreen
-///   authenticated + both done            → HomeScreen
+///   authenticated + both done            → TabBarScreen
 ///   unauthenticated                       → LoginScreen
 ///
 /// IMPORTANT: Never navigate based on button taps here.
@@ -107,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen> {
       AppRoutes.navigateAndRemoveUntil(context, AppRoutes.keySetup);
     } else {
       // Fully set up — go to home
-      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.tabBar);
     }
   }
 

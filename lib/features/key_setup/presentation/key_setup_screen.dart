@@ -19,7 +19,7 @@ import '../../auth/presentation/auth_provider.dart';
 ///
 /// Displays three provider cards (ChatGPT, Gemini, Claude).
 /// Each card allows the user to paste, validate, and save their key.
-/// At least one valid key is required to proceed to HomeScreen.
+/// At least one valid key is required to proceed to TabBarScreen.
 ///
 /// Can also be accessed from Settings for key management (Phase 8).
 class KeySetupScreen extends StatefulWidget {
@@ -61,7 +61,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
     if (!mounted) return;
 
     if (success) {
-      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.tabBar);
     } else {
       context.showError('something_went_wrong');
     }

@@ -56,14 +56,12 @@ class ChatProvider extends ChangeNotifier {
   final List<MessageModel> _messages = [];
   bool _isGenerating = false;
   bool _isLoadingMessages = false;
-  bool _hasMoreMessages = true;
   String? _errorMessage;
 
   ConversationModel? get activeConversation => _activeConversation;
   List<MessageModel> get messages => List.unmodifiable(_messages);
   bool get isGenerating => _isGenerating;
   bool get isLoadingMessages => _isLoadingMessages;
-  bool get hasMoreMessages => _hasMoreMessages;
   String? get errorMessage => _errorMessage;
   bool get hasActiveConversation => _activeConversation != null;
 
@@ -73,8 +71,8 @@ class ChatProvider extends ChangeNotifier {
   ///
   /// Strategy:
   ///   1. Load from Hive cache instantly (fast path)
-  ///   2. Fetch from Firestore in background (fresh data)
-  ///   3. Merge — Firestore result replaces cache
+  ///   2. Fetch ALL messages from Firestore in background (fresh data)
+  ///   3. Firestore result replaces cache — no pagination needed.
   Future<void> loadConversation({
     required String uid,
     required String conversationId,
@@ -94,18 +92,15 @@ class ChatProvider extends ChangeNotifier {
         notifyListeners();
       }
 
-      // Fresh path: load from Firestore
+      // Fresh path: load ALL messages from Firestore
       final fresh = await _repository.getMessages(
         uid: uid,
         conversationId: conversationId,
-        limit: AppConstants.initialMessageLoadCount,
       );
 
       _messages
         ..clear()
         ..addAll(fresh);
-
-      _hasMoreMessages = fresh.length >= AppConstants.initialMessageLoadCount;
 
       // Update cache with fresh data
       await _repository.cacheMessages(
@@ -115,34 +110,6 @@ class ChatProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('⚠️ ChatProvider.loadConversation error: $e');
       _errorMessage = 'something_went_wrong';
-    } finally {
-      _isLoadingMessages = false;
-      notifyListeners();
-    }
-  }
-
-  /// Load older messages when user scrolls to the top.
-  Future<void> loadMoreMessages({
-    required String uid,
-    required String conversationId,
-  }) async {
-    if (!_hasMoreMessages || _isLoadingMessages) return;
-
-    _isLoadingMessages = true;
-    notifyListeners();
-
-    try {
-      final older = await _repository.getMessages(
-        uid: uid,
-        conversationId: conversationId,
-        limit: AppConstants.messagePageSize,
-      );
-
-      // Prepend older messages to the beginning of the list
-      _messages.insertAll(0, older);
-      _hasMoreMessages = older.length >= AppConstants.messagePageSize;
-    } catch (e) {
-      debugPrint('⚠️ ChatProvider.loadMoreMessages error: $e');
     } finally {
       _isLoadingMessages = false;
       notifyListeners();
@@ -326,7 +293,6 @@ class ChatProvider extends ChangeNotifier {
     _messages.clear();
     _isGenerating = false;
     _isLoadingMessages = false;
-    _hasMoreMessages = true;
     _errorMessage = null;
     notifyListeners();
   }

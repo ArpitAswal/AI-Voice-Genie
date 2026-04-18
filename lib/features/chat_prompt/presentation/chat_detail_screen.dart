@@ -1,7 +1,6 @@
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_input.dart';
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/message_bubble.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -49,7 +48,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if(widget.initialTitle != null) {
       _loadConversation();
     }
-    _scrollController.addListener(_onScroll);
   }
 
   void _loadConversation() {
@@ -61,21 +59,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             uid: uid,
             conversationId: widget.conversationId,
           );
+      _scrollToBottom();
     });
-  }
-
-  /// Load older messages when scrolled to top
-  void _onScroll() {
-    if (_scrollController.position.pixels <=
-        _scrollController.position.minScrollExtent + 100) {
-      final uid = context.read<AuthProvider>().currentUser?.uid;
-      if (uid == null) return;
-
-      context.read<ChatProvider>().loadMoreMessages(
-            uid: uid,
-            conversationId: widget.conversationId,
-          );
-    }
   }
 
   /// Scroll to the bottom of the message list
@@ -203,11 +188,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // ── Message List ───────────────────────────────────────────────────
-          Expanded(
-            child: Consumer<ChatProvider>(
+      body: Padding(
+        padding: EdgeInsets.only(
+          bottom: context.bottomPadding + 16,
+        ),
+        child: Stack(
+          alignment: AlignmentGeometry.bottomCenter,
+          children: [
+            // ── Message List ───────────────────────────────────────────────────
+            Consumer<ChatProvider>(
               builder: (context, chatProvider, _) {
                 final messages = chatProvider.messages;
                 if (chatProvider.isLoadingMessages && messages.isEmpty) {
@@ -216,14 +205,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   );
                 }
 
-                if (messages.isEmpty) {
-                  return _EmptyConversation(isTablet: isTablet);
-                }
-
                 return ListView.builder(
                   controller: _scrollController,
                   padding: EdgeInsets.symmetric(
                     vertical: isTablet ? 16 : 12,
+                    horizontal: isTablet ? 16 : 12,
                   ),
                   itemCount: messages.length +
                       (chatProvider.isGenerating ? 1 : 0) +
@@ -268,56 +254,83 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 );
               },
             ),
-          ),
 
-          // ── Input Bar ──────────────────────────────────────────────────────
-          Consumer<ChatProvider>(
-            builder: (_, chatProvider, __) => ChatInputBar(
-              isGenerating: chatProvider.isGenerating,
-              isTablet: isTablet,
-              onSend: _handleSend,
-              // Voice and attach stubbed — wired in Phase 5/7
-              onVoiceTap: null,
-              onAttachTap: null,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+            // ── Input Bar ──────────────────────────────────────────────────────
+            ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: context.screenHeight * 0.3,
+                ),
+                child: Card(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                      vertical: context.verticalSpacing,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Dummy Model Selection Pill
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: context.horizontalPadding / 2,
+                              vertical: 4.0),
+                          decoration: BoxDecoration(
+                            color: context.isDark
+                                ? AppColors.accentLight
+                                : AppColors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppColors
+                                      .primaryLight, // Match the blue indicator dot
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Genie v4.0",
+                                style:
+                                context.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 16,
+                                color: context.isDark
+                                    ? AppColors.darkTextTertiary
+                                    : AppColors.lightTextTertiary,
+                              ),
+                            ],
+                          ),
+                        ),
 
-// =============================================================================
-// EMPTY STATE
-// =============================================================================
-
-class _EmptyConversation extends StatelessWidget {
-  final bool isTablet;
-  const _EmptyConversation({required this.isTablet});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.chat_bubble_outline_rounded,
-              size: isTablet ? 72 : 56,
-              color: context.isDark
-                  ? AppColors.darkDivider
-                  : AppColors.lightDivider,
-            ),
-            SizedBox(height: isTablet ? 20 : 16),
-            Text(
-              l10n.translate('type_message'),
-              style: context.textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
+                        const SizedBox(height: 4.0),
+                        // The Input Component itself
+                        Flexible(
+                          child: Consumer<ChatProvider>(
+                            builder: (_, chatProvider, __) => ChatInputBar(
+                              isGenerating: chatProvider.isGenerating,
+                              isTablet: isTablet,
+                              onSend: _handleSend,
+                              onVoiceTap: null, // wired Phase 7
+                              onAttachTap: null, // wired Phase 5/6
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
           ],
         ),
       ),

@@ -130,6 +130,7 @@ class MessageModel {
 
   Map<String, dynamic> toFirestore() {
     return {
+      FirebaseCollections.fieldMessageID: id,
       FirebaseCollections.fieldMessageRole: role.value,
       FirebaseCollections.fieldMessageContent: content,
       FirebaseCollections.fieldMessageContentType: contentType.value,
@@ -251,10 +252,13 @@ class MessageModel {
             DateTime.now();
 
     final userMsg = MessageModel(
-      id: '${docId}_user',
+      id: docId,
       role: MessageRole.user,
-      content: data[FirebaseCollections.fieldPrompt] as String? ?? '',
+      content: data[FirebaseCollections.fieldPrompt] as String? ?? data[FirebaseCollections.fieldMessageContent] as String? ??'',
       timestamp: timestamp,
+      contentType: MessageContentType.fromValue(
+        data[FirebaseCollections.fieldContentType] as String? ?? 'prompt_text',
+      ),
       status: MessageStatus.delivered,
       validProviders:
           (data[FirebaseCollections.fieldValidProviders] as List<dynamic>?)
@@ -264,11 +268,11 @@ class MessageModel {
     );
 
     final aiMsg = MessageModel(
-      id: '${docId}_ai',
+      id: docId,
       role: MessageRole.assistant,
-      content: data[FirebaseCollections.fieldResponse] as String? ?? '',
+      content: data[FirebaseCollections.fieldResponse] as String? ?? data[FirebaseCollections.fieldMessageContent] as String? ?? '',
       contentType: MessageContentType.fromValue(
-        data[FirebaseCollections.fieldContentType] as String? ?? 'text',
+        data[FirebaseCollections.fieldContentType] as String? ?? 'prompt_text',
       ),
       timestamp: timestamp,
       modelUsed: data[FirebaseCollections.fieldModelUsed] is String

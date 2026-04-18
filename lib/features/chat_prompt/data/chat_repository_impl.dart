@@ -13,15 +13,19 @@ import '../domain/message_model.dart';
 ///
 /// Firestore structure:
 ///   AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}          ← conversation metadata
-///   AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}/messages/{id}  ← prompt + response pair
+///   AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}/messages/UserRef-{id}  ← user message
+///   AI_Voice_Genie/AI_Conversations/{uid}/{conversationId}/messages/AIRef-{id}    ← AI response
 ///
-/// Each message document stores both the user's prompt and the AI's response
-/// together. When reading, each pair is split into two MessageModels for
-/// the UI (one user, one assistant).
+/// Each message is stored as its own document (via MessageModel.toFirestore)
+/// containing a `role`, `content`, `timestamp`, etc. Document IDs are prefixed
+/// with `UserRef-` or `AIRef-` to make their type clear.
+///
+/// When reading, each document is deserialized individually with
+/// MessageModel.fromFirestore into a single MessageModel (user or assistant).
 ///
 /// Hive cache:
 ///   Key: 'messages_{conversationId}' → JSON-encoded List<MessageModel>
-///   Uses individual message format (not paired) for fast UI rendering.
+///   Uses individual message format for fast UI rendering.
 class ChatRepositoryImpl implements ChatRepository {
   final FirebaseFirestore _firestore;
   final StorageService _storage;
@@ -118,39 +122,50 @@ class ChatRepositoryImpl implements ChatRepository {
   Future<List<MessageModel>> getMessages({
     required String uid,
     required String conversationId,
-    int limit = 30,
-    DocumentSnapshot? beforeDocument,
   }) async {
     try {
-      Query query = _firestore
+      // Fetch all message documents ordered oldest→newest (ascending timestamp).
+      // Each doc is a single message (UserRef-{id} or AIRef-{id}) stored via
+      // toFirestore() — containing role, content, timestamp, etc.
+      final snapshot = await _firestore
           .collection(
             FirebaseCollections.messagesCollection(uid, conversationId),
           )
-          .orderBy(FirebaseCollections.fieldTimestamp, descending: true)
-          .limit(limit);
+          .orderBy(FirebaseCollections.fieldMessageTimestamp)
+          .get();
 
-      if (beforeDocument != null) {
-        query = query.startAfterDocument(beforeDocument);
-      }
-
-      final snapshot = await query.get();
-
-      // Each doc is a prompt+response pair — split into individual messages
-      // Documents come newest-first, so reverse to chronological order
-      final messages = <MessageModel>[];
-      for (final doc in snapshot.docs.reversed) {
-        final pair = MessageModel.pairFromFirestore(
-          doc.id,
-          doc.data() as Map<String, dynamic>,
-        );
-        messages.addAll(pair); // [userMsg, aiMsg]
-      }
-
-      return messages;
+      return snapshot.docs
+          .map(
+            (doc) => MessageModel.fromFirestore(
+              doc.id,
+              doc.data(),
+            ),
+          )
+          .toList();
     } on FirebaseException catch (e) {
       throw ChatException(
         ChatErrorCodes.loadFailed,
         technicalMessage: 'getMessages failed: ${e.code}',
+      );
+    }
+  }
+
+  @override
+  Future<List<ConversationModel>> getConversations(String uid) async {
+    try {
+      final snapshot = await _firestore
+          .collection(FirebaseCollections.conversationsCollection(uid))
+          .orderBy(FirebaseCollections.fieldConversationLastMessageAt,
+              descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => ConversationModel.fromFirestore(doc.id, doc.data()))
+          .toList();
+    } on FirebaseException catch (e) {
+      throw ChatException(
+        ChatErrorCodes.loadFailed,
+        technicalMessage: 'getConversations failed: ${e.code}',
       );
     }
   }

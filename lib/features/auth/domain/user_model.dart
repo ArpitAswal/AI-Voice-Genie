@@ -36,7 +36,7 @@ class UserModel {
 
   /// Whether this is the user's first-ever sign-in (new Firestore document).
   /// Used to decide: logUserRegistered() vs logUserSignedIn()
-  /// and to route to OnboardingScreen vs HomeScreen.
+  /// and to route to OnboardingScreen vs TabBarScreen.
   final bool isNewUser;
 
   /// Whether the user has completed the onboarding flow.

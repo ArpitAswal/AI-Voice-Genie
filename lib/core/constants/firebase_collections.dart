@@ -120,6 +120,7 @@ class FirebaseCollections {
   static const String fieldValidProviders = 'validProviders';
 
   // ── Legacy Message Field Names (used by Hive cache serialization) ─────────
+  static const String fieldMessageID = 'messageID';
   static const String fieldMessageRole = 'role';
   static const String fieldMessageContent = 'content';
   static const String fieldMessageContentType = 'contentType';

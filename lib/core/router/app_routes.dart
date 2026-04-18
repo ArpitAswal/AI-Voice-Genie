@@ -5,7 +5,7 @@ import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../features/chat_prompt/presentation/chat_detail_screen.dart';
-import '../../features/home/presentation/home_screen.dart';
+import '../../features/home/presentation/tab_bar_screen.dart';
 import '../../features/key_setup/presentation/key_setup_screen.dart';
 
 /// Centralized route management for AI Voice Genie.
@@ -58,8 +58,8 @@ class AppRoutes {
   /// API Key setup — shown after first sign-in
   static const String keySetup = '/key-setup';
 
-  /// Home dashboard — main entry after auth
-  static const String home = '/home';
+  /// Main tab bar screen — entry after auth
+  static const String tabBar = '/tab-bar';
 
   /// Chat / Text conversation
   static const String chat = '/chat';
@@ -212,10 +212,10 @@ class AppRoutes {
           TransitionType.slideUp,
         );
 
-      // ── Home ───────────────────────────────────────────────────────────────
-      case home:
+      // ── Tab Bar (Home) ────────────────────────────────────────────────────────
+      case tabBar:
         return _buildRoute(
-          const HomeScreen(),
+          const TabBarScreen(),
           settings,
           TransitionType.fade,
         );
@@ -235,12 +235,14 @@ class AppRoutes {
                 initialTitle: arguments.initialTitle),
             settings,
             TransitionType.fade,
+            const Duration(milliseconds: 3000)
           );
         } else{
           return _buildRoute(
             const ChatDetailScreen(conversationId: ''),
             settings,
             TransitionType.fade,
+              const Duration(milliseconds: 3000)
           );
         }
       // ── Image Generator ────────────────────────────────────────────────────
@@ -312,12 +314,13 @@ class AppRoutes {
     Widget screen, [
     RouteSettings? settings,
     TransitionType transition = TransitionType.slide,
+    Duration? dur = const Duration(milliseconds: 300)
   ]) {
     // Default slide uses MaterialPageRoute for standard platform feel
     if (transition == TransitionType.slide) {
       return MaterialPageRoute(builder: (_) => screen, settings: settings);
     }
-    return _buildCustomRoute(screen, settings, transition);
+    return _buildCustomRoute(screen, settings, transition, duration: dur!);
   }
 
   /// Build a custom animated route.
@@ -325,7 +328,7 @@ class AppRoutes {
     Widget screen,
     RouteSettings? settings,
     TransitionType transition, {
-    Duration duration = const Duration(milliseconds: 3000),
+    Duration duration = const Duration(milliseconds: 300),
   }) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => screen,

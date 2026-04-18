@@ -34,102 +34,96 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isTablet ? 24 : 16,
-        vertical: isTablet ? 6 : 4,
-      ),
-      child: Column(
-        crossAxisAlignment:
-            _isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          // AI model chip — shown above AI responses
-          if (!_isUser && message.modelUsed != null) ...[
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: ModelIndicatorChip(
-                provider: message.modelUsed!,
-                isTablet: isTablet,
-              ),
-            ),
-          ],
-
-          // Message bubble
-          GestureDetector(
-            onLongPress: () => _copyToClipboard(context),
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width *
-                    (isTablet ? 0.65 : 0.85),
-              ),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _isUser
-                    ? (context.isDark
-                        ? AppColors.userBubbleDark
-                        : AppColors.userBubbleLight)
-                    : (context.isDark
-                        ? AppColors.aiBubbleDark
-                        : AppColors.aiBubbleLight),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(_isUser ? 16 : 4),
-                  topRight: Radius.circular(_isUser ? 4 : 16),
-                  bottomLeft: const Radius.circular(16),
-                  bottomRight: const Radius.circular(16),
-                ),
-                // border: _isUser
-                //     ? null
-                //     : Border.all(
-                //         color: context.isDark
-                //             ? AppColors.darkDivider
-                //             : AppColors.lightDivider,
-                //         width: 1,
-                //       ),
-                // boxShadow: [
-                //   BoxShadow(
-                //     color: AppColors.black.withValues(alpha: 0.06),
-                //     blurRadius: 4,
-                //     offset: const Offset(0, 2),
-                //   ),
-                // ],
-              ),
-              child: Text(
-                message.content,
-                style: context.textTheme.bodyMedium?.copyWith(
-                  color: _isUser
-                      ? (_isUser
-                          ? AppColors.userBubbleTextLight
-                          : AppColors.userBubbleTextDark)
-                      : (context.isDark
-                          ? AppColors.aiBubbleTextDark
-                          : AppColors.aiBubbleTextLight),
-                  height: 1.5,
-                  fontSize: isTablet ? 16 : 14,
-                ),
-              ),
-            ),
-          ),
-
-          // Timestamp + status row
+    return Column(
+      crossAxisAlignment:
+          _isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        // AI model chip — shown above AI responses
+        if (!_isUser && message.modelUsed != null) ...[
           Padding(
-            padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  message.timestamp.toTimeString,
-                  style: context.textTheme.bodySmall,
-                ),
-                // Sending status indicator for user messages
-                if (_isUser) ...[
-                  const SizedBox(width: 4),
-                  _StatusIcon(status: message.status),
-                ],
-              ],
+            padding: const EdgeInsets.only(left: 4, bottom: 4),
+            child: ModelIndicatorChip(
+              provider: message.modelUsed!,
+              isTablet: isTablet,
             ),
           ),
         ],
-      ),
+
+        // Message bubble
+        GestureDetector(
+          onLongPress: () => _copyToClipboard(context),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width *
+                  (isTablet ? 0.65 : 0.85),
+            ),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _isUser
+                  ? (context.isDark
+                      ? AppColors.userBubbleDark
+                      : AppColors.userBubbleLight)
+                  : (context.isDark
+                      ? AppColors.aiBubbleDark
+                      : AppColors.aiBubbleLight),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(_isUser ? 16 : 4),
+                topRight: Radius.circular(_isUser ? 4 : 16),
+                bottomLeft: const Radius.circular(16),
+                bottomRight: const Radius.circular(16),
+              ),
+              // border: _isUser
+              //     ? null
+              //     : Border.all(
+              //         color: context.isDark
+              //             ? AppColors.darkDivider
+              //             : AppColors.lightDivider,
+              //         width: 1,
+              //       ),
+              // boxShadow: [
+              //   BoxShadow(
+              //     color: AppColors.black.withValues(alpha: 0.06),
+              //     blurRadius: 4,
+              //     offset: const Offset(0, 2),
+              //   ),
+              // ],
+            ),
+            child: Text(
+              message.content,
+              style: context.textTheme.bodyMedium?.copyWith(
+                color: _isUser
+                    ? (_isUser
+                        ? AppColors.userBubbleTextLight
+                        : AppColors.userBubbleTextDark)
+                    : (context.isDark
+                        ? AppColors.aiBubbleTextDark
+                        : AppColors.aiBubbleTextLight),
+                height: 1.5,
+                fontSize: isTablet ? 16 : 14,
+              ),
+            ),
+          ),
+        ),
+
+        // Timestamp + status row
+        Padding(
+          padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                message.timestamp.toTimeString,
+                style: context.textTheme.bodySmall,
+              ),
+              // Sending status indicator for user messages
+              if (_isUser) ...[
+                const SizedBox(width: 4),
+                _StatusIcon(status: message.status),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 

@@ -128,7 +128,7 @@ class _AuthScreenState extends State<AuthScreen> {
       AppRoutes.navigateAndRemoveUntil(context, AppRoutes.keySetup);
     } else {
       // Fully set up returning user
-      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.home);
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.tabBar);
     }
   }
 

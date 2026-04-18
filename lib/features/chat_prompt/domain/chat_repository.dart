@@ -1,6 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-import '../../../core/enums/app_enums.dart';
 import 'conversation_model.dart';
 import 'message_model.dart';
 
@@ -27,15 +24,14 @@ abstract class ChatRepository {
     ConversationModel? conversationModel, // only required when isFirstMessage = true
   });
 
-  /// Load the most recent [limit] messages for a conversation.
-  ///
-  /// Returns messages in chronological order (oldest first).
+  /// Load all messages for a conversation in chronological order (oldest first).
   Future<List<MessageModel>> getMessages({
     required String uid,
     required String conversationId,
-    int limit = 30,
-    DocumentSnapshot? beforeDocument,
   });
+
+  /// Get all conversations for a specific user ordered by last updated.
+  Future<List<ConversationModel>> getConversations(String uid);
 
   // ── Hive Cache Operations ─────────────────────────────────────────────────
 
