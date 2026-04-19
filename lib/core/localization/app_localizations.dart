@@ -127,8 +127,13 @@ class AppLocalizations {
       'no_conversations': 'No conversations yet',
       'start_conversation': 'Start a conversation with your AI assistant.',
       'conversation_history': 'History',
+      'history_subtitle': 'Review your recent thoughts.',
+      'search_placeholder': 'Search conversations...',
+      'no_results_found': 'No results found',
       'today': 'Today',
       'yesterday': 'Yesterday',
+      'older': 'Older',
+      'started_conversation_short': 'Started a conversation...',
       'ai_thinking': 'Generating response...',
       'prompt_required': 'Please enter a message',
       'prompt_too_long': 'Message is too long (max 10,000 characters)',
@@ -359,8 +364,13 @@ class AppLocalizations {
       'no_conversations': 'अभी कोई बातचीत नहीं',
       'start_conversation': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
       'conversation_history': 'इतिहास',
+      'history_subtitle': 'अपने हालिया विचारों की समीक्षा करें।',
+      'search_placeholder': 'बातचीत खोजें...',
+      'no_results_found': 'कोई परिणाम नहीं मिला',
       'today': 'आज',
       'yesterday': 'कल',
+      'older': 'पुराने',
+      'started_conversation_short': 'बातचीत शुरू की...',
       'ai_thinking': 'जवाब बन रहा है...',
       'prompt_required': 'कृपया एक संदेश दर्ज करें',
       'prompt_too_long': 'संदेश बहुत लंबा है (अधिकतम 10,000 अक्षर)',
@@ -578,7 +588,14 @@ class AppLocalizations {
   String get titleTooLong => translate('title_too_long');
   String get dateRequired => translate('date_required');
   String get home => translate('home');
-  String get history => translate('history');
+  String get historySubtitle => translate('history_subtitle');
+  String get conversationHistory => translate('conversation_history');
+  String get searchPlaceholder => translate('search_placeholder');
+  String get noResultsFound => translate('no_results_found');
+  String get today => translate('today');
+  String get yesterday => translate('yesterday');
+  String get older => translate('older');
+  String get startedShort => translate('started_conversation_short');
   String get morning => translate('morning');
   String get evening => translate('evening');
   String get afternoon => translate('afternoon');

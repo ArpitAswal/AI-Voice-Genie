@@ -235,14 +235,14 @@ class AppRoutes {
                 initialTitle: arguments.initialTitle),
             settings,
             TransitionType.fade,
-            const Duration(milliseconds: 3000)
+            const Duration(milliseconds: 700)
           );
         } else{
           return _buildRoute(
             const ChatDetailScreen(conversationId: ''),
             settings,
             TransitionType.fade,
-              const Duration(milliseconds: 3000)
+              const Duration(milliseconds: 700)
           );
         }
       // ── Image Generator ────────────────────────────────────────────────────

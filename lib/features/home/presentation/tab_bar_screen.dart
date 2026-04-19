@@ -38,19 +38,15 @@ class _TabBarScreenState extends State<TabBarScreen> {
   }
 
   Widget _buildBody() {
-    switch (_currentIndex) {
-      case 0:
-        debugPrint('🔀 Route: /intro_home');
-        return const IntroScreen();
-      case 1:
-        debugPrint('🔀 Route: /conversation_history');
-        return const ConversationHistoryScreen();
-        case 2:
-        return const Center(
-            child: Text("Settings Tab", style: TextStyle(color: Colors.white)));
-      default:
-        return const IntroScreen();
-    }
+    return IndexedStack(
+      index: _currentIndex,
+      children: const [
+        IntroScreen(),
+        ConversationHistoryScreen(),
+        Center(
+            child: Text("Settings Tab", style: TextStyle(color: Colors.white))),
+      ],
+    );
   }
 
   Widget _buildTopNavBar() {
@@ -62,9 +58,7 @@ class _TabBarScreenState extends State<TabBarScreen> {
           bottom: MediaQuery.of(context).padding.bottom,
         ),
         decoration: BoxDecoration(
-            gradient: context.isDark
-                ? AppColors.primaryGradientDark
-                : null),
+            gradient: context.isDark ? AppColors.primaryGradientDark : null),
         child: const SizedBox());
   }
 
@@ -84,8 +78,8 @@ class _TabBarScreenState extends State<TabBarScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _buildNavItem(0, Icons.home_outlined, context.l10n.home, context),
-              _buildNavItem(
-                  1, Icons.chat_bubble_outline, context.l10n.history, context),
+              _buildNavItem(1, Icons.chat_bubble_outline,
+                  context.l10n.conversationHistory, context),
               _buildNavItem(
                   2, Icons.settings_outlined, context.l10n.settings, context),
             ],

@@ -1,3 +1,4 @@
+import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -11,21 +12,23 @@ import '../../auth/presentation/auth_provider.dart';
 import '../data/chat_repository_impl.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
-import '../../../core/enums/app_enums.dart';
+import '../../../shared/widgets/dynamic_shimmer.dart';
 
 class ConversationHistoryScreen extends StatefulWidget {
   const ConversationHistoryScreen({super.key});
 
   @override
-  State<ConversationHistoryScreen> createState() => _ConversationHistoryScreenState();
+  State<ConversationHistoryScreen> createState() =>
+      _ConversationHistoryScreenState();
 }
 
 class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   final ChatRepository _repository = ChatRepositoryImpl();
-  
+  final TextEditingController _searchController = TextEditingController();
+
   List<ConversationModel> _allConversations = [];
   List<ConversationModel> _filteredConversations = [];
-  
+
   bool _isLoading = true;
   String _searchQuery = '';
 
@@ -36,7 +39,11 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   }
 
   Future<void> _loadConversations() async {
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
     final uid = context.read<AuthProvider>().currentUser?.uid;
+    await Future.delayed(const Duration(seconds: 1), () {});
     if (uid == null) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -69,7 +76,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
       } else {
         _filteredConversations = _allConversations.where((c) {
           return c.title.toLowerCase().contains(query.toLowerCase()) ||
-                 c.lastMessage.toLowerCase().contains(query.toLowerCase());
+              c.lastMessage.toLowerCase().contains(query.toLowerCase());
         }).toList();
       }
     });
@@ -85,85 +92,82 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: _isLoading 
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _refresh,
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: context.horizontalPadding,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 24),
-                          Text(
-                            "History",
-                            style: context.textTheme.headlineLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 40,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Review your recent thoughts.",
-                            style: context.textTheme.bodyLarge?.copyWith(
-                              color: context.isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          
-                          // Search Container
-                          Container(
-                            decoration: BoxDecoration(
-                              color: context.isDark ? AppColors.cardDark.withValues(alpha: 0.5) : AppColors.cardLight,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: TextField(
-                              onChanged: _onSearchChanged,
-                              decoration: InputDecoration(
-                                hintText: 'Search conversations...',
-                                hintStyle: context.textTheme.bodyMedium?.copyWith(
-                                  color: context.isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.search,
-                                  color: context.isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
-                                ),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                        ],
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: Column(
+            children: [
+              // Fixed Header Section
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.horizontalPadding,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
+                    Text(
+                      context.l10n.conversationHistory,
+                      style: context.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 40,
                       ),
                     ),
-                  ),
-                  
-                  if (_filteredConversations.isEmpty && _searchQuery.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _EmptyHistory(isTablet: isTablet),
-                    )
-                  else if (_filteredConversations.isEmpty && _searchQuery.isNotEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: Text(
-                          "No results found",
-                          style: context.textTheme.bodyLarge,
-                        ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l10n.historySubtitle,
+                      style: context.textTheme.bodyLarge?.copyWith(
+                        color: context.isDark
+                            ? AppColors.darkTextTertiary
+                            : AppColors.lightTextTertiary,
                       ),
-                    )
-                  else
-                    ..._buildGroupedLists(),
-                ],
+                    ),
+
+                    // Search Container (Fixed)
+                    Padding(
+                      padding:
+                          EdgeInsets.symmetric(vertical: isTablet ? 24 : 16),
+                      child: context.themedTextField(
+                        enabled: !_isLoading,
+                        onChanged: _onSearchChanged,
+                        hint: context.l10n.searchPlaceholder,
+                        controller: _searchController,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+
+              // Scrollable Content
+              Expanded(
+                child: CustomScrollView(
+                  slivers: [
+                    if (_isLoading)
+                      _buildShimmerList()
+                    else if (_filteredConversations.isEmpty &&
+                        _searchQuery.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyHistory(isTablet: isTablet),
+                      )
+                    else if (_filteredConversations.isEmpty &&
+                        _searchQuery.isNotEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Text(
+                            context.l10n.noResultsFound,
+                            style: context.textTheme.bodyLarge,
+                          ),
+                        ),
+                      )
+                    else
+                      ..._buildGroupedLists(),
+                  ],
+                ),
+              ),
+            ],
           ),
+        ),
       ),
     );
   }
@@ -171,7 +175,8 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   List<Widget> _buildGroupedLists() {
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
-    final yesterdayStr = DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 1)));
+    final yesterdayStr =
+        DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 1)));
 
     final today = <ConversationModel>[];
     final yesterday = <ConversationModel>[];
@@ -180,7 +185,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     for (final c in _filteredConversations) {
       final date = c.lastMessageAt ?? c.createdAt ?? now;
       final dateStr = DateFormat('yyyy-MM-dd').format(date);
-      
+
       if (dateStr == todayStr) {
         today.add(c);
       } else if (dateStr == yesterdayStr) {
@@ -193,23 +198,28 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     final slivers = <Widget>[];
 
     if (today.isNotEmpty) {
-      slivers.add(_buildSectionHeader("Today"));
+      slivers.add(_buildSectionHeader(context.l10n.today));
       slivers.add(_buildListSliver(today));
     }
 
     if (yesterday.isNotEmpty) {
-      if(today.isNotEmpty) slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
-      slivers.add(_buildSectionHeader("Yesterday"));
+      if (today.isNotEmpty) {
+        slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
+      }
+      slivers.add(_buildSectionHeader(context.l10n.yesterday));
       slivers.add(_buildListSliver(yesterday));
     }
 
     if (older.isNotEmpty) {
-      if(today.isNotEmpty || yesterday.isNotEmpty) slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
-      slivers.add(_buildSectionHeader("Older"));
+      if (today.isNotEmpty || yesterday.isNotEmpty) {
+        slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
+      }
+      slivers.add(_buildSectionHeader(context.l10n.older));
       slivers.add(_buildListSliver(older));
     }
-    
-    slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 32))); // Bottom padding
+
+    slivers.add(const SliverToBoxAdapter(
+        child: SizedBox(height: 32))); // Bottom padding
 
     return slivers;
   }
@@ -217,25 +227,13 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   Widget _buildSectionHeader(String title) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding, vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              width: 4,
-              height: 20,
-              decoration: BoxDecoration(
-                color: context.isDark ? AppColors.darkDivider : AppColors.lightDivider,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: context.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        padding: EdgeInsets.symmetric(
+            horizontal: context.horizontalPadding, vertical: 8),
+        child: Text(
+          title,
+          style: context.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -270,6 +268,63 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
       ),
     );
   }
+
+  Widget _buildShimmerList() {
+    return SliverPadding(
+      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color:
+                      context.isDark ? AppColors.cardDark : AppColors.cardLight,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        DynamicShimmer(
+                            height: 24,
+                            width: (MediaQuery.of(context).size.width / 2),
+                            borderRadius: 6),
+                        const DynamicShimmer(
+                          height: 18,
+                          width: 24,
+                          borderRadius: 8,
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const DynamicShimmer(
+                        height: 16, width: double.infinity, borderRadius: 4),
+                    const SizedBox(height: 6),
+                    const DynamicShimmer(
+                        height: 16, width: 200, borderRadius: 4),
+                    const SizedBox(height: 16),
+                    const Row(
+                      children: [
+                        DynamicShimmer(height: 18, width: 80, borderRadius: 6),
+                        SizedBox(width: 12),
+                        DynamicShimmer(height: 18, width: 120, borderRadius: 4),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          childCount: 6,
+        ),
+      ),
+    );
+  }
 }
 
 class CustomConversationCard extends StatelessWidget {
@@ -285,32 +340,21 @@ class CustomConversationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Determine sender badge text (Genie vs You)
-    final bool isGenie = conversation.lastProvider != null;
-    final badgeText = isGenie ? "Genie" : "You";
-    
+
+    final badgeText = (conversation.lastProvider != null)
+        ? conversation.lastProvider?.displayName
+        : context.l10n.user;
+
     // Time formatting
-    final date = conversation.lastMessageAt ?? conversation.createdAt ?? DateTime.now();
-    
-    final now = DateTime.now();
-    final isSameYear = now.year == date.year;
-    
-    String timeStr;
-    final itemDate = DateTime(date.year, date.month, date.day);
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    
-    if (itemDate == today) {
-        timeStr = DateFormat('jm').format(date); // 10:42 AM
-    } else if (itemDate == yesterday) {
-        timeStr = "Yesterday"; // as per design image
-    } else if (isSameYear) {
-        timeStr = DateFormat('MMM d').format(date);
-    } else {
-        timeStr = DateFormat('MMM d, yyyy').format(date);
-    }
+    final date =
+        conversation.lastMessageAt ?? conversation.createdAt ?? DateTime.now();
+
+    final formatDate = DateFormat('yyyy-MM-dd, HH:mm a').format(date);
 
     // Color definitions based on the image
-    final Color badgeBg = context.isDark ? const Color(0xFF1D243D) : AppColors.primaryLight.withValues(alpha: 0.2);
+    final Color badgeBg = context.isDark
+        ? const Color(0xFF1D243D)
+        : AppColors.primaryLight.withValues(alpha: 0.2);
 
     return InkWell(
       onTap: onTap,
@@ -328,7 +372,9 @@ class CustomConversationCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    conversation.title.isEmpty ? "New Conversation" : conversation.title,
+                    conversation.title.isEmpty
+                        ? context.l10n.newConversation
+                        : conversation.title,
                     style: context.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -338,16 +384,22 @@ class CustomConversationCard extends StatelessWidget {
                 ),
                 Icon(
                   Icons.chevron_right,
-                  color: context.isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                  color: context.isDark
+                      ? AppColors.darkTextTertiary
+                      : AppColors.lightTextTertiary,
                   size: 20,
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              conversation.lastMessage.isEmpty ? "Started a conversation..." : conversation.lastMessage,
+              conversation.lastMessage.isEmpty
+                  ? context.l10n.startedShort
+                  : conversation.lastMessage,
               style: context.textTheme.bodyMedium?.copyWith(
-                color: context.isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                color: context.isDark
+                    ? AppColors.darkTextTertiary
+                    : AppColors.lightTextTertiary,
                 height: 1.4,
               ),
               maxLines: 2,
@@ -357,24 +409,29 @@ class CustomConversationCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: badgeBg,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    badgeText,
+                    badgeText.toString(),
                     style: context.textTheme.labelMedium?.copyWith(
-                      color: context.isDark ? Colors.white70 : AppColors.lightTextPrimary,
+                      color: context.isDark
+                          ? Colors.white70
+                          : AppColors.lightTextPrimary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  timeStr,
+                  formatDate,
                   style: context.textTheme.labelMedium?.copyWith(
-                    color: context.isDark ? AppColors.darkTextTertiary : AppColors.lightTextTertiary,
+                    color: context.isDark
+                        ? AppColors.darkTextTertiary
+                        : AppColors.lightTextTertiary,
                   ),
                 ),
               ],
@@ -405,9 +462,8 @@ class _EmptyHistory extends StatelessWidget {
           Icon(
             Icons.history_rounded,
             size: isTablet ? 72 : 56,
-            color: context.isDark
-                ? AppColors.darkDivider
-                : AppColors.lightDivider,
+            color:
+                context.isDark ? AppColors.darkDivider : AppColors.lightDivider,
           ),
           SizedBox(height: isTablet ? 20 : 16),
           Text(
