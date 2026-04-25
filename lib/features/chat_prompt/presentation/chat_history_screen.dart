@@ -1,11 +1,14 @@
+import 'package:ai_voice_genie/core/constants/app_constants.dart';
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../core/enums/app_enums.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
@@ -339,11 +342,9 @@ class CustomConversationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine sender badge text (Genie vs You)
-
-    final badgeText = (conversation.lastProvider != null)
-        ? conversation.lastProvider?.displayName
-        : context.l10n.user;
+    final modelBadge = _modelBadgeIcon(
+      conversation.lastProvider?.displayName ?? '',
+    );
 
     // Time formatting
     final date =
@@ -351,20 +352,22 @@ class CustomConversationCard extends StatelessWidget {
 
     final formatDate = DateFormat('yyyy-MM-dd, HH:mm a').format(date);
 
-    // Color definitions based on the image
-    final Color badgeBg = context.isDark
-        ? const Color(0xFF1D243D)
-        : AppColors.primaryLight.withValues(alpha: 0.2);
-
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: context.isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(16),
-        ),
+            color: context.isDark ? AppColors.cardDark : AppColors.cardLight,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                  color: (context.isDark)
+                      ? AppColors.tealAccent.withValues(alpha: 0.3)
+                      : AppColors.cyanAccent.withValues(alpha: 0.2),
+                  blurRadius: 3.0,
+                  spreadRadius: 1.5)
+            ]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -397,48 +400,56 @@ class CustomConversationCard extends StatelessWidget {
                   ? context.l10n.startedShort
                   : conversation.lastMessage,
               style: context.textTheme.bodyMedium?.copyWith(
-                color: context.isDark
-                    ? AppColors.darkTextTertiary
-                    : AppColors.lightTextTertiary,
                 height: 1.4,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Row(
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: badgeBg,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    badgeText.toString(),
-                    style: context.textTheme.labelMedium?.copyWith(
-                      color: context.isDark
-                          ? Colors.white70
-                          : AppColors.lightTextPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
+                modelBadge,
                 const SizedBox(width: 12),
-                Text(
-                  formatDate,
-                  style: context.textTheme.labelMedium?.copyWith(
-                    color: context.isDark
-                        ? AppColors.darkTextTertiary
-                        : AppColors.lightTextTertiary,
-                  ),
-                ),
+                Text(formatDate,
+                    style: context.textTheme.bodyMedium),
               ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _modelBadgeIcon(String model) {
+    Gradient gradColor = AppColors.geminiGradient;
+    FaIconData icon = FontAwesomeIcons.gemini;
+    switch (model) {
+      case AppConstants.openAiDisplayName:
+        gradColor = AppColors.openAIGradient;
+        icon = FontAwesomeIcons.openai;
+        break;
+      case AppConstants.geminiDisplayName:
+        gradColor = AppColors.geminiGradient;
+        icon = FontAwesomeIcons.gemini;
+        break;
+      case AppConstants.claudeDisplayName:
+        gradColor = AppColors.claudeGradient;
+        icon = FontAwesomeIcons.claude;
+        break;
+    }
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        gradient: gradColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Center(
+          child: FaIcon(
+        icon,
+        color: Colors.white,
+        size: 14,
+      )),
     );
   }
 }

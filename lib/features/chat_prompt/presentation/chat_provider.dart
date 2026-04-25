@@ -185,7 +185,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       // Replace optimistic user message with confirmed version
       final optimisticIndex =
-      _messages.indexWhere((m) => m.id == userMessage.id);
+          _messages.indexWhere((m) => m.id == userMessage.id);
       if (optimisticIndex != -1) {
         _messages[optimisticIndex] = userMessage.copyWith(
           status: MessageStatus.delivered,
@@ -210,7 +210,7 @@ class ChatProvider extends ChangeNotifier {
         tokenCount: aiResponse.tokenCount,
       );
 
-      if(isNewConversation){
+      if (isNewConversation) {
         final actualTitle = prompt.trim().generateConversationTitle();
         _activeConversation = _activeConversation!.copyWith(title: actualTitle);
       }
@@ -224,7 +224,7 @@ class ChatProvider extends ChangeNotifier {
         await _repository.saveMessagePair(
           uid: uid,
           conversationId: conversationId,
-          userMessage: userMessage,
+          userMessage: userMessage.copyWith(status: MessageStatus.delivered),
           aiMessage: aiMessage,
           isFirstMessage: isNewConversation,
           conversationModel: isNewConversation ? _activeConversation : null,

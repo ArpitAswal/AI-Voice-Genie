@@ -131,7 +131,7 @@ class ChatRepositoryImpl implements ChatRepository {
           .collection(
             FirebaseCollections.messagesCollection(uid, conversationId),
           )
-          .orderBy(FirebaseCollections.fieldMessageTimestamp)
+          .orderBy(FirebaseCollections.fieldMessageTimestamp, descending: true)
           .get();
 
       return snapshot.docs

@@ -41,12 +41,32 @@ class ChatDetailScreen extends StatefulWidget {
 
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _scrollController = ScrollController();
+  ChatProvider? _chatProvider;
 
   @override
   void initState() {
     super.initState();
-    if(widget.initialTitle != null) {
+
+    _chatProvider = context.read<ChatProvider>();
+    if (_chatProvider!.messages.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollToBottom();
+      });
+    } else {
+      _chatProvider!.addListener(_onChatProviderChange);
+    }
+
+    if (widget.initialTitle != null) {
       _loadConversation();
+    }
+  }
+
+  void _onChatProviderChange() {
+    if (_chatProvider != null && _chatProvider!.messages.isNotEmpty) {
+      _chatProvider!.removeListener(_onChatProviderChange);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _scrollToBottom();
+      });
     }
   }
 
@@ -59,18 +79,47 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             uid: uid,
             conversationId: widget.conversationId,
           );
-      _scrollToBottom();
     });
   }
 
   /// Scroll to the bottom of the message list
-  void _scrollToBottom() {
+  void _scrollToBottom() async {
     if (!_scrollController.hasClients) return;
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: const Duration(milliseconds: 300),
+    debugPrint("scroll");
+
+    // Short delay gives the layout engine time to fully calculate
+    // the height of very large MessageBubbles before we record 'maxScrollExtent'.
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted || !_scrollController.hasClients) return;
+
+    _doScroll(isFirst: true);
+  }
+
+  void _doScroll({required bool isFirst}) {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    final target = _scrollController.position.maxScrollExtent;
+    // Keep scrolling if we are not at the very bottom
+    if (target - _scrollController.offset <= 10.0) return;
+
+    _scrollController
+        .animateTo(
+      target,
+      // Maintain the 900ms duration for the main scroll,
+      // but use snappier 300ms if trailing scrolls are needed
+      duration: Duration(milliseconds: isFirst ? 900 : 300),
       curve: Curves.easeOut,
-    );
+    )
+        .then((_) {
+      if (mounted && _scrollController.hasClients) {
+        // As lazy ListView items build during animation, maxScrollExtent increases.
+        // We catch this change and run a trailing scroll if needed.
+        if (_scrollController.position.maxScrollExtent >
+            _scrollController.offset + 10.0) {
+          _doScroll(isFirst: false);
+        }
+      }
+    });
   }
 
   Future<void> _handleSend(String prompt) async {
@@ -140,6 +189,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   @override
   void dispose() {
+    _chatProvider?.removeListener(_onChatProviderChange);
     _scrollController.dispose();
     super.dispose();
   }
@@ -156,12 +206,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         title: Consumer<ChatProvider>(
           builder: (_, chatProvider, __) {
             final titleStr = chatProvider.activeConversation?.title ??
-            widget.initialTitle ?? '';
+                widget.initialTitle ??
+                '';
 
             if (titleStr.isEmpty) {
               return Shimmer.fromColors(
-                baseColor: context.isDark ? Colors.grey[400]! : Colors.grey[200]!,
-                highlightColor: context.isDark ? Colors.grey[700]! : Colors.grey[400]!,
+                baseColor:
+                    context.isDark ? Colors.grey[400]! : Colors.grey[200]!,
+                highlightColor:
+                    context.isDark ? Colors.grey[700]! : Colors.grey[400]!,
                 child: Container(
                   height: context.topPadding / 1.5,
                   width: double.infinity,
@@ -188,151 +241,154 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          bottom: context.bottomPadding + 16,
-        ),
-        child: Stack(
-          alignment: AlignmentGeometry.bottomCenter,
-          children: [
-            // ── Message List ───────────────────────────────────────────────────
-            Consumer<ChatProvider>(
-              builder: (context, chatProvider, _) {
-                final messages = chatProvider.messages;
-                if (chatProvider.isLoadingMessages && messages.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: EdgeInsets.symmetric(
-                    vertical: isTablet ? 16 : 12,
-                    horizontal: isTablet ? 16 : 12,
-                  ),
-                  itemCount: messages.length +
-                      (chatProvider.isGenerating ? 1 : 0) +
-                      (chatProvider.isLoadingMessages ? 1 : 0),
-                  itemBuilder: (context, index) {
-
-                    // Load more indicator at top
-                    if (index == 0 && chatProvider.isLoadingMessages) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      );
-                    }
-
-                    final adjustedIndex =
-                        chatProvider.isLoadingMessages ? index - 1 : index;
-
-                    // Typing indicator at bottom
-                    if (adjustedIndex == messages.length &&
-                        chatProvider.isGenerating) {
-                      return TypingIndicator(
-                        provider: chatProvider.activeConversation?.lastProvider,
-                        isTablet: isTablet,
-                      );
-                    }
-
-                    if (adjustedIndex < 0 || adjustedIndex >= messages.length) {
-                      return const SizedBox.shrink();
-                    }
-
-                    return MessageBubble(
-                      message: messages[adjustedIndex],
-                      isTablet: isTablet,
-                    );
-                  },
-                );
-              },
+      bottomSheet:
+          // ── Input Bar ──────────────────────────────────────────────────────
+          SafeArea(
+        bottom: false,
+        child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: context.screenHeight * 0.2,
             ),
-
-            // ── Input Bar ──────────────────────────────────────────────────────
-            ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: context.screenHeight * 0.3,
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.theme.cardTheme.color,
+                borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(context.isTablet ? 30 : 20)),
+                border: Border.all(
+                    color: context.theme.dividerTheme.color!, width: 1),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.horizontalPadding,
+                  vertical: context.verticalSpacing,
                 ),
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding,
-                      vertical: context.verticalSpacing,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Dummy Model Selection Pill
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: context.horizontalPadding / 2,
-                              vertical: 4.0),
-                          decoration: BoxDecoration(
-                            color: context.isDark
-                                ? AppColors.accentLight
-                                : AppColors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: AppColors
-                                      .primaryLight, // Match the blue indicator dot
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Genie v4.0",
-                                style:
-                                context.textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 16,
-                                color: context.isDark
-                                    ? AppColors.darkTextTertiary
-                                    : AppColors.lightTextTertiary,
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 4.0),
-                        // The Input Component itself
-                        Flexible(
-                          child: Consumer<ChatProvider>(
-                            builder: (_, chatProvider, __) => ChatInputBar(
-                              isGenerating: chatProvider.isGenerating,
-                              isTablet: isTablet,
-                              onSend: _handleSend,
-                              onVoiceTap: null, // wired Phase 7
-                              onAttachTap: null, // wired Phase 5/6
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Dummy Model Selection Pill
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: context.horizontalPadding / 2,
+                          vertical: 4.0),
+                      decoration: BoxDecoration(
+                        color: context.isDark
+                            ? AppColors.accentLight
+                            : AppColors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors
+                                  .primaryLight, // Match the blue indicator dot
+                              shape: BoxShape.circle,
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Genie v4.0",
+                            style: context.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 16,
+                            color: context.isDark
+                                ? AppColors.darkTextTertiary
+                                : AppColors.lightTextTertiary,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 4.0),
+                    // The Input Component itself
+                    Flexible(
+                      child: Consumer<ChatProvider>(
+                        builder: (_, chatProvider, __) => ChatInputBar(
+                          isGenerating: chatProvider.isGenerating,
+                          isTablet: isTablet,
+                          onSend: _handleSend,
+                          onVoiceTap: null, // wired Phase 7
+                          onAttachTap: null, // wired Phase 5/6
                         ),
-                      ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )),
+      ),
+      body: Consumer<ChatProvider>(
+        builder: (context, chatProvider, _) {
+          final messages = chatProvider.messages;
+          if (chatProvider.isLoadingMessages && messages.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          return ListView.builder(
+            controller: _scrollController,
+            padding: EdgeInsets.symmetric(
+              vertical: isTablet ? 16 : 12,
+              horizontal: isTablet ? 16 : 12,
+            ),
+            itemCount: messages.length +
+                (chatProvider.isGenerating ? 1 : 0) +
+                (chatProvider.isLoadingMessages ? 1 : 0),
+            itemBuilder: (context, index) {
+              // Load more indicator at top
+              if (index == 0 && chatProvider.isLoadingMessages) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   ),
-                )),
-          ],
-        ),
+                );
+              }
+
+              final adjustedIndex =
+                  chatProvider.isLoadingMessages ? index - 1 : index;
+
+              // Typing indicator at bottom
+              if (adjustedIndex == messages.length &&
+                  chatProvider.isGenerating) {
+                return TypingIndicator(
+                  provider: chatProvider.activeConversation?.lastProvider,
+                  isTablet: isTablet,
+                );
+              }
+
+              if (adjustedIndex < 0 || adjustedIndex >= messages.length) {
+                return const SizedBox.shrink();
+              }
+
+              return Padding(
+                padding: EdgeInsets.only(
+                    bottom: (index == messages.length - 1)
+                        ? context.screenHeight * 0.2
+                        : 0),
+                child: MessageBubble(
+                  message: messages[adjustedIndex],
+                  isTablet: isTablet,
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

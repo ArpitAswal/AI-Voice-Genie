@@ -54,8 +54,8 @@ class MessageBubble extends StatelessWidget {
           onLongPress: () => _copyToClipboard(context),
           child: Container(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width *
-                  (isTablet ? 0.65 : 0.85),
+              maxWidth:
+                  MediaQuery.of(context).size.width * (isTablet ? 0.65 : 0.85),
             ),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -72,21 +72,6 @@ class MessageBubble extends StatelessWidget {
                 bottomLeft: const Radius.circular(16),
                 bottomRight: const Radius.circular(16),
               ),
-              // border: _isUser
-              //     ? null
-              //     : Border.all(
-              //         color: context.isDark
-              //             ? AppColors.darkDivider
-              //             : AppColors.lightDivider,
-              //         width: 1,
-              //       ),
-              // boxShadow: [
-              //   BoxShadow(
-              //     color: AppColors.black.withValues(alpha: 0.06),
-              //     blurRadius: 4,
-              //     offset: const Offset(0, 2),
-              //   ),
-              // ],
             ),
             child: Text(
               message.content,

@@ -49,6 +49,7 @@ class AppColors {
   static const Color grey = Color(0xFF9CA3AF);
   static const Color purpleAccent = Color(0xFFC3B4FC);
   static const Color tealAccent = Color(0xFF6EE7F9);
+  static const Color cyanAccent = Color(0xFF18FFFF);
   static const Color transparent = Colors.transparent;
 
   // ── Status / Feedback Colors ──────────────────────────────────────────────
@@ -103,15 +104,15 @@ class AppColors {
   // Used for hero sections and loading shimmer effects
   static final LinearGradient primaryGradientLight = LinearGradient(
     colors: [
-      purpleAccent.withValues(alpha: 0.3),
-      scaffoldLight.withValues(alpha: 0.1)
+      cyanAccent.withValues(alpha: 0.3),
+      transparent
     ],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
   static final LinearGradient primaryGradientDark = LinearGradient(
-    colors: [tealAccent.withValues(alpha: 0.3), Colors.transparent],
+    colors: [tealAccent.withValues(alpha: 0.3), transparent],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );

@@ -57,15 +57,15 @@ class _ChatScreenState extends State<ChatScreen> {
       capability: ConversationCapability.textChat,
     );
 
-
     if (!mounted) return;
 
     final conversationID = chatProvider.activeConversation?.id;
-    AppRoutes.navigateAndReplace(context, AppRoutes.chatDetail,
+    AppRoutes.navigateAndReplace(
+      context,
+      AppRoutes.chatDetail,
       arguments: ChatDetailArguments(
-        conversationId: conversationID ?? '',
-        initialTitle: null
-      ),);
+          conversationId: conversationID ?? '', initialTitle: null),
+    );
   }
 
   @override
@@ -76,125 +76,132 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
         body: SafeArea(
       bottom: false,
-      child: Stack(children: [
-        // ── Fixed Welcome content (Geometric Center) ───────────────────────
-        Center(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: _WelcomeContent(isTablet: isTablet),
-          ),
-        ),
-
-        // ── Foreground UI (Top Bar + Input Box) ────────────────────────────
-        Column(
-          children: [
-            // ── Minimal Custom Top Bar ─────────────────────────────────────
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.arrow_back,
-                        color: context.isDark
-                            ? AppColors.primaryLight
-                            : AppColors.primaryDark),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(l10n.newConversation,
-                        style: context.textTheme.titleLarge),
-                  ),
-                ],
-              ),
-            ),
-
-            const Spacer(),
-
-            // ── Input Bar with Background Container ────────────────────────
-            Padding(
-                padding: EdgeInsets.only(
-                  bottom: context.bottomPadding + 16,
+      child: Column(
+        children: [
+          // ── Minimal Custom Top Bar ─────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back,
+                      color: context.isDark
+                          ? AppColors.primaryLight
+                          : AppColors.primaryDark),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                child: ConstrainedBox(
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(l10n.newConversation,
+                      style: context.textTheme.titleLarge),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Scrollable Welcome Content ─────────────────────────────────
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxHeight: context.screenHeight * 0.3,
+                      minHeight: constraints.maxHeight,
                     ),
-                    child: Card(
-                      child: Padding(
+                    child: Center(
+                      child: _WelcomeContent(isTablet: isTablet),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // ── Input Bar with Background Container ────────────────────────
+          ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: context.screenHeight * 0.2,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: context.theme.cardTheme.color,
+                  borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(context.isTablet ? 30 : 20)),
+                  border: Border.all(
+                      color: context.theme.dividerTheme.color!, width: 1),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                    vertical: context.verticalSpacing,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Dummy Model Selection Pill
+                      Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: context.horizontalPadding,
-                          vertical: context.verticalSpacing,
+                            horizontal: context.horizontalPadding / 2,
+                            vertical: 4.0),
+                        decoration: BoxDecoration(
+                          color: context.isDark
+                              ? AppColors.accentLight
+                              : AppColors.white,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Dummy Model Selection Pill
                             Container(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: context.horizontalPadding / 2,
-                                  vertical: 4.0),
-                              decoration: BoxDecoration(
-                                color: context.isDark
-                                    ? AppColors.accentLight
-                                    : AppColors.white,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors
-                                          .primaryLight, // Match the blue indicator dot
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Genie v4.0",
-                                    style:
-                                        context.textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    Icons.keyboard_arrow_down_rounded,
-                                    size: 16,
-                                    color: context.isDark
-                                        ? AppColors.darkTextTertiary
-                                        : AppColors.lightTextTertiary,
-                                  ),
-                                ],
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors
+                                    .primaryLight, // Match the blue indicator dot
+                                shape: BoxShape.circle,
                               ),
                             ),
-
-                            const SizedBox(height: 4.0),
-                            // The Input Component itself
-                            Flexible(
-                              child: Consumer<ChatProvider>(
-                                builder: (_, chatProvider, __) => ChatInputBar(
-                                  isGenerating: chatProvider.isGenerating,
-                                  isTablet: isTablet,
-                                  onSend: _handleSend,
-                                  onVoiceTap: null, // wired Phase 7
-                                  onAttachTap: null, // wired Phase 5/6
-                                ),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Genie v4.0",
+                              style: context.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 16,
+                              color: context.isDark
+                                  ? AppColors.darkTextTertiary
+                                  : AppColors.lightTextTertiary,
                             ),
                           ],
                         ),
                       ),
-                    ))),
-          ],
-        ),
-      ]),
+
+                      const SizedBox(height: 4.0),
+                      // The Input Component itself
+                      Flexible(
+                        child: Consumer<ChatProvider>(
+                          builder: (_, chatProvider, __) => ChatInputBar(
+                            isGenerating: chatProvider.isGenerating,
+                            isTablet: isTablet,
+                            onSend: _handleSend,
+                            onVoiceTap: null, // wired Phase 7
+                            onAttachTap: null, // wired Phase 5/6
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+        ],
+      ),
     ));
   }
 }
@@ -233,8 +240,10 @@ class _WelcomeContent extends StatelessWidget {
           SizedBox(height: context.isTablet ? 24 : 12),
           Text(
             l10n.startConversation,
-            style: context.textTheme.titleMedium?.copyWith(color: context.theme.dividerColor,
-                fontWeight: FontWeight.w400, fontStyle: FontStyle.italic),
+            style: context.textTheme.titleMedium?.copyWith(
+                color: context.theme.dividerColor,
+                fontWeight: FontWeight.w400,
+                fontStyle: FontStyle.italic),
             textAlign: TextAlign.center,
           ),
 
@@ -303,7 +312,10 @@ class _SuggestionActionCard extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight:FontWeight.w400),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w400),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
