@@ -8,9 +8,11 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../core/extensions/build_context_extensions.dart';
+import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
+import '../domain/chat_attachment.dart';
 import 'chat_provider.dart';
 
 /// Active conversation screen showing full message history.
@@ -122,23 +124,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     });
   }
 
-  Future<void> _handleSend(String prompt) async {
+  Future<void> _handleSend(String prompt, ChatAttachment? attachment) async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
     final validProviders = context.read<ApiKeyProvider>().validProviders;
 
-    await context.read<ChatProvider>().sendMessage(
+    context.read<ChatProvider>().sendMessage(
           uid: uid,
           prompt: prompt,
           validProviders: validProviders,
+          attachment: attachment,
         );
+
+    // Show error if any
+    if (!mounted) return;
 
     // Scroll to bottom after response
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
-    // Show error if any
-    if (!mounted) return;
     final error = context.read<ChatProvider>().errorMessage;
     if (error != null) {
       context.showError(error);
@@ -153,10 +157,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(l10n.translate('delete_conversation')),
         content: Text(l10n.translate('delete_conversation_confirm')),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.translate('cancel')),
+            child: Text(l10n.translate('cancel'),
+            style: TextStyle(color: context.textTheme.headlineSmall!.color),),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -174,14 +182,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
-    final success = await context.read<ChatProvider>().deleteConversation(uid);
+    LoadingOverlay.show(context, message: context.l10n.deleting);
+
+    final success = await context.read<ChatProvider>().deleteConversation(
+          uid: uid,
+          conversationId: widget.conversationId,
+        );
 
     if (!mounted) return;
+    LoadingOverlay.hide();
     if (success) {
       context.showSuccessToast(
         AppLocalizations.of(context)!.translate('conversation_deleted'),
       );
-      AppRoutes.pop(context);
+      // Pop with `true` so the history screen knows to reload its list.
+      AppRoutes.pop<bool>(context, true);
     } else {
       context.showError('something_went_wrong');
     }
@@ -247,7 +262,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         bottom: false,
         child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight: context.screenHeight * 0.2,
+              maxHeight: context.screenHeight * 0.4,
             ),
             child: Container(
               decoration: BoxDecoration(
@@ -341,7 +356,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             padding: EdgeInsets.symmetric(
               vertical: isTablet ? 16 : 12,
               horizontal: isTablet ? 16 : 12,
-            ),
+            ).copyWith(bottom: context.screenHeight * 0.2),
             itemCount: messages.length +
                 (chatProvider.isGenerating ? 1 : 0) +
                 (chatProvider.isLoadingMessages ? 1 : 0),
@@ -376,15 +391,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 return const SizedBox.shrink();
               }
 
-              return Padding(
-                padding: EdgeInsets.only(
-                    bottom: (index == messages.length - 1)
-                        ? context.screenHeight * 0.2
-                        : 0),
-                child: MessageBubble(
-                  message: messages[adjustedIndex],
-                  isTablet: isTablet,
-                ),
+              return MessageBubble(
+                message: messages[adjustedIndex],
+                isTablet: isTablet,
               );
             },
           );

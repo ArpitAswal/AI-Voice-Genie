@@ -1,0 +1,37 @@
+import 'dart:typed_data';
+
+enum ChatAttachmentType {
+  image,
+  pdf,
+}
+
+class ChatAttachment {
+  final ChatAttachmentType type;
+  final String name;
+  final Uint8List bytes;
+  final String? path;
+  final String? mimeType;
+  final int? fileSizeBytes;
+  final String? extractedText;
+
+  const ChatAttachment({
+    required this.type,
+    required this.name,
+    required this.bytes,
+    this.path,
+    this.mimeType,
+    this.fileSizeBytes,
+    this.extractedText,
+  });
+
+  bool get isImage => type == ChatAttachmentType.image;
+  bool get isPdf => type == ChatAttachmentType.pdf;
+
+  String get fileSizeLabel {
+    final size = fileSizeBytes ?? bytes.lengthInBytes;
+    if (size >= 1024 * 1024) {
+      return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(size / 1024).toStringAsFixed(0)} KB';
+  }
+}

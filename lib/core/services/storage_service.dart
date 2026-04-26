@@ -125,6 +125,13 @@ class StorageService {
     await _conversationCacheBox.clear();
   }
 
+  /// Remove a single conversation's cached messages by key.
+  ///
+  /// Use this on conversation delete to avoid wiping all cached conversations.
+  Future<void> removeConversationCache(String key) async {
+    await _conversationCacheBox.delete(key);
+  }
+
   // ── Full Clear ────────────────────────────────────────────────────────────
 
   /// Clear all local storage (called on full logout or account deletion)

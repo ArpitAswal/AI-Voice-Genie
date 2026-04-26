@@ -56,13 +56,19 @@ class MessageModel {
   factory MessageModel.userMessage(
     String content, {
     List<AiProviderId> validProviders = const [],
+    MessageContentType contentType = MessageContentType.text,
+    String? imageUrl,
+    String? pdfName,
   }) {
     return MessageModel(
       id: const Uuid().v4(),
       role: MessageRole.user,
       content: content,
+      contentType: contentType,
       timestamp: DateTime.now(),
       status: MessageStatus.sending,
+      imageUrl: imageUrl,
+      pdfName: pdfName,
       isOptimistic: true,
       validProviders: validProviders,
     );
@@ -254,7 +260,9 @@ class MessageModel {
     final userMsg = MessageModel(
       id: docId,
       role: MessageRole.user,
-      content: data[FirebaseCollections.fieldPrompt] as String? ?? data[FirebaseCollections.fieldMessageContent] as String? ??'',
+      content: data[FirebaseCollections.fieldPrompt] as String? ??
+          data[FirebaseCollections.fieldMessageContent] as String? ??
+          '',
       timestamp: timestamp,
       contentType: MessageContentType.fromValue(
         data[FirebaseCollections.fieldContentType] as String? ?? 'prompt_text',
@@ -270,7 +278,9 @@ class MessageModel {
     final aiMsg = MessageModel(
       id: docId,
       role: MessageRole.assistant,
-      content: data[FirebaseCollections.fieldResponse] as String? ?? data[FirebaseCollections.fieldMessageContent] as String? ?? '',
+      content: data[FirebaseCollections.fieldResponse] as String? ??
+          data[FirebaseCollections.fieldMessageContent] as String? ??
+          '',
       contentType: MessageContentType.fromValue(
         data[FirebaseCollections.fieldContentType] as String? ?? 'prompt_text',
       ),

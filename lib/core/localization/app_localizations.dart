@@ -57,6 +57,7 @@ class AppLocalizations {
       'yes': 'Yes',
       'no': 'No',
       'loading': 'Loading...',
+      'deleting': 'Deleting...',
       'please_wait': 'Please wait...',
       'something_went_wrong': 'Something went wrong. Please try again.',
       'no_internet_connection':
@@ -125,6 +126,7 @@ class AppLocalizations {
           'Are you sure you want to delete this conversation? This cannot be undone.',
       'conversation_deleted': 'Conversation deleted.',
       'no_conversations': 'No conversations yet',
+      'no_conversations_message': 'Ready when your are.',
       'start_conversation': 'Start a conversation with your AI assistant.',
       'conversation_history': 'History',
       'history_subtitle': 'Review your recent thoughts.',
@@ -181,11 +183,13 @@ class AppLocalizations {
 
       // ── Image Reading ──────────────────────────────────────────────────────
       'attach_image': 'Attach Image',
+      'attach_file': 'Attach file',
       'take_photo': 'Take Photo',
       'choose_from_gallery': 'Choose from Gallery',
       'analyzing_image': 'Analyzing image...',
       'image_attached': 'Image attached',
       'remove_image': 'Remove image',
+      'remove_file': 'Remove file',
 
       // ── PDF Reader ─────────────────────────────────────────────────────────
       'pdf_reader': 'PDF Reader',
@@ -295,6 +299,7 @@ class AppLocalizations {
       'yes': 'हाँ',
       'no': 'नहीं',
       'loading': 'लोड हो रहा है...',
+      'deleting': 'हटाया जा रहा है...',
       'please_wait': 'कृपया प्रतीक्षा करें...',
       'something_went_wrong': 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।',
       'no_internet_connection': 'इंटरनेट कनेक्शन नहीं है। अपना नेटवर्क जांचें।',
@@ -362,6 +367,7 @@ class AppLocalizations {
       'delete_conversation_confirm': 'क्या आप इस बातचीत को हटाना चाहते हैं?',
       'conversation_deleted': 'बातचीत हटाई गई।',
       'no_conversations': 'अभी कोई बातचीत नहीं',
+      'no_conversations_message': 'तैयार जब आप हैं।',
       'start_conversation': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
       'conversation_history': 'इतिहास',
       'history_subtitle': 'अपने हालिया विचारों की समीक्षा करें।',
@@ -417,11 +423,13 @@ class AppLocalizations {
 
       // ── Image Reading ──────────────────────────────────────────────────────
       'attach_image': 'चित्र जोड़ें',
+      'attach_file': 'फ़ाइल जोड़ें',
       'take_photo': 'फ़ोटो लें',
       'choose_from_gallery': 'गैलरी से चुनें',
       'analyzing_image': 'चित्र विश्लेषण हो रहा है...',
       'image_attached': 'चित्र जोड़ा गया',
       'remove_image': 'चित्र हटाएं',
+      'remove_file': 'फ़ाइल हटाएं',
 
       // ── PDF Reader ─────────────────────────────────────────────────────────
       'pdf_reader': 'PDF रीडर',
@@ -612,6 +620,9 @@ class AppLocalizations {
   String get createImage => translate('create_image');
   String get generateCode => translate('generate_code');
   String get summarizePdf => translate('pdf_summarize');
+  String get noConversations => translate('no_conversations');
+  String get noConversationsMessage => translate('no_conversations_message');
+  String get deleting => translate('deleting');
 }
 
 // ==========================================================================

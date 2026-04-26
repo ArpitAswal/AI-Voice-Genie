@@ -60,15 +60,16 @@ class AppConstants {
   static const String claudeProviderId = 'claude';
 
   // ── AI Model Capabilities (features offered by each) ───────────────────────
-  static const String openAICapabilities =  'GPT-4o • DALL-E 3 • Whisper';
-  static const String geminiAICapabilities =  'GPT-4o • DALL-E 3 • Whisper';
-  static const String claudeAICapabilities =  'GPT-4o • DALL-E 3 • Whisper';
+  static const String openAICapabilities = 'GPT-4o • DALL-E 3 • Whisper';
+  static const String geminiAICapabilities = 'GPT-4o • DALL-E 3 • Whisper';
+  static const String claudeAICapabilities = 'GPT-4o • DALL-E 3 • Whisper';
 
   // ── OpenAI Model Names ────────────────────────────────────────────────────
   // Default models used for each capability
   static const String openAiTextModel = 'gpt-4o';
   static const String openAiImageGenModel = 'dall-e-3';
-  static const String openAiVisionModel = 'gpt-4o'; // same model, vision capable
+  static const String openAiVisionModel =
+      'gpt-4o'; // same model, vision capable
   static const String openAiSttModel = 'whisper-1';
   static const String openAiTtsModel = 'tts-1';
   static const String openAiTtsVoice = 'alloy'; // default voice
@@ -76,11 +77,13 @@ class AppConstants {
   // ── Gemini Model Names ────────────────────────────────────────────────────
   static const String geminiTextModel = 'gemini-2.5-flash';
   static const String geminiVisionModel = 'gemini-2.5-flash'; // multimodal
-  static const String geminiImageGenModel = 'gemini-2.0-flash-exp-image-generation';
+  static const String geminiImageGenModel =
+      'gemini-2.0-flash-exp-image-generation';
 
   // ── Claude Model Names ────────────────────────────────────────────────────
   static const String claudeTextModel = 'claude-sonnet-4-5';
-  static const String claudeVisionModel = 'claude-sonnet-4-5'; // same, multimodal
+  static const String claudeVisionModel =
+      'claude-sonnet-4-5'; // same, multimodal
   // Claude does NOT support image generation — no constant needed
 
   // ── AI API Base URLs ──────────────────────────────────────────────────────
@@ -124,6 +127,8 @@ class AppConstants {
   // ── Image Handling ────────────────────────────────────────────────────────
   // Maximum image size for vision requests (compressed before sending)
   static const int maxImageSizeBytes = 5 * 1024 * 1024;
+  static const String defaultImageQuestion = 'Please analyze this image.';
+  static const String defaultPdfQuestion = 'Please summarize this PDF.';
   // DALL-E 3 image size options
   static const String imageSize1024 = '1024x1024';
   static const String imageSize1792x1024 = '1792x1024';

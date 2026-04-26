@@ -33,6 +33,16 @@ abstract class ChatRepository {
   /// Get all conversations for a specific user ordered by last updated.
   Future<List<ConversationModel>> getConversations(String uid);
 
+  /// Permanently delete a conversation and all its messages from Firestore,
+  /// and wipe its Hive cache entry.
+  ///
+  /// Deletes: messages sub-collection documents, the conversation document,
+  /// and the local Hive cache for this conversation ID.
+  Future<void> deleteConversation({
+    required String uid,
+    required String conversationId,
+  });
+
   // ── Hive Cache Operations ─────────────────────────────────────────────────
 
   /// Cache messages for the active conversation in Hive.

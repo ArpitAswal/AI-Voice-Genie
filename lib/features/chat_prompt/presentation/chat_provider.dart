@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../ai_layer/models/ai_request.dart';
+import '../../../ai_layer/models/ai_response.dart';
 import '../../../ai_layer/orchestrator/ai_orchestrator.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/enums/app_enums.dart';
@@ -12,6 +13,7 @@ import '../../../core/error/ai_exception.dart';
 import '../../../core/error/effect_bus.dart';
 import '../../../core/services/analytics_service.dart';
 import '../data/chat_repository_impl.dart';
+import '../domain/chat_attachment.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
 import '../domain/message_model.dart';
@@ -126,20 +128,37 @@ class ChatProvider extends ChangeNotifier {
   /// [capability]       — defaults to textGeneration (chat). Override for image/PDF.
   ///
   /// Returns true on success, false on failure.
-  Future<bool> sendMessage({
+  Future<void> sendMessage({
     required String uid,
     required String prompt,
     required List<AiProviderId> validProviders,
     ConversationCapability capability = ConversationCapability.textChat,
+    ChatAttachment? attachment,
   }) async {
-    if (prompt.trim().isEmpty) return false;
+    final trimmedPrompt = prompt.trim();
+    if (trimmedPrompt.isEmpty && attachment == null) return;
 
     _errorMessage = null;
+    final requestCapability = _resolveRequestCapability(
+      prompt: trimmedPrompt,
+      attachment: attachment,
+    );
+    final conversationCapability = _resolveConversationCapability(
+      requestCapability: requestCapability,
+      fallback: capability,
+    );
+    final effectivePrompt = _effectivePrompt(
+      prompt: trimmedPrompt,
+      attachment: attachment,
+    );
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
     final userMessage = MessageModel.userMessage(
-      prompt.trim(),
+      trimmedPrompt,
       validProviders: validProviders,
+      contentType: _userContentTypeFor(attachment),
+      imageUrl: attachment?.isImage == true ? attachment!.path : null,
+      pdfName: attachment?.isPdf == true ? attachment!.name : null,
     );
     _messages.add(userMessage);
     _isGenerating = true;
@@ -156,15 +175,15 @@ class ChatProvider extends ChangeNotifier {
         newConversation = ConversationModel(
           id: conversationId,
           title: '', // Empty initially to show shimmer
-          lastMessage: prompt.trim(),
-          capability: capability,
+          lastMessage: _conversationPreview(effectivePrompt, attachment),
+          capability: conversationCapability,
           lastProvider: validProviders.isNotEmpty
               ? validProviders.first
               : AiProviderId.openAi,
         );
         _activeConversation = newConversation;
         unawaited(_analytics.logConversationStarted(
-          capability: capability,
+          capability: conversationCapability,
           provider: validProviders.isNotEmpty
               ? validProviders.first
               : AiProviderId.openAi,
@@ -174,7 +193,6 @@ class ChatProvider extends ChangeNotifier {
         _isGenerating = false;
         _errorMessage = 'something_went_wrong';
         notifyListeners();
-        return false;
       }
     }
 
@@ -193,27 +211,28 @@ class ChatProvider extends ChangeNotifier {
         );
       }
 
+      if (isNewConversation) {
+        final actualTitle = effectivePrompt.generateConversationTitle();
+        _activeConversation = _activeConversation!.copyWith(title: actualTitle);
+      }
+
       final aiResponse = await _orchestrator.execute(
         request: AiRequest(
-          capability: AiCapability.textGeneration,
+          capability: requestCapability,
           uid: uid,
-          prompt: prompt.trim(),
+          prompt: effectivePrompt,
           conversationHistory: history,
+          imageBytes: attachment?.isImage == true ? attachment!.bytes : null,
+          imageMimeType:
+              attachment?.isImage == true ? attachment!.mimeType : null,
+          pdfText: attachment?.isPdf == true ? attachment!.extractedText : null,
+          pdfFileName: attachment?.isPdf == true ? attachment!.name : null,
         ),
         userKeyedProviders: validProviders,
       );
 
       // ── Step 5: Add AI response to list ──────────────────────────────────
-      final aiMessage = MessageModel.aiResponse(
-        content: aiResponse.text ?? '',
-        modelUsed: aiResponse.modelUsed,
-        tokenCount: aiResponse.tokenCount,
-      );
-
-      if (isNewConversation) {
-        final actualTitle = prompt.trim().generateConversationTitle();
-        _activeConversation = _activeConversation!.copyWith(title: actualTitle);
-      }
+      final aiMessage = _buildAiMessage(aiResponse, attachment: attachment);
 
       _messages.add(aiMessage);
       notifyListeners();
@@ -240,47 +259,64 @@ class ChatProvider extends ChangeNotifier {
       });
 
       // ── Step 8: Analytics ─────────────────────────────────────────────────
-      await _analytics.logFeatureUsed(AppFeature.textChat);
+      await _analytics.logFeatureUsed(_featureForCapability(requestCapability));
 
       _isGenerating = false;
       notifyListeners();
-      return true;
     } on AiExhaustedException catch (e) {
       // All providers failed — EffectBus already emitted by orchestrator
-      _rollbackOptimisticMessage(userMessage.id);
+      // _rollbackOptimisticMessage(userMessage.id);
       _errorMessage = e.message;
       _isGenerating = false;
       notifyListeners();
-      return false;
     } on AiException catch (e) {
       _rollbackOptimisticMessage(userMessage.id);
       _errorMessage = e.message;
       _isGenerating = false;
       notifyListeners();
-      return false;
     } catch (e) {
       _rollbackOptimisticMessage(userMessage.id);
       _errorMessage = 'something_went_wrong';
       _isGenerating = false;
       notifyListeners();
-      return false;
     }
   }
 
   // ── Delete Conversation ────────────────────────────────────────────────────
 
-  Future<bool> deleteConversation(String uid) async {
-    final conversationId = _activeConversation?.id;
-    if (conversationId == null) return false;
-
+  /// Permanently delete a conversation from Firestore and the local Hive cache.
+  ///
+  /// Accepts an explicit [conversationId] so this works correctly whether called
+  /// from the active [ChatDetailScreen] (new chat flow) or directly from the
+  /// [ConversationHistoryScreen] (where [_activeConversation] may differ).
+  ///
+  /// After deletion:
+  ///   - If the deleted conversation was the currently active one, local state
+  ///     is cleared so the UI returns to a clean "new chat" state.
+  ///   - Otherwise, only Firestore + cache are cleaned up; in-memory state for
+  ///     the active conversation is left untouched.
+  ///
+  /// Returns true on success, false on failure.
+  Future<bool> deleteConversation({
+    required String uid,
+    required String conversationId,
+  }) async {
     try {
-      // await _repository.deleteConversation(
-      //   uid: uid,
-      //   conversationId: conversationId,
-      // );
-      clearConversation();
+      await _repository.deleteConversation(
+        uid: uid,
+        conversationId: conversationId,
+      );
+
+      // Clear in-memory state only when we deleted the currently active convo
+      if (_activeConversation?.id == conversationId) {
+        clearConversation();
+      }
+
       return true;
     } on ChatException {
+      return false;
+    } catch (e) {
+      debugPrint('⚠️ ChatProvider.deleteConversation error: $e');
       return false;
     }
   }
@@ -342,6 +378,114 @@ class ChatProvider extends ChangeNotifier {
 
   /// Remove an optimistic message on failure — prevents ghost messages.
   void _rollbackOptimisticMessage(String messageId) {
-    _messages.removeWhere((m) => m.id == messageId && m.isOptimistic);
+    _messages.removeWhere((m) => m.id == messageId);
+  }
+
+  AiCapability _resolveRequestCapability({
+    required String prompt,
+    required ChatAttachment? attachment,
+  }) {
+    if (attachment?.isImage == true) return AiCapability.imageUnderstanding;
+    if (attachment?.isPdf == true) return AiCapability.pdfParsing;
+    if (_looksLikeImageGenerationPrompt(prompt)) {
+      return AiCapability.imageGeneration;
+    }
+    return AiCapability.textGeneration;
+  }
+
+  ConversationCapability _resolveConversationCapability({
+    required AiCapability requestCapability,
+    required ConversationCapability fallback,
+  }) {
+    switch (requestCapability) {
+      case AiCapability.imageGeneration:
+        return ConversationCapability.imageGeneration;
+      case AiCapability.imageUnderstanding:
+        return ConversationCapability.imageReading;
+      case AiCapability.pdfParsing:
+        return ConversationCapability.pdfReader;
+      case AiCapability.textGeneration:
+      case AiCapability.speechToText:
+      case AiCapability.textToSpeech:
+        return fallback;
+    }
+  }
+
+  MessageContentType _userContentTypeFor(ChatAttachment? attachment) {
+    if (attachment?.isImage == true) return MessageContentType.imageUrl;
+    if (attachment?.isPdf == true) return MessageContentType.pdfSummary;
+    return MessageContentType.text;
+  }
+
+  String _effectivePrompt({
+    required String prompt,
+    required ChatAttachment? attachment,
+  }) {
+    if (prompt.isNotEmpty) return prompt;
+    if (attachment?.isImage == true) return AppConstants.defaultImageQuestion;
+    if (attachment?.isPdf == true) return AppConstants.defaultPdfQuestion;
+    return prompt;
+  }
+
+  String _conversationPreview(String prompt, ChatAttachment? attachment) {
+    if (attachment?.isImage == true) return 'Image: $prompt';
+    if (attachment?.isPdf == true) return 'PDF: ${attachment!.name}';
+    return prompt;
+  }
+
+  MessageModel _buildAiMessage(
+    AiResponse response, {
+    required ChatAttachment? attachment,
+  }) {
+    if (response.contentType == AiResponseContentType.imageUrl ||
+        response.contentType == AiResponseContentType.imageBase64) {
+      final imageUrl = response.imageUrl ??
+          (response.imageBase64 == null
+              ? null
+              : 'data:image/png;base64,${response.imageBase64}');
+
+      return MessageModel.aiResponse(
+        content: response.text ?? '',
+        modelUsed: response.modelUsed,
+        contentType: MessageContentType.imageUrl,
+        imageUrl: imageUrl,
+        tokenCount: response.tokenCount,
+      );
+    }
+
+    return MessageModel.aiResponse(
+      content: response.text ?? '',
+      modelUsed: response.modelUsed,
+      contentType: attachment?.isPdf == true
+          ? MessageContentType.pdfSummary
+          : MessageContentType.text,
+      tokenCount: response.tokenCount,
+    );
+  }
+
+  AppFeature _featureForCapability(AiCapability capability) {
+    switch (capability) {
+      case AiCapability.imageGeneration:
+        return AppFeature.imageGeneration;
+      case AiCapability.imageUnderstanding:
+        return AppFeature.imageReading;
+      case AiCapability.pdfParsing:
+        return AppFeature.pdfReader;
+      case AiCapability.textGeneration:
+      case AiCapability.speechToText:
+      case AiCapability.textToSpeech:
+        return AppFeature.textChat;
+    }
+  }
+
+  bool _looksLikeImageGenerationPrompt(String prompt) {
+    final lower = prompt.toLowerCase();
+    final hasCreateVerb = RegExp(
+      r'\b(create|generate|draw|make|design|render|paint)\b',
+    ).hasMatch(lower);
+    final hasImageNoun = RegExp(
+      r'\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b',
+    ).hasMatch(lower);
+    return hasCreateVerb && hasImageNoun;
   }
 }

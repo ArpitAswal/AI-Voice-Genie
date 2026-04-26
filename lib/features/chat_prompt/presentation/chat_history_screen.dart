@@ -253,8 +253,8 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: CustomConversationCard(
                 conversation: conversation,
-                onTap: () {
-                  AppRoutes.navigateTo(
+                onTap: () async {
+                  final result = await AppRoutes.navigateTo(
                     context,
                     AppRoutes.chatDetail,
                     arguments: ChatDetailArguments(
@@ -262,6 +262,10 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                       initialTitle: conversation.title,
                     ),
                   );
+                  // Reload list when a conversation was deleted inside the detail screen
+                  if (result == true && mounted) {
+                    _loadConversations();
+                  }
                 },
               ),
             );
@@ -410,8 +414,7 @@ class CustomConversationCard extends StatelessWidget {
               children: [
                 modelBadge,
                 const SizedBox(width: 12),
-                Text(formatDate,
-                    style: context.textTheme.bodyMedium),
+                Text(formatDate, style: context.textTheme.bodyMedium),
               ],
             ),
           ],
@@ -476,19 +479,13 @@ class _EmptyHistory extends StatelessWidget {
             color:
                 context.isDark ? AppColors.darkDivider : AppColors.lightDivider,
           ),
-          SizedBox(height: isTablet ? 20 : 16),
+          SizedBox(height: isTablet ? 14 : 8),
           Text(
-            l10n.translate('no_conversations'),
-            style: context.textTheme.headlineMedium,
+            l10n.noConversationsMessage,
+            style: context.textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: isTablet ? 10 : 8),
-          Text(
-            l10n.translate('no_conversations_subtitle'),
-            style: context.textTheme.headlineSmall,
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: isTablet ? 28 : 24),
+          SizedBox(height: isTablet ? 28 : 14),
           SizedBox(
             height: isTablet ? 52 : 46,
             child: ElevatedButton(

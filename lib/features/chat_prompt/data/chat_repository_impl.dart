@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/constants/firebase_collections.dart';
+import '../../../../core/enums/app_enums.dart';
 import '../../../../core/services/storage_service.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
@@ -131,10 +132,10 @@ class ChatRepositoryImpl implements ChatRepository {
           .collection(
             FirebaseCollections.messagesCollection(uid, conversationId),
           )
-          .orderBy(FirebaseCollections.fieldMessageTimestamp, descending: true)
+          .orderBy(FirebaseCollections.fieldMessageTimestamp)
           .get();
 
-      return snapshot.docs
+      final messages = snapshot.docs
           .map(
             (doc) => MessageModel.fromFirestore(
               doc.id,
@@ -142,6 +143,8 @@ class ChatRepositoryImpl implements ChatRepository {
             ),
           )
           .toList();
+
+      return _sortChronologically(messages);
     } on FirebaseException catch (e) {
       throw ChatException(
         ChatErrorCodes.loadFailed,
@@ -170,6 +173,50 @@ class ChatRepositoryImpl implements ChatRepository {
     }
   }
 
+  @override
+  Future<void> deleteConversation({
+    required String uid,
+    required String conversationId,
+  }) async {
+    try {
+      // ── Step 1: Delete all message documents ─────────────────────────────
+      // Firestore does NOT cascade-delete sub-collections automatically.
+      // We must fetch all message doc refs and delete them explicitly.
+      final messagesRef = _firestore.collection(
+        FirebaseCollections.messagesCollection(uid, conversationId),
+      );
+
+      // Fetch in pages of 500 (Firestore batch write limit)
+      const batchLimit = 500;
+      QuerySnapshot snapshot;
+      do {
+        snapshot = await messagesRef.limit(batchLimit).get();
+        if (snapshot.docs.isEmpty) break;
+
+        final batch = _firestore.batch();
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      } while (snapshot.docs.length == batchLimit);
+
+      // ── Step 2: Delete the conversation document itself ───────────────────
+      await _firestore
+          .doc(FirebaseCollections.conversationDoc(uid, conversationId))
+          .delete();
+
+      // ── Step 3: Remove from Hive cache ────────────────────────────────────
+      await _storage.removeConversationCache('messages_$conversationId');
+
+      debugPrint('🗑️ Deleted conversation $conversationId');
+    } on FirebaseException catch (e) {
+      throw ChatException(
+        ChatErrorCodes.deleteFailed,
+        technicalMessage: 'deleteConversation failed: ${e.code}',
+      );
+    }
+  }
+
   // ── Hive Cache Operations ─────────────────────────────────────────────────
 
   @override
@@ -182,8 +229,9 @@ class ChatRepositoryImpl implements ChatRepository {
       // Uses toCacheMap() instead of toFirestore() to avoid FieldValue
       // serialization errors (FieldValue.serverTimestamp() is a Firestore
       // sentinel that cannot be JSON-encoded).
+      final sortedMessages = _sortChronologically(messages);
       final encoded = jsonEncode(
-        messages.map((m) => m.toCacheMap()).toList(),
+        sortedMessages.map((m) => m.toCacheMap()).toList(),
       );
       await _storage.setConversationCache(
         'messages_$conversationId',
@@ -206,13 +254,14 @@ class ChatRepositoryImpl implements ChatRepository {
       if (encoded == null || encoded.isEmpty) return [];
 
       final list = jsonDecode(encoded) as List<dynamic>;
-      return list
+      final messages = list
           .map(
             (item) => MessageModel.fromCacheMap(
               item as Map<String, dynamic>,
             ),
           )
           .toList();
+      return _sortChronologically(messages);
     } catch (e) {
       debugPrint('⚠️ getCachedMessages error: $e');
       return [];
@@ -222,5 +271,21 @@ class ChatRepositoryImpl implements ChatRepository {
   @override
   Future<void> clearCache() async {
     await _storage.clearConversationCache();
+  }
+
+  List<MessageModel> _sortChronologically(List<MessageModel> messages) {
+    final sorted = List<MessageModel>.from(messages);
+    sorted.sort((a, b) {
+      final timeCompare = a.timestamp.compareTo(b.timestamp);
+      if (timeCompare != 0) return timeCompare;
+
+      if (a.role != b.role) {
+        if (a.role == MessageRole.user) return -1;
+        if (b.role == MessageRole.user) return 1;
+      }
+
+      return a.id.compareTo(b.id);
+    });
+    return sorted;
   }
 }

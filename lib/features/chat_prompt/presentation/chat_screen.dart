@@ -13,6 +13,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
+import '../domain/chat_attachment.dart';
 import 'chat_provider.dart';
 
 /// Entry point for starting a brand new conversation.
@@ -40,7 +41,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  Future<void> _handleSend(String prompt) async {
+  Future<void> _handleSend(String prompt, ChatAttachment? attachment) async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
@@ -55,6 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
       prompt: prompt,
       validProviders: validProviders,
       capability: ConversationCapability.textChat,
+      attachment: attachment,
     );
 
     if (!mounted) return;
@@ -121,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
           // ── Input Bar with Background Container ────────────────────────
           ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: context.screenHeight * 0.2,
+                maxHeight: context.screenHeight * 0.4,
               ),
               child: Container(
                 decoration: BoxDecoration(
