@@ -45,7 +45,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => AppRoutes.pop(context, false),
-            child: Text(context.l10n.cancel, style: TextStyle(color: context.primaryColor)),
+            child: Text(context.l10n.cancel,
+                style: TextStyle(color: context.primaryColor)),
           ),
           TextButton(
             onPressed: () => AppRoutes.pop(context, true),
@@ -278,7 +279,11 @@ class _ProfileAvatar extends StatelessWidget {
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: (photoUrl.trim().isEmpty) ? null : context.isDark ? AppColors.darkVoiceGradient : AppColors.lightVoiceGradient,
+        gradient: (photoUrl.trim().isEmpty)
+            ? null
+            : context.isDark
+                ? AppColors.darkVoiceGradient
+                : AppColors.lightVoiceGradient,
         boxShadow: [
           BoxShadow(
             color: context.primaryColor.withValues(alpha: 0.2),
@@ -362,8 +367,6 @@ class _SettingsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localeProvider = context.watch<LocaleProvider>();
-
     return _Panel(
       child: Column(
         children: [
@@ -376,37 +379,7 @@ class _SettingsPanel extends StatelessWidget {
           _SettingsRow(
             icon: Icons.language_rounded,
             title: context.l10n.language,
-            trailing: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: () {
-                final nextLocale = localeProvider.isEnglish
-                    ? const Locale('hi')
-                    : const Locale('en');
-                context.read<LocaleProvider>().setLocale(nextLocale);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      localeProvider.isEnglish
-                          ? context.l10n.translate('language_en')
-                          : context.l10n.translate('language_hi'),
-                      style: context.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color:  _mutedTextColor(context),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: _mutedTextColor(context),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            trailing: const _LanguagePopupButton(),
           ),
         ],
       ),
@@ -414,15 +387,20 @@ class _SettingsPanel extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// _ThemeSwitcher — Light | Dark
+// isSelected is driven by the STORED ThemeType, not the resolved effective
+// theme. This means System is highlighted on first install (default) and
+// whenever the user explicitly selects it again.
+// ---------------------------------------------------------------------------
 class _ThemeSwitcher extends StatelessWidget {
   const _ThemeSwitcher();
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
-    final effectiveType = themeProvider.currentThemeType == ThemeType.system
-        ? (context.isDark ? ThemeType.dark : ThemeType.light)
-        : themeProvider.currentThemeType;
+    // Use the stored preference directly — no system resolution.
+    final selected = themeProvider.currentThemeType;
 
     return Container(
       padding: const EdgeInsets.all(4),
@@ -435,16 +413,90 @@ class _ThemeSwitcher extends StatelessWidget {
         children: [
           _ThemeOption(
             label: context.l10n.translate('theme_light'),
-            isSelected: effectiveType == ThemeType.light,
+            isSelected: selected == ThemeType.light,
             onTap: () =>
                 context.read<ThemeProvider>().setTheme(ThemeType.light),
           ),
           _ThemeOption(
             label: context.l10n.translate('theme_dark'),
-            isSelected: effectiveType == ThemeType.dark,
+            isSelected: selected == ThemeType.dark,
             onTap: () => context.read<ThemeProvider>().setTheme(ThemeType.dark),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// _LanguagePopupButton — opens a PopupMenuButton in-place at the trailing
+// position. The active locale is shown with a checkmark. Selecting an option
+// calls LocaleProvider.setLocale() and dismisses the popup automatically.
+// ---------------------------------------------------------------------------
+class _LanguagePopupButton extends StatelessWidget {
+  const _LanguagePopupButton();
+
+  static const List<Locale> _locales = [
+    Locale('en'),
+    Locale('hi'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final localeProvider = context.watch<LocaleProvider>();
+    final activeLocale = localeProvider.locale;
+    final activeLabel = activeLocale.languageCode == 'en'
+        ? context.l10n.translate('language_en')
+        : context.l10n.translate('language_hi');
+
+    return PopupMenuButton<Locale>(
+      onSelected: (locale) => context.read<LocaleProvider>().setLocale(locale),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: _ProfileHelpers.panelColor(context),
+      elevation: 8,
+      offset: const Offset(0, 40),
+      itemBuilder: (_) => _locales.map((locale) {
+        final isActive = locale.languageCode == activeLocale.languageCode;
+        final label = locale.languageCode == 'en'
+            ? context.l10n.translate('language_en')
+            : context.l10n.translate('language_hi');
+        return PopupMenuItem<Locale>(
+          value: locale,
+          child: Row(
+            children: [
+              Text(
+                label,
+                style: context.textTheme.headlineSmall?.copyWith(
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: isActive ? context.primaryColor : _ProfileHelpers.mutedTextColor(context),
+                ),
+              ),
+              if (isActive) ...[
+                const SizedBox(width: 8),
+                Icon(Icons.check_rounded,
+                    size: 18, color: context.primaryColor),
+              ],
+            ],
+          ),
+        );
+      }).toList(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              activeLabel,
+              style: context.textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: _ProfileHelpers.mutedTextColor(context),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.expand_more_rounded,
+                size: 18, color: _ProfileHelpers.mutedTextColor(context)),
+          ],
+        ),
       ),
     );
   }
@@ -528,10 +580,9 @@ class _AiIntelligenceSection extends StatelessWidget {
     return Consumer<ApiKeyProvider>(
       builder: (context, keyProvider, _) {
         final activeProviders = keyProvider.validProviders;
-        final inactiveProviders = AiProviderId.values
+        List<AiProviderId> inactiveProviders = AiProviderId.values
             .where((provider) => !activeProviders.contains(provider))
             .toList();
-
         return Column(
           children: [
             if (activeProviders.isEmpty)
@@ -560,23 +611,23 @@ class _ModelIntelligenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _providerColor(provider);
-    final usage = _providerUsage(provider);
+    final color = _ProfileHelpers.providerColor(provider);
+    final usage = _ProfileHelpers.providerUsage(provider);
 
     return Container(
       padding: const EdgeInsets.all(21),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            _panelColor(context),
-            _panelColor(context),
+            _ProfileHelpers.panelColor(context),
+            _ProfileHelpers.panelColor(context),
             color.withValues(alpha: context.isDark ? 0.2 : 0.8),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: _softShadow(context),
+        boxShadow: _ProfileHelpers.softShadow(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -607,9 +658,8 @@ class _ModelIntelligenceCard extends StatelessWidget {
               ),
               Text(
                 '${(usage * 100).round()}%',
-                style: context.textTheme.headlineMedium?.copyWith(
-                  color: _mutedTextColor(context)
-                ),
+                style: context.textTheme.headlineMedium
+                    ?.copyWith(color: _ProfileHelpers.mutedTextColor(context)),
               ),
             ],
           ),
@@ -617,17 +667,16 @@ class _ModelIntelligenceCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: LinearProgressIndicator(
-              value: usage,
-              minHeight: 12,
-              color: color,
-              backgroundColor: Colors.grey.shade400
-            ),
+                value: usage,
+                minHeight: 12,
+                color: color,
+                backgroundColor: Colors.grey.shade400),
           ),
           const SizedBox(height: 18),
           Text(
             provider.features,
             style: context.textTheme.bodyMedium?.copyWith(
-              color: _mutedTextColor(context),
+              color: _ProfileHelpers.mutedTextColor(context),
               height: 1.5,
             ),
           ),
@@ -650,7 +699,8 @@ class _ActivationPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const _IconTile(icon: Icons.auto_awesome_motion_rounded, size: 48),
+              const _IconTile(
+                  icon: Icons.auto_awesome_motion_rounded, size: 48),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -662,7 +712,7 @@ class _ActivationPanel extends StatelessWidget {
                     Text(
                       context.l10n.activateModelsMessage,
                       style: context.textTheme.bodySmall?.copyWith(
-                        color: _mutedTextColor(context),
+                        color: _ProfileHelpers.mutedTextColor(context),
                         height: 1.4,
                       ),
                     ),
@@ -671,16 +721,14 @@ class _ActivationPanel extends StatelessWidget {
               ),
             ],
           ),
-          if (inactiveProviders.isNotEmpty) ...[
             const SizedBox(height: 18),
             Wrap(
-              spacing: 10,
+              spacing: 16,
               runSpacing: 10,
               children: inactiveProviders
                   .map((provider) => _InactiveModelChip(provider: provider))
                   .toList(),
             ),
-          ],
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
@@ -707,7 +755,7 @@ class _InactiveModelChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _providerColor(provider);
+    final color = _ProfileHelpers.providerColor(provider);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -719,7 +767,8 @@ class _InactiveModelChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FaIcon(_providerIcon(provider), color: color, size: 16),
+          FaIcon(_ProfileHelpers.providerIcon(provider),
+              color: color, size: 16),
           const SizedBox(width: 8),
           Text(
             provider.displayName,
@@ -808,7 +857,7 @@ class _ActionRow extends StatelessWidget {
           ),
           Icon(
             Icons.chevron_right_rounded,
-            color: _mutedTextColor(context),
+            color: _ProfileHelpers.mutedTextColor(context),
           ),
         ],
       ),
@@ -827,14 +876,13 @@ class _Panel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: _panelColor(context),
+        color: _ProfileHelpers.panelColor(context),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: context.isDark
-              ? AppColors.darkDivider
-              : AppColors.lightDivider
-        ),
-        boxShadow: _softShadow(context),
+            color: context.isDark
+                ? AppColors.darkDivider
+                : AppColors.lightDivider),
+        boxShadow: _ProfileHelpers.softShadow(context),
       ),
       child: child,
     );
@@ -885,12 +933,12 @@ class _ProviderLogo extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        gradient: _providerGradient(provider),
+        gradient: _ProfileHelpers.providerGradient(provider),
         shape: BoxShape.circle,
       ),
       child: Center(
         child: FaIcon(
-          _providerIcon(provider),
+          _ProfileHelpers.providerIcon(provider),
           color: AppColors.white,
           size: size * 0.55,
         ),
@@ -899,66 +947,76 @@ class _ProviderLogo extends StatelessWidget {
   }
 }
 
-Color _providerColor(AiProviderId provider) {
-  switch (provider) {
-    case AiProviderId.openAi:
-      return AppColors.openAiBrand;
-    case AiProviderId.gemini:
-      return AppColors.geminiBrand;
-    case AiProviderId.claude:
-      return AppColors.claudeBrand;
+// =============================================================================
+// _ProfileHelpers — private static utility namespace.
+//
+// All view-layer helpers for this file live here. Using an abstract final
+// class (not instantiable) keeps them out of the global namespace while
+// remaining easily accessible as _ProfileHelpers.method().
+// =============================================================================
+abstract final class _ProfileHelpers {
+  // ── Provider branding ───────────────────────────────────────────────────
+
+  static Color providerColor(AiProviderId provider) {
+    switch (provider) {
+      case AiProviderId.openAi:
+        return AppColors.openAiBrand;
+      case AiProviderId.gemini:
+        return AppColors.geminiBrand;
+      case AiProviderId.claude:
+        return AppColors.claudeBrand;
+    }
   }
-}
 
-Gradient _providerGradient(AiProviderId provider) {
-  switch (provider) {
-    case AiProviderId.openAi:
-      return AppColors.openAIGradient;
-    case AiProviderId.gemini:
-      return AppColors.geminiGradient;
-    case AiProviderId.claude:
-      return AppColors.claudeGradient;
+  static Gradient providerGradient(AiProviderId provider) {
+    switch (provider) {
+      case AiProviderId.openAi:
+        return AppColors.openAIGradient;
+      case AiProviderId.gemini:
+        return AppColors.geminiGradient;
+      case AiProviderId.claude:
+        return AppColors.claudeGradient;
+    }
   }
-}
 
-FaIconData _providerIcon(AiProviderId provider) {
-  switch (provider) {
-    case AiProviderId.openAi:
-      return FontAwesomeIcons.openai;
-    case AiProviderId.gemini:
-      return FontAwesomeIcons.gemini;
-    case AiProviderId.claude:
-      return FontAwesomeIcons.claude;
+  static FaIconData providerIcon(AiProviderId provider) {
+    switch (provider) {
+      case AiProviderId.openAi:
+        return FontAwesomeIcons.openai;
+      case AiProviderId.gemini:
+        return FontAwesomeIcons.gemini;
+      case AiProviderId.claude:
+        return FontAwesomeIcons.claude;
+    }
   }
-}
 
-double _providerUsage(AiProviderId provider) {
-  switch (provider) {
-    case AiProviderId.openAi:
-      return 0.72;
-    case AiProviderId.gemini:
-      return 0.64;
-    case AiProviderId.claude:
-      return 0.81;
+  /// Placeholder usage percentage (replace with real data when available).
+  static double providerUsage(AiProviderId provider) {
+    switch (provider) {
+      case AiProviderId.openAi:
+        return 0.72;
+      case AiProviderId.gemini:
+        return 0.64;
+      case AiProviderId.claude:
+        return 0.81;
+    }
   }
-}
 
-Color _panelColor(BuildContext context) {
-  return context.isDark ? AppColors.cardDark : AppColors.cardLight;
-}
+  // ── Theme-aware surface helpers ──────────────────────────────────────────
 
-Color _mutedTextColor(BuildContext context) {
-  return context.isDark
+  static Color panelColor(BuildContext context) =>
+      context.isDark ? AppColors.cardDark : AppColors.cardLight;
+
+  static Color mutedTextColor(BuildContext context) => context.isDark
       ? AppColors.darkTextPrimary.withValues(alpha: 0.66)
       : AppColors.lightTextPrimary.withValues(alpha: 0.58);
-}
 
-List<BoxShadow> _softShadow(BuildContext context) {
-  return [
-    BoxShadow(
-      color: AppColors.black.withValues(alpha: context.isDark ? 0.12 : 0.06),
-      blurRadius: 24,
-      offset: const Offset(0, 14),
-    ),
-  ];
+  static List<BoxShadow> softShadow(BuildContext context) => [
+        BoxShadow(
+          color:
+              AppColors.black.withValues(alpha: context.isDark ? 0.12 : 0.06),
+          blurRadius: 24,
+          offset: const Offset(0, 14),
+        ),
+      ];
 }

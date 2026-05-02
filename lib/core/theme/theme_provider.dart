@@ -26,7 +26,7 @@ class ThemeProvider extends ChangeNotifier {
       case ThemeMode.dark:
         return ThemeType.dark;
       case ThemeMode.system:
-        return ThemeType.system;
+        return (ThemeMode.system == ThemeMode.light) ? ThemeType.light : ThemeType.dark;
     }
   }
 
