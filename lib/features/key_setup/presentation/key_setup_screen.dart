@@ -75,7 +75,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
       appBar: widget.isInitialSetup
           ? null // No app bar on initial setup — full immersive flow
           : AppBar(
-              title: Text(context.l10n.manageKeys),
+              title: Text(context.l10n.manageApiKeys),
             ),
       body: SafeArea(
         child: Consumer<ApiKeyProvider>(

@@ -4,10 +4,8 @@ import 'package:ai_voice_genie/core/localization/app_localizations.dart';
 import 'package:ai_voice_genie/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../auth/presentation/auth_provider.dart';
 
 class IntroScreen extends StatelessWidget {
   const IntroScreen({super.key});
@@ -25,9 +23,8 @@ class IntroScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // The selected tab body
-          _buildTopNavBar(context),
           SizedBox(height: (context.isTablet) ? 24 : 16),
-          _buildHero(context),
+          _buildTopNavBar(context),
           SizedBox(height: (context.isTablet) ? 40 : 30),
           _buildQuickActions(context),
           SizedBox(height: (context.isTablet) ? 40 : 30),
@@ -192,41 +189,12 @@ class IntroScreen extends StatelessWidget {
   }
 
   Widget _buildTopNavBar(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final user = authProvider.currentUser;
-    final userName = user?.displayName ?? context.l10n.user;
-    final userInitial = userName.isNotEmpty
-        ? userName[0].toUpperCase()
-        : context.l10n.user[0].toUpperCase();
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        CircleAvatar(
-          radius: 23,
-          backgroundColor:
-              context.isDark ? AppColors.accentDark : AppColors.accentLight,
-          child: Text(
-            userInitial,
-            style: TextStyle(
-                color: context.isDark
-                    ? AppColors.primaryLight
-                    : AppColors.primaryDark,
-                fontWeight: FontWeight.bold,
-                fontSize: context.isTablet ? 36 : 24),
-          ),
-        ),
-        SizedBox(width: context.isTablet ? 16 : 8),
-        Expanded(
-          child: Text(
-            userName,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: context.isDark
-                    ? AppColors.primaryLight
-                    : AppColors.primaryDark),
-          ),
-        ),
+        _buildHero(context),
+        const Spacer(),
         Container(
           decoration: BoxDecoration(
               gradient: context.isDark

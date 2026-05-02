@@ -4,7 +4,14 @@
 /// Never hardcode strings, numbers, or paths in feature code.
 class AppConstants {
   // ── App Info ───────────────────────────────────────────────────────────────
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.0 + 1';
+  static const String copyrightOwner = 'AI Voice Genie';
+
+  // Fill these before publishing the app on Google Play.
+  static const String privacyPolicyUrl = '';
+  static const String termsOfServiceUrl = '';
+  static const String supportEmail = '';
+  static const String helpCenterUrl = '';
 
   // ── Validation ────────────────────────────────────────────────────────────
   static const int minPasswordLength = 8;

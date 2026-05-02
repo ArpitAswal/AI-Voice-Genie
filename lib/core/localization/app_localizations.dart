@@ -252,6 +252,7 @@ class AppLocalizations {
       'photo_url': 'Photo URL',
       'photo_url_optional': 'Photo URL (optional)',
       'profile_updated': 'Profile updated successfully.',
+      'profile_updating': 'Profile Updating...',
       'profile_update_failed': 'Could not update profile. Please try again.',
       'active_models': 'Active Models',
       'inactive_models': 'Inactive Models',
@@ -263,6 +264,23 @@ class AppLocalizations {
       'configure': 'Configure',
       'help_center': 'Help Center',
       'coming_soon': 'Coming soon.',
+      'about_app': 'About AI Voice Genie',
+      'development_build': 'Development Build',
+      'about_mission_title': 'Mission',
+      'about_mission_body':
+          'AI Voice Genie brings ChatGPT, Gemini, and Claude into one voice-first workspace for chat, images, documents, and everyday thinking.',
+      'legal': 'Legal',
+      'credits_attribution': 'Credits & Attribution',
+      'open_source_licenses': 'Open-source Licenses',
+      'contact_support': 'Contact Support',
+      'configured': 'Configured',
+      'not_configured': 'Not configured',
+      'view_licenses': 'View package licenses',
+      'about_developer': 'Developer',
+      'independent_developer': 'Independent developer',
+      'copyright': 'Copyright',
+      'link_unavailable': 'This link is not configured yet.',
+      'could_not_open_link': 'Could not open this link.',
       'delete_account': 'Delete Account',
       'delete_account_confirm':
           'This will permanently delete your account and all conversations. This cannot be undone.',
@@ -514,6 +532,7 @@ class AppLocalizations {
       'photo_url': 'फ़ोटो URL',
       'photo_url_optional': 'फ़ोटो URL (वैकल्पिक)',
       'profile_updated': 'प्रोफ़ाइल सफलतापूर्वक अपडेट हुई।',
+      'profile_updating': 'प्रोफ़ाइल अपडेट हो रही है...',
       'profile_update_failed':
           'प्रोफ़ाइल अपडेट नहीं हो सकी। कृपया पुनः प्रयास करें।',
       'active_models': 'सक्रिय मॉडल',
@@ -526,6 +545,23 @@ class AppLocalizations {
       'configure': 'कॉन्फ़िगर करें',
       'help_center': 'हेल्प सेंटर',
       'coming_soon': 'जल्द आ रहा है।',
+      'about_app': 'ऐएआई वॉइस जीनियस के बारे में',
+      'development_build': 'डेवलपमेंट बिल्ड',
+      'about_mission_title': 'मिशन',
+      'about_mission_body':
+          'AI Voice Genie ChatGPT, Gemini और Claude को chat, images, documents और everyday thinking के लिए एक voice-first workspace में लाता है।',
+     'legal': 'कानूनी',
+      'credits_attribution': 'क्रेडिट और एट्रिब्यूशन',
+      'open_source_licenses': 'ओपन-सोर्स लाइसेंस',
+      'contact_support': 'सहायता से संपर्क करें',
+      'configured': 'कॉन्फ़िगर किया गया',
+      'not_configured': 'कॉन्फ़िगर नहीं किया गया',
+      'view_licenses': 'पैकेज लाइसेंस देखें',
+      'about_developer': 'डेवलपर',
+      'independent_developer': 'स्वतंत्र डेवलपर',
+      'copyright': 'कॉपीराइट',
+      'link_unavailable': 'यह लिंक अभी कॉन्फ़िगर नहीं है।',
+      'could_not_open_link': 'यह लिंक नहीं खुल सका।',
       'delete_account': 'खाता हटाएं',
       'delete_account_confirm':
           'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा।',
@@ -613,7 +649,6 @@ class AppLocalizations {
   String get onboardTitle3 => translate('onboarding_title_3');
   String get onboardDesc3 => translate('onboarding_desc_3');
   String get next => translate('next');
-  String get manageKeys => translate('manage_api_keys');
   String get keySetupTitle => translate('setup_title');
   String get keySetupSubTitle => translate('setup_subtitle');
   String get keyValid => translate('key_valid');
@@ -683,6 +718,14 @@ class AppLocalizations {
   String get signOutConfirm => translate('sign_out_confirm');
   String get signOutSuccess => translate('sign_out_success');
   String get signingOut => translate('signing_out');
+  String get aboutApp => translate('about_app');
+  String get appVersion => translate('app_version');
+  String get privacyPolicy => translate('privacy_policy');
+  String get termsOfService => translate('terms_of_service');
+  String get developmentBuild => translate('development_build');
+  String get linkUnavailable => translate('link_unavailable');
+  String get couldNotOpenLink => translate('could_not_open_link');
+  String get profileUpdating => translate('profile_updating');
 }
 
 // ==========================================================================

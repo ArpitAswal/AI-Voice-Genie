@@ -62,6 +62,7 @@ extension WidgetExtensions on BuildContext {
         labelText: label,
         hintText: hint,
         hintStyle: theme.textTheme.bodyLarge,
+        labelStyle: theme.textTheme.titleSmall,
         errorText: errorText,
         counterText: maxLength != null ? null : '',
         prefixIcon: prefixIcon != null

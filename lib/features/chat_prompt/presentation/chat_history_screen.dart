@@ -109,7 +109,10 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                     const SizedBox(height: 24),
                     Text(
                       context.l10n.conversationHistory,
-                      style: context.textTheme.displayMedium
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                          color: context.isDark
+                              ? AppColors.primaryLight
+                              : AppColors.primaryDark),
                     ),
                     const SizedBox(height: 8),
                     Text(

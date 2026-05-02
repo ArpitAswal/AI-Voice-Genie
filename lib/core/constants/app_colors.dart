@@ -24,7 +24,7 @@ class AppColors {
   static const Color cardDark = Color(0xFF091328);
 
   // ── AppBar Colors ─────────────────────────────────────────────────────
-  static const Color appBarLight = Color(0xFFFFFFFF);
+  static const Color appBarLight = Color(0xFFE5E5E5);
   static const Color appBarTextLight = Color(0xFF0F172A);
 
   static const Color appBarDark = Color(0xFF0B1220);

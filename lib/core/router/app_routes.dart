@@ -72,6 +72,9 @@ class AppRoutes {
   /// Edit profile
   static const String profileEdit = '/profile/edit';
 
+  /// About app
+  static const String about = '/about';
+
   /// Exception / 404
   static const String exception = '/exception';
 
@@ -242,6 +245,14 @@ class AppRoutes {
           const EditProfileScreen(),
           settings,
           TransitionType.slideUp,
+        );
+
+      // ── About ──────────────────────────────────────────────────────────────
+      case about:
+        return _buildRoute(
+          const AboutScreen(),
+          settings,
+          TransitionType.slide,
         );
 
       // ── Exception / 404 ────────────────────────────────────────────────────
