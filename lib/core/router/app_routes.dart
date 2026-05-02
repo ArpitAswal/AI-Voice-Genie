@@ -1,6 +1,7 @@
 import 'package:ai_voice_genie/features/auth/presentation/auth_screen.dart';
 import 'package:ai_voice_genie/features/chat_prompt/presentation/chat_screen.dart';
 import 'package:ai_voice_genie/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:ai_voice_genie/features/profile/presentation/profie_view.dart';
 import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -65,26 +66,11 @@ class AppRoutes {
   static const String chat = '/chat';
   static const String chatDetail = '/chat-detail';
 
-  /// Image generation
-  static const String imageGenerator = '/image-generator';
-
-  /// Image reading (upload + analyze)
-  static const String imageReader = '/image-reader';
-
-  /// PDF reader
-  static const String pdfReader = '/pdf-reader';
-
-  /// Conversation history
-  static const String conversationHistory = '/history';
-
-  /// Settings screen
-  static const String settingsScreen = '/settings';
-
   /// API key management
   static const String apiKeyManagement = '/api-keys';
 
-  /// Profile
-  static const String profile = '/profile';
+  /// Edit profile
+  static const String profileEdit = '/profile/edit';
 
   /// Exception / 404
   static const String exception = '/exception';
@@ -231,74 +217,31 @@ class AppRoutes {
       case chatDetail:
         if (arguments is ChatDetailArguments) {
           return _buildRoute(
-            ChatDetailScreen(conversationId: arguments.conversationId,
-                initialTitle: arguments.initialTitle),
-            settings,
-            TransitionType.fade,
-            const Duration(milliseconds: 700)
-          );
-        } else{
-          return _buildRoute(
-            const ChatDetailScreen(conversationId: ''),
-            settings,
-            TransitionType.fade,
-              const Duration(milliseconds: 700)
-          );
+              ChatDetailScreen(
+                  conversationId: arguments.conversationId,
+                  initialTitle: arguments.initialTitle),
+              settings,
+              TransitionType.fade,
+              const Duration(milliseconds: 700));
+        } else {
+          return _buildRoute(const ChatDetailScreen(conversationId: ''),
+              settings, TransitionType.fade, const Duration(milliseconds: 700));
         }
-      // ── Image Generator ────────────────────────────────────────────────────
-      case imageGenerator:
-        return _buildRoute(
-          const _PlaceholderScreen(label: 'ImageGeneratorScreen'),
-          settings,
-          TransitionType.slide,
-        );
-
-      // ── Image Reader ───────────────────────────────────────────────────────
-      case imageReader:
-        return _buildRoute(
-          const _PlaceholderScreen(label: 'ImageReaderScreen'),
-          settings,
-          TransitionType.slide,
-        );
-
-      // ── PDF Reader ─────────────────────────────────────────────────────────
-      case pdfReader:
-        return _buildRoute(
-          const _PlaceholderScreen(label: 'PdfReaderScreen'),
-          settings,
-          TransitionType.slide,
-        );
-
-      // ── Conversation History ───────────────────────────────────────────────
-      case conversationHistory:
-        return _buildRoute(
-          const _PlaceholderScreen(label: 'ConversationHistoryScreen'),
-          settings,
-          TransitionType.slide,
-        );
-
-      // ── Settings ───────────────────────────────────────────────────────────
-      case settingsScreen:
-        return _buildRoute(
-          const _PlaceholderScreen(label: 'SettingsScreen'),
-          settings,
-          TransitionType.slide,
-        );
 
       // ── API Key Management ─────────────────────────────────────────────────
       case apiKeyManagement:
         return _buildRoute(
-          const _PlaceholderScreen(label: 'ApiKeyManagementScreen'),
+          const KeySetupScreen(isInitialSetup: false),
           settings,
           TransitionType.slide,
         );
 
-      // ── Profile ────────────────────────────────────────────────────────────
-      case profile:
+      // ── Profile Edit ───────────────────────────────────────────────────────
+      case profileEdit:
         return _buildRoute(
-          const _PlaceholderScreen(label: 'ProfileScreen'),
+          const EditProfileScreen(),
           settings,
-          TransitionType.slide,
+          TransitionType.slideUp,
         );
 
       // ── Exception / 404 ────────────────────────────────────────────────────
@@ -310,12 +253,10 @@ class AppRoutes {
   // ── Private Route Builders ─────────────────────────────────────────────────
 
   /// Build a route with the specified transition type.
-  static Route<dynamic> _buildRoute(
-    Widget screen, [
-    RouteSettings? settings,
-    TransitionType transition = TransitionType.slide,
-    Duration? dur = const Duration(milliseconds: 300)
-  ]) {
+  static Route<dynamic> _buildRoute(Widget screen,
+      [RouteSettings? settings,
+      TransitionType transition = TransitionType.slide,
+      Duration? dur = const Duration(milliseconds: 300)]) {
     // Default slide uses MaterialPageRoute for standard platform feel
     if (transition == TransitionType.slide) {
       return MaterialPageRoute(builder: (_) => screen, settings: settings);

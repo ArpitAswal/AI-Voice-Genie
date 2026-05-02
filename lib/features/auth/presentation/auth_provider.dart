@@ -99,7 +99,7 @@ class AuthProvider extends ChangeNotifier {
     await _analytics.logSignInButtonTapped(SocialAuthProvider.google);
 
     return _performSignIn(
-          () => _repository.signInWithGoogle(),
+      () => _repository.signInWithGoogle(),
       provider: SocialAuthProvider.google,
     );
   }
@@ -115,7 +115,7 @@ class AuthProvider extends ChangeNotifier {
     await _analytics.logSignInButtonTapped(SocialAuthProvider.apple);
 
     return _performSignIn(
-          () => _repository.signInWithApple(),
+      () => _repository.signInWithApple(),
       provider: SocialAuthProvider.apple,
     );
   }
@@ -128,14 +128,54 @@ class AuthProvider extends ChangeNotifier {
   Future<void> signOut() async {
     try {
       await _repository.signOut();
-      _currentUser = null;
       await _analytics.clearUserId();
-      _setAuthState(AuthState.unauthenticated);
+      await Future.delayed(const Duration(seconds: 3),(){
+        _currentUser = null;
+        _setAuthState(AuthState.unauthenticated);
+      });
     } catch (e) {
       debugPrint('⚠️ AuthProvider.signOut error: $e');
       // Even on error, clear local state so user is not stuck
       _currentUser = null;
       _setAuthState(AuthState.unauthenticated);
+    }
+  }
+
+  // ── Profile Update ─────────────────────────────────────────────────────────
+
+  /// Update profile fields and refresh the in-memory user model.
+  Future<bool> updateProfile({
+    required String displayName,
+    required String photoUrl,
+  }) async {
+    final user = _currentUser;
+    final resolvedDisplayName = displayName.trim();
+    final resolvedPhotoUrl = photoUrl.trim();
+
+    if (user == null || resolvedDisplayName.isEmpty) {
+      return false;
+    }
+
+    try {
+      final success = await _repository.updateProfile(
+        user,
+        displayName: resolvedDisplayName,
+        photoUrl: resolvedPhotoUrl,
+      );
+
+      if (!success) return false;
+
+      _currentUser = user.copyWith(
+        displayName: resolvedDisplayName,
+        photoUrl: resolvedPhotoUrl,
+      );
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('❌ AuthProvider.updateProfile error: $e');
+      _authError = 'something_went_wrong';
+      notifyListeners();
+      return false;
     }
   }
 
@@ -159,9 +199,9 @@ class AuthProvider extends ChangeNotifier {
   /// Handles loading state, error mapping, analytics, and state transitions.
   /// The caller provides the repository method to invoke.
   Future<bool> _performSignIn(
-      Future<UserModel?> Function() signInMethod, {
-        required SocialAuthProvider provider,
-      }) async {
+    Future<UserModel?> Function() signInMethod, {
+    required SocialAuthProvider provider,
+  }) async {
     // Clear any previous error before starting
     _authError = null;
     _setAuthState(AuthState.authenticating);
@@ -222,22 +262,20 @@ class AuthProvider extends ChangeNotifier {
 
   /// Set onboarding complete and notify listeners.
 
-  Future<void> markBoardingComplete() async{
-    if(currentUser == null) {
+  Future<void> markBoardingComplete() async {
+    if (currentUser == null) {
       return;
     }
 
     try {
-
       // Update the in-memory UserModel so _navigateAfterAuth (and SplashScreen)
       // read the correct value without fetching from Firestore again
       _currentUser = _currentUser?.copyWith(onboardingDone: true);
 
-      await _repository.updateUser(
-          _currentUser, field: FirebaseCollections.fieldOnboardingDone,
+      await _repository.updateUser(_currentUser,
+          field: FirebaseCollections.fieldOnboardingDone,
           value: currentUser?.onboardingDone ?? false);
-
-    } catch (e){
+    } catch (e) {
       debugPrint('❌ AuthProvider onboarding error: $e');
       _authError = 'something_went_wrong';
     }

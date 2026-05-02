@@ -2,9 +2,9 @@
 ///
 /// These match the provider IDs stored in Firestore and fired in analytics.
 enum AiProviderId {
-  openAi('openai', 'ChatGPT', 'GPT-4o • DALL-E 3 • Whisper'),
-  gemini('gemini', 'Gemini', 'Gemini 2.0 Flash • Image Gen'),
-  claude('claude', 'Claude', 'Claude Sonnet • Vision • PDF');
+  openAi('openai', 'ChatGPT', '• GPT-4o • DALL-E 3 • Whisper'),
+  gemini('gemini', 'Gemini', '• Gemini 2.0 Flash • Image Gen'),
+  claude('claude', 'Claude', '• Claude Sonnet • Vision • PDF');
 
   /// Internal ID used in Firestore, analytics, and API routing
   final String id;

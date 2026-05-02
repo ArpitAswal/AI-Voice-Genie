@@ -79,6 +79,7 @@ class AppLocalizations {
       'sign_out_confirm': 'Are you sure you want to sign out?',
       'welcome_back': 'Welcome back',
       'signing_in': 'Signing you in...',
+      'signing_out': "Signing you out...",
       'sign_in_failed': 'Sign in failed. Please try again.',
       'sign_out_success': 'Signed out successfully.',
 
@@ -243,10 +244,30 @@ class AppLocalizations {
       // ── Profile ────────────────────────────────────────────────────────────
       'profile': 'Profile',
       'account': 'Account',
+      'app_settings': 'App Settings',
+      'ai_intelligence': 'AI Intelligence',
+      'support': 'Support',
+      'edit_profile': 'Edit Profile',
+      'display_name': 'Display Name',
+      'photo_url': 'Photo URL',
+      'photo_url_optional': 'Photo URL (optional)',
+      'profile_updated': 'Profile updated successfully.',
+      'profile_update_failed': 'Could not update profile. Please try again.',
+      'active_models': 'Active Models',
+      'inactive_models': 'Inactive Models',
+      'activate_more_models': 'Activate more AI models',
+      'activate_more_models_message':
+          'Add API keys to unlock more reasoning styles, fallback routing, and feature coverage.',
+      'enabled': 'Enabled',
+      'not_active': 'Not Active',
+      'configure': 'Configure',
+      'help_center': 'Help Center',
+      'coming_soon': 'Coming soon.',
       'delete_account': 'Delete Account',
       'delete_account_confirm':
           'This will permanently delete your account and all conversations. This cannot be undone.',
       'account_deleted': 'Account deleted.',
+      'unauthenticate_profile': 'UnAuthenticate Profile',
 
       // ── Validation ─────────────────────────────────────────────────────────
       'field_required': 'This field is required',
@@ -320,6 +341,7 @@ class AppLocalizations {
       'sign_out_confirm': 'क्या आप साइन आउट करना चाहते हैं?',
       'welcome_back': 'वापस आपका स्वागत है',
       'signing_in': 'साइन इन हो रहा है...',
+      'signing_out': "साइन आउट हो रहा है...",
       'sign_in_failed': 'साइन इन विफल। कृपया पुनः प्रयास करें।',
       'sign_out_success': 'सफलतापूर्वक साइन आउट हो गए।',
 
@@ -484,10 +506,31 @@ class AppLocalizations {
       // ── Profile ────────────────────────────────────────────────────────────
       'profile': 'प्रोफ़ाइल',
       'account': 'खाता',
+      'app_settings': 'ऐप सेटिंग',
+      'ai_intelligence': 'AI इंटेलिजेंस',
+      'support': 'सहायता',
+      'edit_profile': 'प्रोफ़ाइल संपादित करें',
+      'display_name': 'डिस्प्ले नाम',
+      'photo_url': 'फ़ोटो URL',
+      'photo_url_optional': 'फ़ोटो URL (वैकल्पिक)',
+      'profile_updated': 'प्रोफ़ाइल सफलतापूर्वक अपडेट हुई।',
+      'profile_update_failed':
+          'प्रोफ़ाइल अपडेट नहीं हो सकी। कृपया पुनः प्रयास करें।',
+      'active_models': 'सक्रिय मॉडल',
+      'inactive_models': 'निष्क्रिय मॉडल',
+      'activate_more_models': 'और AI मॉडल सक्रिय करें',
+      'activate_more_models_message':
+          'अधिक reasoning styles, fallback routing और feature coverage के लिए API keys जोड़ें।',
+      'enabled': 'सक्षम',
+      'not_active': 'सक्रिय नहीं',
+      'configure': 'कॉन्फ़िगर करें',
+      'help_center': 'हेल्प सेंटर',
+      'coming_soon': 'जल्द आ रहा है।',
       'delete_account': 'खाता हटाएं',
       'delete_account_confirm':
           'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा।',
       'account_deleted': 'खाता हटा दिया गया।',
+      'unauthenticate_profile': 'अप्रमाणित प्रोफ़ाइल',
 
       // ── Validation ─────────────────────────────────────────────────────────
       'field_required': 'यह फ़ील्ड आवश्यक है',
@@ -623,6 +666,23 @@ class AppLocalizations {
   String get noConversations => translate('no_conversations');
   String get noConversationsMessage => translate('no_conversations_message');
   String get deleting => translate('deleting');
+  String get profile => translate('profile');
+  String get editProfile => translate('edit_profile');
+  String get profileUpdated => translate('profile_updated');
+  String get profileUpdateFailed => translate('profile_update_failed');
+  String get unAuthenticate => translate('unauthenticate_profile');
+  String get appSettings => translate('app_settings');
+  String get aiIntelligence => translate('ai_intelligence');
+  String get support => translate('support');
+  String get theme => translate('theme');
+  String get language => translate('language');
+  String get activateModels => translate('activate_more_models');
+  String get activateModelsMessage => translate('activate_more_models_message');
+  String get helpCenter => translate('help_center');
+  String get about => translate('about');
+  String get signOutConfirm => translate('sign_out_confirm');
+  String get signOutSuccess => translate('sign_out_success');
+  String get signingOut => translate('signing_out');
 }
 
 // ==========================================================================

@@ -43,7 +43,15 @@ abstract class AuthRepository {
   /// Updating the field in the firestore
   ///
   /// User the user id or FirebaseAuth.currentUser to update only auth user
-  Future<bool> updateUser(UserModel? currentUser, {required String field, required bool value});
+  Future<bool> updateUser(UserModel? currentUser,
+      {required String field, required bool value});
+
+  /// Update editable profile fields for the signed-in user.
+  Future<bool> updateProfile(
+    UserModel currentUser, {
+    required String displayName,
+    required String photoUrl,
+  });
 }
 
 // =============================================================================

@@ -8,7 +8,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
-import '../../../core/enums/app_enums.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
@@ -110,10 +109,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                     const SizedBox(height: 24),
                     Text(
                       context.l10n.conversationHistory,
-                      style: context.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 40,
-                      ),
+                      style: context.textTheme.displayMedium
                     ),
                     const SizedBox(height: 8),
                     Text(

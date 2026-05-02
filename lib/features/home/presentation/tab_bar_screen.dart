@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../chat_prompt/presentation/chat_history_screen.dart';
+import '../../profile/presentation/profie_view.dart';
 
 class TabBarScreen extends StatefulWidget {
   const TabBarScreen({super.key});
@@ -43,9 +44,8 @@ class _TabBarScreenState extends State<TabBarScreen> {
       children: const [
         IntroScreen(),
         ConversationHistoryScreen(),
-        Center(
-            child: Text("Settings Tab", style: TextStyle(color: Colors.white))),
-      ],
+        ProfileScreen(),
+        ],
     );
   }
 
@@ -81,7 +81,7 @@ class _TabBarScreenState extends State<TabBarScreen> {
               _buildNavItem(1, Icons.chat_bubble_outline,
                   context.l10n.conversationHistory, context),
               _buildNavItem(
-                  2, Icons.settings_outlined, context.l10n.settings, context),
+                  2, Icons.account_circle_outlined, context.l10n.profile, context),
             ],
           ),
         ),

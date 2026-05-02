@@ -319,8 +319,7 @@ class AuthRepositoryImpl implements AuthRepository {
         // For Apple returning users — name and email are null from Apple
         // Read the stored values from Firestore instead
         resolvedDisplayName =
-            existingData[FirebaseCollections.fieldDisplayName] as String? ??
-                '';
+            existingData[FirebaseCollections.fieldDisplayName] as String? ?? '';
         resolvedEmail =
             existingData[FirebaseCollections.fieldEmail] as String? ?? '';
         resolvedPhotoUrl =
@@ -478,15 +477,14 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<bool> updateUser(UserModel? currentUser, {required String field, required bool value}) async{
-
-    if(currentUser == null){
+  Future<bool> updateUser(UserModel? currentUser,
+      {required String field, required bool value}) async {
+    if (currentUser == null) {
       return false;
     }
 
     try {
       final uid = _firebaseAuth.currentUser?.uid ?? '';
-      final docRef = _firestore.doc(FirebaseCollections.userDoc(uid));
 
       // Update only lastUpdatedAt and given field — preserve all other fields
       await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
@@ -507,7 +505,7 @@ class AuthRepositoryImpl implements AuthRepository {
       // Acceptable edge case — much less disruptive than blocking the user.
       debugPrint(
         '⚠️ AuthRepository: markOnboardingComplete Firestore failed — '
-            '${e.code}: ${e.message}',
+        '${e.code}: ${e.message}',
       );
       // Still write Hive so the current session routes correctly
       await _storage.setBool(StorageKeys.onboardingCompleted, true);
@@ -515,6 +513,55 @@ class AuthRepositoryImpl implements AuthRepository {
     } catch (e) {
       debugPrint('❌ AuthRepository: markOnboardingComplete error : $e');
       await _storage.setBool(StorageKeys.onboardingCompleted, true);
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> updateProfile(
+    UserModel currentUser, {
+    required String displayName,
+    required String photoUrl,
+  }) async {
+    final resolvedDisplayName = displayName.trim();
+    final resolvedPhotoUrl = photoUrl.trim();
+
+    if (currentUser.uid.isEmpty || resolvedDisplayName.isEmpty) {
+      return false;
+    }
+
+    try {
+      final authUser = _firebaseAuth.currentUser;
+      final uid = authUser?.uid ?? currentUser.uid;
+
+      if (authUser != null) {
+        await authUser.updateDisplayName(resolvedDisplayName);
+        await authUser.updatePhotoURL(
+          resolvedPhotoUrl.isEmpty ? null : resolvedPhotoUrl,
+        );
+      }
+
+      await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
+        FirebaseCollections.fieldDisplayName: resolvedDisplayName,
+        FirebaseCollections.fieldPhotoUrl: resolvedPhotoUrl,
+        FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
+      });
+
+      final updatedUser = currentUser.copyWith(
+        displayName: resolvedDisplayName,
+        photoUrl: resolvedPhotoUrl,
+      );
+
+      await _persistSession(updatedUser);
+      return true;
+    } on FirebaseException catch (e) {
+      debugPrint(
+        '⚠️ AuthRepository: updateProfile Firestore failed — '
+        '${e.code}: ${e.message}',
+      );
+      return false;
+    } catch (e) {
+      debugPrint('❌ AuthRepository: updateProfile error : $e');
       return false;
     }
   }
