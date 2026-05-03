@@ -112,8 +112,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 14),
                   const ProfileSettingsPanel(),
                   const SizedBox(height: 24),
-                  ProfileSectionTitle(label: context.l10n.aiIntelligence),
-                  const SizedBox(height: 14),
                   const ProfileAiIntelligenceSection(),
                   const SizedBox(height: 24),
                   ProfileSectionTitle(label: context.l10n.support),

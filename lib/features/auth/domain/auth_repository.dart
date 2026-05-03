@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'user_model.dart';
 
 /// Abstract authentication repository for AI Voice Genie.
@@ -51,6 +53,10 @@ abstract class AuthRepository {
     UserModel currentUser, {
     required String displayName,
     required String photoUrl,
+    DateTime? dateOfBirth,
+    int? age,
+    String? preferredAiModel,
+    File? photoFile,
   });
 }
 

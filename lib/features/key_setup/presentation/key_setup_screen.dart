@@ -1,10 +1,12 @@
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:ai_voice_genie/features/key_setup/presentation/api_key_provider.dart';
+import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/extensions/build_context_extensions.dart';
@@ -13,6 +15,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/utils/app_validators.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
+import '../../../shared/widgets/image_view.dart';
 import '../../auth/presentation/auth_provider.dart';
 
 /// API key setup screen shown once after first sign-in.
@@ -202,16 +205,46 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
         );
   }
 
-  Future<void> _handleDelete() async {
+  Future<void> _handleDelete(String provider) async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
+    final isConfirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.removeKey),
+          content: Text(context.l10n.keyRemoveMsg),
+          actions: [
+            TextButton(
+              onPressed: () => AppRoutes.pop(context, false),
+              child: Text(
+                context.l10n.cancel,
+                style: TextStyle(color: context.primaryColor),
+              ),
+            ),
+            TextButton(
+              onPressed: () => AppRoutes.pop(context, true),
+              child: Text(
+                context.l10n.delete,
+                style: const TextStyle(color: AppColors.error),
+              ),
+            ),
+          ],
+        ));
+
+    if (isConfirm != true || !mounted) return;
+
+    LoadingOverlay.show(context, message: context.l10n.deleting);
     _keyController.clear();
 
     await context.read<ApiKeyProvider>().deleteKey(
           uid: uid,
           providerId: widget.provider,
         );
+    LoadingOverlay.hide();
+
+    if (!mounted) return;
+    MessageUtils.showSuccess(context, "$provider ${context.l10n.keyRemoveSuccess}");
   }
 
   Future<void> _handlePaste() async {
@@ -422,26 +455,33 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                 if (isValid) ...[
                   Selector<ApiKeyProvider, String?>(
                     selector: (_, p) => p.maskedKeyFor(widget.provider),
-                    builder: (context, maskedKey, _) => Row(
-                      children: [
-                        Text(
-                          maskedKey ?? '••••••••••••',
-                          style: context.textTheme.bodySmall?.copyWith(
-                            fontFamily: 'monospace',
-                            color: _providerColor(widget.provider),
-                            letterSpacing: 1,
+                    builder: (context, maskedKey, _) => Padding(
+                      padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            maskedKey ?? '••••••••••••',
+                            style: context.textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              color: _providerColor(widget.provider),
+                              letterSpacing: 1,
+                            ),
+                            maxLines: 1,
                           ),
-                        ),
-                        const Spacer(),
-                        // Delete button — only shown when key is valid
-                        GestureDetector(
-                          onTap: _handleDelete,
-                          child: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: AppColors.error,
+                          const Spacer(),
+                          // Delete button — only shown when key is valid
+                          GestureDetector(
+                            onTap: ()=> _handleDelete(widget.provider.displayName),
+                            child: const ImageView(
+                              image: ImageViewData.asset(
+                               AppAssets.deleteIcon
+                              ),
+                              width: 18,
+                              height: 18,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],

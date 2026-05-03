@@ -200,6 +200,7 @@ class ApiKeyProvider extends ChangeNotifier {
       _errors[providerId] = null;
       await _analytics.logModelKeyRemoved(providerId);
       _setStatus(providerId, ApiKeyStatus.notAdded);
+      notifyListeners();
     } on ApiKeyException catch (e) {
       debugPrint(
         '❌ ApiKeyProvider.deleteKey [${providerId.id}]: ${e.technicalMessage}',

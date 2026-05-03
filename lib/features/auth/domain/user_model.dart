@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/enums/app_enums.dart';
 
 /// Normalized user entity for AI Voice Genie.
@@ -47,6 +48,15 @@ class UserModel {
   /// Read from Firestore — defaults to false for new users.
   final bool keySetupDone;
 
+  /// Date of birth (optional).
+  final DateTime? dateOfBirth;
+
+  /// Age (optional numeric input).
+  final int? age;
+
+  /// Preferred AI Model (default: 'auto').
+  final String preferredAiModel;
+
   const UserModel({
     required this.uid,
     required this.email,
@@ -56,6 +66,9 @@ class UserModel {
     this.isNewUser = false,
     this.onboardingDone = false,
     this.keySetupDone = false,
+    this.dateOfBirth,
+    this.age,
+    this.preferredAiModel = 'auto',
   });
 
   // ── Factory: from Firestore document ─────────────────────────────────────
@@ -75,6 +88,11 @@ class UserModel {
       isNewUser: false,
       onboardingDone: data['onboardingDone'] as bool? ?? false,
       keySetupDone: data['keySetupDone'] as bool? ?? false,
+      dateOfBirth: data['dateOfBirth'] != null
+          ? (data['dateOfBirth'] as Timestamp).toDate()
+          : null,
+      age: data['age'] as int?,
+      preferredAiModel: data['preferredAiModel'] as String? ?? 'auto',
     );
   }
 
@@ -96,6 +114,9 @@ class UserModel {
       'preferredProvider': '',
       'dailyQuotaUsed': 0,
       'dailyQuotaLimit': 50,
+      'dateOfBirth': null,
+      'age': null,
+      'preferredAiModel': 'auto',
     };
   }
 
@@ -111,6 +132,9 @@ class UserModel {
     bool? isNewUser,
     bool? onboardingDone,
     bool? keySetupDone,
+    DateTime? dateOfBirth,
+    int? age,
+    String? preferredAiModel,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -121,6 +145,9 @@ class UserModel {
       isNewUser: isNewUser ?? this.isNewUser,
       onboardingDone: onboardingDone ?? this.onboardingDone,
       keySetupDone: keySetupDone ?? this.keySetupDone,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      age: age ?? this.age,
+      preferredAiModel: preferredAiModel ?? this.preferredAiModel,
     );
   }
 

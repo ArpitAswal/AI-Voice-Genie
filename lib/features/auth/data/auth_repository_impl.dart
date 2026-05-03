@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:ai_voice_genie/core/error/effect_bus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -522,9 +524,13 @@ class AuthRepositoryImpl implements AuthRepository {
     UserModel currentUser, {
     required String displayName,
     required String photoUrl,
+    DateTime? dateOfBirth,
+    int? age,
+    String? preferredAiModel,
+    File? photoFile,
   }) async {
     final resolvedDisplayName = displayName.trim();
-    final resolvedPhotoUrl = photoUrl.trim();
+    String resolvedPhotoUrl = photoUrl.trim();
 
     if (currentUser.uid.isEmpty || resolvedDisplayName.isEmpty) {
       return false;
@@ -534,25 +540,54 @@ class AuthRepositoryImpl implements AuthRepository {
       final authUser = _firebaseAuth.currentUser;
       final uid = authUser?.uid ?? currentUser.uid;
 
-      if (authUser != null) {
-        await authUser.updateDisplayName(resolvedDisplayName);
-        await authUser.updatePhotoURL(
-          resolvedPhotoUrl.isEmpty ? null : resolvedPhotoUrl,
-        );
+      // ── PHOTO HANDLING (Local + Firestore Base64) ──────────────────────────
+      if (photoFile != null) {
+        // 1. Store locally for fast access on this device
+        final appDir = await getApplicationDocumentsDirectory();
+        final localFile = File('${appDir.path}/profile_avatar.jpg');
+        debugPrint('📸 Saving local profile image to: ${localFile.path}');
+        await photoFile.copy(localFile.path);
+
+        // 2. Convert to Base64 for Firestore syncing (no Storage available)
+        final bytes = await photoFile.readAsBytes();
+        debugPrint('📸 Photo size: ${bytes.length} bytes');
+        final base64String = base64Encode(bytes);
+        resolvedPhotoUrl = 'data:image/jpeg;base64,$base64String';
+        debugPrint('📸 Base64 string length: ${resolvedPhotoUrl.length}');
       }
 
       await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
         FirebaseCollections.fieldDisplayName: resolvedDisplayName,
         FirebaseCollections.fieldPhotoUrl: resolvedPhotoUrl,
+        FirebaseCollections.fieldDateOfBirth:
+            dateOfBirth != null ? Timestamp.fromDate(dateOfBirth) : null,
+        FirebaseCollections.fieldAge: age,
+        FirebaseCollections.fieldPreferredAiModel: preferredAiModel ?? 'auto',
         FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
       });
+
+      if (authUser != null) {
+        // Firebase Auth photoURL has a length limit, so we might not be able
+        // to store large Base64 strings there. We'll prioritize Firestore.
+        try {
+          EffectBus.instance.safeEffect(() async {
+            await authUser.updateDisplayName(resolvedDisplayName);
+            await authUser.updatePhotoURL(
+              resolvedPhotoUrl.startsWith('data:') ? null : resolvedPhotoUrl,
+            );
+          });
+        } catch (_) {}
+      }
 
       final updatedUser = currentUser.copyWith(
         displayName: resolvedDisplayName,
         photoUrl: resolvedPhotoUrl,
+        dateOfBirth: dateOfBirth,
+        age: age,
+        preferredAiModel: preferredAiModel ?? 'auto',
       );
 
-      await _persistSession(updatedUser);
+      _persistSession(updatedUser);
       return true;
     } on FirebaseException catch (e) {
       debugPrint(

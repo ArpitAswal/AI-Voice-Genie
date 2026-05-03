@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:ai_voice_genie/core/constants/firebase_collections.dart';
 import 'package:flutter/foundation.dart';
 
@@ -147,6 +149,10 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> updateProfile({
     required String displayName,
     required String photoUrl,
+    DateTime? dateOfBirth,
+    int? age,
+    String? preferredAiModel,
+    File? photoFile,
   }) async {
     final user = _currentUser;
     final resolvedDisplayName = displayName.trim();
@@ -161,15 +167,22 @@ class AuthProvider extends ChangeNotifier {
         user,
         displayName: resolvedDisplayName,
         photoUrl: resolvedPhotoUrl,
+        dateOfBirth: dateOfBirth,
+        age: age,
+        preferredAiModel: preferredAiModel,
+        photoFile: photoFile,
       );
 
       if (!success) return false;
 
-      _currentUser = user.copyWith(
-        displayName: resolvedDisplayName,
-        photoUrl: resolvedPhotoUrl,
-      );
-      notifyListeners();
+      // Re-fetch the user from repository to get the updated photoUrl (Base64) 
+      // and other server-calculated fields if any.
+      final updatedUser = await _repository.getCurrentUser();
+      if (updatedUser != null) {
+        _currentUser = updatedUser;
+        notifyListeners();
+      }
+      
       return true;
     } catch (e) {
       debugPrint('❌ AuthProvider.updateProfile error: $e');

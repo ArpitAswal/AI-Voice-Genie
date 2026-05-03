@@ -7,6 +7,7 @@ class AppAssets {
   static const String appLogo = "assets/images/app_logo.png";
   static const String googleLogo = "assets/images/google.png";
   static const String appleLogo = "assets/images/apple_logo.png";
+  static const String deleteIcon = "assets/images/delete.png";
 
   /// Light Image
   static const String lightAuth = "assets/images/light_auth.png";

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
@@ -41,12 +43,20 @@ class ProfileViewModel extends ChangeNotifier {
     required AuthProvider authProvider,
     required String displayName,
     required String photoUrl,
+    DateTime? dateOfBirth,
+    int? age,
+    String? preferredAiModel,
+    File? photoFile,
   }) async {
     _setSavingProfile(true);
     try {
       return authProvider.updateProfile(
         displayName: displayName,
         photoUrl: photoUrl,
+        dateOfBirth: dateOfBirth,
+        age: age,
+        preferredAiModel: preferredAiModel,
+        photoFile: photoFile,
       );
     } finally {
       _setSavingProfile(false);

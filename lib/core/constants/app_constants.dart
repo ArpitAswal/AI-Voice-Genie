@@ -67,9 +67,9 @@ class AppConstants {
   static const String claudeProviderId = 'claude';
 
   // ── AI Model Capabilities (features offered by each) ───────────────────────
-  static const String openAICapabilities = 'GPT-4o • DALL-E 3 • Whisper';
-  static const String geminiAICapabilities = 'GPT-4o • DALL-E 3 • Whisper';
-  static const String claudeAICapabilities = 'GPT-4o • DALL-E 3 • Whisper';
+  static const String openAICapabilities = '• GPT-4o • DALL-E 3 • Whisper';
+  static const String geminiAICapabilities = '• Gemini 2.0 Flash • Image Gen';
+  static const String claudeAICapabilities = '• Claude Sonnet • Vision • PDF';
 
   // ── OpenAI Model Names ────────────────────────────────────────────────────
   // Default models used for each capability

@@ -23,7 +23,26 @@ class ProfileAiIntelligenceSection extends StatelessWidget {
             .toList();
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ProfileSectionTitle(label: context.l10n.aiIntelligence),
+                if(inactiveProviders.isEmpty)...[
+                  ElevatedButton.icon(
+                    onPressed: () => AppRoutes.navigateTo(
+                      context,
+                      AppRoutes.apiKeyManagement,
+                    ),
+                    style: context.theme.elevatedButtonTheme.style,
+                    icon: const Icon(Icons.key_rounded, size: 20),
+                    label: Text(context.l10n.keys),
+                  ),
+                ]
+              ],
+            ),
+            const SizedBox(height: 14),
             if (activeProviders.isEmpty)
               _ActivationPanel(inactiveProviders: inactiveProviders)
             else ...[

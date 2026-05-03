@@ -100,7 +100,8 @@ class AppLocalizations {
       'setup_subtitle': 'Add your API keys to start using AI models.',
       'add_key': 'Add API Key',
       'update_key': 'Update API Key',
-      'remove_key': 'Remove Key',
+      'remove_key': 'Removing Key',
+      'key_remove_msg': 'Are you sure you want to remove this key',
       'key_added_success': 'API key added successfully.',
       'key_removed_success': 'API key removed.',
       'key_invalid': 'Invalid API key.',
@@ -115,6 +116,7 @@ class AppLocalizations {
       'no_key_added': 'No key added',
       'key_added': 'Key added',
       'key_fetch_error': 'Loading AI Keys failed, Please restart the app.',
+      'keys': 'Keys',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'new_conversation': 'New Conversation',
@@ -286,6 +288,17 @@ class AppLocalizations {
           'This will permanently delete your account and all conversations. This cannot be undone.',
       'account_deleted': 'Account deleted.',
       'unauthenticate_profile': 'UnAuthenticate Profile',
+      'date_of_birth': 'Date of Birth',
+      'age': 'Age',
+      'prefer_model': 'Prefer Model',
+      'auto_prefer_model': 'Auto Prefer Model',
+      'select_photo_source': 'Select Photo Source',
+      'camera': 'Camera',
+      'gallery': 'Gallery',
+      'permission_denied': 'Permission Denied',
+      'camera_permission_denied': 'Camera permission is required to take photos.',
+      'gallery_permission_denied': 'Gallery permission is required to choose photos.',
+      'uploading_photo': 'Uploading photo...',
 
       // ── Validation ─────────────────────────────────────────────────────────
       'field_required': 'This field is required',
@@ -380,7 +393,8 @@ class AppLocalizations {
       'setup_subtitle': 'AI मॉडल उपयोग करने के लिए API key जोड़ें।',
       'add_key': 'API Key जोड़ें',
       'update_key': 'API Key अपडेट करें',
-      'remove_key': 'Key हटाएं',
+      'remove_key': 'कुंजी हटाना',
+      'key_remove_msg': 'क्या आप वाकई इस कुंजी को हटाना चाहते हैं?',
       'key_added_success': 'API key सफलतापूर्वक जोड़ी गई।',
       'key_removed_success': 'API key हटाई गई।',
       'key_invalid': 'अमान्य API key।',
@@ -396,6 +410,7 @@ class AppLocalizations {
       'key_added': 'Key जोड़ी गई',
       'key_fetch_error':
           'एआई कुंजी लोड करने में विफलता, कृपया ऐप को पुनः आरंभ करें।',
+      'keys': 'कुंजी',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'new_conversation': 'नई बातचीत',
@@ -567,6 +582,17 @@ class AppLocalizations {
           'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा।',
       'account_deleted': 'खाता हटा दिया गया।',
       'unauthenticate_profile': 'अप्रमाणित प्रोफ़ाइल',
+      'date_of_birth': 'जन्म तिथि',
+      'age': 'आयु',
+      'prefer_model': 'पसंदीदा मॉडल',
+      'auto_prefer_model': 'ऑटो पसंदीदा मॉडल',
+      'select_photo_source': 'फोटो स्रोत चुनें',
+      'camera': 'कैमरा',
+      'gallery': 'गैलरी',
+      'permission_denied': 'अनुमति अस्वीकृत',
+      'camera_permission_denied': 'फोटो लेने के लिए कैमरा अनुमति आवश्यक है।',
+      'gallery_permission_denied': 'फोटो चुनने के लिए गैलरी अनुमति आवश्यक है।',
+      'uploading_photo': 'फोटो अपलोड हो रही है...',
 
       // ── Validation ─────────────────────────────────────────────────────────
       'field_required': 'यह फ़ील्ड आवश्यक है',
@@ -618,6 +644,7 @@ class AppLocalizations {
   String get cancel => translate('cancel');
   String get save => translate('save');
   String get loading => translate('loading');
+  String get delete => translate('delete');
   String get pleaseWait => translate('please_wait');
   String get somethingWentWrong => translate('something_went_wrong');
   String get noInternet => translate('no_internet_connection');
@@ -655,7 +682,6 @@ class AppLocalizations {
   String get keyInvalid => translate('key_invalid');
   String get keyValidating => translate('key_validating');
   String get noKeyAdded => translate('no_key_added');
-  String get removeKey => translate('remove_key');
   String get paste => translate('paste');
   String get openAIKey => translate('get_openai_key');
   String get geminiAIKey => translate('get_gemini_key');
@@ -726,6 +752,22 @@ class AppLocalizations {
   String get linkUnavailable => translate('link_unavailable');
   String get couldNotOpenLink => translate('could_not_open_link');
   String get profileUpdating => translate('profile_updating');
+  String get keyRemoveSuccess => translate('key_removed_success');
+  String get removeKey => translate('remove_key');
+  String get keyRemoveMsg => translate('key_remove_msg');
+  String get keys => translate('keys');
+  String get dateOfBirthLabel => translate('date_of_birth');
+  String get ageLabel => translate('age');
+  String get preferModelLabel => translate('prefer_model');
+  String get autoPreferModel => translate('auto_prefer_model');
+  String get selectPhotoSource => translate('select_photo_source');
+  String get camera => translate('camera');
+  String get gallery => translate('gallery');
+  String get permissionDenied => translate('permission_denied');
+  String get openSettings => translate('open_settings');
+  String get cameraDeniedMessage => translate('camera_permission_denied');
+  String get galleryDeniedMessage => translate('gallery_permission_denied');
+  String get uploadingPhoto => translate('uploading_photo');
 }
 
 // ==========================================================================

@@ -77,6 +77,9 @@ class FirebaseCollections {
   static const String fieldLastUpdatedAt = 'lastUpdatedAt';
   static const String fieldOnboardingDone = 'onboardingDone';
   static const String fieldKeySetupDone = 'keySetupDone';
+  static const String fieldDateOfBirth = 'dateOfBirth';
+  static const String fieldAge = 'age';
+  static const String fieldPreferredAiModel = 'preferredAiModel';
   static const String fieldPreferredProvider = 'preferredProvider';
   static const String fieldDailyQuotaUsed = 'dailyQuotaUsed';
   static const String fieldDailyQuotaLimit = 'dailyQuotaLimit';
