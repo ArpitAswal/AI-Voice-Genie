@@ -33,13 +33,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _viewModel = ProfileViewModel();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _viewModel.loadApiKeys(
-        authProvider: context.read<AuthProvider>(),
-        apiKeyProvider: context.read<ApiKeyProvider>(),
-      );
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (!mounted) return;
+    //   _viewModel.loadApiKeys(
+    //     authProvider: context.read<AuthProvider>(),
+    //     apiKeyProvider: context.read<ApiKeyProvider>(),
+    //   );
+    // });
   }
 
   @override

@@ -12,6 +12,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_validators.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../pdf_reader/data/pdf_repository_impl.dart';
+import '../../../voice_speech/presentation/widgets/voice_input_button.dart';
 import '../../domain/chat_attachment.dart';
 
 /// Chat input bar with text, media attachment preview, send, and voice actions.
@@ -20,16 +21,11 @@ class ChatInputBar extends StatefulWidget {
   final bool isTablet;
   final Future<void> Function(String prompt, ChatAttachment? attachment) onSend;
 
-  /// Optional callback for voice input — null until Phase 7
-  final VoidCallback? onVoiceTap;
-
   const ChatInputBar({
     super.key,
     required this.isGenerating,
     required this.isTablet,
     required this.onSend,
-    this.onVoiceTap,
-    VoidCallback? onAttachTap,
   });
 
   @override
@@ -41,6 +37,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
   final PdfRepositoryImpl _pdfRepository = PdfRepositoryImpl();
+  final FocusNode _focusNode = FocusNode();
 
   ChatAttachment? _attachment;
   bool _canSend = false;
@@ -57,6 +54,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
       ..removeListener(_syncCanSend)
       ..dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -216,6 +214,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
     return 'image/jpeg';
   }
 
+  /// Called by VoiceInputButton when STT has a final transcript.
+  ///
+  /// Pre-fills the text field and requests focus so the user can
+  /// review and optionally edit before sending.
+  void _onTranscriptReady(String transcript) {
+    debugPrint("transcript");
+    if (transcript.isEmpty) return;
+    _controller.text = transcript;
+    // Cursor to end of text
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: transcript.length),
+    );
+    _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -258,6 +271,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   thumbVisibility: false,
                   child: context.themedTextField(
                     controller: _controller,
+                    focus: _focusNode,
                     scrollController: _scrollController,
                     enabled: !widget.isGenerating,
                     maxLines: null,
@@ -269,6 +283,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   ),
                 ),
               ),
+              // ── Voice Input Button ↔ Send Button ─────────────────────────────
+              // Shows VoiceInputButton when field is empty.
+              // Switches to SendButton as soon as user starts typing.
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: _canSend
@@ -278,13 +295,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
                         isGenerating: widget.isGenerating,
                         isTablet: widget.isTablet,
                       )
-                    : _ActionButton(
+                    : VoiceInputButton(
                         key: const ValueKey('voice'),
-                        icon: Icons.mic_rounded,
-                        onTap: widget.onVoiceTap,
+                  onTranscriptReady: _onTranscriptReady,
                         tooltip: l10n.translate('tap_to_speak'),
                         isTablet: widget.isTablet,
-                        color: AppColors.primaryLight,
                       ),
               ),
             ],
@@ -440,7 +455,6 @@ class _ActionButton extends StatelessWidget {
   final Color? color;
 
   const _ActionButton({
-    super.key,
     required this.icon,
     required this.onTap,
     required this.tooltip,

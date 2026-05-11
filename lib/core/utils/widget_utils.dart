@@ -41,12 +41,14 @@ extension WidgetExtensions on BuildContext {
     EdgeInsets? contentPad,
     ScrollController? scrollController,
     ScrollPhysics? scrollPhysics,
+    FocusNode? focus
   }) {
     final theme = Theme.of(this);
     final isDark = theme.brightness == Brightness.dark;
 
     return TextFormField(
       controller: controller,
+      focusNode: focus,
       scrollController: scrollController,
       scrollPhysics: scrollPhysics,
       keyboardType: keyboardType,

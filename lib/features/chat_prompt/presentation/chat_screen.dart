@@ -174,8 +174,6 @@ class _ChatScreenState extends State<ChatScreen> {
                               isGenerating: chatProvider.isGenerating,
                               isTablet: isTablet,
                               onSend: _handleSend,
-                              onVoiceTap: null, // wired Phase 7
-                              onAttachTap: null, // wired Phase 5/6
                             ),
                           ),
                         ],

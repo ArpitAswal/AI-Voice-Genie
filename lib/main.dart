@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:ai_voice_genie/features/voice_speech/presentation/voice_speech_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
@@ -165,6 +166,7 @@ class AiVoiceGenieApp extends StatelessWidget {
       ),
       ChangeNotifierProvider<ApiKeyProvider>(create: (_) => ApiKeyProvider()),
       ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
+      ChangeNotifierProvider<VoiceProvider>(create: (_) => VoiceProvider()),
     ];
   }
 

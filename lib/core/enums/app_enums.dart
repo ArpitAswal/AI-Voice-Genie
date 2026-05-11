@@ -221,6 +221,15 @@ enum VoiceRecordingState {
 
   /// Error occurred during recording or processing
   error,
+
+  /// User is currently listening for voice input
+  listening,
+
+  /// Device is not available for voice input
+  unavailable,
+
+  /// TTS is currently playing
+  playing
 }
 
 /// Social authentication provider used to sign in.

@@ -28,6 +28,10 @@
 	<string>AI Voice Genie needs camera access so you can ask questions about photos you take.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>AI Voice Genie needs photo library access so you can attach images to chat.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+    <string>AI Voice Genie uses speech recognition to convert your voice to text.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>AI Voice Genie needs the microphone to listen to your voice input.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

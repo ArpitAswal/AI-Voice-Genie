@@ -40,15 +40,15 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
   void initState() {
     super.initState();
     // Load any previously saved keys on mount
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final uid = context.read<AuthProvider>().currentUser?.uid;
-      if (uid != null) {
-       bool success = await context.read<ApiKeyProvider>().loadExistingKeys(uid);
-       if(!success && mounted){
-         context.showError('key_fetch_error');
-       }
-      }
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) async {
+    //   final uid = context.read<AuthProvider>().currentUser?.uid;
+    //   if (uid != null) {
+    //    bool success = await context.read<ApiKeyProvider>().loadExistingKeys(uid);
+    //    if(!success && mounted){
+    //      context.showError('key_fetch_error');
+    //    }
+    //   }
+    // });
   }
 
   Future<void> _handleContinue() async {
