@@ -218,6 +218,7 @@ class AppLocalizations {
       'microphone_permission_denied':
           'Microphone permission is required for voice input.',
       'open_settings': 'Open Settings',
+      'speech_text_unavailable': 'Speech Text not available.',
 
       // ── Settings ───────────────────────────────────────────────────────────
       'home': 'Home',
@@ -530,6 +531,7 @@ class AppLocalizations {
       'microphone_permission_denied':
           'वॉयस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
       'open_settings': 'सेटिंग खोलें',
+      'speech_text_unavailable': 'भाषण का पाठ उपलब्ध नहीं है।',
 
       // ── Settings ───────────────────────────────────────────────────────────
       'home': 'होम',

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../../core/constants/app_constants.dart';
@@ -26,6 +27,9 @@ class VoiceRepositoryImpl implements VoiceRepository {
   late final FlutterTts _tts;
   bool _isInitialized = false;
   bool _isSpeaking = false;
+  
+  /// Callback triggered when the STT engine stops (for any reason)
+  VoidCallback? _onEngineStop;
 
   VoiceRepositoryImpl() {
     _stt = stt.SpeechToText();
@@ -56,30 +60,27 @@ class VoiceRepositoryImpl implements VoiceRepository {
 
   @override
   Future<bool> isSttAvailable() async {
-    try {
-      return await _stt.initialize(
-        onError: (error) =>
-            debugPrint('⚠️ STT init error: ${error.errorMsg}'),
-        onStatus: (status) => debugPrint('STT status: $status'),
-      );
-    } catch (e) {
-      debugPrint('⚠️ STT availability check failed: $e');
-      return false;
-    }
+    // We assume STT is available on modern iOS/Android devices to avoid
+    // calling _stt.initialize() on startup, which triggers permission dialogs (bad UX).
+    // The actual availability check happens when the user first taps the mic.
+    return true;
   }
 
   @override
   Future<bool> requestMicrophonePermission() async {
-    // speech_to_text handles permission internally on both platforms.
-    // If permission was denied previously, initialize() returns false.
-    // We rely on the initialize() result as the permission indicator.
     if (_isInitialized) return true;
 
-    _isInitialized = await _stt.initialize(
-      onError: (error) => debugPrint('STT init error: ${error.errorMsg}'),
-    );
+    final status = await Permission.microphone.request();
 
-    return _isInitialized;
+    if (status.isGranted) {
+      return await _initStt();
+    } else if (status.isPermanentlyDenied || status.isDenied) {
+      debugPrint('🚫 Microphone permission denied. Routing to settings.');
+      await openAppSettings();
+      return false;
+    }
+
+    return false;
   }
 
   @override
@@ -91,8 +92,8 @@ class VoiceRepositoryImpl implements VoiceRepository {
     try {
       // Ensure STT is initialized before listening
       if (!_isInitialized) {
-        _isInitialized = await _stt.initialize();
-        if (!_isInitialized) {
+        final success = await _initStt();
+        if (!success) {
           onError(VoiceErrorCodes.permissionDenied);
           return;
         }
@@ -101,13 +102,11 @@ class VoiceRepositoryImpl implements VoiceRepository {
       await _stt.listen(
         // Called continuously with partial transcription
         onResult: (result) {
+          onPartialResult(result.recognizedWords);
           if (result.finalResult) {
             final transcript = result.recognizedWords.trim();
-            if (transcript.isNotEmpty) {
-              onFinalResult(transcript);
-            }
-          } else {
-            onPartialResult(result.recognizedWords);
+            onFinalResult(transcript);
+            _onEngineStop = null;
           }
         },
         // Auto-stop after configured silence duration
@@ -116,9 +115,16 @@ class VoiceRepositoryImpl implements VoiceRepository {
         listenFor: const Duration(seconds: AppConstants.maxRecordingSeconds),
         // Partial results drive the live transcript display
         partialResults: true,
+        // Use dictation mode for better handling of silence gaps
+        listenMode: stt.ListenMode.dictation,
+        // onDevice recognition is often less aggressive with auto-stopping
+        onDevice: true,
         // Use localeId matching the current device language
         localeId: 'en_US',
       );
+
+      // Register the engine stop callback to handle timeouts where no result is returned
+      _onEngineStop = () => onFinalResult("");
 
       debugPrint('🎤 STT: started listening');
     } catch (e) {
@@ -199,6 +205,23 @@ class VoiceRepositoryImpl implements VoiceRepository {
 
   @override
   bool get isSpeaking => _isSpeaking;
+
+  Future<bool> _initStt() async {
+    _isInitialized = await _stt.initialize(
+      onError: (error) {
+        _isInitialized = false;
+        debugPrint('❌ STT Engine Error: ${error.errorMsg}');
+      },
+      onStatus: (status) {
+        debugPrint('STT Status: $status');
+        if (status == 'done' || status == 'notListening') {
+          _onEngineStop?.call();
+          _onEngineStop = null;
+        }
+      },
+    );
+    return _isInitialized;
+  }
 
   @override
   Future<void> dispose() async {

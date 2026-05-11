@@ -5,6 +5,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/utils/status_message_utils.dart';
 import '../voice_speech_provider.dart';
 
 /// Microphone button with pulse animation for voice input.
@@ -66,20 +67,31 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
     super.dispose();
   }
 
-  void _handleTap(VoiceProvider voiceProvider) {
+  void _handleTap(BuildContext context, VoiceProvider voiceProvider) {
     if (voiceProvider.isListening) {
       // Tap while listening → stop early
       voiceProvider.stopListening();
       _pulseController.stop();
       _pulseController.reset();
-    } else if (voiceProvider.isIdle) {
-      // Tap while idle → start listening
+    } else if (voiceProvider.isIdle ||
+        voiceProvider.isUnavailable ||
+        voiceProvider.state == VoiceRecordingState.error) {
+      // Tap while idle/unavailable → try to start listening
       _pulseController.repeat(reverse: true);
       voiceProvider.startListening(
         onTranscriptReady: (text) {
           _pulseController.stop();
           _pulseController.reset();
           widget.onTranscriptReady!(text);
+        },
+        onError: (errorKey) {
+          _pulseController.stop();
+          _pulseController.reset();
+          if (mounted) {
+            context.showError(
+              AppLocalizations.of(context)!.translate(errorKey),
+            );
+          }
         },
       );
     }
@@ -92,50 +104,17 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
         final state = voiceProvider.state;
         final isListening = state == VoiceRecordingState.listening;
         final isProcessing = state == VoiceRecordingState.processing;
-        final isUnavailable = state == VoiceRecordingState.unavailable;
-        final isError = state == VoiceRecordingState.error;
 
-        final buttonSize = widget.isTablet ? 48.0 : 42.0;
+        final buttonSize = widget.isTablet ? 44.0 : 36.0;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Live partial transcript shown above button during recording
-            if (isListening && voiceProvider.partialTranscript.isNotEmpty) ...[
-              Container(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.7,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.error.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(
-                  voiceProvider.partialTranscript,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    color: AppColors.error,
-                    fontStyle: FontStyle.italic,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              const SizedBox(height: 6),
-            ],
-
             // Mic button with pulse
             GestureDetector(
-              onTap: (isUnavailable || isProcessing)
+              onTap: isProcessing
                   ? null
-                  : () => _handleTap(voiceProvider),
+                  : () => _handleTap(context, voiceProvider),
               child: AnimatedBuilder(
                 animation: _pulseAnimation,
                 builder: (context, child) {
@@ -170,34 +149,21 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
                         )
                       : Icon(
                           isListening
-                              ? Icons.mic_rounded
+                              ? Icons.stop_rounded
                               : Icons.mic_none_rounded,
-                          color: AppColors.primaryLight),
+                          color: isListening
+                              ? AppColors.error
+                              : AppColors.primaryLight),
                 ),
               ),
             ),
-
             // "Listening..." label shown below button during recording
             if (isListening) ...[
               const SizedBox(height: 4),
               Text(
                 AppLocalizations.of(context)!.translate('listening'),
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: AppColors.error,
-                  fontSize: widget.isTablet ? 10 : 9,
-                ),
-              ),
-            ],
-
-            // Error label
-            if (isError) ...[
-              const SizedBox(height: 4),
-              Text(
-                AppLocalizations.of(context)!.translate('voice_input_failed'),
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: AppColors.error,
-                  fontSize: widget.isTablet ? 10 : 9,
-                ),
+                style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.error, fontWeight: FontWeight.w500),
               ),
             ],
           ],

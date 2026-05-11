@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/constants/storage_keys.dart';
 import '../../../core/enums/app_enums.dart';
@@ -108,6 +109,7 @@ class VoiceProvider extends ChangeNotifier {
   ///   ```
   Future<void> startListening({
     required void Function(String transcript) onTranscriptReady,
+    required void Function(String errorKey) onError,
   }) async {
     // If TTS is currently playing, stop it first
     if (isPlaying) {
@@ -116,16 +118,24 @@ class VoiceProvider extends ChangeNotifier {
 
     if (!_isSttAvailable) {
       _setState(VoiceRecordingState.unavailable);
+      onError('speech_text_unavailable');
       return;
     }
 
     // Request microphone permission before listening
-    final hasPermission = await _repository.requestMicrophonePermission();
-    if (!hasPermission) {
-      _setState(VoiceRecordingState.error);
-      // Reset to idle after brief error display
-      await Future.delayed(const Duration(seconds: 2));
-      _setState(VoiceRecordingState.idle);
+    final success = await _repository.requestMicrophonePermission();
+    if (!success) {
+      _setState(VoiceRecordingState.unavailable);
+      
+      // Differentiate between permission denial and engine failure
+      final status = await Permission.microphone.status;
+      if (status.isGranted) {
+        // Permission was granted, so the repository must have failed on _stt.initialize()
+        onError('voice_input_failed');
+      } else {
+        // Actual permission denial
+        onError('microphone_permission_denied');
+      }
       return;
     }
 

@@ -214,15 +214,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
     return 'image/jpeg';
   }
 
-  /// Called by VoiceInputButton when STT has a final transcript.
-  ///
-  /// Pre-fills the text field and requests focus so the user can
-  /// review and optionally edit before sending.
   void _onTranscriptReady(String transcript) {
     debugPrint("transcript");
     if (transcript.isEmpty) return;
+    
+    // Set the text in the controller
     _controller.text = transcript;
-    // Cursor to end of text
+    
+    // Move cursor to end and request focus for manual editing/confirmation
     _controller.selection = TextSelection.fromPosition(
       TextPosition(offset: transcript.length),
     );

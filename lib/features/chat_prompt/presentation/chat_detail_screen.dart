@@ -9,9 +9,12 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
+import '../../../shared/model/image_model.dart';
+import '../../../shared/widgets/image_view.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/chat_attachment.dart';
@@ -251,15 +254,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             return Text(
               titleStr.isEmpty ? l10n.translate('new_conversation') : titleStr,
               overflow: TextOverflow.ellipsis,
+              maxLines: 2,
               style: context.textTheme.titleLarge,
             );
           },
         ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 8),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_forever_rounded),
-            onPressed: _handleDelete,
-            tooltip: l10n.translate('delete_conversation'),
+          GestureDetector(
+          onTap: _handleDelete,
+            child: const ImageView(
+              image: ImageViewData.asset(
+                  AppAssets.deleteIcon
+              ),
+              width: 24,
+              height: 24,
+            ),
           ),
         ],
       ),
@@ -331,6 +341,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             return const Center(
               child: CircularProgressIndicator(),
             );
+          }
+
+          if (chatProvider.isGenerating) {
+            WidgetsBinding.instance
+                .addPostFrameCallback((_) => _scrollToBottom());
           }
 
           return ListView.builder(
