@@ -1,10 +1,12 @@
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_input.dart';
+import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_model_selector_dropdown.dart';
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/enums/app_enums.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../core/extensions/build_context_extensions.dart';
@@ -44,6 +46,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   ChatProvider? _chatProvider;
+  AiProviderId? _selectedProvider;
 
   @override
   void initState() {
@@ -128,12 +131,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
-    final validProviders = context.read<ApiKeyProvider>().validProviders;
+    final apiKeyProvider = context.read<ApiKeyProvider>();
+    final validProviders = apiKeyProvider.validProviders;
+    final selectedProvider = _currentSelectedProvider(validProviders);
 
-    context.read<ChatProvider>().sendMessage(
+    await context.read<ChatProvider>().sendMessage(
           uid: uid,
           prompt: prompt,
-          validProviders: validProviders,
+          selectedProvider: selectedProvider,
           attachment: attachment,
         );
 
@@ -163,8 +168,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.translate('cancel'),
-            style: TextStyle(color: context.textTheme.headlineSmall!.color),),
+            child: Text(
+              l10n.translate('cancel'),
+              style: TextStyle(color: context.textTheme.headlineSmall!.color),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -264,82 +271,59 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             constraints: BoxConstraints(
               maxHeight: context.screenHeight * 0.4,
             ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: context.theme.cardTheme.color,
-                borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(context.isTablet ? 30 : 20)),
-                border: Border.all(
-                    color: context.theme.dividerTheme.color!, width: 1),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.horizontalPadding,
-                  vertical: context.verticalSpacing,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Dummy Model Selection Pill
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: context.horizontalPadding / 2,
-                          vertical: 4.0),
-                      decoration: BoxDecoration(
-                        color: context.isDark
-                            ? AppColors.accentLight
-                            : AppColors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors
-                                  .primaryLight, // Match the blue indicator dot
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Genie v4.0",
-                            style: context.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: 16,
-                            color: context.isDark
-                                ? AppColors.darkTextTertiary
-                                : AppColors.lightTextTertiary,
-                          ),
-                        ],
-                      ),
-                    ),
+            child: Consumer3<AuthProvider, ApiKeyProvider, ChatProvider>(
+              builder: (_, authProvider, apiKeyProvider, chatProvider, __) {
+                final validProviders = apiKeyProvider.validProviders;
+                final selectedProvider =
+                    ChatModelSelection.resolveSelectedProvider(
+                  availableProviders: validProviders,
+                  selectedProvider: _selectedProvider,
+                  preferredProviderId:
+                      authProvider.currentUser?.preferredAiModel,
+                );
 
-                    const SizedBox(height: 4.0),
-                    // The Input Component itself
-                    Flexible(
-                      child: Consumer<ChatProvider>(
-                        builder: (_, chatProvider, __) => ChatInputBar(
-                          isGenerating: chatProvider.isGenerating,
-                          isTablet: isTablet,
-                          onSend: _handleSend,
-                          onVoiceTap: null, // wired Phase 7
-                          onAttachTap: null, // wired Phase 5/6
-                        ),
-                      ),
+                return Container(
+                  decoration: BoxDecoration(
+                    color: context.theme.cardTheme.color,
+                    borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(context.isTablet ? 30 : 20)),
+                    border: Border.all(
+                        color: context.theme.dividerTheme.color!, width: 1),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                      vertical: context.verticalSpacing,
                     ),
-                  ],
-                ),
-              ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ChatModelSelectorDropdown(
+                          providers: validProviders,
+                          selectedProvider: selectedProvider,
+                          isEnabled: !chatProvider.isGenerating,
+                          onChanged: (provider) {
+                            setState(() => _selectedProvider = provider);
+                          },
+                        ),
+                        const SizedBox(height: 4.0),
+                        // The Input Component itself
+                        Flexible(
+                          child: ChatInputBar(
+                            isGenerating: chatProvider.isGenerating,
+                            isTablet: isTablet,
+                            onSend: _handleSend,
+                            onVoiceTap: null, // wired Phase 7
+                            onAttachTap: null, // wired Phase 5/6
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             )),
       ),
       body: Consumer<ChatProvider>(
@@ -399,6 +383,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           );
         },
       ),
+    );
+  }
+
+  AiProviderId? _currentSelectedProvider(List<AiProviderId> validProviders) {
+    return ChatModelSelection.resolveSelectedProvider(
+      availableProviders: validProviders,
+      selectedProvider: _selectedProvider,
+      preferredProviderId:
+          context.read<AuthProvider>().currentUser?.preferredAiModel,
     );
   }
 }

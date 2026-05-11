@@ -8,7 +8,6 @@ import 'message_model.dart';
 ///
 /// Implementation: ChatRepositoryImpl
 abstract class ChatRepository {
-
   // ── Message Operations ────────────────────────────────────────────────────
 
   /// Save a prompt + response pair as a single Firestore document.
@@ -21,7 +20,8 @@ abstract class ChatRepository {
     required MessageModel userMessage,
     required MessageModel aiMessage,
     bool isFirstMessage = false,
-    ConversationModel? conversationModel, // only required when isFirstMessage = true
+    ConversationModel?
+        conversationModel, // only required when isFirstMessage = true
   });
 
   /// Load all messages for a conversation in chronological order (oldest first).
@@ -29,6 +29,9 @@ abstract class ChatRepository {
     required String uid,
     required String conversationId,
   });
+
+  /// Get a single conversation document by ID.
+  Future<ConversationModel?> getConversation(String uid, String conversationId);
 
   /// Get all conversations for a specific user ordered by last updated.
   Future<List<ConversationModel>> getConversations(String uid);

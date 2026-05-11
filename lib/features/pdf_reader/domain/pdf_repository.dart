@@ -34,20 +34,6 @@ abstract class PdfRepository {
     required String fileName,
     required int fileSizeBytes,
   });
-
-  /// Save a PDF Q&A exchange as a conversation in Firestore.
-  ///
-  /// Creates a conversation of type [ConversationCapability.pdfReader]
-  /// with the user's question and the AI's answer as messages.
-  ///
-  /// Returns the Firestore conversation ID, or null if save fails.
-  Future<String?> savePdfConversation({
-    required String uid,
-    required String pdfFileName,
-    required String question,
-    required String answer,
-    required AiProviderId providerUsed,
-  });
 }
 
 // =============================================================================

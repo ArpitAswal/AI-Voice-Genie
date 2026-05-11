@@ -97,7 +97,7 @@ class GeminiAdapter extends AiProviderAdapter {
     final stopwatch = Stopwatch()..start();
 
     try {
-      // Gemini image generation uses a specific experimental model
+      // Gemini image generation uses a dedicated image model.
       // Response contains inline_data with base64-encoded PNG
       final response = await _post(
         model: AppConstants.geminiImageGenModel,
@@ -111,7 +111,7 @@ class GeminiAdapter extends AiProviderAdapter {
             },
           ],
           'generationConfig': {
-            'responseModalities': ['IMAGE', 'TEXT']
+            'responseModalities': ['TEXT', 'IMAGE'],
           },
         },
       ).timeout(AppConstants.aiRequestTimeout);
@@ -276,7 +276,10 @@ class GeminiAdapter extends AiProviderAdapter {
     );
     return _client.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
       body: jsonEncode(body),
     );
   }

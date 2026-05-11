@@ -125,9 +125,8 @@ class AiRequest {
       DateTime.now().millisecondsSinceEpoch.toString();
 
   @override
-  String toString() =>
-      'AiRequest(capability: ${capability.id}, uid: $uid, '
-          'requestId: $requestId, estimatedTokens: $estimatedTokenCount)';
+  String toString() => 'AiRequest(capability: ${capability.id}, uid: $uid, '
+      'requestId: $requestId, estimatedTokens: $estimatedTokenCount)';
 }
 
 /// Desired image size for generation requests.
@@ -135,11 +134,11 @@ enum AiImageSize {
   /// 1024×1024 — default square format
   square('1024x1024'),
 
-  /// 1792×1024 — landscape / widescreen
-  landscape('1792x1024'),
+  /// 1536×1024 — landscape / widescreen
+  landscape('1536x1024'),
 
-  /// 1024×1792 — portrait
-  portrait('1024x1792');
+  /// 1024×1536 — portrait
+  portrait('1024x1536');
 
   final String value;
   const AiImageSize(this.value);

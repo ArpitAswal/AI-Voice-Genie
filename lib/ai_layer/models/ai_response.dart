@@ -96,7 +96,7 @@ class AiResponse {
     );
   }
 
-  /// Create a base64 image response (Gemini image generation)
+  /// Create a base64 image response (OpenAI/Gemini image generation)
   factory AiResponse.imageBase64({
     required AiProviderId modelUsed,
     required String requestId,
@@ -121,12 +121,12 @@ class AiResponse {
   /// Whether this response contains an image (URL or base64)
   bool get hasImage =>
       (imageUrl != null && imageUrl!.isNotEmpty) ||
-          (imageBase64 != null && imageBase64!.isNotEmpty);
+      (imageBase64 != null && imageBase64!.isNotEmpty);
 
   @override
   String toString() =>
       'AiResponse(model: ${modelUsed.id}, type: ${contentType.name}, '
-          'responseTimeMs: $responseTimeMs, tokens: $tokenCount)';
+      'responseTimeMs: $responseTimeMs, tokens: $tokenCount)';
 }
 
 /// How the response content should be rendered in the UI.
@@ -134,9 +134,9 @@ enum AiResponseContentType {
   /// Plain or markdown text
   text,
 
-  /// Remote image URL (DALL-E style)
+  /// Remote image URL
   imageUrl,
 
-  /// Base64-encoded image data (Gemini style)
+  /// Base64-encoded image data
   imageBase64,
 }

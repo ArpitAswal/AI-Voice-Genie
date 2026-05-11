@@ -208,12 +208,12 @@ class AnalyticsService {
 
   /// Safe wrapper — analytics failures must never crash the app
   Future<void> _safeLog(
-      String eventName,
-      Map<String, Object> parameters,
-      ) async {
+    String eventName,
+    Map<String, Object> parameters,
+  ) async {
     try {
       await _analytics.logEvent(name: eventName, parameters: parameters);
-      debugPrint('📊 Analytics Success: $eventName → $parameters');
+      debugPrint('📊 Analytics Event Log: $eventName → $parameters');
     } catch (e) {
       // Analytics failures are silent — never interrupt the user flow
       debugPrint('⚠️ Analytics log failed [$eventName]: $e');

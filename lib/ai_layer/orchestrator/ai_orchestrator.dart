@@ -14,7 +14,6 @@ import '../adapters/openai_adapter.dart';
 import '../models/ai_request.dart';
 import '../models/ai_response.dart';
 import '../registry/provider_registry.dart';
-import 'model_selector.dart';
 
 /// The AI execution engine for AI Voice Genie.
 ///
@@ -23,13 +22,12 @@ import 'model_selector.dart';
 /// which provider handled the request.
 ///
 /// Responsibilities:
-///   1. Select capable providers the user has keys for (via ModelSelector)
-///   2. Retrieve API key from Firestore for each attempt
+///   1. Validate the selected provider can handle the requested capability
+///   2. Retrieve that provider's API key from Firestore
 ///   3. Execute the request via the correct adapter
 ///   4. Retry transient failures (max [AppConstants.maxRetryAttempts])
-///   5. Fall back to next provider on rate limit or exhausted retries
-///   6. Fire analytics events at every step
-///   7. Emit via EffectBus on full exhaustion
+///   5. Fire analytics events at every step
+///   6. Emit via EffectBus on selected-model exhaustion
 ///
 /// Usage (from any feature Provider):
 /// ```dart
@@ -40,7 +38,7 @@ import 'model_selector.dart';
 ///     prompt: userMessage,
 ///     conversationHistory: history,
 ///   ),
-///   userKeyedProviders: apiKeyProvider.validProviders,
+///   selectedProvider: selectedProvider,
 /// );
 /// ```
 class AiOrchestrator {
@@ -64,137 +62,82 @@ class AiOrchestrator {
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  /// Execute an AI request with full retry and fallback orchestration.
+  /// Execute an AI request against the selected provider.
   ///
   /// [request]             — what to ask and which capability to use
-  /// [userKeyedProviders]  — providers the user has valid API keys for
+  /// [selectedProvider]    — the single provider chosen by the user
   ///
   /// Returns [AiResponse] on success.
-  /// Throws [AiException] if all providers fail or the request is invalid.
+  /// Throws [AiException] if the selected provider fails or is invalid.
   Future<AiResponse> execute({
     required AiRequest request,
-    required List<AiProviderId> userKeyedProviders,
+    required AiProviderId? selectedProvider,
   }) async {
     debugPrint(
-      '🎯 Orchestrator: ${request.capability.id} '
-          '[requestId: ${request.requestId}]',
+      '🎯 Orchestrator: ${selectedProvider?.displayName}, ${request.capability.id}, '
+      '[requestId: ${request.requestId}]',
     );
 
-    // Step 1: Get ordered provider list for this capability (filters by user keys)
-    final orderedProviders = ModelSelector.select(
-      capability: request.capability,
-      userKeyedProviders: userKeyedProviders,
-    );
-
-    // Step 2: Handle capability gap (no provider available for this request)
-    if (orderedProviders.isEmpty) {
-      final supportedBy = ModelSelector.providerNamesFor(request.capability);
+    // Step 1: Ensure the user has selected a provider with a saved key.
+    if (selectedProvider == null) {
       const error = AiExhaustedException(
         message: 'error_no_models_with_key',
         triedProviders: [],
       );
 
-      await _analytics.logAiCapabilityGap(
-        modelSelected: userKeyedProviders.isNotEmpty
-            ? userKeyedProviders.first
-            : AiProviderId.openAi,
-        capabilityAttempted: request.capability,
-      );
-
       debugPrint(
-        '⚠️ Orchestrator: capability gap — '
-            '${request.capability.id} supported by: $supportedBy',
+        '⚠️ Orchestrator: no selected provider for ${request.capability.id}',
       );
 
       EffectBus.instance.emit(error, StackTrace.current);
       throw error;
     }
 
-    debugPrint(
-      '📋 Orchestrator: trying providers: '
-          '${orderedProviders.map((p) => p.id).join(" → ")}',
-    );
+    // Step 2: Fail fast if the selected provider cannot do this task.
+    if (!_registry.supports(selectedProvider, request.capability)) {
+      final error = AiCapabilityGapException(
+        message: 'error_selected_model_capability_gap',
+        provider: selectedProvider,
+        missingCapability: request.capability,
+      );
 
-    // Step 3: Try each provider in order
-    final triedProviders = <AiProviderId>[];
-    AiProviderId? lastFailedProvider;
+      await _analytics.logAiCapabilityGap(
+        modelSelected: selectedProvider,
+        capabilityAttempted: request.capability,
+      );
 
-    for (int i = 0; i < orderedProviders.length; i++) {
-      final providerId = orderedProviders[i];
-      final isLastProvider = i == orderedProviders.length - 1;
-      triedProviders.add(providerId);
+      debugPrint(
+        '⚠️ Orchestrator: ${selectedProvider.id} does not support '
+        '${request.capability.id}',
+      );
 
-      // If we are falling back, log the transition
-      if (lastFailedProvider != null) {
-        await _analytics.logAiFallbackTriggered(
-          fromModel: lastFailedProvider,
-          toModel: providerId,
-          reason: AiFailureType.transient,
-        );
-      }
-
-      try {
-        final response = await _executeWithRetry(
-          request: request,
-          providerId: providerId,
-          isLastProvider: isLastProvider,
-        );
-        return response;
-      } on AiHardErrorException catch (e) {
-        // Hard errors do not fallback — immediately surface to caller
-        debugPrint(
-          '🔴 Orchestrator: hard error on ${providerId.id} — not retrying',
-        );
-        await _analytics.logAiRequestFailed(
-          modelAttempted: providerId,
-          capability: request.capability,
-          failureType: AiFailureType.hardError,
-          fallbackTriggered: false,
-        );
-        rethrow;
-      } on AiRateLimitException {
-        // Rate limit — skip to next provider immediately
-        debugPrint(
-          '⚡ Orchestrator: rate limit on ${providerId.id} — skipping',
-        );
-        await _analytics.logAiRequestFailed(
-          modelAttempted: providerId,
-          capability: request.capability,
-          failureType: AiFailureType.rateLimit,
-          fallbackTriggered: !isLastProvider,
-        );
-        lastFailedProvider = providerId;
-        continue;
-      } on AiTransientException {
-        // Transient — retry was already attempted inside _executeWithRetry
-        debugPrint(
-          '🟡 Orchestrator: transient failure on ${providerId.id} — '
-              '${isLastProvider ? "no more providers" : "trying next"}',
-        );
-        await _analytics.logAiRequestFailed(
-          modelAttempted: providerId,
-          capability: request.capability,
-          failureType: AiFailureType.transient,
-          fallbackTriggered: !isLastProvider,
-        );
-        lastFailedProvider = providerId;
-        continue;
-      }
+      throw error;
     }
 
-    // Step 4: All providers exhausted
-    final exhaustedError = AiExhaustedException(
-      message: 'error_all_models_failed',
-      triedProviders: triedProviders,
-    );
+    // Step 3: Execute only the selected provider.
+    try {
+      return await _executeWithRetry(
+        request: request,
+        providerId: selectedProvider,
+      );
+    } on AiException catch (e) {
+      await _analytics.logAiRequestFailed(
+        modelAttempted: selectedProvider,
+        capability: request.capability,
+        failureType: e.failureType,
+        fallbackTriggered: false,
+      );
 
-    debugPrint(
-      '💀 Orchestrator: all providers exhausted — '
-          '${triedProviders.map((p) => p.id).join(", ")}',
-    );
+      if (e is AiTransientException) {
+        final exhaustedError = AiExhaustedException(
+          message: 'error_all_models_failed',
+          triedProviders: [selectedProvider],
+        );
+        EffectBus.instance.emit(exhaustedError, StackTrace.current);
+      }
 
-    EffectBus.instance.emit(exhaustedError, StackTrace.current);
-    throw exhaustedError;
+      rethrow;
+    }
   }
 
   // ── Private: Execute with Retry ────────────────────────────────────────────
@@ -206,7 +149,6 @@ class AiOrchestrator {
   Future<AiResponse> _executeWithRetry({
     required AiRequest request,
     required AiProviderId providerId,
-    required bool isLastProvider,
   }) async {
     final adapter = _adapters[providerId]!;
     int attempt = 0;
@@ -223,10 +165,10 @@ class AiOrchestrator {
       if (keyModel == null || keyModel.apiKey.isEmpty) {
         // Key was deleted mid-session — treat as unavailable
         debugPrint(
-          '⚠️ Orchestrator: no key found for ${providerId.id} — skipping',
+          '⚠️ Orchestrator: no key found for ${providerId.id}',
         );
-        throw AiTransientException(
-          message: 'API key not found for ${providerId.displayName}',
+        throw AiHardErrorException(
+          message: 'error_no_models_with_key',
           provider: providerId,
         );
       }
@@ -255,7 +197,7 @@ class AiOrchestrator {
 
         debugPrint(
           '✅ Orchestrator: success on ${providerId.id} '
-              '(${response.responseTimeMs}ms)',
+          '(${response.responseTimeMs}ms)',
         );
 
         return response;
@@ -267,7 +209,7 @@ class AiOrchestrator {
         rethrow;
       } on AiTransientException {
         if (attempt >= AppConstants.maxRetryAttempts) {
-          // Retries exhausted — let the caller handle fallback
+          // Retries exhausted — surface failure for the selected provider.
           rethrow;
         }
 
@@ -275,7 +217,7 @@ class AiOrchestrator {
         final delayMs = 500 * attempt;
         debugPrint(
           '🔄 Orchestrator: retry $attempt in ${delayMs}ms '
-              '[${providerId.id}]',
+          '[${providerId.id}]',
         );
         await Future.delayed(Duration(milliseconds: delayMs));
       }

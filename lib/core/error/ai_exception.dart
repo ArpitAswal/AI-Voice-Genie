@@ -21,12 +21,13 @@ sealed class AiException implements Exception {
   });
 
   @override
-  String toString() => 'AiException[${provider.id}/${failureType.value}]: $message';
+  String toString() =>
+      'AiException[${provider.id}/${failureType.value}]: $message';
 }
 
 /// Transient failure — network timeout, 503 service unavailable.
 ///
-/// Orchestrator behavior: retry same model (max 2x), then fall back.
+/// Orchestrator behavior: retry same model (max 2x), then report failure.
 class AiTransientException extends AiException {
   const AiTransientException({
     required super.message,
@@ -37,7 +38,7 @@ class AiTransientException extends AiException {
 
 /// Rate limit exceeded — HTTP 429 Too Many Requests.
 ///
-/// Orchestrator behavior: immediately skip this model, try next.
+/// Orchestrator behavior: immediately report failure for the selected model.
 class AiRateLimitException extends AiException {
   const AiRateLimitException({
     required super.message,
@@ -60,7 +61,7 @@ class AiHardErrorException extends AiException {
 /// Capability gap — model does not support the requested feature.
 ///
 /// This is NOT a runtime failure. It is detected before the API call is made.
-/// Orchestrator behavior: show capability gap message with model switch options.
+/// Orchestrator behavior: show capability gap message for the selected model.
 class AiCapabilityGapException extends AiException {
   final AiCapability missingCapability;
 
@@ -71,7 +72,7 @@ class AiCapabilityGapException extends AiException {
   }) : super(failureType: AiFailureType.capabilityGap);
 }
 
-/// All models exhausted — every available model with a key has failed.
+/// Selected model exhausted — the selected model failed after retry policy.
 ///
 /// Orchestrator behavior: emit via EffectBus, show global error to user.
 class AiExhaustedException extends AiException {
@@ -81,9 +82,9 @@ class AiExhaustedException extends AiException {
     required super.message,
     required this.triedProviders,
   }) : super(
-    provider: AiProviderId.openAi, // placeholder — all failed
-    failureType: AiFailureType.exhausted,
-  );
+          provider: AiProviderId.openAi, // placeholder — all failed
+          failureType: AiFailureType.exhausted,
+        );
 }
 
 /// Utility to map HTTP status codes to the correct AiException subtype.
@@ -94,38 +95,76 @@ AiException mapHttpErrorToAiException({
   required AiProviderId provider,
   required String rawMessage,
 }) {
+  final messageLower = rawMessage.toLowerCase();
+
   switch (statusCode) {
-    case 429:
-      return AiRateLimitException(
-        message: 'Rate limit exceeded. Trying another model...',
+    case 400:
+      // Bad Request - often invalid parameters or prompt
+      return AiHardErrorException(
+        message: 'error_invalid_ai_request',
         provider: provider,
         statusCode: statusCode,
       );
     case 401:
-    case 403:
+      // Unauthorized - Invalid API Key
       return AiHardErrorException(
-        message: 'Invalid API key for ${provider.displayName}. Please check your key in Settings.',
+        message: 'error_invalid_key',
         provider: provider,
         statusCode: statusCode,
       );
-    case 400:
+    case 403:
+      // Forbidden - often country/region restriction
+      if (messageLower.contains('location') ||
+          messageLower.contains('region') ||
+          messageLower.contains('country')) {
+        return AiHardErrorException(
+          message: 'error_region_not_supported',
+          provider: provider,
+          statusCode: statusCode,
+        );
+      }
       return AiHardErrorException(
-        message: 'Invalid request sent to ${provider.displayName}.',
+        message: 'error_permission_denied',
+        provider: provider,
+        statusCode: statusCode,
+      );
+    case 429:
+      // Rate Limit or Quota Exceeded
+      if (messageLower.contains('quota') || messageLower.contains('credit')) {
+        return AiRateLimitException(
+          message: 'error_quota_exceeded',
+          provider: provider,
+          statusCode: statusCode,
+        );
+      }
+      return AiRateLimitException(
+        message: 'error_rate_limit',
         provider: provider,
         statusCode: statusCode,
       );
     case 500:
-    case 502:
+      return AiTransientException(
+        message: 'error_ai_server',
+        provider: provider,
+        statusCode: statusCode,
+      );
     case 503:
+      // Engine Overloaded
+      return AiTransientException(
+        message: 'error_engine_overloaded',
+        provider: provider,
+        statusCode: statusCode,
+      );
+    case 502:
     case 504:
       return AiTransientException(
-        message: '${provider.displayName} server error. Retrying...',
+        message: 'request_timed_out',
         provider: provider,
         statusCode: statusCode,
       );
     default:
       return AiTransientException(
-        message: 'Unexpected error from ${provider.displayName}.',
+        message: 'error_unexpected_ai',
         provider: provider,
         statusCode: statusCode,
       );

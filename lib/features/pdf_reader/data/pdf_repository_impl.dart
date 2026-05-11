@@ -59,58 +59,6 @@ class PdfRepositoryImpl implements PdfRepository {
       fileSizeBytes: fileSizeBytes,
     ));
   }
-
-  // ── Conversation Save ──────────────────────────────────────────────────────
-
-  @override
-  Future<String?> savePdfConversation({
-    required String uid,
-    required String pdfFileName,
-    required String question,
-    required String answer,
-    required AiProviderId providerUsed,
-  }) async {
-    try {
-      // Create conversation document for this PDF session
-      // final conversation = await _chatRepository.createConversation(
-      //   uid: uid,
-      //   firstMessagePreview: 'PDF: $pdfFileName',
-      //   capability: ConversationCapability.pdfReader,
-      //   firstProvider: providerUsed,
-      // );
-
-      // User's question as first message
-      final userMessage = MessageModel.userMessage(question).copyWith(
-        status: MessageStatus.delivered,
-        isOptimistic: false,
-        pdfName: pdfFileName,
-      );
-
-      // AI answer as second message
-      final aiMessage = MessageModel.aiResponse(
-        content: answer,
-        modelUsed: providerUsed,
-        pdfName: pdfFileName,
-      );
-      return "";
-
-      // await _chatRepository.saveMessagePair(
-      //   uid: uid,
-      //   conversationId: conversation.id,
-      //   userMessage: userMessage,
-      //   aiMessage: aiMessage,
-      // );
-      //
-      //
-      // debugPrint(
-      //   '✅ PdfRepository: saved PDF conversation ${conversation.id}',
-      // );
-      // return conversation.id;
-    } catch (e) {
-      debugPrint('⚠️ PdfRepository.savePdfConversation error: $e');
-      return null; // Non-fatal — Q&A still works even if save fails
-    }
-  }
 }
 
 // =============================================================================

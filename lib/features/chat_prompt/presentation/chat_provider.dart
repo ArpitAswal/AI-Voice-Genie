@@ -36,7 +36,7 @@ import '../domain/message_model.dart';
 /// await chatProvider.sendMessage(
 ///   uid: uid,
 ///   prompt: 'Hello!',
-///   validProviders: apiKeyProvider.validProviders,
+///   selectedProvider: selectedProvider,
 /// );
 /// ```
 class ChatProvider extends ChangeNotifier {
@@ -81,6 +81,7 @@ class ChatProvider extends ChangeNotifier {
   }) async {
     _isLoadingMessages = true;
     _errorMessage = null;
+    _activeConversation = null;
     notifyListeners();
 
     try {
@@ -94,15 +95,25 @@ class ChatProvider extends ChangeNotifier {
         notifyListeners();
       }
 
-      // Fresh path: load ALL messages from Firestore
-      final fresh = await _repository.getMessages(
-        uid: uid,
-        conversationId: conversationId,
-      );
+      // Fresh path: load ALL messages and conversation details from Firestore
+      final results = await Future.wait([
+        _repository.getMessages(
+          uid: uid,
+          conversationId: conversationId,
+        ),
+        _repository.getConversation(uid, conversationId),
+      ]);
+
+      final freshMessages = results[0] as List<MessageModel>;
+      final conversationModel = results[1] as ConversationModel?;
+
+      if (conversationModel != null) {
+        _activeConversation = conversationModel;
+      }
 
       _messages
         ..clear()
-        ..addAll(fresh);
+        ..addAll(freshMessages);
 
       // Update cache with fresh data
       await _repository.cacheMessages(
@@ -124,14 +135,14 @@ class ChatProvider extends ChangeNotifier {
   ///
   /// [uid]              — current user's Firebase UID
   /// [prompt]           — the user's message text
-  /// [validProviders]   — providers with valid keys (from ApiKeyProvider)
+  /// [selectedProvider] — provider selected for this single request
   /// [capability]       — defaults to textGeneration (chat). Override for image/PDF.
   ///
   /// Returns true on success, false on failure.
   Future<void> sendMessage({
     required String uid,
     required String prompt,
-    required List<AiProviderId> validProviders,
+    required AiProviderId? selectedProvider,
     ConversationCapability capability = ConversationCapability.textChat,
     ChatAttachment? attachment,
   }) async {
@@ -151,11 +162,13 @@ class ChatProvider extends ChangeNotifier {
       prompt: trimmedPrompt,
       attachment: attachment,
     );
+    final selectedProviders =
+        selectedProvider == null ? const <AiProviderId>[] : [selectedProvider];
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
     final userMessage = MessageModel.userMessage(
       trimmedPrompt,
-      validProviders: validProviders,
+      validProviders: selectedProviders,
       contentType: _userContentTypeFor(attachment),
       imageUrl: attachment?.isImage == true ? attachment!.path : null,
       pdfName: attachment?.isPdf == true ? attachment!.name : null,
@@ -177,16 +190,12 @@ class ChatProvider extends ChangeNotifier {
           title: '', // Empty initially to show shimmer
           lastMessage: _conversationPreview(effectivePrompt, attachment),
           capability: conversationCapability,
-          lastProvider: validProviders.isNotEmpty
-              ? validProviders.first
-              : AiProviderId.openAi,
+          lastProvider: selectedProvider,
         );
         _activeConversation = newConversation;
         unawaited(_analytics.logConversationStarted(
           capability: conversationCapability,
-          provider: validProviders.isNotEmpty
-              ? validProviders.first
-              : AiProviderId.openAi,
+          provider: selectedProvider ?? AiProviderId.openAi,
         ));
       } catch (e) {
         // Conversation creation failed — roll back and show error
@@ -198,6 +207,8 @@ class ChatProvider extends ChangeNotifier {
 
     // ── Step 3: Build context-aware history ───────────────────────────────────
     final history = _buildTruncatedHistory();
+
+    MessageModel? aiMessage;
 
     // ── Step 4: Execute via orchestrator ─────────────────────────────────────
     try {
@@ -228,55 +239,76 @@ class ChatProvider extends ChangeNotifier {
           pdfText: attachment?.isPdf == true ? attachment!.extractedText : null,
           pdfFileName: attachment?.isPdf == true ? attachment!.name : null,
         ),
-        userKeyedProviders: validProviders,
+        selectedProvider: selectedProvider,
       );
 
       // ── Step 5: Add AI response to list ──────────────────────────────────
-      final aiMessage = _buildAiMessage(aiResponse, attachment: attachment);
+      aiMessage = _buildAiMessage(aiResponse, attachment: attachment);
 
       _messages.add(aiMessage);
       notifyListeners();
 
-      // ── Step 6: Persist to Firestore (non-blocking side effect) ──────────
-      final conversationId = _activeConversation!.id;
-      await EffectBus.instance.safeEffect(() async {
-        await _repository.saveMessagePair(
-          uid: uid,
-          conversationId: conversationId,
-          userMessage: userMessage.copyWith(status: MessageStatus.delivered),
-          aiMessage: aiMessage,
-          isFirstMessage: isNewConversation,
-          conversationModel: isNewConversation ? _activeConversation : null,
-        );
-      });
-
-      // ── Step 7: Update Hive cache ─────────────────────────────────────────
-      await EffectBus.instance.safeEffect(() async {
-        await _repository.cacheMessages(
-          conversationId: conversationId,
-          messages: _messages,
-        );
-      });
-
-      // ── Step 8: Analytics ─────────────────────────────────────────────────
-      await _analytics.logFeatureUsed(_featureForCapability(requestCapability));
-
-      _isGenerating = false;
-      notifyListeners();
+      // Step 6 to 8 follow in finally, because whether the response is success or fail it has to store.
     } on AiExhaustedException catch (e) {
       // All providers failed — EffectBus already emitted by orchestrator
-      // _rollbackOptimisticMessage(userMessage.id);
-      _errorMessage = e.message;
-      _isGenerating = false;
+      final friendlyMessage = _friendlyAiErrorMessage(e);
+      _errorMessage = friendlyMessage;
+      aiMessage = _buildFailedAiMessage(
+        content: friendlyMessage,
+        error: e,
+        selectedProvider: selectedProvider,
+      );
+      _messages.add(aiMessage);
       notifyListeners();
     } on AiException catch (e) {
-      _rollbackOptimisticMessage(userMessage.id);
-      _errorMessage = e.message;
-      _isGenerating = false;
+      final friendlyMessage = _friendlyAiErrorMessage(e);
+      _errorMessage = friendlyMessage;
+      aiMessage = _buildFailedAiMessage(
+        content: friendlyMessage,
+        error: e,
+        selectedProvider: selectedProvider,
+      );
+      _messages.add(aiMessage);
       notifyListeners();
     } catch (e) {
-      _rollbackOptimisticMessage(userMessage.id);
-      _errorMessage = 'something_went_wrong';
+      final friendlyMessage = _friendlyAiErrorMessage(e);
+      _errorMessage = friendlyMessage;
+      aiMessage = _buildFailedAiMessage(
+        content: friendlyMessage,
+        error: e,
+        selectedProvider: selectedProvider,
+      );
+      _messages.add(aiMessage);
+      notifyListeners();
+    } finally {
+      final messageToPersist = aiMessage;
+      final conversationToPersist = _activeConversation;
+
+      if (messageToPersist != null && conversationToPersist != null) {
+        // ── Step 6: Persist to Firestore (non-blocking side effect) ──────────
+        final conversationId = conversationToPersist.id;
+        await EffectBus.instance.safeEffect(() async {
+          await _repository.saveMessagePair(
+            uid: uid,
+            conversationId: conversationId,
+            userMessage: userMessage.copyWith(
+              status: MessageStatus.delivered,
+            ),
+            aiMessage: messageToPersist,
+            isFirstMessage: isNewConversation,
+            conversationModel: isNewConversation ? conversationToPersist : null,
+          );
+        });
+
+        // ── Step 7: Update Hive cache ───────────────────────────────────────
+        await EffectBus.instance.safeEffect(() async {
+          await _repository.cacheMessages(
+            conversationId: conversationId,
+            messages: _messages,
+          );
+        });
+      }
+
       _isGenerating = false;
       notifyListeners();
     }
@@ -370,15 +402,14 @@ class ChatProvider extends ChangeNotifier {
     // Truncate oldest messages until within limit
     while (totalChars > maxChars && historyMessages.isNotEmpty) {
       final removed = historyMessages.removeAt(0);
-      totalChars -= removed['content']?.length ?? 0;
+      final removedLen = removed['content']?.length ?? 0;
+      totalChars -= removedLen;
+
+      // Safety: if totalChars is still high but we removed something with 0 length,
+      // the loop will eventually terminate due to historyMessages.isNotEmpty.
     }
 
     return historyMessages;
-  }
-
-  /// Remove an optimistic message on failure — prevents ghost messages.
-  void _rollbackOptimisticMessage(String messageId) {
-    _messages.removeWhere((m) => m.id == messageId);
   }
 
   AiCapability _resolveRequestCapability({
@@ -463,29 +494,73 @@ class ChatProvider extends ChangeNotifier {
     );
   }
 
-  AppFeature _featureForCapability(AiCapability capability) {
-    switch (capability) {
-      case AiCapability.imageGeneration:
-        return AppFeature.imageGeneration;
-      case AiCapability.imageUnderstanding:
-        return AppFeature.imageReading;
-      case AiCapability.pdfParsing:
-        return AppFeature.pdfReader;
-      case AiCapability.textGeneration:
-      case AiCapability.speechToText:
-      case AiCapability.textToSpeech:
-        return AppFeature.textChat;
+  MessageModel _buildFailedAiMessage({
+    required String content,
+    required Object error,
+    required AiProviderId? selectedProvider,
+  }) {
+    return MessageModel(
+      id: const Uuid().v4(),
+      role: MessageRole.assistant,
+      content: content,
+      timestamp: DateTime.now(),
+      modelUsed: _providerForError(error, selectedProvider),
+      status: MessageStatus.failed,
+    );
+  }
+
+  AiProviderId? _providerForError(
+    Object error,
+    AiProviderId? selectedProvider,
+  ) {
+    if (error is AiExhaustedException && error.triedProviders.isNotEmpty) {
+      return error.triedProviders.last;
     }
+    if (error is AiException) return error.provider;
+    return selectedProvider;
+  }
+
+  String _friendlyAiErrorMessage(Object error) {
+    if (error is AiException) return error.message;
+    return 'something_went_wrong';
   }
 
   bool _looksLikeImageGenerationPrompt(String prompt) {
-    final lower = prompt.toLowerCase();
-    final hasCreateVerb = RegExp(
-      r'\b(create|generate|draw|make|design|render|paint)\b',
+    final lower = prompt.trim().toLowerCase();
+
+    // 1. Explicit exclusions: Questions about capabilities, models, code, or pricing
+    final askingAboutCapabilities = RegExp(
+      r'\b(do you have|are there|what models|which models|free models|paid models|how to|how do|can you tell me|what is)\b',
     ).hasMatch(lower);
-    final hasImageNoun = RegExp(
-      r'\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b',
+
+    if (askingAboutCapabilities) return false;
+
+    // 2. Strong match: Verb + nearby image noun + "of", "for", or "with"
+    final strongMatch = RegExp(
+      r'\b(create|generate|draw|make|design|render|paint|need|want|show me)\b.{0,20}\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b\s+(of|for|with)\b',
     ).hasMatch(lower);
-    return hasCreateVerb && hasImageNoun;
+
+    if (strongMatch) return true;
+
+    // 3. Command at the very beginning of the prompt
+    final commandAtStart = RegExp(
+      r'^(can you|could you|please|i want to|i need to)?\s*(create|generate|draw|make|design|render|paint)\b.{0,20}\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b',
+    ).hasMatch(lower);
+
+    if (commandAtStart) return true;
+
+    // 4. Strict visual verbs that strongly imply image generation even without nouns
+    final visualVerbAtStart = RegExp(
+      r'^(can you|could you|please)?\s*(draw|paint|sketch)\b',
+    ).hasMatch(lower);
+
+    if (visualVerbAtStart) return true;
+
+    // 5. Starts directly with describing the image
+    final nounAtStart = RegExp(
+      r'^(a|an|the|some)?\s*(image|picture|photo|illustration|poster|logo)\s+(of|for)\b',
+    ).hasMatch(lower);
+
+    return nounAtStart;
   }
 }

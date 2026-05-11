@@ -20,7 +20,7 @@ class ModelIndicatorChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (color, bgColor, icon) = _providerStyle(provider);
+    final (color, bgColor, icon) = _providerStyle(provider, context.isDark);
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -49,24 +49,24 @@ class ModelIndicatorChip extends StatelessWidget {
     );
   }
 
-  (Color, Color, IconData) _providerStyle(AiProviderId provider) {
+  (Color, Color, IconData) _providerStyle(AiProviderId provider, bool isDark) {
     switch (provider) {
       case AiProviderId.openAi:
         return (
-          AppColors.openAiBrand,
-          AppColors.openAiBrand,
+            (isDark) ? AppColors.white : AppColors.openAiBrand,
+    (isDark) ? AppColors.openAiBrandDark : AppColors.white,
           Icons.auto_awesome_rounded,
         );
       case AiProviderId.gemini:
         return (
-          AppColors.geminiBrand,
-          AppColors.white,
+            (isDark) ? AppColors.white : AppColors.geminiBrand,
+    (isDark) ? AppColors.geminiBrandDark : AppColors.white,
           Icons.diamond_outlined,
         );
       case AiProviderId.claude:
         return (
-          AppColors.claudeBrand,
-          AppColors.claudeBrand,
+            (isDark) ? AppColors.white : AppColors.claudeBrand,
+    (isDark) ? AppColors.claudeBrandDark : AppColors.white,
           Icons.psychology_outlined,
         );
     }

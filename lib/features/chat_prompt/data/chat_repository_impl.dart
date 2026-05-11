@@ -154,6 +154,27 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
+  Future<ConversationModel?> getConversation(
+    String uid,
+    String conversationId,
+  ) async {
+    try {
+      final doc = await _firestore
+          .doc(FirebaseCollections.conversationDoc(uid, conversationId))
+          .get();
+
+      if (!doc.exists) return null;
+
+      return ConversationModel.fromFirestore(doc.id, doc.data() ?? {});
+    } on FirebaseException catch (e) {
+      throw ChatException(
+        ChatErrorCodes.loadFailed,
+        technicalMessage: 'getConversation failed: ${e.code}',
+      );
+    }
+  }
+
+  @override
   Future<List<ConversationModel>> getConversations(String uid) async {
     try {
       final snapshot = await _firestore

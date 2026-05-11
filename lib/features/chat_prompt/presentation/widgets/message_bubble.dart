@@ -129,7 +129,7 @@ class _MessageBubbleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = message.content.trim();
+    final text = _displayText(context).trim();
     final textWidget = text.isEmpty
         ? null
         : Text(
@@ -169,6 +169,14 @@ class _MessageBubbleContent extends StatelessWidget {
           isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: children,
     );
+  }
+
+  String _displayText(BuildContext context) {
+    if (message.status == MessageStatus.failed) {
+      return AppLocalizations.of(context)?.translate(message.content) ??
+          message.content;
+    }
+    return message.content;
   }
 }
 

@@ -66,10 +66,13 @@ class AppConstants {
   static const String geminiProviderId = 'gemini';
   static const String claudeProviderId = 'claude';
 
-  // ── AI Model Capabilities (features offered by each) ───────────────────────
-  static const String openAICapabilities = '• GPT-4o • DALL-E 3 • Whisper';
-  static const String geminiAICapabilities = '• Gemini 2.0 Flash • Image Gen';
-  static const String claudeAICapabilities = '• Claude Sonnet • Vision • PDF';
+  // ── AI Model Capabilities (features offered by each adapter) ──────────────
+  // PDF reading uses locally extracted PDF text, not native file/URL upload.
+  static const String openAICapabilities =
+      '• GPT Image Gen \n• GPT-4o Text/Vision/PDF';
+  static const String geminiAICapabilities =
+      '• Gemini Image Gen \n• Gemini 2.5 Flash Text/Vision/PDF';
+  static const String claudeAICapabilities = '• Claude Sonnet Text/Vision/PDF';
 
   // ── OpenAI Model Names ────────────────────────────────────────────────────
   // Default models used for each capability
@@ -84,13 +87,12 @@ class AppConstants {
   // ── Gemini Model Names ────────────────────────────────────────────────────
   static const String geminiTextModel = 'gemini-2.5-flash';
   static const String geminiVisionModel = 'gemini-2.5-flash'; // multimodal
-  static const String geminiImageGenModel =
-      'gemini-2.0-flash-exp-image-generation';
+  static const String geminiImageGenModel = 'gemini-2.5-flash-image';
 
   // ── Claude Model Names ────────────────────────────────────────────────────
-  static const String claudeTextModel = 'claude-sonnet-4-5';
+  static const String claudeTextModel = 'claude-3-5-sonnet-latest';
   static const String claudeVisionModel =
-      'claude-sonnet-4-5'; // same, multimodal
+      'claude-3-5-sonnet-latest'; // same, multimodal
   // Claude does NOT support image generation — no constant needed
 
   // ── AI API Base URLs ──────────────────────────────────────────────────────
@@ -112,7 +114,7 @@ class AppConstants {
   // ── Token / Context Window Limits ────────────────────────────────────────
   // Context window token limits per model (approximate)
   static const int openAiContextTokenLimit = 128000; // GPT-4o
-  static const int geminiContextTokenLimit = 1000000; // Gemini 2.0 Flash
+  static const int geminiContextTokenLimit = 1000000; // Gemini 2.5 Flash
   static const int claudeContextTokenLimit = 200000; // Claude Sonnet
 
   // Safety margin — only use 70% of context limit to avoid cutoffs
@@ -136,10 +138,10 @@ class AppConstants {
   static const int maxImageSizeBytes = 5 * 1024 * 1024;
   static const String defaultImageQuestion = 'Please analyze this image.';
   static const String defaultPdfQuestion = 'Please summarize this PDF.';
-  // DALL-E 3 image size options
+  // GPT Image size options
   static const String imageSize1024 = '1024x1024';
-  static const String imageSize1792x1024 = '1792x1024';
-  static const String imageSize1024x1792 = '1024x1792';
+  static const String imageSize1536x1024 = '1536x1024';
+  static const String imageSize1024x1536 = '1024x1536';
 
   // ── Voice ─────────────────────────────────────────────────────────────────
   // Maximum recording duration in seconds

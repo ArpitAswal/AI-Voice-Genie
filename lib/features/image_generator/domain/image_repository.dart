@@ -15,18 +15,6 @@ abstract class ImageRepository {
   /// Returns null if processing fails.
   Future<Uint8List?> processImageResponse(AiResponse response);
 
-  /// Save a generated image as a conversation + messages in Firestore.
-  ///
-  /// Creates a conversation of type imageGeneration with:
-  ///   - User message: the prompt
-  ///   - AI message: the image URL or placeholder text
-  Future<String?> saveImageConversation({
-    required String uid,
-    required String prompt,
-    required AiResponse response,
-    required AiProviderId providerUsed,
-  });
-
   /// Save image bytes to the device gallery.
   ///
   /// Returns true on success, false on failure.

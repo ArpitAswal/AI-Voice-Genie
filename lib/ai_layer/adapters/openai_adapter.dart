@@ -15,7 +15,7 @@ import 'ai_provider_adapter.dart';
 ///
 /// Implements all four capabilities using OpenAI's REST API:
 ///   textGeneration    → POST /v1/chat/completions (gpt-4o)
-///   imageGeneration   → POST /v1/images/generations (dall-e-3)
+///   imageGeneration   → POST /v1/images/generations (gpt-image-1)
 ///   imageUnderstanding → POST /v1/chat/completions with image_url (gpt-4o)
 ///   pdfParsing        → POST /v1/chat/completions with PDF text in context
 ///
@@ -66,7 +66,15 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       final data = _parseResponse(response, request.requestId);
 
-      final text = data['choices'][0]['message']['content'] as String? ?? '';
+      final choices = data['choices'] as List?;
+      if (choices == null || choices.isEmpty) {
+        throw const AiTransientException(
+          message: 'OpenAI returned empty choices',
+          provider: AiProviderId.openAi,
+        );
+      }
+
+      final text = choices[0]['message']?['content'] as String? ?? '';
       final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
 
       stopwatch.stop();
@@ -103,20 +111,27 @@ class OpenAiAdapter extends AiProviderAdapter {
           'prompt': request.prompt,
           'n': 1,
           'size': request.imageSize.value,
-          'quality': 'standard',
-          'response_format': 'url',
+          'quality': 'standard', // DALL-E 3 supports standard or hd
+          'response_format': 'b64_json',
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = _parseResponse(response, request.requestId);
-      final imageUrl = data['data'][0]['url'] as String? ?? '';
+      final imageBase64 = data['data']?[0]?['b64_json'] as String? ?? '';
+
+      if (imageBase64.isEmpty) {
+        throw const AiTransientException(
+          message: 'error_unexpected_ai',
+          provider: AiProviderId.openAi,
+        );
+      }
 
       stopwatch.stop();
-      return AiResponse.imageUrl(
+      return AiResponse.imageBase64(
         modelUsed: AiProviderId.openAi,
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
-        imageUrl: imageUrl,
+        imageBase64: imageBase64,
       );
     } on AiException {
       rethrow;
@@ -164,7 +179,15 @@ class OpenAiAdapter extends AiProviderAdapter {
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = _parseResponse(response, request.requestId);
-      final text = data['choices'][0]['message']['content'] as String? ?? '';
+      final choices = data['choices'] as List?;
+      if (choices == null || choices.isEmpty) {
+        throw const AiTransientException(
+          message: 'OpenAI returned empty choices for image analysis',
+          provider: AiProviderId.openAi,
+        );
+      }
+
+      final text = choices[0]['message']?['content'] as String? ?? '';
       final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
 
       stopwatch.stop();
@@ -214,9 +237,16 @@ class OpenAiAdapter extends AiProviderAdapter {
           'temperature': 0.3, // Lower temp for factual document Q&A
         },
       ).timeout(AppConstants.aiRequestTimeout);
-
       final data = _parseResponse(response, request.requestId);
-      final text = data['choices'][0]['message']['content'] as String? ?? '';
+      final choices = data['choices'] as List?;
+      if (choices == null || choices.isEmpty) {
+        throw const AiTransientException(
+          message: 'OpenAI returned empty choices for PDF parsing',
+          provider: AiProviderId.openAi,
+        );
+      }
+
+      final text = choices[0]['message']?['content'] as String? ?? '';
       final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
 
       stopwatch.stop();
@@ -265,6 +295,8 @@ class OpenAiAdapter extends AiProviderAdapter {
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
+
+    debugPrint('🤖 OpenAI error body: ${response.body}');
 
     throw mapHttpErrorToAiException(
       statusCode: response.statusCode,

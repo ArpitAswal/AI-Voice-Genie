@@ -63,7 +63,7 @@ extension WidgetExtensions on BuildContext {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        hintStyle: theme.textTheme.bodyLarge,
+        hintStyle: theme.textTheme.bodyMedium,
         labelStyle: theme.textTheme.titleSmall,
         errorText: errorText,
         counterText: maxLength != null ? null : '',

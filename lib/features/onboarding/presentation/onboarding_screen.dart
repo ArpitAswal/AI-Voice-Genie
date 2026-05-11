@@ -91,78 +91,76 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final isTablet = context.isTablet;
 
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── Page View ────────────────────────────────────────────────────
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) => setState(() => _currentPage = index),
-                itemCount: _totalPages,
-                itemBuilder: (context, index) => Stack(
-                  children: [
-                    ImageView(
-                      image: ImageViewData.asset(_pages[index].image),
-                      width: context.screenWidth,
-                      height: context.screenHeight,
-                      filterQuality: FilterQuality.high,
-                      fit: BoxFit.cover,
-                    ),
-                    Column(
-                      children: [
-                        _OnboardingPage(
-                            data: _pages[index],
-                            isTablet: isTablet,
-                            navigate: _handleGetStarted),
+      body: Column(
+        children: [
+          // ── Page View ────────────────────────────────────────────────────
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) => setState(() => _currentPage = index),
+              itemCount: _totalPages,
+              itemBuilder: (context, index) => Stack(
+                children: [
+                  ImageView(
+                    image: ImageViewData.asset(_pages[index].image),
+                    width: context.screenWidth,
+                    height: context.screenHeight,
+                    filterQuality: FilterQuality.high,
+                    fit: BoxFit.cover,
+                  ),
+                  Column(
+                    children: [
+                      _OnboardingPage(
+                          data: _pages[index],
+                          isTablet: isTablet,
+                          navigate: _handleGetStarted),
 
-                        const Spacer(),
-                        // ── Page Indicators ──────────────────────────────────────────────
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: List.generate(
-                            _totalPages,
-                            (index) => AnimatedContainer(
-                              duration: AppConstants.shortDuration,
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              width: _currentPage == index ? 20 : 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: _currentPage == index
-                                    ? AppColors.primaryLight
-                                    : (context.isDark
-                                        ? AppColors.darkDivider
-                                        : AppColors.lightDivider),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
+                      const Spacer(),
+                      // ── Page Indicators ──────────────────────────────────────────────
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          _totalPages,
+                          (index) => AnimatedContainer(
+                            duration: AppConstants.shortDuration,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentPage == index ? 20 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _currentPage == index
+                                  ? AppColors.primaryLight
+                                  : (context.isDark
+                                      ? AppColors.darkDivider
+                                      : AppColors.lightDivider),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                           ),
                         ),
+                      ),
 
-                        SizedBox(height: isTablet ? 36 : 28),
+                      SizedBox(height: isTablet ? 36 : 28),
 
-                        // ── Next / Get Started Button ────────────────────────────────────
-                        Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: context.horizontalPadding,
-                            ),
-                            child: context.themedElevatedButton(
-                                label: _currentPage == _totalPages - 1
-                                    ? context.l10n.getStarted
-                                    : context.l10n.next,
-                                onPressed: () => _handleNext())),
+                      // ── Next / Get Started Button ────────────────────────────────────
+                      Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: context.horizontalPadding,
+                          ),
+                          child: context.themedElevatedButton(
+                              label: _currentPage == _totalPages - 1
+                                  ? context.l10n.getStarted
+                                  : context.l10n.next,
+                              onPressed: () => _handleNext())),
 
-                        SizedBox(
-                          height: context.bottomPadding + (isTablet ? 32 : 24),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      SizedBox(
+                        height: context.bottomPadding + (isTablet ? 32 : 24),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -203,6 +201,7 @@ class _OnboardingPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // ── Skip button ──────────────────────────────────────────────────
+          SizedBox(height: context.viewPadding.top),
           Align(
             alignment: Alignment.topRight,
             child: TextButton(

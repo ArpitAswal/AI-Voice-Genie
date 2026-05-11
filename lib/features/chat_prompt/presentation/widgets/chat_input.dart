@@ -408,9 +408,7 @@ class _SendButton extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isGenerating
-              ? AppColors.primaryLight.withValues(alpha: 0.5)
-              : AppColors.primaryLight,
+            color: context.primaryColor.withValues(alpha: 0.18)
         ),
         child: isGenerating
             ? const Padding(
@@ -422,7 +420,7 @@ class _SendButton extends StatelessWidget {
               )
             : Icon(
                 Icons.send_rounded,
-                color: AppColors.white,
+                color: AppColors.primaryLight,
                 size: isTablet ? 22 : 18,
               ),
       ),
@@ -463,9 +461,7 @@ class _ActionButton extends StatelessWidget {
           height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: onTap == null
-                ? AppColors.primaryLight.withValues(alpha: 0.18)
-                : AppColors.primaryLight.withValues(alpha: 0.5),
+            color: context.primaryColor.withValues(alpha: 0.18)
           ),
           child: Icon(
             icon,

@@ -89,11 +89,15 @@ extension StringExtension on String {
     if (selected.isEmpty) return "New Chat";
 
     // Convert to Title Case
-    String title = selected.map((word) {
-      return word[0].toUpperCase() + word.substring(1);
-    }).join(" ");
+    String title = selected
+        .map((word) {
+          if (word.isEmpty) return "";
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .where((s) => s.isNotEmpty)
+        .join(" ");
 
-    return title;
+    return title.isEmpty ? "New Chat" : title;
   }
 }
 

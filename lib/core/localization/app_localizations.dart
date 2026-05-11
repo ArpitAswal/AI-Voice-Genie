@@ -296,8 +296,10 @@ class AppLocalizations {
       'camera': 'Camera',
       'gallery': 'Gallery',
       'permission_denied': 'Permission Denied',
-      'camera_permission_denied': 'Camera permission is required to take photos.',
-      'gallery_permission_denied': 'Gallery permission is required to choose photos.',
+      'camera_permission_denied':
+          'Camera permission is required to take photos.',
+      'gallery_permission_denied':
+          'Gallery permission is required to choose photos.',
       'uploading_photo': 'Uploading photo...',
 
       // ── Validation ─────────────────────────────────────────────────────────
@@ -314,15 +316,32 @@ class AppLocalizations {
       'no_images_subtitle': 'Use the Image Generator to create AI images.',
 
       // ── Error Messages ─────────────────────────────────────────────────────
-      'error_rate_limit': 'Rate limit reached. Trying another model...',
+      'error_rate_limit': 'Rate limit reached. Please try again in a moment.',
+      'error_quota_exceeded':
+          'API quota exceeded. Please check your billing or plan.',
       'error_invalid_key': 'Invalid API key. Please update it in Settings.',
+      'error_invalid_ai_request':
+          'The selected AI model could not process this request.',
       'error_all_models_failed':
           'All AI models are currently unavailable. Please try again later.',
+      'error_ai_server':
+          'The selected AI model is temporarily unavailable. Please try again.',
+      'error_engine_overloaded':
+          'The AI engine is currently overloaded. Please try again in a few seconds.',
+      'error_region_not_supported':
+          'This AI model is not available in your region.',
+      'error_permission_denied':
+          'Permission denied. Please check your API key permissions.',
+      'error_unexpected_ai':
+          'The selected AI model returned an unexpected error. Please try again.',
+      'error_selected_model_capability_gap':
+          'The selected AI model cannot complete this task. Choose a model that supports this feature.',
       'error_pdf_too_large': 'PDF exceeds the 10MB size limit.',
       'error_image_too_large': 'Image exceeds the 5MB size limit.',
       'error_no_models_with_key':
           'Please add at least one API key in Settings to use AI features.',
       'error_microphone': 'Microphone is not available on this device.',
+      'model_rate_limit': 'rate limit exceeded. Please try again in a moment.',
     },
 
     // ── HINDI ─────────────────────────────────────────────────────────────────
@@ -565,7 +584,7 @@ class AppLocalizations {
       'about_mission_title': 'मिशन',
       'about_mission_body':
           'AI Voice Genie ChatGPT, Gemini और Claude को chat, images, documents और everyday thinking के लिए एक voice-first workspace में लाता है।',
-     'legal': 'कानूनी',
+      'legal': 'कानूनी',
       'credits_attribution': 'क्रेडिट और एट्रिब्यूशन',
       'open_source_licenses': 'ओपन-सोर्स लाइसेंस',
       'contact_support': 'सहायता से संपर्क करें',
@@ -608,15 +627,34 @@ class AppLocalizations {
       'no_images_subtitle': 'AI चित्र बनाने के लिए इमेज जनरेटर उपयोग करें।',
 
       // ── Error Messages ─────────────────────────────────────────────────────
-      'error_rate_limit': 'दर सीमा पहुंच गई। दूसरा मॉडल आज़मा रहे हैं...',
+      'error_rate_limit':
+          'दर सीमा पहुंच गई। कृपया कुछ देर बाद पुनः प्रयास करें।',
+      'error_quota_exceeded':
+          'API कोटा समाप्त हो गया है। कृपया अपना बिलिंग या प्लान जांचें।',
       'error_invalid_key': 'अमान्य API key। सेटिंग में अपडेट करें।',
+      'error_invalid_ai_request':
+          'चयनित AI मॉडल इस अनुरोध को प्रोसेस नहीं कर सका।',
       'error_all_models_failed':
           'सभी AI मॉडल अभी उपलब्ध नहीं हैं। बाद में प्रयास करें।',
+      'error_ai_server':
+          'चयनित AI मॉडल अस्थायी रूप से उपलब्ध नहीं है। कृपया पुनः प्रयास करें।',
+      'error_engine_overloaded':
+          'AI इंजन अभी ओवरलोड है। कृपया कुछ सेकंड बाद पुनः प्रयास करें।',
+      'error_region_not_supported':
+          'यह AI मॉडल आपके क्षेत्र में उपलब्ध नहीं है।',
+      'error_permission_denied':
+          'अनुमति अस्वीकृत। कृपया अपनी API key अनुमतियाँ जांचें।',
+      'error_unexpected_ai':
+          'चयनित AI मॉडल ने अनपेक्षित त्रुटि लौटाई। कृपया पुनः प्रयास करें।',
+      'error_selected_model_capability_gap':
+          'चयनित AI मॉडल यह कार्य पूरा नहीं कर सकता। ऐसी सुविधा का समर्थन करने वाला मॉडल चुनें।',
       'error_pdf_too_large': 'PDF 10MB की सीमा से अधिक है।',
       'error_image_too_large': 'चित्र 5MB की सीमा से अधिक है।',
       'error_no_models_with_key':
           'AI सुविधाएं उपयोग करने के लिए सेटिंग में कम से कम एक API key जोड़ें।',
       'error_microphone': 'इस डिवाइस पर माइक्रोफ़ोन उपलब्ध नहीं है।',
+      'model_rate_limit':
+          'की दर सीमा पार हो गई है। कृपया कुछ देर बाद पुनः प्रयास करें।',
     },
   };
 
@@ -768,6 +806,7 @@ class AppLocalizations {
   String get cameraDeniedMessage => translate('camera_permission_denied');
   String get galleryDeniedMessage => translate('gallery_permission_denied');
   String get uploadingPhoto => translate('uploading_photo');
+  String get modelLimit => translate('model_rate_limit');
 }
 
 // ==========================================================================
