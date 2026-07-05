@@ -11,6 +11,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/error/ai_exception.dart';
 import '../../../core/error/effect_bus.dart';
+import '../../../core/services/ai_preferences_service.dart';
 import '../../../core/services/analytics_service.dart';
 import '../data/chat_repository_impl.dart';
 import '../domain/chat_attachment.dart';
@@ -43,14 +44,17 @@ class ChatProvider extends ChangeNotifier {
   final ChatRepository _repository;
   final AiOrchestrator _orchestrator;
   final AnalyticsService _analytics;
+  final AiPreferencesService _preferences;
 
   ChatProvider({
     ChatRepository? repository,
     AiOrchestrator? orchestrator,
     AnalyticsService? analytics,
+    AiPreferencesService? preferences,
   })  : _repository = repository ?? ChatRepositoryImpl(),
         _orchestrator = orchestrator ?? AiOrchestrator.instance,
-        _analytics = analytics ?? AnalyticsService.instance;
+        _analytics = analytics ?? AnalyticsService.instance,
+        _preferences = preferences ?? AiPreferencesService.instance;
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -166,6 +170,9 @@ class ChatProvider extends ChangeNotifier {
     );
     final selectedProviders =
         selectedProvider == null ? const <AiProviderId>[] : [selectedProvider];
+    final preferredImageSize = _preferences.preferredImageSize;
+    final preferredImageQuality = _preferences.preferredImageQuality;
+    final preferredImageCount = _preferences.preferredImageCount;
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
     final userMessage = MessageModel.userMessage(
@@ -238,6 +245,9 @@ class ChatProvider extends ChangeNotifier {
           imageBytes: attachment?.isImage == true ? attachment!.bytes : null,
           imageMimeType:
               attachment?.isImage == true ? attachment!.mimeType : null,
+          imageSize: preferredImageSize,
+          imageQuality: preferredImageQuality,
+          imageCount: preferredImageCount,
           pdfText: attachment?.isPdf == true ? attachment!.extractedText : null,
           pdfFileName: attachment?.isPdf == true ? attachment!.name : null,
         ),

@@ -1,7 +1,5 @@
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_input.dart';
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_model_selector_dropdown.dart';
-import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/image_generate_size.dart';
-import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/model_image_quality.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:ai_voice_genie/shared/widgets/image_view.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +13,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
+import '../../../core/preferences/ai_preferences_provider.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/chat_attachment.dart';
@@ -36,9 +35,6 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  AiProviderId? _selectedProvider;
-  ImageQuality? _imageQuality;
-  ImageGenerateSize? _imageSize;
   final ChatInputController _chatInputController = ChatInputController();
   bool _showSuggestions = true;
 
@@ -58,7 +54,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final apiKeyProvider = context.read<ApiKeyProvider>();
     final validProviders = apiKeyProvider.validProviders;
-    final selectedProvider = _currentSelectedProvider(validProviders);
+    final selectedProvider = _currentSelectedProvider(
+      validProviders,
+      context.read<AiPreferencesProvider>().preferredProvider,
+    );
     final chatProvider = context.read<ChatProvider>();
 
     // Start sending message without awaiting its completion.
@@ -171,99 +170,85 @@ class _ChatScreenState extends State<ChatScreen> {
 
           // ── Input Bar with Background Container ────────────────────────
           ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: context.screenHeight * 0.4,
-              ),
-              child: Consumer3<AuthProvider, ApiKeyProvider, ChatProvider>(
-                builder: (_, authProvider, apiKeyProvider, chatProvider, __) {
-                  final validProviders = apiKeyProvider.validProviders;
-                  final selectedProvider =
-                      ChatModelSelection.resolveSelectedProvider(
-                    availableProviders: validProviders,
-                    selectedProvider: _selectedProvider,
-                    preferredProviderId:
-                        authProvider.currentUser?.preferredAiModel,
-                  );
-                  final imageQuality = _imageQuality ?? ImageQuality.Low;
-                  final imageSize = _imageSize ?? ImageGenerateSize.cheapSize;
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: context.theme.cardTheme.color,
-                      borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(context.isTablet ? 30 : 20)),
-                      border: Border.all(
-                          color: context.theme.dividerTheme.color!, width: 1),
+            constraints: BoxConstraints(
+              maxHeight: context.screenHeight * 0.4,
+            ),
+            child:
+                Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
+              builder: (
+                _,
+                apiKeyProvider,
+                chatProvider,
+                preferences,
+                __,
+              ) {
+                final validProviders = apiKeyProvider.validProviders;
+                final selectedProvider =
+                    ChatModelSelection.resolveSelectedProvider(
+                  availableProviders: validProviders,
+                  selectedProvider: preferences.preferredProvider,
+                  preferredProvider: preferences.preferredProvider,
+                );
+                return Container(
+                  decoration: BoxDecoration(
+                    color: context.theme.cardTheme.color,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(context.isTablet ? 30 : 20),
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: context.horizontalPadding,
-                        vertical: context.verticalSpacing,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            children: [
-                              ChatModelSelectorDropdown(
-                                providers: validProviders,
-                                selectedProvider: selectedProvider,
-                                isEnabled: !chatProvider.isGenerating,
-                                onChanged: (provider) {
-                                  setState(() => _selectedProvider = provider);
-                                },
-                              ),
-                              if(_selectedProvider == AiProviderId.openAi)...[
-                                SizedBox(width: 4),
-                                ModelImageQuality(
-                                  selectedQuality: imageQuality,
-                                  onChanged: (quality){
-                                    setState(() {
-                                      _imageQuality = quality;
-                                    });
-                                  },
-                                ), SizedBox(width: 4),
-                                ModelImageSize(
-                                  selectedSize: imageSize,
-                                  onChanged: (size){
-                                    setState(() {
-                                      _imageSize = size;
-                                    });
-                                  },
-                                ),
-
-                              ]
-                            ],
-                          ),
-                          const SizedBox(height: 4.0),
-                          // The Input Component itself
-                          Flexible(
-                            child: ChatInputBar(
-                              isGenerating: chatProvider.isGenerating,
-                              isTablet: isTablet,
-                              controller: _chatInputController,
-                              onUserInteracted: _hideSuggestions,
-                              onSend: _handleSend,
-                            ),
-                          ),
-                        ],
-                      ),
+                    border: Border.all(
+                      color: context.theme.dividerTheme.color!,
+                      width: 1,
                     ),
-                  );
-                },
-              )),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
+                      vertical: context.verticalSpacing,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ChatModelSelectorDropdown(
+                          providers: validProviders,
+                          selectedProvider: selectedProvider,
+                          isEnabled: !chatProvider.isGenerating,
+                          onChanged: (provider) {
+                            preferences.setPreferredProvider(provider);
+                          },
+                        ),
+                        const SizedBox(height: 4.0),
+                        // The Input Component itself
+                        Flexible(
+                          child: ChatInputBar(
+                            isGenerating: chatProvider.isGenerating,
+                            isTablet: isTablet,
+                            controller: _chatInputController,
+                            onUserInteracted: _hideSuggestions,
+                            onSend: _handleSend,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     ));
   }
 
-  AiProviderId? _currentSelectedProvider(List<AiProviderId> validProviders) {
+  AiProviderId? _currentSelectedProvider(
+    List<AiProviderId> validProviders,
+    AiProviderId preferredProvider,
+  ) {
     return ChatModelSelection.resolveSelectedProvider(
       availableProviders: validProviders,
-      selectedProvider: _selectedProvider,
-      preferredProviderId:
-          context.read<AuthProvider>().currentUser?.preferredAiModel,
+      selectedProvider: preferredProvider,
+      preferredProvider: preferredProvider,
     );
   }
 }

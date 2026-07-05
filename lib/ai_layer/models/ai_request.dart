@@ -26,6 +26,8 @@ import '../../core/enums/app_enums.dart';
 ///   uid: uid,
 ///   prompt: 'A red fox sitting in a snowy forest',
 ///   imageSize: AiImageSize.square,
+///   imageQuality: ImageQuality.Low,
+///   imageCount: 1,
 /// );
 ///
 /// // Image understanding
@@ -77,6 +79,12 @@ class AiRequest {
   /// Desired output image size for generation requests
   final AiImageSize imageSize;
 
+  /// Desired output image quality for generation requests
+  final ImageQuality imageQuality;
+
+  /// Number of images to generate for a single request
+  final int imageCount;
+
   // ── PDF Parsing ────────────────────────────────────────────────────────────
 
   /// Text extracted from the PDF — passed as context to the AI
@@ -101,11 +109,14 @@ class AiRequest {
     this.imageBytes,
     this.imageMimeType,
     this.imageSize = AiImageSize.square,
+    this.imageQuality = ImageQuality.Low,
+    int imageCount = 1,
     this.pdfText,
     this.pdfFileName,
     String? requestId,
     DateTime? createdAt,
-  })  : requestId = requestId ?? _generateId(),
+  })  : imageCount = imageCount.clamp(1, 10),
+        requestId = requestId ?? _generateId(),
         createdAt = createdAt ?? DateTime.now();
 
   /// Estimated token count of the prompt + history.
@@ -142,4 +153,11 @@ enum AiImageSize {
 
   final String value;
   const AiImageSize(this.value);
+
+  static AiImageSize fromValue(String value) {
+    return AiImageSize.values.firstWhere(
+      (size) => size.value == value,
+      orElse: () => AiImageSize.square,
+    );
+  }
 }

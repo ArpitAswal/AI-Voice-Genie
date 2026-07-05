@@ -3,13 +3,17 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 class ModelImageQuality extends StatelessWidget {
   final ImageQuality selectedQuality;
   final ValueChanged<ImageQuality> onChanged;
 
-  const ModelImageQuality(
-      {required this.selectedQuality, required this.onChanged});
+  const ModelImageQuality({
+    super.key,
+    required this.selectedQuality,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -65,8 +69,11 @@ class _SelectorPill extends StatelessWidget {
         vertical: 4.0,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: context.theme.dividerTheme.color ?? AppColors.lightDivider,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -81,7 +88,7 @@ class _SelectorPill extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            provider?.name ?? '',
+            _labelFor(context, provider),
             style: context.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: isEnabled ? color : context.textTheme.bodySmall?.color,
@@ -125,7 +132,7 @@ class _ProviderMenuItem extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            provider.name,
+            _labelFor(context, provider),
             style: context.textTheme.bodyMedium?.copyWith(
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               color: context.isDark ? AppColors.white : AppColors.primaryLight,
@@ -153,5 +160,19 @@ abstract final class _ProviderStyle {
       case ImageQuality.High:
         return AppColors.error;
     }
+  }
+}
+
+String _labelFor(BuildContext context, ImageQuality? quality) {
+  final l10n = AppLocalizations.of(context)!;
+  switch (quality) {
+    case ImageQuality.Low:
+      return l10n.qualityLow;
+    case ImageQuality.Medium:
+      return l10n.qualityMedium;
+    case ImageQuality.High:
+      return l10n.qualityHigh;
+    case null:
+      return l10n.imageQuality;
   }
 }

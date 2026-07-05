@@ -11,6 +11,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
+import '../../../core/preferences/ai_preferences_provider.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../shared/model/image_model.dart';
@@ -49,7 +50,6 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   ChatProvider? _chatProvider;
-  AiProviderId? _selectedProvider;
 
   @override
   void initState() {
@@ -136,7 +136,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     final apiKeyProvider = context.read<ApiKeyProvider>();
     final validProviders = apiKeyProvider.validProviders;
-    final selectedProvider = _currentSelectedProvider(validProviders);
+    final selectedProvider = _currentSelectedProvider(
+      validProviders,
+      context.read<AiPreferencesProvider>().preferredProvider,
+    );
 
     await context.read<ChatProvider>().sendMessage(
           uid: uid,
@@ -262,11 +265,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         actionsPadding: const EdgeInsets.symmetric(horizontal: 8),
         actions: [
           GestureDetector(
-          onTap: _handleDelete,
+            onTap: _handleDelete,
             child: const ImageView(
-              image: ImageViewData.asset(
-                  AppAssets.deleteIcon
-              ),
+              image: ImageViewData.asset(AppAssets.deleteIcon),
               width: 24,
               height: 24,
             ),
@@ -281,15 +282,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             constraints: BoxConstraints(
               maxHeight: context.screenHeight * 0.4,
             ),
-            child: Consumer3<AuthProvider, ApiKeyProvider, ChatProvider>(
-              builder: (_, authProvider, apiKeyProvider, chatProvider, __) {
+            child:
+                Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
+              builder: (
+                _,
+                apiKeyProvider,
+                chatProvider,
+                preferences,
+                __,
+              ) {
                 final validProviders = apiKeyProvider.validProviders;
                 final selectedProvider =
                     ChatModelSelection.resolveSelectedProvider(
                   availableProviders: validProviders,
-                  selectedProvider: _selectedProvider,
-                  preferredProviderId:
-                      authProvider.currentUser?.preferredAiModel,
+                  selectedProvider: preferences.preferredProvider,
+                  preferredProvider: preferences.preferredProvider,
                 );
 
                 return Container(
@@ -315,7 +322,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           selectedProvider: selectedProvider,
                           isEnabled: !chatProvider.isGenerating,
                           onChanged: (provider) {
-                            setState(() => _selectedProvider = provider);
+                            preferences.setPreferredProvider(provider);
                           },
                         ),
                         const SizedBox(height: 4.0),
@@ -399,12 +406,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  AiProviderId? _currentSelectedProvider(List<AiProviderId> validProviders) {
+  AiProviderId? _currentSelectedProvider(
+    List<AiProviderId> validProviders,
+    AiProviderId preferredProvider,
+  ) {
     return ChatModelSelection.resolveSelectedProvider(
       availableProviders: validProviders,
-      selectedProvider: _selectedProvider,
-      preferredProviderId:
-          context.read<AuthProvider>().currentUser?.preferredAiModel,
+      selectedProvider: preferredProvider,
+      preferredProvider: preferredProvider,
     );
   }
 }

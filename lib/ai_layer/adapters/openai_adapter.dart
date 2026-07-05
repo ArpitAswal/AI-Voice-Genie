@@ -109,9 +109,9 @@ class OpenAiAdapter extends AiProviderAdapter {
         body: {
           'model': AppConstants.openAiImageGenModel,
           'prompt': request.prompt,
-          'n': 1,
-          'size': '1024x1024',
-          'quality': 'low',
+          'n': request.imageCount,
+          'size': request.imageSize.value,
+          'quality': request.imageQuality.value,
         },
       ).timeout(AppConstants.aiRequestTimeout);
 

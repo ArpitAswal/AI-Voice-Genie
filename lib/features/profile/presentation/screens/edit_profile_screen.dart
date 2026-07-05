@@ -29,7 +29,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _ageController;
 
   DateTime? _selectedDob;
-  String _selectedModel = 'gemini';
+  // String _selectedModel = 'gemini';
   File? _pickedImageFile;
 
   @override
@@ -47,7 +47,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _ageController = TextEditingController(
       text: user?.age?.toString() ?? '',
     );
-    _selectedModel = user?.preferredAiModel ?? 'gemini';
+    // _selectedModel = user?.preferredAiModel ?? 'gemini';
   }
 
   @override
@@ -87,7 +87,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           "", // This will be updated by repository if photoFile is present
       dateOfBirth: _selectedDob,
       age: int.tryParse(_ageController.text),
-      preferredAiModel: _selectedModel,
       photoFile: _pickedImageFile,
     );
 
@@ -172,88 +171,88 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedModel,
-                          style: context.textTheme.bodyLarge,
-                          decoration: InputDecoration(
-                            labelText: context.l10n.preferModelLabel,
-                            labelStyle: context.textTheme.titleSmall,
-                            prefixIcon: Icon(
-                              Icons.psychology_outlined,
-                              color: context.theme.colorScheme.primary
-                                  .withValues(alpha: 0.7),
-                            ),
-                            filled: true,
-                            fillColor: context.isDark
-                                ? AppColors.cardDark
-                                : AppColors.cardLight,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                color: context.isDark
-                                    ? AppColors.darkDivider
-                                    : AppColors.lightDivider,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                color: context.isDark
-                                    ? AppColors.darkDivider
-                                    : AppColors.lightDivider,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                  color: context.theme.colorScheme.primary),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide:
-                                  const BorderSide(color: AppColors.error),
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide:
-                                  const BorderSide(color: AppColors.error),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                            ),
-                          ),
-                          items: [
-                            DropdownMenuItem(
-                              value: 'openai',
-                              child: Text(
-                                'ChatGPT',
-                                style: context.textTheme.bodyLarge,
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 'gemini',
-                              child: Text(
-                                'Gemini',
-                                style: context.textTheme.bodyLarge,
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 'claude',
-                              child: Text(
-                                'Claude',
-                                style: context.textTheme.bodyLarge,
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() {
-                                _selectedModel = value;
-                              });
-                            }
-                          },
-                        ),
+                        // const SizedBox(height: 20),
+                        // DropdownButtonFormField<String>(
+                        //   initialValue: _selectedModel,
+                        //   style: context.textTheme.bodyLarge,
+                        //   decoration: InputDecoration(
+                        //     labelText: context.l10n.preferModelLabel,
+                        //     labelStyle: context.textTheme.titleSmall,
+                        //     prefixIcon: Icon(
+                        //       Icons.psychology_outlined,
+                        //       color: context.theme.colorScheme.primary
+                        //           .withValues(alpha: 0.7),
+                        //     ),
+                        //     filled: true,
+                        //     fillColor: context.isDark
+                        //         ? AppColors.cardDark
+                        //         : AppColors.cardLight,
+                        //     border: OutlineInputBorder(
+                        //       borderRadius: BorderRadius.circular(14),
+                        //       borderSide: BorderSide(
+                        //         color: context.isDark
+                        //             ? AppColors.darkDivider
+                        //             : AppColors.lightDivider,
+                        //       ),
+                        //     ),
+                        //     enabledBorder: OutlineInputBorder(
+                        //       borderRadius: BorderRadius.circular(14),
+                        //       borderSide: BorderSide(
+                        //         color: context.isDark
+                        //             ? AppColors.darkDivider
+                        //             : AppColors.lightDivider,
+                        //       ),
+                        //     ),
+                        //     focusedBorder: OutlineInputBorder(
+                        //       borderRadius: BorderRadius.circular(14),
+                        //       borderSide: BorderSide(
+                        //           color: context.theme.colorScheme.primary),
+                        //     ),
+                        //     errorBorder: OutlineInputBorder(
+                        //       borderRadius: BorderRadius.circular(14),
+                        //       borderSide:
+                        //           const BorderSide(color: AppColors.error),
+                        //     ),
+                        //     focusedErrorBorder: OutlineInputBorder(
+                        //       borderRadius: BorderRadius.circular(14),
+                        //       borderSide:
+                        //           const BorderSide(color: AppColors.error),
+                        //     ),
+                        //     contentPadding: const EdgeInsets.symmetric(
+                        //       horizontal: 16,
+                        //     ),
+                        //   ),
+                        //   items: [
+                        //     DropdownMenuItem(
+                        //       value: 'openai',
+                        //       child: Text(
+                        //         'ChatGPT',
+                        //         style: context.textTheme.bodyLarge,
+                        //       ),
+                        //     ),
+                        //     DropdownMenuItem(
+                        //       value: 'gemini',
+                        //       child: Text(
+                        //         'Gemini',
+                        //         style: context.textTheme.bodyLarge,
+                        //       ),
+                        //     ),
+                        //     DropdownMenuItem(
+                        //       value: 'claude',
+                        //       child: Text(
+                        //         'Claude',
+                        //         style: context.textTheme.bodyLarge,
+                        //       ),
+                        //     ),
+                        //   ],
+                        //   onChanged: (value) {
+                        //     if (value != null) {
+                        //       setState(() {
+                        //         _selectedModel = value;
+                        //       });
+                        //     }
+                        //   },
+                        // ),
                         const SizedBox(height: 32),
                         context.themedElevatedButton(
                           label: context.l10n.save.toUpperCase(),

@@ -23,6 +23,12 @@ class StorageKeys {
   // ── AI Model Preferences ──────────────────────────────────────────────────
   // The user's currently selected/preferred AI provider ID
   static const String preferredProviderId = 'preferredProviderId';
+  // The user's preferred image quality for generation
+  static const String preferredImageQuality = 'preferredImageQuality';
+  // The user's preferred image size for generation
+  static const String preferredImageSize = 'preferredImageSize';
+  // The user's preferred number of generated images
+  static const String preferredImageCount = 'preferredImageCount';
 
   // ── Active Conversation Cache ──────────────────────────────────────────────
   // ID of the last open conversation (to restore on app resume)

@@ -526,7 +526,6 @@ class AuthRepositoryImpl implements AuthRepository {
     required String photoUrl,
     DateTime? dateOfBirth,
     int? age,
-    String? preferredAiModel,
     File? photoFile,
   }) async {
     final resolvedDisplayName = displayName.trim();
@@ -562,7 +561,6 @@ class AuthRepositoryImpl implements AuthRepository {
         FirebaseCollections.fieldDateOfBirth:
             dateOfBirth != null ? Timestamp.fromDate(dateOfBirth) : null,
         FirebaseCollections.fieldAge: age,
-        FirebaseCollections.fieldPreferredAiModel: preferredAiModel ?? 'auto',
         FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
       });
 
@@ -584,7 +582,6 @@ class AuthRepositoryImpl implements AuthRepository {
         photoUrl: resolvedPhotoUrl,
         dateOfBirth: dateOfBirth,
         age: age,
-        preferredAiModel: preferredAiModel ?? 'auto',
       );
 
       _persistSession(updatedUser);

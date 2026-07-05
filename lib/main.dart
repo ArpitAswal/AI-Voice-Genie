@@ -12,6 +12,7 @@ import 'core/constants/app_colors.dart';
 import 'core/error/effect_listener.dart';
 import 'core/localization/app_localizations.dart';
 import 'core/localization/locale_provider.dart';
+import 'core/preferences/ai_preferences_provider.dart';
 import 'core/router/app_routes.dart';
 import 'core/services/analytics_service.dart';
 import 'core/services/storage_service.dart';
@@ -123,7 +124,8 @@ class AiVoiceGenieApp extends StatelessWidget {
               final screenWidth = mediaQueryData.size.width;
 
               // Text scale factor adapts to device size
-              final double textScaleFactor = _resolveTextScaleFactor(screenWidth);
+              final double textScaleFactor =
+                  _resolveTextScaleFactor(screenWidth);
 
               return MediaQuery(
                 data: mediaQueryData.copyWith(
@@ -156,6 +158,9 @@ class AiVoiceGenieApp extends StatelessWidget {
       ),
       ChangeNotifierProvider<LocaleProvider>(
         create: (_) => LocaleProvider()..initialize(),
+      ),
+      ChangeNotifierProvider<AiPreferencesProvider>(
+        create: (_) => AiPreferencesProvider(),
       ),
 
       // ── Feature providers will be added in subsequent phases ──────────────

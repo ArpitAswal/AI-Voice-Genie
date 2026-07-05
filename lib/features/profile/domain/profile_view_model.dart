@@ -44,7 +44,6 @@ class ProfileViewModel extends ChangeNotifier {
     required String photoUrl,
     DateTime? dateOfBirth,
     int? age,
-    String? preferredAiModel,
     File? photoFile,
   }) async {
     _setSavingProfile(true);
@@ -54,7 +53,6 @@ class ProfileViewModel extends ChangeNotifier {
         photoUrl: photoUrl,
         dateOfBirth: dateOfBirth,
         age: age,
-        preferredAiModel: preferredAiModel,
         photoFile: photoFile,
       );
     } finally {

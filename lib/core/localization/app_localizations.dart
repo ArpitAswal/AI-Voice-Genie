@@ -261,6 +261,7 @@ class AppLocalizations {
       'profile': 'Profile',
       'account': 'Account',
       'app_settings': 'App Settings',
+      'ai_preferences': 'AI Preferences',
       'ai_intelligence': 'AI Intelligence',
       'support': 'Support',
       'edit_profile': 'Edit Profile',
@@ -306,6 +307,18 @@ class AppLocalizations {
       'age': 'Age',
       'prefer_model': 'Prefer Model',
       'auto_prefer_model': 'Auto Prefer Model',
+      'preferred_model': 'Preferred Model',
+      'preferred_model_hint':
+          'Quick switch the model used for chats. Falls back if unavailable.',
+      'image_quality': 'Image Quality',
+      'image_quality_hint': 'Set the default quality for image generation.',
+      'image_size': 'Image Size',
+      'image_size_hint': 'Choose the default output size for images.',
+      'image_count': 'Image Count',
+      'image_count_hint': 'Choose how many images to generate per request.',
+      'quality_low': 'Low',
+      'quality_medium': 'Medium',
+      'quality_high': 'High',
       'select_photo_source': 'Select Photo Source',
       'camera': 'Camera',
       'gallery': 'Gallery',
@@ -587,6 +600,7 @@ class AppLocalizations {
       'profile': 'प्रोफ़ाइल',
       'account': 'खाता',
       'app_settings': 'ऐप सेटिंग',
+      'ai_preferences': 'AI प्राथमिकताएं',
       'ai_intelligence': 'AI इंटेलिजेंस',
       'support': 'सहायता',
       'edit_profile': 'प्रोफ़ाइल संपादित करें',
@@ -633,6 +647,18 @@ class AppLocalizations {
       'age': 'आयु',
       'prefer_model': 'पसंदीदा मॉडल',
       'auto_prefer_model': 'ऑटो पसंदीदा मॉडल',
+      'preferred_model': 'पसंदीदा मॉडल',
+      'preferred_model_hint':
+          'चैट के लिए मॉडल जल्दी बदलें। उपलब्ध न होने पर fallback होगा।',
+      'image_quality': 'इमेज गुणवत्ता',
+      'image_quality_hint': 'इमेज जनरेशन की डिफ़ॉल्ट गुणवत्ता सेट करें।',
+      'image_size': 'इमेज आकार',
+      'image_size_hint': 'इमेज का डिफ़ॉल्ट आउटपुट आकार चुनें।',
+      'image_count': 'इमेज संख्या',
+      'image_count_hint': 'प्रति अनुरोध कितनी इमेज बनानी हैं चुनें।',
+      'quality_low': 'कम',
+      'quality_medium': 'मध्यम',
+      'quality_high': 'उच्च',
       'select_photo_source': 'फोटो स्रोत चुनें',
       'camera': 'कैमरा',
       'gallery': 'गैलरी',
@@ -808,10 +834,22 @@ class AppLocalizations {
   String get profileUpdateFailed => translate('profile_update_failed');
   String get unAuthenticate => translate('unauthenticate_profile');
   String get appSettings => translate('app_settings');
+  String get aiPreferences => translate('ai_preferences');
   String get aiIntelligence => translate('ai_intelligence');
   String get support => translate('support');
   String get theme => translate('theme');
   String get language => translate('language');
+  String get preferredModel => translate('preferred_model');
+  String get preferredModelHint => translate('preferred_model_hint');
+  String get imageQuality => translate('image_quality');
+  String get imageQualityHint => translate('image_quality_hint');
+  String get imageSize => translate('image_size');
+  String get imageSizeHint => translate('image_size_hint');
+  String get imageCount => translate('image_count');
+  String get imageCountHint => translate('image_count_hint');
+  String get qualityLow => translate('quality_low');
+  String get qualityMedium => translate('quality_medium');
+  String get qualityHigh => translate('quality_high');
   String get activateModels => translate('activate_more_models');
   String get activateModelsMessage => translate('activate_more_models_message');
   String get helpCenter => translate('help_center');

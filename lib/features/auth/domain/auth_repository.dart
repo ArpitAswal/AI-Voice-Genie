@@ -55,7 +55,6 @@ abstract class AuthRepository {
     required String photoUrl,
     DateTime? dateOfBirth,
     int? age,
-    String? preferredAiModel,
     File? photoFile,
   });
 }

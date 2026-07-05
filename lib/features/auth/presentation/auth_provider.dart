@@ -151,7 +151,6 @@ class AuthProvider extends ChangeNotifier {
     required String photoUrl,
     DateTime? dateOfBirth,
     int? age,
-    String? preferredAiModel,
     File? photoFile,
   }) async {
     final user = _currentUser;
@@ -169,7 +168,6 @@ class AuthProvider extends ChangeNotifier {
         photoUrl: resolvedPhotoUrl,
         dateOfBirth: dateOfBirth,
         age: age,
-        preferredAiModel: preferredAiModel,
         photoFile: photoFile,
       );
 

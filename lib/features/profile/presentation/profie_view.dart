@@ -8,9 +8,9 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
-import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/profile_view_model.dart';
 import 'widgets/ai_intelligence_section.dart';
+import 'widgets/ai_preferences_panel.dart';
 import 'widgets/profile_common_widgets.dart';
 import 'widgets/profile_header.dart';
 import 'widgets/settings_panel.dart';
@@ -111,6 +111,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ProfileSectionTitle(label: context.l10n.appSettings),
                   const SizedBox(height: 14),
                   const ProfileSettingsPanel(),
+                  const SizedBox(height: 24),
+                  ProfileSectionTitle(label: context.l10n.aiPreferences),
+                  const SizedBox(height: 14),
+                  const ProfileAiPreferencesPanel(),
                   const SizedBox(height: 24),
                   const ProfileAiIntelligenceSection(),
                   const SizedBox(height: 24),

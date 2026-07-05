@@ -277,23 +277,22 @@ enum AuthState {
 /// AI model image generate quality
 enum ImageQuality {
   /// Cost cheapest, Speed fastest
-  Low,
+  Low('low'),
 
   /// Cost balanced, Speed normal
-  Medium,
+  Medium('medium'),
 
   /// Cost Expensive, Speed slower
-  High
-}
+  High('high');
 
-/// AI image generate size
-enum ImageGenerateSize {
-  /// 512x512
-  cheapSize,
-  /// 1024x1024
-  standardSize,
-  /// 1024x1536
-  portraitSize,
-  /// 1536x1024
-  landscapeSize
+  final String value;
+
+  const ImageQuality(this.value);
+
+  static ImageQuality fromValue(String value) {
+    return ImageQuality.values.firstWhere(
+          (e) => e.value == value,
+      orElse: () => ImageQuality.Low,
+    );
+  }
 }

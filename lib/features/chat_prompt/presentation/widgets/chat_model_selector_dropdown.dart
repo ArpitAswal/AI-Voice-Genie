@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
+import '../../../../core/localization/app_localizations.dart';
 
 abstract final class ChatModelSelection {
   static AiProviderId? resolveSelectedProvider({
     required List<AiProviderId> availableProviders,
     required AiProviderId? selectedProvider,
-    required String? preferredProviderId,
+    required AiProviderId? preferredProvider,
   }) {
     if (availableProviders.isEmpty) return null;
 
@@ -17,23 +18,12 @@ abstract final class ChatModelSelection {
       return selectedProvider;
     }
 
-    final preferredProvider = _providerFromId(preferredProviderId);
     if (preferredProvider != null &&
         availableProviders.contains(preferredProvider)) {
       return preferredProvider;
     }
 
     return availableProviders.first;
-  }
-
-  static AiProviderId? _providerFromId(String? providerId) {
-    if (providerId == null || providerId == 'auto') return null;
-
-    for (final provider in AiProviderId.values) {
-      if (provider.id == providerId) return provider;
-    }
-
-    return null;
   }
 }
 
@@ -59,7 +49,7 @@ class ChatModelSelectorDropdown extends StatelessWidget {
       enabled: canSelect,
       initialValue: selectedProvider,
       onSelected: onChanged,
-      color: context.isDark ? AppColors.cardDark : AppColors.white,
+      color: context.theme.colorScheme.surface,
       elevation: 8,
       offset: const Offset(0, 8),
       shape: RoundedRectangleBorder(
@@ -107,8 +97,11 @@ class _SelectorPill extends StatelessWidget {
         vertical: 4.0,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: context.theme.dividerTheme.color ?? AppColors.lightDivider,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -123,7 +116,7 @@ class _SelectorPill extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            provider?.displayName ?? 'Genie v4.0',
+            provider?.displayName ?? AppLocalizations.of(context)!.selectModel,
             style: context.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: isEnabled ? color : context.textTheme.bodySmall?.color,
