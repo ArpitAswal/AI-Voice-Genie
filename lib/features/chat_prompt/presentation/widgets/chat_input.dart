@@ -15,17 +15,57 @@ import '../../../pdf_reader/data/pdf_repository_impl.dart';
 import '../../../voice_speech/presentation/widgets/voice_input_button.dart';
 import '../../domain/chat_attachment.dart';
 
+/// Imperative bridge used by parent screens to prepare the chat composer.
+///
+/// Keeps attachment picking, prompt insertion, and focus behavior inside
+/// [ChatInputBar] while letting onboarding actions trigger those flows.
+class ChatInputController {
+  _ChatInputBarState? _state;
+
+  void _attach(_ChatInputBarState state) => _state = state;
+
+  void _detach(_ChatInputBarState state) {
+    if (_state == state) _state = null;
+  }
+
+  /// Insert a reusable prompt template and optionally focus the composer.
+  void setPrompt(String prompt, {bool focus = true}) {
+    _state?._applyPromptTemplate(prompt, focus: focus);
+  }
+
+  /// Open the PDF picker, attach the selected document, and insert a template.
+  Future<bool> pickPdfWithPrompt(String prompt) async {
+    final state = _state;
+    if (state == null) return false;
+    return state._pickPdf(promptTemplate: prompt);
+  }
+
+  /// Open the image picker, attach the selected image, and insert a template.
+  Future<bool> pickImageWithPrompt(
+    String prompt, {
+    ImageSource source = ImageSource.gallery,
+  }) async {
+    final state = _state;
+    if (state == null) return false;
+    return state._pickImage(source, promptTemplate: prompt);
+  }
+}
+
 /// Chat input bar with text, media attachment preview, send, and voice actions.
 class ChatInputBar extends StatefulWidget {
   final bool isGenerating;
   final bool isTablet;
   final Future<void> Function(String prompt, ChatAttachment? attachment) onSend;
+  final ChatInputController? controller;
+  final VoidCallback? onUserInteracted;
 
   const ChatInputBar({
     super.key,
     required this.isGenerating,
     required this.isTablet,
     required this.onSend,
+    this.controller,
+    this.onUserInteracted,
   });
 
   @override
@@ -41,21 +81,40 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   ChatAttachment? _attachment;
   bool _canSend = false;
+  bool _isApplyingTemplate = false;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_syncCanSend);
+    widget.controller?._attach(this);
+    _controller.addListener(_handleTextChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatInputBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?._detach(this);
+      widget.controller?._attach(this);
+    }
   }
 
   @override
   void dispose() {
+    widget.controller?._detach(this);
     _controller
-      ..removeListener(_syncCanSend)
+      ..removeListener(_handleTextChanged)
       ..dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _handleTextChanged() {
+    _syncCanSend();
+    if (!_isApplyingTemplate && _controller.text.trim().isNotEmpty) {
+      widget.onUserInteracted?.call();
+    }
   }
 
   void _syncCanSend() {
@@ -128,18 +187,21 @@ class _ChatInputBarState extends State<ChatInputBar> {
     );
   }
 
-  Future<void> _pickImage(ImageSource source) async {
+  Future<bool> _pickImage(
+    ImageSource source, {
+    String? promptTemplate,
+  }) async {
     try {
       final image = await _imagePicker.pickImage(source: source);
-      if (image == null) return;
+      if (image == null) return false;
 
       final bytes = await image.readAsBytes();
       if (bytes.lengthInBytes > AppConstants.maxImageSizeBytes) {
         if (mounted) context.showError('error_image_too_large');
-        return;
+        return false;
       }
 
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
         _attachment = ChatAttachment(
           type: ChatAttachmentType.image,
@@ -151,31 +213,38 @@ class _ChatInputBarState extends State<ChatInputBar> {
         );
         _canSend = true;
       });
+      if (promptTemplate != null) {
+        _applyPromptTemplate(promptTemplate);
+      } else {
+        widget.onUserInteracted?.call();
+      }
+      return true;
     } catch (_) {
       if (mounted) context.showError('something_went_wrong');
+      return false;
     }
   }
 
-  Future<void> _pickPdf() async {
+  Future<bool> _pickPdf({String? promptTemplate}) async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
         withData: true,
       );
-      if (result == null || result.files.isEmpty) return;
+      if (result == null || result.files.isEmpty) return false;
 
       final file = result.files.first;
       final bytes = file.bytes;
       if (bytes == null) {
         if (mounted) context.showError('pdf_read_failed');
-        return;
+        return false;
       }
 
       final sizeError = _pdfRepository.validateFileSize(bytes.lengthInBytes);
       if (sizeError != null) {
         if (mounted) context.showError(sizeError);
-        return;
+        return false;
       }
 
       final doc = await _pdfRepository.extractText(
@@ -185,10 +254,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
       );
       if (!doc.hasText) {
         if (mounted) context.showError('pdf_read_failed');
-        return;
+        return false;
       }
 
-      if (!mounted) return;
+      if (!mounted) return false;
       setState(() {
         _attachment = ChatAttachment(
           type: ChatAttachmentType.pdf,
@@ -201,8 +270,15 @@ class _ChatInputBarState extends State<ChatInputBar> {
         );
         _canSend = true;
       });
+      if (promptTemplate != null) {
+        _applyPromptTemplate(promptTemplate);
+      } else {
+        widget.onUserInteracted?.call();
+      }
+      return true;
     } catch (_) {
       if (mounted) context.showError('pdf_read_failed');
+      return false;
     }
   }
 
@@ -217,15 +293,24 @@ class _ChatInputBarState extends State<ChatInputBar> {
   void _onTranscriptReady(String transcript) {
     debugPrint("transcript");
     if (transcript.isEmpty) return;
-    
-    // Set the text in the controller
+
+    // Voice input behaves like manual composition once a transcript is ready.
     _controller.text = transcript;
-    
-    // Move cursor to end and request focus for manual editing/confirmation
     _controller.selection = TextSelection.fromPosition(
       TextPosition(offset: transcript.length),
     );
     _focusNode.requestFocus();
+    widget.onUserInteracted?.call();
+  }
+
+  void _applyPromptTemplate(String prompt, {bool focus = true}) {
+    _isApplyingTemplate = true;
+    _controller.text = prompt;
+    _controller.selection = TextSelection.collapsed(offset: prompt.length);
+    _isApplyingTemplate = false;
+    _syncCanSend();
+    if (focus) _focusNode.requestFocus();
+    widget.onUserInteracted?.call();
   }
 
   @override
@@ -296,7 +381,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                       )
                     : VoiceInputButton(
                         key: const ValueKey('voice'),
-                  onTranscriptReady: _onTranscriptReady,
+                        onTranscriptReady: _onTranscriptReady,
                         tooltip: l10n.translate('tap_to_speak'),
                         isTablet: widget.isTablet,
                       ),
@@ -421,9 +506,8 @@ class _SendButton extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-            color: context.primaryColor.withValues(alpha: 0.18)
-        ),
+            shape: BoxShape.circle,
+            color: context.primaryColor.withValues(alpha: 0.18)),
         child: isGenerating
             ? const Padding(
                 padding: EdgeInsets.all(12),
@@ -473,9 +557,8 @@ class _ActionButton extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: context.primaryColor.withValues(alpha: 0.18)
-          ),
+              shape: BoxShape.circle,
+              color: context.primaryColor.withValues(alpha: 0.18)),
           child: Icon(
             icon,
             color: color ?? AppColors.white,

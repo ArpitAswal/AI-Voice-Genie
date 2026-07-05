@@ -29,7 +29,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _ageController;
 
   DateTime? _selectedDob;
-  String _selectedModel = 'auto';
+  String _selectedModel = 'gemini';
   File? _pickedImageFile;
 
   @override
@@ -47,7 +47,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _ageController = TextEditingController(
       text: user?.age?.toString() ?? '',
     );
-    _selectedModel = user?.preferredAiModel ?? 'auto';
+    _selectedModel = user?.preferredAiModel ?? 'gemini';
   }
 
   @override
@@ -224,13 +224,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             ),
                           ),
                           items: [
-                            DropdownMenuItem(
-                              value: 'auto',
-                              child: Text(
-                                context.l10n.autoPreferModel,
-                                style: context.textTheme.bodyLarge,
-                              ),
-                            ),
                             DropdownMenuItem(
                               value: 'openai',
                               child: Text(

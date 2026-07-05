@@ -77,7 +77,7 @@ class AppConstants {
   // ── OpenAI Model Names ────────────────────────────────────────────────────
   // Default models used for each capability
   static const String openAiTextModel = 'gpt-4o';
-  static const String openAiImageGenModel = 'dall-e-3';
+  static const String openAiImageGenModel = 'gpt-image-1';
   static const String openAiVisionModel =
       'gpt-4o'; // same model, vision capable
   static const String openAiSttModel = 'whisper-1';

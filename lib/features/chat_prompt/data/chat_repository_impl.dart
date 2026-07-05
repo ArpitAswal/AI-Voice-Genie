@@ -238,6 +238,30 @@ class ChatRepositoryImpl implements ChatRepository {
     }
   }
 
+  @override
+  Future<void> deleteAllConversations(String uid) async {
+    try {
+      final snapshot = await _firestore
+          .collection(FirebaseCollections.conversationsCollection(uid))
+          .get();
+
+      // Firestore client SDKs do not support deleting an entire collection at once.
+      // We must delete documents individually. We use Future.wait to run them concurrently for speed.
+      await Future.wait(
+        snapshot.docs.map((doc) => deleteConversation(uid: uid, conversationId: doc.id)),
+      );
+
+      await clearCache();
+      
+      debugPrint('🗑️ Deleted all conversations for user $uid');
+    } on FirebaseException catch (e) {
+      throw ChatException(
+        ChatErrorCodes.deleteFailed,
+        technicalMessage: 'deleteAllConversations failed: ${e.code}',
+      );
+    }
+  }
+
   // ── Hive Cache Operations ─────────────────────────────────────────────────
 
   @override

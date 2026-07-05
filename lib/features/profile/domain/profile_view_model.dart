@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../auth/presentation/auth_provider.dart';
-import '../../key_setup/presentation/api_key_provider.dart';
 
 enum ProfileLinkResult { opened, missing, failed }
 

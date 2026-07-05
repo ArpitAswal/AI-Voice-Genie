@@ -215,7 +215,9 @@ class _SplashContent extends StatelessWidget {
         _PulsingWidget(
           child: Text(
             context.l10n.appName,
-            style: context.textTheme.displayLarge,
+            style: context.textTheme.titleLarge?.copyWith(
+              fontSize: context.textTheme.displaySmall?.fontSize
+            ),
             textAlign: TextAlign.center,
           ),
         ),
@@ -226,7 +228,9 @@ class _SplashContent extends StatelessWidget {
         _PulsingWidget(
           child: Text(
             context.l10n.appTagline,
-            style: context.textTheme.headlineSmall,
+            style: context.textTheme.titleSmall?.copyWith(
+                fontSize: context.textTheme.headlineLarge?.fontSize
+            ),
             textAlign: TextAlign.center,
           ),
         ),

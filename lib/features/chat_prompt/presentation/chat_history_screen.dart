@@ -1,5 +1,8 @@
 import 'package:ai_voice_genie/core/constants/app_constants.dart';
+import 'package:ai_voice_genie/core/utils/loading_overlay.dart';
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
+import 'package:ai_voice_genie/shared/model/image_model.dart';
+import 'package:ai_voice_genie/shared/widgets/image_view.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +11,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
@@ -88,87 +92,180 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     await _loadConversations();
   }
 
+  Future<void> _confirmDeleteAll() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor:
+            context.isDark ? AppColors.cardDark : AppColors.cardLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                color: AppColors.error, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                context.l10n.deleteAllConversations,
+                style: context.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          context.l10n.deleteAllConfirmMessage,
+          style: context.textTheme.bodyMedium?.copyWith(
+            height: 1.4,
+          ),
+        ),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: context.themedOutlinedButton(
+                  label: context.l10n.cancel,
+                  onPressed: () => Navigator.of(context).pop(false),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: context.themedDangerButton(
+                  label: context.l10n.delete,
+                  onPressed: () => Navigator.of(context).pop(true),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _deleteAll();
+    }
+  }
+
+  Future<void> _deleteAll() async {
+    final uid = context.read<AuthProvider>().currentUser?.uid;
+    if (uid == null) return;
+    LoadingOverlay.show(context, message: context.l10n.deleteAllConversations);
+    try {
+      await _repository.deleteAllConversations(uid);
+      await _loadConversations();
+    } catch (e) {
+      if (mounted) context.showError('something_went_wrong');
+    } finally {
+      LoadingOverlay.hide();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = context.isTablet;
 
     return Scaffold(
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          child: Column(
-            children: [
-              // Fixed Header Section
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.horizontalPadding,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 24),
-                    Text(
-                      context.l10n.conversationHistory,
-                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          color: context.isDark
-                              ? AppColors.primaryLight
-                              : AppColors.primaryDark),
+        child: Stack(
+          children: [
+            RefreshIndicator(
+              onRefresh: _refresh,
+              child: Column(
+                children: [
+                  // Fixed Header Section
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      context.l10n.historySubtitle,
-                      style: context.textTheme.bodyLarge?.copyWith(
-                        color: context.isDark
-                            ? AppColors.darkTextTertiary
-                            : AppColors.lightTextTertiary,
-                      ),
-                    ),
-
-                    // Search Container (Fixed)
-                    Padding(
-                      padding:
-                          EdgeInsets.symmetric(vertical: isTablet ? 24 : 16),
-                      child: context.themedTextField(
-                        enabled: !_isLoading,
-                        onChanged: _onSearchChanged,
-                        hint: context.l10n.searchPlaceholder,
-                        controller: _searchController,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Scrollable Content
-              Expanded(
-                child: CustomScrollView(
-                  slivers: [
-                    if (_isLoading)
-                      _buildShimmerList()
-                    else if (_filteredConversations.isEmpty &&
-                        _searchQuery.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _EmptyHistory(isTablet: isTablet),
-                      )
-                    else if (_filteredConversations.isEmpty &&
-                        _searchQuery.isNotEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: Text(
-                            context.l10n.noResultsFound,
-                            style: context.textTheme.bodyLarge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              context.l10n.conversationHistory,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .displayMedium
+                                  ?.copyWith(
+                                      color: context.isDark
+                                          ? AppColors.primaryLight
+                                          : AppColors.primaryDark),
+                            ),
+                            if (_allConversations.isNotEmpty && !_isLoading)
+                              GestureDetector(
+                                onTap: _confirmDeleteAll,
+                                child: const ImageView(
+                                  image: ImageViewData.asset(
+                                    AppAssets.deleteIcon,
+                                  ),
+                                  width: 24,
+                                  height: 24,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          context.l10n.historySubtitle,
+                          style: context.textTheme.bodyLarge?.copyWith(
+                            color: context.isDark
+                                ? AppColors.darkTextTertiary
+                                : AppColors.lightTextTertiary,
                           ),
                         ),
-                      )
-                    else
-                      ..._buildGroupedLists(),
-                  ],
-                ),
+
+                        // Search Container (Fixed)
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                              vertical: isTablet ? 24 : 16),
+                          child: context.themedTextField(
+                            enabled: !_isLoading,
+                            onChanged: _onSearchChanged,
+                            hint: context.l10n.searchPlaceholder,
+                            controller: _searchController,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Scrollable Content
+                  Expanded(
+                    child: CustomScrollView(
+                      slivers: [
+                        if (_isLoading)
+                          _buildShimmerList()
+                        else if (_filteredConversations.isEmpty &&
+                            _searchQuery.isEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: _EmptyHistory(isTablet: isTablet),
+                          )
+                        else if (_filteredConversations.isEmpty &&
+                            _searchQuery.isNotEmpty)
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Text(
+                                context.l10n.noResultsFound,
+                                style: context.textTheme.bodyLarge,
+                              ),
+                            ),
+                          )
+                        else
+                          ..._buildGroupedLists(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

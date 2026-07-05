@@ -273,3 +273,27 @@ enum AuthState {
   /// No active session — navigate to LoginScreen
   unauthenticated,
 }
+
+/// AI model image generate quality
+enum ImageQuality {
+  /// Cost cheapest, Speed fastest
+  Low,
+
+  /// Cost balanced, Speed normal
+  Medium,
+
+  /// Cost Expensive, Speed slower
+  High
+}
+
+/// AI image generate size
+enum ImageGenerateSize {
+  /// 512x512
+  cheapSize,
+  /// 1024x1024
+  standardSize,
+  /// 1024x1536
+  portraitSize,
+  /// 1536x1024
+  landscapeSize
+}

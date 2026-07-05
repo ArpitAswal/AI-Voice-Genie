@@ -46,6 +46,10 @@ abstract class ChatRepository {
     required String conversationId,
   });
 
+  /// Permanently delete all conversations and messages from Firestore for a given user,
+  /// and wipe all conversation Hive caches.
+  Future<void> deleteAllConversations(String uid);
+
   // ── Hive Cache Operations ─────────────────────────────────────────────────
 
   /// Cache messages for the active conversation in Hive.

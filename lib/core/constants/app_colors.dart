@@ -37,7 +37,7 @@ class AppColors {
 
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
   static const Color darkTextSecondary = Color(0xFF000000);
-  static const Color darkTextTertiary = Color(0xFF6D758C);
+  static const Color darkTextTertiary = Color(0xFF7A839C);
 
   // ── Border Colors ─────────────────────────────────────────────────────────
   static const Color lightDivider = Color(0xFFD1D1D1);

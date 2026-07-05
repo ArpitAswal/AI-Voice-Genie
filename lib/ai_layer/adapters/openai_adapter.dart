@@ -110,9 +110,8 @@ class OpenAiAdapter extends AiProviderAdapter {
           'model': AppConstants.openAiImageGenModel,
           'prompt': request.prompt,
           'n': 1,
-          'size': request.imageSize.value,
-          'quality': 'standard', // DALL-E 3 supports standard or hd
-          'response_format': 'b64_json',
+          'size': '1024x1024',
+          'quality': 'low',
         },
       ).timeout(AppConstants.aiRequestTimeout);
 

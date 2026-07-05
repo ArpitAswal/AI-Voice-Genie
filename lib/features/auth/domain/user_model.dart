@@ -68,7 +68,7 @@ class UserModel {
     this.keySetupDone = false,
     this.dateOfBirth,
     this.age,
-    this.preferredAiModel = 'auto',
+    this.preferredAiModel = 'gemini',
   });
 
   // ── Factory: from Firestore document ─────────────────────────────────────
@@ -92,7 +92,7 @@ class UserModel {
           ? (data['dateOfBirth'] as Timestamp).toDate()
           : null,
       age: data['age'] as int?,
-      preferredAiModel: data['preferredAiModel'] as String? ?? 'auto',
+      preferredAiModel: data['preferredAiModel'] as String? ?? 'gemini',
     );
   }
 
@@ -111,12 +111,11 @@ class UserModel {
       'authProvider': authProvider.id,
       'onboardingDone': false,
       'keySetupDone': false,
-      'preferredProvider': '',
       'dailyQuotaUsed': 0,
       'dailyQuotaLimit': 50,
       'dateOfBirth': null,
       'age': null,
-      'preferredAiModel': 'auto',
+      'preferredAiModel': preferredAiModel,
     };
   }
 
@@ -156,15 +155,14 @@ class UserModel {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is UserModel &&
-              runtimeType == other.runtimeType &&
-              uid == other.uid;
+      other is UserModel &&
+          runtimeType == other.runtimeType &&
+          uid == other.uid;
 
   @override
   int get hashCode => uid.hashCode;
 
   @override
-  String toString() =>
-      'UserModel(uid: $uid, email: $email, '
-          'displayName: $displayName, provider: ${authProvider.id})';
+  String toString() => 'UserModel(uid: $uid, email: $email, '
+      'displayName: $displayName, provider: ${authProvider.id})';
 }

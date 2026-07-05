@@ -1,11 +1,14 @@
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_input.dart';
 import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_model_selector_dropdown.dart';
+import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/image_generate_size.dart';
+import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/model_image_quality.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:ai_voice_genie/shared/widgets/image_view.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -34,6 +37,10 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   AiProviderId? _selectedProvider;
+  ImageQuality? _imageQuality;
+  ImageGenerateSize? _imageSize;
+  final ChatInputController _chatInputController = ChatInputController();
+  bool _showSuggestions = true;
 
   @override
   void initState() {
@@ -45,6 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _handleSend(String prompt, ChatAttachment? attachment) async {
+    _hideSuggestions();
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
@@ -73,6 +81,35 @@ class _ChatScreenState extends State<ChatScreen> {
       arguments: ChatDetailArguments(
           conversationId: conversationID ?? '', initialTitle: null),
     );
+  }
+
+  void _hideSuggestions() {
+    if (!_showSuggestions) return;
+    setState(() => _showSuggestions = false);
+  }
+
+  Future<void> _handleSummarizePdf() async {
+    _hideSuggestions();
+    final l10n = AppLocalizations.of(context)!;
+    await _chatInputController.pickPdfWithPrompt(l10n.summarizePdfPrompt);
+  }
+
+  Future<void> _handleAnalyzeImage() async {
+    _hideSuggestions();
+    final l10n = AppLocalizations.of(context)!;
+    await _chatInputController.pickImageWithPrompt(l10n.analyzeImagePrompt);
+  }
+
+  void _handleGenerateCode() {
+    _hideSuggestions();
+    final l10n = AppLocalizations.of(context)!;
+    _chatInputController.setPrompt(l10n.generateCodePrompt);
+  }
+
+  void _handleCreateImage() {
+    _hideSuggestions();
+    final l10n = AppLocalizations.of(context)!;
+    _chatInputController.setPrompt(l10n.createImagePrompt);
   }
 
   @override
@@ -117,7 +154,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       minHeight: constraints.maxHeight,
                     ),
                     child: Center(
-                      child: _WelcomeContent(isTablet: isTablet),
+                      child: _WelcomeContent(
+                        isTablet: isTablet,
+                        showSuggestions: _showSuggestions,
+                        onSummarizePdf: _handleSummarizePdf,
+                        onGenerateCode: _handleGenerateCode,
+                        onAnalyzeImage: _handleAnalyzeImage,
+                        onCreateImage: _handleCreateImage,
+                      ),
                     ),
                   ),
                 );
@@ -140,7 +184,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     preferredProviderId:
                         authProvider.currentUser?.preferredAiModel,
                   );
-
+                  final imageQuality = _imageQuality ?? ImageQuality.Low;
+                  final imageSize = _imageSize ?? ImageGenerateSize.cheapSize;
                   return Container(
                     decoration: BoxDecoration(
                       color: context.theme.cardTheme.color,
@@ -159,13 +204,37 @@ class _ChatScreenState extends State<ChatScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          ChatModelSelectorDropdown(
-                            providers: validProviders,
-                            selectedProvider: selectedProvider,
-                            isEnabled: !chatProvider.isGenerating,
-                            onChanged: (provider) {
-                              setState(() => _selectedProvider = provider);
-                            },
+                          Row(
+                            children: [
+                              ChatModelSelectorDropdown(
+                                providers: validProviders,
+                                selectedProvider: selectedProvider,
+                                isEnabled: !chatProvider.isGenerating,
+                                onChanged: (provider) {
+                                  setState(() => _selectedProvider = provider);
+                                },
+                              ),
+                              if(_selectedProvider == AiProviderId.openAi)...[
+                                SizedBox(width: 4),
+                                ModelImageQuality(
+                                  selectedQuality: imageQuality,
+                                  onChanged: (quality){
+                                    setState(() {
+                                      _imageQuality = quality;
+                                    });
+                                  },
+                                ), SizedBox(width: 4),
+                                ModelImageSize(
+                                  selectedSize: imageSize,
+                                  onChanged: (size){
+                                    setState(() {
+                                      _imageSize = size;
+                                    });
+                                  },
+                                ),
+
+                              ]
+                            ],
                           ),
                           const SizedBox(height: 4.0),
                           // The Input Component itself
@@ -173,6 +242,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             child: ChatInputBar(
                               isGenerating: chatProvider.isGenerating,
                               isTablet: isTablet,
+                              controller: _chatInputController,
+                              onUserInteracted: _hideSuggestions,
                               onSend: _handleSend,
                             ),
                           ),
@@ -203,7 +274,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
 class _WelcomeContent extends StatelessWidget {
   final bool isTablet;
-  const _WelcomeContent({required this.isTablet});
+  final bool showSuggestions;
+  final VoidCallback onSummarizePdf;
+  final VoidCallback onGenerateCode;
+  final VoidCallback onAnalyzeImage;
+  final VoidCallback onCreateImage;
+
+  const _WelcomeContent({
+    required this.isTablet,
+    required this.showSuggestions,
+    required this.onSummarizePdf,
+    required this.onGenerateCode,
+    required this.onAnalyzeImage,
+    required this.onCreateImage,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -240,32 +324,111 @@ class _WelcomeContent extends StatelessWidget {
 
           SizedBox(height: isTablet ? 48 : 30),
 
-          // Quick suggestion stacked buttons
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _SuggestionActionCard(
-                  icon: FontAwesomeIcons.images,
-                  label: l10n.createImage,
-                  onTap: () {},
-                  iconColor: AppColors.primaryLight),
-              _SuggestionActionCard(
-                  icon: FontAwesomeIcons.laptopCode,
-                  label: l10n.generateCode,
-                  onTap: () {},
-                  iconColor: AppColors.purpleAccent),
-              _SuggestionActionCard(
-                  icon: FontAwesomeIcons.filePdf,
-                  label: l10n.summarizePdf,
-                  onTap: () {},
-                  iconColor: AppColors.tealAccent),
-            ],
+          // Suggestion actions are visible only while this is a fresh chat.
+          AnimatedSwitcher(
+            duration: AppConstants.mediumDuration,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SizeTransition(
+                sizeFactor: animation,
+                axisAlignment: -1,
+                child: child,
+              ),
+            ),
+            child: showSuggestions
+                ? _SuggestionGrid(
+                    key: const ValueKey('chat_suggestions'),
+                    isTablet: isTablet,
+                    actions: [
+                      _SuggestionAction(
+                        icon: FontAwesomeIcons.filePdf,
+                        label: l10n.summarizePdf,
+                        onTap: onSummarizePdf,
+                        iconColor: AppColors.tealAccent,
+                      ),
+                      _SuggestionAction(
+                        icon: FontAwesomeIcons.laptopCode,
+                        label: l10n.generateCode,
+                        onTap: onGenerateCode,
+                        iconColor: AppColors.purpleAccent,
+                      ),
+                      _SuggestionAction(
+                        icon: FontAwesomeIcons.magnifyingGlass,
+                        label: l10n.analyzeImage,
+                        onTap: onAnalyzeImage,
+                        iconColor: AppColors.info,
+                      ),
+                      _SuggestionAction(
+                        icon: FontAwesomeIcons.images,
+                        label: l10n.createImage,
+                        onTap: onCreateImage,
+                        iconColor: AppColors.primaryLight,
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(key: ValueKey('chat_suggestions_gone')),
           ),
 
           SizedBox(
               height: context.bottomPadding > 0 ? context.bottomPadding : 20),
         ],
+      ),
+    );
+  }
+}
+
+class _SuggestionAction {
+  final FaIconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color iconColor;
+
+  const _SuggestionAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.iconColor,
+  });
+}
+
+class _SuggestionGrid extends StatelessWidget {
+  final bool isTablet;
+  final List<_SuggestionAction> actions;
+
+  const _SuggestionGrid({
+    super.key,
+    required this.isTablet,
+    required this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final crossAxisCount = isTablet ? 4 : 2;
+    final maxWidth = isTablet ? 760.0 : 420.0;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: actions.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: isTablet ? 2.4 : 3.2,
+        ),
+        itemBuilder: (context, index) {
+          final action = actions[index];
+          return _SuggestionActionCard(
+            icon: action.icon,
+            label: action.label,
+            onTap: action.onTap,
+            iconColor: action.iconColor,
+          );
+        },
       ),
     );
   }
@@ -286,10 +449,12 @@ class _SuggestionActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(30),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: (context.isDark) ? AppColors.cardDark : AppColors.cardLight,
           borderRadius: BorderRadius.circular(30),
@@ -297,18 +462,20 @@ class _SuggestionActionCard extends StatelessWidget {
               color: context.theme.dividerTheme.color ?? AppColors.grey),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             FaIcon(icon, size: 20, color: iconColor),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w400),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            Flexible(
+              child: Text(
+                label,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w400),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

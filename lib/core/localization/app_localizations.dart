@@ -37,7 +37,7 @@ class AppLocalizations {
       'app_name': 'AI Voice Genie',
       'app_tagline': 'Your intelligent AI assistant',
       'ai_assist': 'Your AI assistant is ready to assist you.',
-      'welcome_message': "Welcome to",
+      'welcome_message': "Welcome To",
       'morning': 'Good Morning',
       'evening': 'Good Evening',
       'afternoon': 'Good Afternoon',
@@ -68,9 +68,10 @@ class AppLocalizations {
       'ask_user_todo': 'WHAT WOULD YOU LIKE TO DO?',
       'ask_question': 'Ask a question',
       'intelligent_models': 'INTELLIGENT AI MODELS',
-      'create_image': 'Create image',
-      'generate_code': 'Generate code',
-      'pdf_summarize': 'Summarize pdf',
+      'create_image': 'Create Image',
+      'generate_code': 'Generate Code',
+      'analyze_image': 'Analyze Image',
+      'pdf_summarize': 'Summarize PDF',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'Continue with Google',
@@ -128,6 +129,10 @@ class AppLocalizations {
       'delete_conversation_confirm':
           'Are you sure you want to delete this conversation? This cannot be undone.',
       'conversation_deleted': 'Conversation deleted.',
+      'delete_all_conversations': 'Delete All Conversations',
+      'delete_all_confirm_message':
+          'Are you sure you want to delete all conversations? This cannot be undone.',
+      'deleting_all_conversations': 'Deleting All Conversations..',
       'no_conversations': 'No conversations yet',
       'no_conversations_message': 'Ready when your are.',
       'start_conversation': 'Start a conversation with your AI assistant.',
@@ -143,6 +148,14 @@ class AppLocalizations {
       'prompt_required': 'Please enter a message',
       'prompt_too_long': 'Message is too long (max 10,000 characters)',
       'response_failed': 'Failed to get a response. Please try again.',
+      'prompt_template_summarize_pdf':
+          'Summarize this attached PDF document. Break it down into key highlights, main takeaways, and any actionable items.',
+      'prompt_template_generate_code':
+          'Write a clean, optimized function in [Language] to handle [Problem/Goal]. Please include brief comments explaining the logic.',
+      'prompt_template_analyze_image':
+          'Analyze this image and describe what is happening in detail. [Optional: Extract any visible text or UI elements].',
+      'prompt_template_create_image':
+          'Generate a high-quality, realistic image of [Describe your scene, style, lighting, and details here].',
 
       // ── AI Model Selection ─────────────────────────────────────────────────
       'select_model': 'Select AI Model',
@@ -383,6 +396,7 @@ class AppLocalizations {
       'intelligent_models': 'INTELLIGENT AI MODELS',
       'create_image': 'चित्र बनाएं',
       'generate_code': 'कोड जनरेट करें',
+      'analyze_image': 'चित्र का विश्लेषण करें',
       'pdf_summarize': 'पीडीएफ का सारांश प्रस्तुत करेंं',
 
       // ── Auth ───────────────────────────────────────────────────────────────
@@ -441,6 +455,10 @@ class AppLocalizations {
       'delete_conversation': 'बातचीत हटाएं',
       'delete_conversation_confirm': 'क्या आप इस बातचीत को हटाना चाहते हैं?',
       'conversation_deleted': 'बातचीत हटाई गई।',
+      'delete_all_conversations': 'सभी बातचीत हटाएं',
+      'delete_all_confirm_message':
+          'क्या आप सभी बातचीत हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
+      'deleting_all_conversations': 'सभी बातचीत हटाई जा रही हैं..',
       'no_conversations': 'अभी कोई बातचीत नहीं',
       'no_conversations_message': 'तैयार जब आप हैं।',
       'start_conversation': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
@@ -456,6 +474,14 @@ class AppLocalizations {
       'prompt_required': 'कृपया एक संदेश दर्ज करें',
       'prompt_too_long': 'संदेश बहुत लंबा है (अधिकतम 10,000 अक्षर)',
       'response_failed': 'जवाब नहीं मिला। पुनः प्रयास करें।',
+      'prompt_template_summarize_pdf':
+          'इस संलग्न PDF दस्तावेज़ का सारांश दें। इसे मुख्य हाइलाइट्स, मुख्य निष्कर्षों और कार्य योग्य बिंदुओं में बांटें।',
+      'prompt_template_generate_code':
+          '[Language] में [Problem/Goal] को संभालने के लिए एक साफ़, ऑप्टिमाइज़्ड फ़ंक्शन लिखें। कृपया लॉजिक समझाने वाली छोटी टिप्पणियां शामिल करें।',
+      'prompt_template_analyze_image':
+          'इस चित्र का विश्लेषण करें और विस्तार से बताएं कि इसमें क्या हो रहा है। [वैकल्पिक: दिखने वाला टेक्स्ट या UI एलिमेंट निकालें].',
+      'prompt_template_create_image':
+          '[Describe your scene, style, lighting, and details here] की एक उच्च-गुणवत्ता, वास्तविक दिखने वाली छवि जनरेट करें।',
 
       // ── AI Model Selection ─────────────────────────────────────────────────
       'select_model': 'AI मॉडल चुनें',
@@ -693,6 +719,10 @@ class AppLocalizations {
   String get signOut => translate('sign_out');
   String get settings => translate('settings');
   String get newConversation => translate('new_conversation');
+  String get deleteAllConversations => translate('delete_all_conversations');
+  String get deleteAllConfirmMessage => translate('delete_all_confirm_message');
+  String get deletingAllConversations =>
+      translate('deleting_all_conversations');
   String get typeMessage => translate('type_message');
   String get send => translate('send');
   String get aiThinking => translate('ai_thinking');
@@ -763,7 +793,12 @@ class AppLocalizations {
   String get startConversation => translate('start_conversation');
   String get createImage => translate('create_image');
   String get generateCode => translate('generate_code');
+  String get analyzeImage => translate('analyze_image');
   String get summarizePdf => translate('pdf_summarize');
+  String get summarizePdfPrompt => translate('prompt_template_summarize_pdf');
+  String get generateCodePrompt => translate('prompt_template_generate_code');
+  String get analyzeImagePrompt => translate('prompt_template_analyze_image');
+  String get createImagePrompt => translate('prompt_template_create_image');
   String get noConversations => translate('no_conversations');
   String get noConversationsMessage => translate('no_conversations_message');
   String get deleting => translate('deleting');
