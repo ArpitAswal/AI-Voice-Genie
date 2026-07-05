@@ -678,7 +678,9 @@ USER types "Explain black holes in simple terms" → taps Send
         → ChatRepositoryImpl.saveMessages(uid, conversationId, [userMessage, aiMessage])
             → Firestore batch write:
                 set('messages/{userMsgId}', userMessage.toFirestore())
-                set('messages/{aiMsgId}',   aiMessage.toFirestore())
+                set('messages/{aiMsgId}',   sanitizedAiMessage.toFirestore())
+                  → if response contains generated image data, image payload is stripped
+                    before Firestore write so the document stays under Firestore limits
         → ChatRepositoryImpl.updateConversationMetadata(
               uid, conversationId,
               lastMessage: 'Black holes are regions...',
@@ -688,6 +690,7 @@ USER types "Explain black holes in simple terms" → taps Send
         STEP 7: Update Hive cache (non-blocking via EffectBus.safeEffect)
         → ChatRepositoryImpl.cacheMessages(conversationId, _messages)
             → jsonEncode(messages) → StorageService.setConversationCache('messages_{id}', json)
+            → generated image payloads remain available locally for replay after reopen
 
         STEP 8: Analytics
         → AnalyticsService.logFeatureUsed(AppFeature.textChat)
@@ -782,6 +785,8 @@ USER opens ConversationHistoryScreen
                 .orderBy('lastMessageAt', descending: true).limit(15).get()
           ← List<ConversationModel> returned
       → setState → _conversations = results → ListView.builder renders tiles
+    → ConversationHistoryScreen listens to ChatProvider.conversationHistoryVersion
+      → when chat saves or deletes a conversation, the list auto-refreshes without a manual pull-to-refresh
 
   → ConversationTile renders:
       CapabilityIcon | Title + lastMessage preview | Date | ChevronRight
@@ -796,7 +801,7 @@ ChatDetailScreen mounts with conversationId
     → ChatProvider.loadConversation(uid, conversationId)
 
       FAST PATH (Hive):
-      → ChatRepositoryImpl.getCachedMessages(conversationId)
+    → ChatRepositoryImpl.getCachedMessages(conversationId)
           → StorageService.getConversationCache('messages_conv-uuid-xyz')
           → jsonDecode → List<MessageModel> returned instantly
       → _messages.addAll(cached) → _isLoadingMessages = false → notifyListeners()
@@ -809,6 +814,8 @@ ChatDetailScreen mounts with conversationId
       → ChatRepositoryImpl.getMessages(uid, conversationId, limit: 30)
           → Firestore.collection('messages').orderBy('timestamp', descending: true).limit(30).get()
           → reversed to chronological order
+          → merge cached image/pdf payloads back into the fresh Firestore records
+          → if Firestore stores only lightweight metadata, the local cache restores the image bubble
           ← List<MessageModel>
       → _messages.clear() → _messages.addAll(fresh)
       → _hasMoreMessages = fresh.length >= 30
@@ -1045,4 +1052,3 @@ ModelSelector               Capability gap detected
   └→ ImageGeneratorProvider _errorMessage = 'capability_gap'  Inline gap message
                             logAiCapabilityGap analytics event
 ```
-

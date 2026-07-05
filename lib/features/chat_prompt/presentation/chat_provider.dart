@@ -59,6 +59,7 @@ class ChatProvider extends ChangeNotifier {
   bool _isGenerating = false;
   bool _isLoadingMessages = false;
   String? _errorMessage;
+  int _conversationHistoryVersion = 0;
 
   ConversationModel? get activeConversation => _activeConversation;
   List<MessageModel> get messages => List.unmodifiable(_messages);
@@ -66,6 +67,7 @@ class ChatProvider extends ChangeNotifier {
   bool get isLoadingMessages => _isLoadingMessages;
   String? get errorMessage => _errorMessage;
   bool get hasActiveConversation => _activeConversation != null;
+  int get conversationHistoryVersion => _conversationHistoryVersion;
 
   // ── Load Conversation ──────────────────────────────────────────────────────
 
@@ -307,6 +309,8 @@ class ChatProvider extends ChangeNotifier {
             messages: _messages,
           );
         });
+
+        _markConversationHistoryDirty();
       }
 
       _isGenerating = false;
@@ -343,6 +347,9 @@ class ChatProvider extends ChangeNotifier {
       if (_activeConversation?.id == conversationId) {
         clearConversation();
       }
+
+      _markConversationHistoryDirty();
+      notifyListeners();
 
       return true;
     } on ChatException {
@@ -562,5 +569,9 @@ class ChatProvider extends ChangeNotifier {
     ).hasMatch(lower);
 
     return nounAtStart;
+  }
+
+  void _markConversationHistoryDirty() {
+    _conversationHistoryVersion++;
   }
 }

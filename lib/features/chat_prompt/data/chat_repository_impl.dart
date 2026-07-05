@@ -50,13 +50,14 @@ class ChatRepositoryImpl implements ChatRepository {
   }) async {
     try {
       final batch = _firestore.batch();
+      final firestoreAiMessage = _sanitizeMessageForFirestore(aiMessage);
 
       // Determine the effective last message and its timestamp based on AI vs User content
-      final hasAiContent = aiMessage.content.trim().isNotEmpty;
+      final hasAiContent = firestoreAiMessage.content.trim().isNotEmpty;
       final effectiveLastMessage =
-          hasAiContent ? aiMessage.content : userMessage.content;
+          hasAiContent ? firestoreAiMessage.content : userMessage.content;
       final effectiveLastMessageAt =
-          hasAiContent ? aiMessage.timestamp : userMessage.timestamp;
+          hasAiContent ? firestoreAiMessage.timestamp : userMessage.timestamp;
 
       // If first message: write the conversation document in the same batch
       if (isFirstMessage && conversationModel != null) {
@@ -68,7 +69,7 @@ class ChatRepositoryImpl implements ChatRepository {
         final updatedModel = conversationModel.copyWith(
           lastMessage: effectiveLastMessage,
           lastMessageAt: effectiveLastMessageAt,
-          lastProvider: aiMessage.modelUsed,
+          lastProvider: firestoreAiMessage.modelUsed,
         );
 
         batch.set(convRef, {
@@ -89,7 +90,7 @@ class ChatRepositoryImpl implements ChatRepository {
           FirebaseCollections.fieldConversationLastMessageAt:
               effectiveLastMessageAt,
           FirebaseCollections.fieldConversationLastProvider:
-              aiMessage.modelUsed?.id,
+              firestoreAiMessage.modelUsed?.id,
         });
       }
 
@@ -104,7 +105,7 @@ class ChatRepositoryImpl implements ChatRepository {
       );
 
       batch.set(userRef, userMessage.toFirestore());
-      batch.set(aiRef, aiMessage.toFirestore());
+      batch.set(aiRef, firestoreAiMessage.toFirestore());
 
       await batch.commit();
 
@@ -135,7 +136,7 @@ class ChatRepositoryImpl implements ChatRepository {
           .orderBy(FirebaseCollections.fieldMessageTimestamp)
           .get();
 
-      final messages = snapshot.docs
+      final freshMessages = snapshot.docs
           .map(
             (doc) => MessageModel.fromFirestore(
               doc.id,
@@ -144,7 +145,40 @@ class ChatRepositoryImpl implements ChatRepository {
           )
           .toList();
 
-      return _sortChronologically(messages);
+      final cachedMessages = await getCachedMessages(conversationId);
+      if (cachedMessages.isEmpty) {
+        return _sortChronologically(freshMessages);
+      }
+
+      final cachedById = {
+        for (final message in cachedMessages) message.id: message,
+      };
+      final freshIds = freshMessages.map((message) => message.id).toSet();
+
+      final mergedMessages = freshMessages.map((message) {
+        final cached = cachedById[message.id];
+        if (cached == null) return message;
+
+        return message.copyWith(
+          content:
+              message.content.isNotEmpty ? message.content : cached.content,
+          contentType: message.contentType,
+          imageUrl: message.imageUrl ?? cached.imageUrl,
+          pdfName: message.pdfName ?? cached.pdfName,
+          validProviders: message.validProviders.isNotEmpty
+              ? message.validProviders
+              : cached.validProviders,
+        );
+      }).toList();
+
+      final missingCachedMessages = cachedMessages
+          .where((message) => !freshIds.contains(message.id))
+          .toList();
+
+      return _sortChronologically([
+        ...mergedMessages,
+        ...missingCachedMessages,
+      ]);
     } on FirebaseException catch (e) {
       throw ChatException(
         ChatErrorCodes.loadFailed,
@@ -248,11 +282,12 @@ class ChatRepositoryImpl implements ChatRepository {
       // Firestore client SDKs do not support deleting an entire collection at once.
       // We must delete documents individually. We use Future.wait to run them concurrently for speed.
       await Future.wait(
-        snapshot.docs.map((doc) => deleteConversation(uid: uid, conversationId: doc.id)),
+        snapshot.docs
+            .map((doc) => deleteConversation(uid: uid, conversationId: doc.id)),
       );
 
       await clearCache();
-      
+
       debugPrint('🗑️ Deleted all conversations for user $uid');
     } on FirebaseException catch (e) {
       throw ChatException(
@@ -332,5 +367,18 @@ class ChatRepositoryImpl implements ChatRepository {
       return a.id.compareTo(b.id);
     });
     return sorted;
+  }
+
+  MessageModel _sanitizeMessageForFirestore(MessageModel message) {
+    if (message.contentType != MessageContentType.imageUrl) {
+      return message;
+    }
+
+    // Firestore documents have a strict 1 MiB size limit, so generated image
+    // payloads are cached locally in Hive and only lightweight metadata is
+    // persisted remotely.
+    return message.copyWith(
+      imageUrl: null,
+    );
   }
 }

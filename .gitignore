@@ -1,9 +1,65 @@
+# ===============================
+# 🔐 Secrets & Credentials
+# ===============================
+.env
+.env.*
+secrets.json
+*.secrets.json
+*secret*.json
+*.jks
+*.keystore
+key.properties
+*.p8
+*.p12
+*.pem
+*.firebaserc
+
+
+# Firebase & Google
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+firebase.json
+**/google_maps_api.xml
+**/GoogleMapsKeys.plist
+**/google_maps_keys.json
+**/maps_keys.json
+
+# Local project operating docs stay off the public repository.
+*.md
+!/README.md
+!/app_flow.md
+!/app_summary.md
+
+# ===============================
+# 🧱 Flutter / Dart
+# ===============================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# ===============================
+# 🧠 IDE
+# ===============================
+.idea/
+.vscode/
+*.iml
+
+# ===============================
+# 🖥 System
+# ===============================
+.DS_Store
+*.log
+*.swp
+
+
 # Miscellaneous
 *.class
-*.log
 *.pyc
-*.swp
-.DS_Store
 .atom/
 .build/
 .buildlog/
@@ -13,7 +69,6 @@
 migrate_working_dir/
 
 # IntelliJ related
-*.iml
 *.ipr
 *.iws
 
@@ -39,36 +94,3 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-
-# ===============================
-# 🔐 Secrets & Credentials
-# ===============================
-.env
-.env.*
-*.jks
-*.keystore
-key.properties
-
-# Firebase & Google
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
-lib/firebase_options.dart
-firebase.json
-.firebaserc
-
-# ===============================
-# 🧱 Flutter / Dart
-# ===============================
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-build/
-
-# ===============================
-# 🧠 IDE
-# ===============================
-.idea/
-.vscode/

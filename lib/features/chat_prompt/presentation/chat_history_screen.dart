@@ -15,6 +15,7 @@ import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
+import 'chat_provider.dart';
 import '../data/chat_repository_impl.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
@@ -31,16 +32,31 @@ class ConversationHistoryScreen extends StatefulWidget {
 class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   final ChatRepository _repository = ChatRepositoryImpl();
   final TextEditingController _searchController = TextEditingController();
+  late final ChatProvider _chatProvider;
 
   List<ConversationModel> _allConversations = [];
   List<ConversationModel> _filteredConversations = [];
 
   bool _isLoading = true;
   String _searchQuery = '';
+  int _lastHistoryVersion = -1;
 
   @override
   void initState() {
     super.initState();
+    _chatProvider = context.read<ChatProvider>();
+    _lastHistoryVersion = _chatProvider.conversationHistoryVersion;
+    _chatProvider.addListener(_onChatProviderChanged);
+    _loadConversations();
+  }
+
+  void _onChatProviderChanged() {
+    if (!mounted) return;
+
+    final currentVersion = _chatProvider.conversationHistoryVersion;
+    if (currentVersion == _lastHistoryVersion) return;
+
+    _lastHistoryVersion = currentVersion;
     _loadConversations();
   }
 
@@ -160,6 +176,13 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     } finally {
       LoadingOverlay.hide();
     }
+  }
+
+  @override
+  void dispose() {
+    _chatProvider.removeListener(_onChatProviderChanged);
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override

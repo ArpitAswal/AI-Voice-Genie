@@ -145,6 +145,7 @@ Before proceeding to code, confirm:
 * No hardcoded values
 * Proper error handling planned
 * Scalable and maintainable approach
+* Large generated image payloads are not written directly to Firestore; use lightweight metadata plus local cache rehydration instead
 
 ---
 

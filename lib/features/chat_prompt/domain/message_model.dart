@@ -102,7 +102,7 @@ class MessageModel {
 
   factory MessageModel.fromFirestore(String id, Map<String, dynamic> data) {
     return MessageModel(
-      id: id,
+      id: _normalizeStoredMessageId(id),
       role: MessageRole.fromValue(
         data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
       ),
@@ -253,12 +253,13 @@ class MessageModel {
     String docId,
     Map<String, dynamic> data,
   ) {
+    final normalizedId = _normalizeStoredMessageId(docId);
     final timestamp =
         (data[FirebaseCollections.fieldTimestamp] as Timestamp?)?.toDate() ??
             DateTime.now();
 
     final userMsg = MessageModel(
-      id: docId,
+      id: normalizedId,
       role: MessageRole.user,
       content: data[FirebaseCollections.fieldPrompt] as String? ??
           data[FirebaseCollections.fieldMessageContent] as String? ??
@@ -276,7 +277,7 @@ class MessageModel {
     );
 
     final aiMsg = MessageModel(
-      id: docId,
+      id: normalizedId,
       role: MessageRole.assistant,
       content: data[FirebaseCollections.fieldResponse] as String? ??
           data[FirebaseCollections.fieldMessageContent] as String? ??
@@ -346,4 +347,14 @@ class MessageModel {
   @override
   String toString() => 'MessageModel(id: $id, role: ${role.value}, '
       'status: ${status.value})';
+}
+
+String _normalizeStoredMessageId(String id) {
+  const prefixes = ['UserRef-', 'AIRef-'];
+  for (final prefix in prefixes) {
+    if (id.startsWith(prefix)) {
+      return id.substring(prefix.length);
+    }
+  }
+  return id;
 }
