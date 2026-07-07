@@ -10,8 +10,8 @@ import '../../../ai_layer/orchestrator/ai_orchestrator.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/error/ai_exception.dart';
-import '../../../core/error/effect_bus.dart';
 import '../../../core/services/ai_preferences_service.dart';
+import '../../../core/services/cloudinary_service.dart';
 import '../../../core/services/analytics_service.dart';
 import '../data/chat_repository_impl.dart';
 import '../domain/chat_attachment.dart';
@@ -72,6 +72,10 @@ class ChatProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get hasActiveConversation => _activeConversation != null;
   int get conversationHistoryVersion => _conversationHistoryVersion;
+
+  AiImageSize get preferredImageSize => _preferences.preferredImageSize;
+  ImageQuality get preferredImageQuality => _preferences.preferredImageQuality;
+  int get preferredImageCount => _preferences.preferredImageCount;
 
   // ── Load Conversation ──────────────────────────────────────────────────────
 
@@ -170,17 +174,17 @@ class ChatProvider extends ChangeNotifier {
     );
     final selectedProviders =
         selectedProvider == null ? const <AiProviderId>[] : [selectedProvider];
-    final preferredImageSize = _preferences.preferredImageSize;
-    final preferredImageQuality = _preferences.preferredImageQuality;
-    final preferredImageCount = _preferences.preferredImageCount;
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
     final userMessage = MessageModel.userMessage(
       trimmedPrompt,
       validProviders: selectedProviders,
       contentType: _userContentTypeFor(attachment),
-      imageUrl: attachment?.isImage == true ? attachment!.path : null,
+      imageUrls: attachment?.isImage == true ? [attachment!.path!] : null,
       pdfName: attachment?.isPdf == true ? attachment!.name : null,
+      imageSize: attachment?.isImage == true ? preferredImageSize : null,
+      imageQuality: attachment?.isImage == true ? preferredImageQuality : null,
+      imageCount: attachment?.isImage == true ? preferredImageCount : null,
     );
     _messages.add(userMessage);
     _isGenerating = true;
@@ -243,8 +247,6 @@ class ChatProvider extends ChangeNotifier {
           prompt: effectivePrompt,
           conversationHistory: history,
           imageBytes: attachment?.isImage == true ? attachment!.bytes : null,
-          imageMimeType:
-              attachment?.isImage == true ? attachment!.mimeType : null,
           imageSize: preferredImageSize,
           imageQuality: preferredImageQuality,
           imageCount: preferredImageCount,
@@ -254,11 +256,30 @@ class ChatProvider extends ChangeNotifier {
         selectedProvider: selectedProvider,
       );
 
-      // ── Step 5: Add AI response to list ──────────────────────────────────
-      aiMessage = _buildAiMessage(aiResponse, attachment: attachment);
+      // ── Upload Base64 to Cloudinary ─────────────────────────────────────────
+      List<String> uploadedUrls = [];
+      if (aiResponse.contentType == AiResponseContentType.imageBase64 &&
+          aiResponse.generatedImages != null &&
+          aiResponse.generatedImages!.isNotEmpty) {
+        
+        final futures = aiResponse.generatedImages!
+            .where((img) => img.b64Json != null && img.b64Json!.isNotEmpty)
+            .map((img) => CloudinaryService.instance.uploadBase64Image(img.b64Json!));
 
-      _messages.add(aiMessage);
-      notifyListeners();
+        // Testing with local images
+        // List<String> imageUrls  = [
+        //   "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+        //   "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+        //   "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+        // ];
+        // final futures =  imageUrls.map((img) => Future.value(img));
+            
+        final results = await Future.wait(futures);
+        uploadedUrls = results.whereType<String>().toList();
+      }
+
+      // ── Step 5: Build AI response message ──────────────────────────────────
+      aiMessage = _buildAiMessage(aiResponse, attachment: attachment, uploadedUrls: uploadedUrls);
 
       // Step 6 to 8 follow in finally, because whether the response is success or fail it has to store.
     } on AiExhaustedException catch (e) {
@@ -270,8 +291,6 @@ class ChatProvider extends ChangeNotifier {
         error: e,
         selectedProvider: selectedProvider,
       );
-      _messages.add(aiMessage);
-      notifyListeners();
     } on AiException catch (e) {
       final friendlyMessage = _friendlyAiErrorMessage(e);
       _errorMessage = friendlyMessage;
@@ -280,8 +299,6 @@ class ChatProvider extends ChangeNotifier {
         error: e,
         selectedProvider: selectedProvider,
       );
-      _messages.add(aiMessage);
-      notifyListeners();
     } catch (e) {
       final friendlyMessage = _friendlyAiErrorMessage(e);
       _errorMessage = friendlyMessage;
@@ -290,35 +307,30 @@ class ChatProvider extends ChangeNotifier {
         error: e,
         selectedProvider: selectedProvider,
       );
-      _messages.add(aiMessage);
-      notifyListeners();
     } finally {
       final messageToPersist = aiMessage;
       final conversationToPersist = _activeConversation;
 
       if (messageToPersist != null && conversationToPersist != null) {
-        // ── Step 6: Persist to Firestore (non-blocking side effect) ──────────
+        // ── Step 6: Persist to Firestore ──────────────────────────
         final conversationId = conversationToPersist.id;
-        await EffectBus.instance.safeEffect(() async {
-          await _repository.saveMessagePair(
-            uid: uid,
-            conversationId: conversationId,
-            userMessage: userMessage.copyWith(
-              status: MessageStatus.delivered,
-            ),
-            aiMessage: messageToPersist,
-            isFirstMessage: isNewConversation,
-            conversationModel: isNewConversation ? conversationToPersist : null,
-          );
-        });
+        await _repository.saveMessagePair(
+          uid: uid,
+          conversationId: conversationId,
+          userMessage: userMessage,
+          aiMessage: messageToPersist,
+          isFirstMessage: isNewConversation,
+          conversationModel: isNewConversation ? conversationToPersist : null,
+        );
 
-        // ── Step 7: Update Hive cache ───────────────────────────────────────
-        await EffectBus.instance.safeEffect(() async {
-          await _repository.cacheMessages(
-            conversationId: conversationId,
-            messages: _messages,
-          );
-        });
+        // ── Step 7: Update UI with AI response ──────────────────────────────
+        _messages.add(messageToPersist);
+        
+        // ── Step 8: Update Hive cache ───────────────────────────────────────
+        await _repository.cacheMessages(
+          conversationId: conversationId,
+          messages: _messages,
+        );
 
         _markConversationHistoryDirty();
       }
@@ -484,20 +496,20 @@ class ChatProvider extends ChangeNotifier {
   MessageModel _buildAiMessage(
     AiResponse response, {
     required ChatAttachment? attachment,
+    List<String> uploadedUrls = const [],
   }) {
     if (response.contentType == AiResponseContentType.imageUrl ||
         response.contentType == AiResponseContentType.imageBase64) {
-      final imageUrl = response.imageUrl ??
-          (response.imageBase64 == null
-              ? null
-              : 'data:image/png;base64,${response.imageBase64}');
-
+      
       return MessageModel.aiResponse(
         content: response.text ?? '',
         modelUsed: response.modelUsed,
         contentType: MessageContentType.imageUrl,
-        imageUrl: imageUrl,
+        imageUrls: uploadedUrls.isNotEmpty ? uploadedUrls : null,
         tokenCount: response.tokenCount,
+        imageSize: preferredImageSize,
+        imageQuality: preferredImageQuality,
+        imageCount: preferredImageCount,
       );
     }
 

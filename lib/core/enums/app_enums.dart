@@ -277,13 +277,13 @@ enum AuthState {
 /// AI model image generate quality
 enum ImageQuality {
   /// Cost cheapest, Speed fastest
-  Low('low'),
+  low('Low'),
 
   /// Cost balanced, Speed normal
-  Medium('medium'),
+  medium('Medium'),
 
   /// Cost Expensive, Speed slower
-  High('high');
+  high('High');
 
   final String value;
 
@@ -291,8 +291,54 @@ enum ImageQuality {
 
   static ImageQuality fromValue(String value) {
     return ImageQuality.values.firstWhere(
-          (e) => e.value == value,
-      orElse: () => ImageQuality.Low,
+      (e) => e.value == value,
+      orElse: () => ImageQuality.low,
     );
   }
+}
+
+/// Desired image size for generation requests.
+enum AiImageSize {
+  /// 1024×1024 — default square format
+  square(width: 1024, height: 1024, apiValue: '1024x1024', name: 'Square'),
+
+  /// 1024×1536 — portrait
+  portrait(width: 1024, height: 1536, apiValue: '1024x1536', name: 'Portrait'),
+
+  /// 1536×1024 — landscape / widescreen
+  landscape(
+      width: 1536, height: 1024, apiValue: '1536x1024', name: 'Landscape');
+
+  const AiImageSize(
+      {required this.width,
+      required this.height,
+      required this.apiValue,
+      required this.name});
+
+  final int width;
+  final int height;
+  final String apiValue;
+  final String name;
+
+  double get aspectRatio => width / height;
+
+  static AiImageSize fromValue(String value) {
+    // Check both name (e.g. 'square') and apiValue (e.g. '1024x1024') for backward compatibility
+    return AiImageSize.values.firstWhere(
+      (size) => size.name == value || size.apiValue == value,
+      orElse: () => AiImageSize.square,
+    );
+  }
+}
+
+/// How the response content should be rendered in the UI.
+enum AiResponseContentType {
+  /// Plain or markdown text
+  text,
+
+  /// Remote image URL
+  imageUrl,
+
+  /// Base64-encoded image data
+  imageBase64,
 }

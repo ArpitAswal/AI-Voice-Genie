@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../ai_layer/models/ai_request.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 
 class AiImageSizeSelector extends StatelessWidget {
@@ -68,14 +68,16 @@ class _SelectorPill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            _labelFor(selectedSize),
+            selectedSize.name,
             style: context.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
-              color: context.textTheme.bodySmall?.color,
+              color: context.primaryColor,
             ),
           ),
           const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+           Icon(Icons.keyboard_arrow_down_rounded, size: 16,
+            color: context.primaryColor,
+          ),
         ],
       ),
     );
@@ -97,7 +99,7 @@ class _SizeMenuItem extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            _labelFor(size),
+            size.apiValue,
             style: context.textTheme.bodyMedium?.copyWith(
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               color: context.isDark ? AppColors.white : AppColors.primaryLight,
@@ -112,16 +114,5 @@ class _SizeMenuItem extends StatelessWidget {
           ),
       ],
     );
-  }
-}
-
-String _labelFor(AiImageSize size) {
-  switch (size) {
-    case AiImageSize.square:
-      return '1024x1024';
-    case AiImageSize.landscape:
-      return '1536x1024';
-    case AiImageSize.portrait:
-      return '1024x1536';
   }
 }

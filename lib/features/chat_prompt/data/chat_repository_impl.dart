@@ -50,14 +50,13 @@ class ChatRepositoryImpl implements ChatRepository {
   }) async {
     try {
       final batch = _firestore.batch();
-      final firestoreAiMessage = _sanitizeMessageForFirestore(aiMessage);
 
       // Determine the effective last message and its timestamp based on AI vs User content
-      final hasAiContent = firestoreAiMessage.content.trim().isNotEmpty;
+      final hasAiContent = aiMessage.content.trim().isNotEmpty;
       final effectiveLastMessage =
-          hasAiContent ? firestoreAiMessage.content : userMessage.content;
+          hasAiContent ? aiMessage.content : userMessage.content;
       final effectiveLastMessageAt =
-          hasAiContent ? firestoreAiMessage.timestamp : userMessage.timestamp;
+          hasAiContent ? aiMessage.timestamp : userMessage.timestamp;
 
       // If first message: write the conversation document in the same batch
       if (isFirstMessage && conversationModel != null) {
@@ -69,7 +68,7 @@ class ChatRepositoryImpl implements ChatRepository {
         final updatedModel = conversationModel.copyWith(
           lastMessage: effectiveLastMessage,
           lastMessageAt: effectiveLastMessageAt,
-          lastProvider: firestoreAiMessage.modelUsed,
+          lastProvider: aiMessage.modelUsed,
         );
 
         batch.set(convRef, {
@@ -90,7 +89,7 @@ class ChatRepositoryImpl implements ChatRepository {
           FirebaseCollections.fieldConversationLastMessageAt:
               effectiveLastMessageAt,
           FirebaseCollections.fieldConversationLastProvider:
-              firestoreAiMessage.modelUsed?.id,
+          aiMessage.modelUsed?.id,
         });
       }
 
@@ -105,7 +104,7 @@ class ChatRepositoryImpl implements ChatRepository {
       );
 
       batch.set(userRef, userMessage.toFirestore());
-      batch.set(aiRef, firestoreAiMessage.toFirestore());
+      batch.set(aiRef, aiMessage.toFirestore());
 
       await batch.commit();
 
@@ -163,7 +162,7 @@ class ChatRepositoryImpl implements ChatRepository {
           content:
               message.content.isNotEmpty ? message.content : cached.content,
           contentType: message.contentType,
-          imageUrl: message.imageUrl ?? cached.imageUrl,
+          imageUrls: message.imageUrls ?? cached.imageUrls,
           pdfName: message.pdfName ?? cached.pdfName,
           validProviders: message.validProviders.isNotEmpty
               ? message.validProviders
@@ -367,18 +366,5 @@ class ChatRepositoryImpl implements ChatRepository {
       return a.id.compareTo(b.id);
     });
     return sorted;
-  }
-
-  MessageModel _sanitizeMessageForFirestore(MessageModel message) {
-    if (message.contentType != MessageContentType.imageUrl) {
-      return message;
-    }
-
-    // Firestore documents have a strict 1 MiB size limit, so generated image
-    // payloads are cached locally in Hive and only lightweight metadata is
-    // persisted remotely.
-    return message.copyWith(
-      imageUrl: null,
-    );
   }
 }

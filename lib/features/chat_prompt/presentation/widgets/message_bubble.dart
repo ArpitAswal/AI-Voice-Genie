@@ -106,7 +106,9 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  bool get _hasMedia => message.imageUrl != null || message.pdfName != null;
+  bool get _hasMedia =>
+      (message.imageUrls != null && message.imageUrls!.isNotEmpty) ||
+      message.pdfName != null;
 
   void _copyToClipboard(BuildContext context) {
     Clipboard.setData(ClipboardData(text: message.content));
@@ -146,14 +148,21 @@ class _MessageBubbleContent extends StatelessWidget {
           );
 
     final children = <Widget>[
-      if (message.imageUrl != null) _ChatImage(url: message.imageUrl!),
+      if (message.imageUrls != null && message.imageUrls!.isNotEmpty)
+        // Wrap(
+        //   spacing: 8,
+        //   runSpacing: 8,
+        //   children: message.imageUrls!.map((url) => _ChatImage(url: url)).toList(),
+        // ),
+        _ChatImage(images: message.imageUrls!, size: message.imageSize ?? AiImageSize.square),
       if (message.pdfName != null)
         _PdfAttachmentCard(
           name: message.pdfName!,
           isUser: isUser,
         ),
       if (textWidget != null) ...[
-        if (message.imageUrl != null || message.pdfName != null)
+        if ((message.imageUrls != null && message.imageUrls!.isNotEmpty) ||
+            message.pdfName != null)
           const SizedBox(height: 10),
         textWidget,
       ],
@@ -181,51 +190,70 @@ class _MessageBubbleContent extends StatelessWidget {
 }
 
 class _ChatImage extends StatelessWidget {
-  final String url;
+  final List<String> images;
+  final AiImageSize size;
 
-  const _ChatImage({required this.url});
+  const _ChatImage({required this.images, required this.size});
 
   @override
   Widget build(BuildContext context) {
-    final width =
-        MediaQuery.of(context).size.width * (context.isTablet ? 0.48 : 0.68);
-    final height = width * 0.78;
+    switch (images.length) {
+      case 1:
+        return _OneImage(image: images.first, size: size);
 
+      case 2:
+        return _TwoImages(
+          images: images,
+          size: size,
+        );
+
+      case 3:
+        return _ThreeImages(
+          images: images,
+          size: size,
+        );
+
+      case 4:
+        return _FourImages(
+          images: images,
+          size: size,
+        );
+
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+}
+
+Widget _buildImage(String url) {
+  if (url.startsWith('data:image')) {
+    final base64Data = url.substring(url.indexOf(',') + 1);
+    return Image.memory(
+      base64Decode(base64Data),
+      fit: BoxFit.cover,
+    );
+  }
+
+  if (url.startsWith('http')) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: SizedBox(
-        width: width,
-        height: height.clamp(180.0, 360.0).toDouble(),
-        child: _buildImage(),
+      borderRadius: BorderRadiusGeometry.circular(16),
+      child: Image.network(
+        url,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
+        alignment: AlignmentGeometry.center,
+        errorBuilder: (_, __, ___) => const _ImageFallback(),
+        loadingBuilder: (_, child, progress) =>
+            progress == null ? child : const _ImageFallback(isLoading: true),
       ),
     );
   }
 
-  Widget _buildImage() {
-    if (url.startsWith('data:image')) {
-      final base64Data = url.substring(url.indexOf(',') + 1);
-      return Image.memory(
-        base64Decode(base64Data),
-        fit: BoxFit.cover,
-      );
-    }
-
-    if (url.startsWith('http')) {
-      return Image.network(
-        url,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const _ImageFallback(),
-        loadingBuilder: (_, child, progress) =>
-            progress == null ? child : const _ImageFallback(isLoading: true),
-      );
-    }
-
-    return Image.file(
-      File(url),
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const _ImageFallback(),
-    );
-  }
+  return Image.file(
+    File(url),
+    fit: BoxFit.cover,
+    errorBuilder: (_, __, ___) => const _ImageFallback(),
+  );
 }
 
 class _ImageFallback extends StatelessWidget {
@@ -241,6 +269,172 @@ class _ImageFallback extends StatelessWidget {
       child: isLoading
           ? const CircularProgressIndicator(strokeWidth: 2)
           : const Icon(Icons.broken_image_rounded, color: AppColors.grey),
+    );
+  }
+}
+
+class _OneImage extends StatelessWidget {
+  const _OneImage({
+    required this.image,
+    required this.size,
+  });
+
+  final String image;
+  final AiImageSize size;
+  @override
+  Widget build(BuildContext context) {
+    final width =
+        MediaQuery.sizeOf(context).width * (context.isTablet ? 0.55 : 0.72);
+
+    return AspectRatio(
+      aspectRatio: size.aspectRatio,
+      child: _buildImage(image),
+    );
+  }
+}
+
+class _TwoImages extends StatelessWidget {
+  const _TwoImages({required this.images, required this.size});
+
+  final List<String> images;
+  final AiImageSize size;
+
+  @override
+  Widget build(BuildContext context) {
+    const spacing = 8.0;
+
+    final landscape = size == AiImageSize.landscape;
+
+    final width =
+        MediaQuery.sizeOf(context).width * (context.isTablet ? 0.55 : 0.72);
+
+    if (landscape) {
+      return Column(
+        children: [
+          AspectRatio(
+            aspectRatio: size.aspectRatio,
+            child: _buildImage(images[0]),
+          ),
+          const SizedBox(height: spacing),
+          AspectRatio(
+            aspectRatio: size.aspectRatio,
+            child: _buildImage(images[1]),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: AspectRatio(
+            aspectRatio: size.aspectRatio,
+            child: _buildImage(images[0]),
+          ),
+        ),
+        const SizedBox(width: spacing),
+        Expanded(
+          child: AspectRatio(
+            aspectRatio: size.aspectRatio,
+            child: _buildImage(images[1]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ThreeImages extends StatelessWidget {
+  const _ThreeImages({required this.images, required this.size});
+
+  final List<String> images;
+  final AiImageSize size;
+
+  @override
+  Widget build(BuildContext context) {
+    final width =
+        MediaQuery.sizeOf(context).width * (context.isTablet ? 0.55 : 0.72);
+    const spacing = 8.0;
+
+    return Column(
+      children: [
+        AspectRatio(
+          aspectRatio: size.aspectRatio,
+          child: _buildImage(images[0]),
+        ),
+        const SizedBox(height: spacing),
+        Row(
+          children: [
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: size.aspectRatio,
+                child: _buildImage(images[1]),
+              ),
+            ),
+            const SizedBox(width: spacing),
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: size.aspectRatio,
+                child: _buildImage(images[2]),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FourImages extends StatelessWidget {
+  const _FourImages({required this.images, required this.size});
+
+  final List<String> images;
+  final AiImageSize size;
+
+  @override
+  Widget build(BuildContext context) {
+    final width =
+        MediaQuery.sizeOf(context).width * (context.isTablet ? 0.55 : 0.72);
+    const spacing = 8.0;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: size.aspectRatio,
+                child: _buildImage(images[0]),
+              ),
+            ),
+            const SizedBox(width: spacing),
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: size.aspectRatio,
+                child: _buildImage(images[1]),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: spacing),
+        Row(
+          children: [
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: size.aspectRatio,
+                child: _buildImage(images[2]),
+              ),
+            ),
+            const SizedBox(width: spacing),
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: size.aspectRatio,
+                child: _buildImage(images[3]),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

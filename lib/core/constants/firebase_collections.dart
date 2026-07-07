@@ -121,6 +121,9 @@ class FirebaseCollections {
   static const String fieldImageUrl = 'imageUrl';
   static const String fieldPdfName = 'pdfName';
   static const String fieldValidProviders = 'validProviders';
+  static const String fieldImageSize = 'imageSize';
+  static const String fieldImageCount = 'imageCount';
+  static const String fieldImageQuality = 'imageQuality';
 
   // ── Legacy Message Field Names (used by Hive cache serialization) ─────────
   static const String fieldMessageID = 'messageID';
@@ -132,6 +135,7 @@ class FirebaseCollections {
   static const String fieldMessageTokenCount = 'tokenCount';
   static const String fieldMessageStatus = 'status';
   static const String fieldMessageImageUrl = 'imageUrl';
+  static const String fieldMessageLocalImageKey = 'localImageKey';
   static const String fieldMessagePdfName = 'pdfName';
   static const String fieldMessageValidProviders = 'validProviders';
 

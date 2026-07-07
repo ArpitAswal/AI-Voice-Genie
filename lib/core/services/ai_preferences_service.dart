@@ -1,7 +1,6 @@
 import '../constants/storage_keys.dart';
 import '../enums/app_enums.dart';
 import 'storage_service.dart';
-import '../../ai_layer/models/ai_request.dart';
 
 /// Local preference access for AI-related defaults.
 ///
@@ -21,12 +20,12 @@ class AiPreferencesService {
 
   ImageQuality get preferredImageQuality {
     final saved = _storage.getString(StorageKeys.preferredImageQuality);
-    return saved == null ? ImageQuality.Low : ImageQuality.fromValue(saved);
+    return saved == null ? ImageQuality.low : ImageQuality.fromValue(saved);
   }
 
   AiImageSize get preferredImageSize {
     final saved = _storage.getString(StorageKeys.preferredImageSize);
-    return saved == null ? AiImageSize.square : _imageSizeFromValue(saved);
+    return saved == null ? AiImageSize.square : AiImageSize.fromValue(saved);
   }
 
   int get preferredImageCount {
@@ -44,7 +43,8 @@ class AiPreferencesService {
   }
 
   Future<void> setPreferredImageSize(AiImageSize imageSize) async {
-    await _storage.setString(StorageKeys.preferredImageSize, imageSize.value);
+    // Write imageSize.name (e.g. 'square', 'landscape', 'portrait') as a string since Hive expects a String
+    await _storage.setString(StorageKeys.preferredImageSize, imageSize.name);
   }
 
   Future<void> setPreferredImageCount(int count) async {
@@ -60,12 +60,5 @@ class AiPreferencesService {
       if (provider.id == providerId) return provider;
     }
     return null;
-  }
-
-  AiImageSize _imageSizeFromValue(String value) {
-    return AiImageSize.values.firstWhere(
-      (size) => size.value == value,
-      orElse: () => AiImageSize.square,
-    );
   }
 }

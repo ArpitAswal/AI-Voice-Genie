@@ -93,7 +93,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   /// Scroll to the bottom of the message list
   void _scrollToBottom() async {
     if (!_scrollController.hasClients) return;
-    debugPrint("scroll");
 
     // Short delay gives the layout engine time to fully calculate
     // the height of very large MessageBubbles before we record 'maxScrollExtent'.

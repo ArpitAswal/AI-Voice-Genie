@@ -153,11 +153,11 @@ class _ProviderMenuItem extends StatelessWidget {
 abstract final class _ProviderStyle {
   static Color colorFor(ImageQuality provider) {
     switch (provider) {
-      case ImageQuality.Low:
+      case ImageQuality.low:
         return AppColors.success;
-      case ImageQuality.Medium:
+      case ImageQuality.medium:
         return AppColors.warning;
-      case ImageQuality.High:
+      case ImageQuality.high:
         return AppColors.error;
     }
   }
@@ -166,11 +166,11 @@ abstract final class _ProviderStyle {
 String _labelFor(BuildContext context, ImageQuality? quality) {
   final l10n = AppLocalizations.of(context)!;
   switch (quality) {
-    case ImageQuality.Low:
+    case ImageQuality.low:
       return l10n.qualityLow;
-    case ImageQuality.Medium:
+    case ImageQuality.medium:
       return l10n.qualityMedium;
-    case ImageQuality.High:
+    case ImageQuality.high:
       return l10n.qualityHigh;
     case null:
       return l10n.imageQuality;

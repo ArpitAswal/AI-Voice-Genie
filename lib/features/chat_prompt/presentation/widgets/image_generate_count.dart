@@ -86,10 +86,11 @@ class _SelectorPill extends StatelessWidget {
             '$selectedCount',
             style: context.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
+              color: context.primaryColor,
             ),
           ),
           const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+           Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: context.primaryColor),
         ],
       ),
     );

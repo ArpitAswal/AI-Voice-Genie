@@ -101,12 +101,6 @@ class AppConstants {
       'https://generativelanguage.googleapis.com/v1beta';
   static const String claudeBaseUrl = 'https://api.anthropic.com/v1';
 
-  // ── AI API Validation Endpoints ───────────────────────────────────────────
-  // Lightweight endpoints used to validate user API keys on first entry
-  static const String openAiValidationEndpoint = '/models';
-  static const String geminiValidationEndpoint = '/models';
-  static const String claudeValidationEndpoint = '/models';
-
   // ── Claude API Version Header ─────────────────────────────────────────────
   // Claude requires this specific header on every request
   static const String claudeApiVersion = '2023-06-01';
@@ -138,10 +132,6 @@ class AppConstants {
   static const int maxImageSizeBytes = 5 * 1024 * 1024;
   static const String defaultImageQuestion = 'Please analyze this image.';
   static const String defaultPdfQuestion = 'Please summarize this PDF.';
-  // GPT Image size options
-  static const String imageSize1024 = '1024x1024';
-  static const String imageSize1536x1024 = '1536x1024';
-  static const String imageSize1024x1536 = '1024x1536';
 
   // ── Voice ─────────────────────────────────────────────────────────────────
   // Maximum recording duration in seconds

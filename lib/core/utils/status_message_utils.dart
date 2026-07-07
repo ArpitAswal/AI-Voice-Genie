@@ -28,7 +28,7 @@ class MessageConfig {
   const MessageConfig({
     required this.message,
     required this.type,
-    this.duration = const Duration(seconds: 4),
+    this.duration = const Duration(seconds: 2),
     this.actionLabel,
     this.onAction,
   });

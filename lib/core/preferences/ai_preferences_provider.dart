@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../enums/app_enums.dart';
 import '../services/ai_preferences_service.dart';
-import '../../ai_layer/models/ai_request.dart';
 
 /// Notifies the UI when AI defaults change.
 ///
@@ -20,7 +19,7 @@ class AiPreferencesProvider extends ChangeNotifier {
   final AiPreferencesService _service;
 
   AiProviderId _preferredProvider = AiProviderId.gemini;
-  ImageQuality _preferredImageQuality = ImageQuality.Low;
+  ImageQuality _preferredImageQuality = ImageQuality.low;
   AiImageSize _preferredImageSize = AiImageSize.square;
   int _preferredImageCount = 1;
 
