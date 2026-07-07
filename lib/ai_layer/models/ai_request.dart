@@ -109,7 +109,7 @@ class AiRequest {
     this.imageBytes,
     this.imageMimeType,
     this.imageSize = AiImageSize.square,
-    this.imageQuality = ImageQuality.Low,
+    this.imageQuality = ImageQuality.low,
     int imageCount = 1,
     this.pdfText,
     this.pdfFileName,
@@ -138,26 +138,4 @@ class AiRequest {
   @override
   String toString() => 'AiRequest(capability: ${capability.id}, uid: $uid, '
       'requestId: $requestId, estimatedTokens: $estimatedTokenCount)';
-}
-
-/// Desired image size for generation requests.
-enum AiImageSize {
-  /// 1024×1024 — default square format
-  square('1024x1024'),
-
-  /// 1536×1024 — landscape / widescreen
-  landscape('1536x1024'),
-
-  /// 1024×1536 — portrait
-  portrait('1024x1536');
-
-  final String value;
-  const AiImageSize(this.value);
-
-  static AiImageSize fromValue(String value) {
-    return AiImageSize.values.firstWhere(
-      (size) => size.value == value,
-      orElse: () => AiImageSize.square,
-    );
-  }
 }

@@ -100,6 +100,7 @@ class OpenAiAdapter extends AiProviderAdapter {
     required AiRequest request,
     required String apiKey,
   }) async {
+    // ── Real API ──────────────────────────────────────────────────────────────
     final stopwatch = Stopwatch()..start();
 
     try {
@@ -110,27 +111,47 @@ class OpenAiAdapter extends AiProviderAdapter {
           'model': AppConstants.openAiImageGenModel,
           'prompt': request.prompt,
           'n': request.imageCount,
-          'size': request.imageSize.value,
+          'size': request.imageSize.apiValue,
           'quality': request.imageQuality.value,
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = _parseResponse(response, request.requestId);
-      final imageBase64 = data['data']?[0]?['b64_json'] as String? ?? '';
+      
+      // Parse all generated images and their attributes into AiImageData models
+      final List<AiImageData> generatedImages = (data['data'] as List<dynamic>)
+          .map((e) => AiImageData(
+                b64Json: e['b64_json'] as String?,
+                url: e['url'] as String?,
+                revisedPrompt: e['revised_prompt'] as String?,
+              ))
+          .toList();
 
-      if (imageBase64.isEmpty) {
+      debugPrint(
+        '🖼️ OpenAI image response: requestId=${request.requestId}, '
+        'model = ${AppConstants.openAiImageGenModel}, '
+        'contentType = imageBase64, '
+            'No of Images = ${generatedImages.length}'
+      );
+
+      if (generatedImages.isEmpty) {
         throw const AiTransientException(
           message: 'error_unexpected_ai',
           provider: AiProviderId.openAi,
         );
       }
 
+      // Extract the first image's base64 for legacy compatibility in other parts of the app
+      final String? firstImageBase64 = generatedImages.first.b64Json;
+
       stopwatch.stop();
+      // Store all the valid response attributes that will be returned by image generations
       return AiResponse.imageBase64(
         modelUsed: AiProviderId.openAi,
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
-        imageBase64: imageBase64,
+        imageBase64: firstImageBase64,
+        generatedImages: generatedImages,
       );
     } on AiException {
       rethrow;
