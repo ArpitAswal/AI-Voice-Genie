@@ -1,5 +1,23 @@
 import '../../core/enums/app_enums.dart';
 
+/// Represents a single generated image and its metadata from an AI provider.
+class AiImageData {
+  /// Base64-encoded image data (if requested format was b64_json)
+  final String? b64Json;
+
+  /// Publicly accessible image URL (if requested format was url)
+  final String? url;
+
+  /// The prompt used to generate the image, if revised by the provider
+  final String? revisedPrompt;
+
+  const AiImageData({
+    this.b64Json,
+    this.url,
+    this.revisedPrompt,
+  });
+}
+
 /// Unified response object returned by AiOrchestrator.execute().
 ///
 /// Regardless of which provider handled the request, the caller
@@ -40,6 +58,9 @@ class AiResponse {
   /// Base64-encoded image data — alternative to imageUrl for some providers
   final String? imageBase64;
 
+  /// Multiple image generation results including attributes like revised prompts.
+  final List<AiImageData>? generatedImages;
+
   // ── Usage Metadata ─────────────────────────────────────────────────────────
 
   /// Approximate token count used in this response (from provider metadata)
@@ -54,6 +75,7 @@ class AiResponse {
     this.text,
     this.imageUrl,
     this.imageBase64,
+    this.generatedImages,
     this.tokenCount = 0,
   });
 
@@ -101,7 +123,8 @@ class AiResponse {
     required AiProviderId modelUsed,
     required String requestId,
     required int responseTimeMs,
-    required String imageBase64,
+    String? imageBase64,
+    List<AiImageData>? generatedImages,
   }) {
     return AiResponse(
       modelUsed: modelUsed,
@@ -110,6 +133,7 @@ class AiResponse {
       requestId: requestId,
       responseTimeMs: responseTimeMs,
       imageBase64: imageBase64,
+      generatedImages: generatedImages,
     );
   }
 
@@ -127,16 +151,4 @@ class AiResponse {
   String toString() =>
       'AiResponse(model: ${modelUsed.id}, type: ${contentType.name}, '
       'responseTimeMs: $responseTimeMs, tokens: $tokenCount)';
-}
-
-/// How the response content should be rendered in the UI.
-enum AiResponseContentType {
-  /// Plain or markdown text
-  text,
-
-  /// Remote image URL
-  imageUrl,
-
-  /// Base64-encoded image data
-  imageBase64,
 }

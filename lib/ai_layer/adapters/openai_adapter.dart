@@ -117,7 +117,7 @@ class OpenAiAdapter extends AiProviderAdapter {
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = _parseResponse(response, request.requestId);
-      
+
       // Parse all generated images and their attributes into AiImageData models
       final List<AiImageData> generatedImages = (data['data'] as List<dynamic>)
           .map((e) => AiImageData(
@@ -127,12 +127,10 @@ class OpenAiAdapter extends AiProviderAdapter {
               ))
           .toList();
 
-      debugPrint(
-        '🖼️ OpenAI image response: requestId=${request.requestId}, '
-        'model = ${AppConstants.openAiImageGenModel}, '
-        'contentType = imageBase64, '
-            'No of Images = ${generatedImages.length}'
-      );
+      debugPrint('🖼️ OpenAI image response: requestId=${request.requestId}, '
+          'model = ${AppConstants.openAiImageGenModel}, '
+          'contentType = imageBase64, '
+          'No of Images = ${generatedImages.length}');
 
       if (generatedImages.isEmpty) {
         throw const AiTransientException(
