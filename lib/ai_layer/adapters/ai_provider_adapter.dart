@@ -76,13 +76,6 @@ abstract class AiProviderAdapter {
         return analyzeImage(request: request, apiKey: apiKey);
       case AiCapability.pdfParsing:
         return parsePdf(request: request, apiKey: apiKey);
-      case AiCapability.speechToText:
-      case AiCapability.textToSpeech:
-      // Voice capabilities are handled by VoiceRepository (Phase 7)
-        throw UnsupportedError(
-          'Voice capabilities are not routed through AiOrchestrator. '
-              'Use VoiceRepository instead.',
-        );
     }
   }
 }

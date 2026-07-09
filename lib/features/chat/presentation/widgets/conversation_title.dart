@@ -37,7 +37,7 @@ class ConversationTile extends StatelessWidget {
           horizontal: isTablet ? 20 : 16,
           vertical: isTablet ? 16 : 12,
         ),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           border: Border(
             bottom: BorderSide(
               // color: context.isDark
@@ -135,7 +135,7 @@ class ConversationTile extends StatelessWidget {
         child: ListTile(
           leading:
               const Icon(Icons.delete_outline_rounded, color: AppColors.error),
-          title: Text(
+          title: const Text(
             'Delete conversation',
             style: TextStyle(color: AppColors.error),
           ),
@@ -150,7 +150,7 @@ class ConversationTile extends StatelessWidget {
 }
 
 class _CapabilityIcon extends StatelessWidget {
-  final ConversationCapability capability;
+  final AiCapability capability;
   final bool isTablet;
 
   const _CapabilityIcon({
@@ -161,19 +161,19 @@ class _CapabilityIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color) = switch (capability) {
-      ConversationCapability.textChat => (
+      AiCapability.textGeneration => (
           Icons.chat_bubble_outline_rounded,
           AppColors.primaryLight,
         ),
-      ConversationCapability.imageGeneration => (
+      AiCapability.imageGeneration => (
           Icons.image_outlined,
           AppColors.accentLight,
         ),
-      ConversationCapability.imageReading => (
+      AiCapability.imageUnderstanding => (
           Icons.image_search_outlined,
           AppColors.info,
         ),
-      ConversationCapability.pdfReader => (
+      AiCapability.pdfParsing => (
           Icons.picture_as_pdf_outlined,
           AppColors.warning,
         ),

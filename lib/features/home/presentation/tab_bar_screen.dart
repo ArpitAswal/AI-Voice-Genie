@@ -4,8 +4,8 @@ import 'package:ai_voice_genie/features/intro/presentation/intro_screen.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../chat_prompt/presentation/chat_history_screen.dart';
-import '../../profile/presentation/profie_view.dart';
+import '../../chat/presentation/chat_history_screen.dart';
+import '../../profile/presentation/profile_view.dart';
 
 class TabBarScreen extends StatefulWidget {
   const TabBarScreen({super.key});

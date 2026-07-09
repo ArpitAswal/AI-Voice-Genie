@@ -376,7 +376,7 @@ class MessageUtils {
       MessageConfig(
         message: message,
         type: MessageType.success,
-        duration: duration ?? const Duration(seconds: 4),
+        duration: duration ?? const Duration(seconds: 2),
         actionLabel: actionLabel,
         onAction: onAction,
       ),
@@ -441,7 +441,7 @@ class MessageUtils {
       MessageConfig(
         message: message,
         type: MessageType.success,
-        duration: duration ?? const Duration(seconds: 4),
+        duration: duration ?? const Duration(seconds: 2),
       ),
       _Channel.toast,
     );
@@ -495,7 +495,7 @@ class MessageUtils {
       config: MessageConfig(
         message: resolvedMessage,
         type: MessageType.success,
-        duration: duration ?? const Duration(seconds: 4),
+        duration: duration ?? const Duration(seconds: 2),
       ),
       displayMessage: resolvedMessage,
       channel: _Channel.toast,

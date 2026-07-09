@@ -36,7 +36,7 @@ class LoadingOverlay {
       context: context,
       barrierDismissible: false,
       useRootNavigator: true,
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: Colors.black.withValues(alpha: 0.5),
       builder: (BuildContext ctx) {
         _dialogContext = ctx;
         return PopScope(
@@ -124,7 +124,7 @@ class _LoadingOverlayWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.5 : 0.2),
+                color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

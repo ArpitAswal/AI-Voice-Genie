@@ -113,12 +113,12 @@ class VoiceRepositoryImpl implements VoiceRepository {
         pauseFor: AppConstants.silenceTimeout,
         // Listen for long enough to capture complete sentences
         listenFor: const Duration(seconds: AppConstants.maxRecordingSeconds),
-        // Partial results drive the live transcript display
-        partialResults: true,
-        // Use dictation mode for better handling of silence gaps
-        listenMode: stt.ListenMode.dictation,
-        // onDevice recognition is often less aggressive with auto-stopping
-        onDevice: true,
+        // SpeechListenOptions for deprecated properties
+        listenOptions: stt.SpeechListenOptions(
+          partialResults: true,
+          listenMode: stt.ListenMode.dictation,
+          onDevice: true,
+        ),
         // Use localeId matching the current device language
         localeId: 'en_US',
       );

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -69,7 +70,7 @@ class GeminiAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
       final text = _extractTextFromResponse(data);
 
       stopwatch.stop();
@@ -116,7 +117,7 @@ class GeminiAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
 
       // Extract base64 image from Gemini's inline_data format
       final parts = data['candidates']?[0]?['content']?['parts'] as List?;
@@ -192,7 +193,7 @@ class GeminiAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
       final text = _extractTextFromResponse(data);
 
       stopwatch.stop();
@@ -244,7 +245,7 @@ class GeminiAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
       final text = _extractTextFromResponse(data);
 
       stopwatch.stop();
@@ -285,19 +286,26 @@ class GeminiAdapter extends AiProviderAdapter {
   }
 
   /// Parse HTTP response and map to typed AiExceptions.
-  Map<String, dynamic> _parseResponse(
+  Future<Map<String, dynamic>> _parseResponse(
     http.Response response,
     String requestId,
-  ) {
+  ) async {
     debugPrint('🔷 Gemini: ${response.statusCode}');
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      final bodyString = response.body;
+      // Offload heavy JSON parsing to a background isolate.
+      // For large responses (like multiple base64 images), decoding on the
+      // main thread would cause severe UI stuttering and frozen frames.
+      return await Isolate.run(
+          () => jsonDecode(bodyString) as Map<String, dynamic>);
     }
 
     // Gemini uses 400 for invalid API key (not 401)
     if (response.statusCode == 400) {
-      final body = jsonDecode(response.body) as Map<String, dynamic>?;
+      final bodyString = response.body;
+      final body = await Isolate.run(
+          () => jsonDecode(bodyString) as Map<String, dynamic>?);
       final message = body?['error']?['message'] as String? ?? '';
       if (message.toLowerCase().contains('api key')) {
         throw const AiHardErrorException(

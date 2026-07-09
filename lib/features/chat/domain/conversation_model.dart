@@ -19,7 +19,7 @@ class ConversationModel {
   final int messageCount;
 
   /// Which AI capability this conversation used
-  final ConversationCapability capability;
+  final AiCapability capability;
 
   /// Which AI provider sent the last response
   final AiProviderId? lastProvider;
@@ -31,7 +31,7 @@ class ConversationModel {
     this.lastMessageAt,
     this.createdAt,
     this.messageCount = 0,
-    this.capability = ConversationCapability.textChat,
+    this.capability = AiCapability.textGeneration,
     this.lastProvider,
   });
 
@@ -56,9 +56,9 @@ class ConversationModel {
               ?.toDate(),
       messageCount:
           data[FirebaseCollections.fieldConversationMessageCount] as int? ?? 0,
-      capability: ConversationCapability.fromValue(
+      capability: AiCapability.fromId(
         data[FirebaseCollections.fieldConversationCapability] as String? ??
-            'text',
+            'text_generation',
       ),
       lastProvider: data[FirebaseCollections.fieldConversationLastProvider]
               is String
@@ -77,7 +77,7 @@ class ConversationModel {
       FirebaseCollections.fieldConversationTitle: title,
       FirebaseCollections.fieldConversationLastMessage: lastMessage,
       FirebaseCollections.fieldConversationMessageCount: messageCount,
-      FirebaseCollections.fieldConversationCapability: capability.value,
+      FirebaseCollections.fieldConversationCapability: capability.id,
       if (lastProvider != null)
         FirebaseCollections.fieldConversationLastProvider: lastProvider!.id,
     };
@@ -92,7 +92,7 @@ class ConversationModel {
     DateTime? lastMessageAt,
     DateTime? createdAt,
     int? messageCount,
-    ConversationCapability? capability,
+    AiCapability? capability,
     AiProviderId? lastProvider,
   }) {
     return ConversationModel(

@@ -1,11 +1,11 @@
 import 'package:ai_voice_genie/features/auth/presentation/auth_screen.dart';
-import 'package:ai_voice_genie/features/chat_prompt/presentation/chat_screen.dart';
+import 'package:ai_voice_genie/features/chat/presentation/chat_screen.dart';
 import 'package:ai_voice_genie/features/onboarding/presentation/onboarding_screen.dart';
-import 'package:ai_voice_genie/features/profile/presentation/profie_view.dart';
+import 'package:ai_voice_genie/features/profile/presentation/profile_view.dart';
 import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
 import 'package:flutter/material.dart';
 
-import '../../features/chat_prompt/presentation/chat_detail_screen.dart';
+import '../../features/chat/presentation/chat_detail_screen.dart';
 import '../../features/home/presentation/tab_bar_screen.dart';
 import '../../features/key_setup/presentation/key_setup_screen.dart';
 

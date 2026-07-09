@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -64,7 +65,7 @@ class ClaudeAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
       final text = data['content']?[0]?['text'] as String? ?? '';
       final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
           (data['usage']?['output_tokens'] as int? ?? 0);
@@ -139,7 +140,7 @@ class ClaudeAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
       final text = data['content']?[0]?['text'] as String? ?? '';
       final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
           (data['usage']?['output_tokens'] as int? ?? 0);
@@ -189,7 +190,7 @@ class ClaudeAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
       final text = data['content']?[0]?['text'] as String? ?? '';
       final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
           (data['usage']?['output_tokens'] as int? ?? 0);
@@ -229,14 +230,19 @@ class ClaudeAdapter extends AiProviderAdapter {
   }
 
   /// Parse HTTP response and map to typed AiExceptions.
-  Map<String, dynamic> _parseResponse(
+  Future<Map<String, dynamic>> _parseResponse(
     http.Response response,
     String requestId,
-  ) {
+  ) async {
     debugPrint('🟠 Claude: ${response.statusCode}');
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      final bodyString = response.body;
+      // Offload heavy JSON parsing to a background isolate.
+      // For large responses (like multiple base64 images), decoding on the
+      // main thread would cause severe UI stuttering and frozen frames.
+      return await Isolate.run(
+          () => jsonDecode(bodyString) as Map<String, dynamic>);
     }
 
     throw mapHttpErrorToAiException(

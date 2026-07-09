@@ -1,6 +1,6 @@
-import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_input.dart';
-import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_model_selector_dropdown.dart';
-import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/message_bubble.dart';
+import 'package:ai_voice_genie/features/chat/presentation/widgets/chat_input.dart';
+import 'package:ai_voice_genie/features/chat/presentation/widgets/chat_model_selector_dropdown.dart';
+import 'package:ai_voice_genie/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';

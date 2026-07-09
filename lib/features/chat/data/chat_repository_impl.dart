@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'dart:isolate';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
@@ -240,7 +240,8 @@ class ChatRepositoryImpl implements ChatRepository {
         FirebaseCollections.messagesCollection(uid, conversationId),
       );
 
-      // Fetch in pages of 500 (Firestore batch write limit)
+      // Fetch in pages of 500 (Firestore batch write limit).
+      // We loop until there are no documents left in this subcollection.
       const batchLimit = 500;
       QuerySnapshot snapshot;
       do {
@@ -309,9 +310,8 @@ class ChatRepositoryImpl implements ChatRepository {
       // serialization errors (FieldValue.serverTimestamp() is a Firestore
       // sentinel that cannot be JSON-encoded).
       final sortedMessages = _sortChronologically(messages);
-      final encoded = jsonEncode(
-        sortedMessages.map((m) => m.toCacheMap()).toList(),
-      );
+      final cachedList = sortedMessages.map((m) => m.toCacheMap()).toList();
+      final encoded = await Isolate.run(() => jsonEncode(cachedList));
       await _storage.setConversationCache(
         'messages_$conversationId',
         encoded,

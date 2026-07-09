@@ -49,18 +49,19 @@ enum AiCapability {
   imageUnderstanding('image_understanding', 'Image Reading'),
 
   /// Extract text from a PDF and answer questions about it
-  pdfParsing('pdf_parsing', 'PDF Reading'),
-
-  /// Convert speech audio to text
-  speechToText('speech_to_text', 'Voice Input'),
-
-  /// Convert text to spoken audio
-  textToSpeech('text_to_speech', 'Voice Output');
+  pdfParsing('pdf_parsing', 'PDF Reading');
 
   final String id;
   final String displayName;
 
   const AiCapability(this.id, this.displayName);
+
+  static AiCapability fromId(String id) {
+    return AiCapability.values.firstWhere(
+      (e) => e.id == id,
+      orElse: () => AiCapability.textGeneration,
+    );
+  }
 }
 
 /// Roles in a conversation message.
@@ -175,23 +176,6 @@ enum AppFeature {
   const AppFeature(this.analyticsId);
 }
 
-/// Conversation type — determines which feature screen opened it.
-enum ConversationCapability {
-  textChat('text_generate'),
-  imageGeneration('image_generate'),
-  imageReading('image_read'),
-  pdfReader('pdf_reader');
-
-  final String value;
-  const ConversationCapability(this.value);
-
-  static ConversationCapability fromValue(String value) {
-    return ConversationCapability.values.firstWhere(
-      (e) => e.value == value,
-      orElse: () => ConversationCapability.textChat,
-    );
-  }
-}
 
 /// API key validation status — shown in the key management UI.
 enum ApiKeyStatus {

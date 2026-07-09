@@ -84,36 +84,54 @@ class MessageBubble extends StatelessWidget {
           ),
         ),
 
-        // Timestamp + status row
-        Padding(
-          padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                message.timestamp.toTimeString,
-                style: context.textTheme.bodySmall,
-              ),
-              // Sending status indicator for user messages
-              if (_isUser) ...[
-                const SizedBox(width: 4),
-                _StatusIcon(status: message.status),
-              ],
-            ],
-          ),
-        ),
+        // Timestamp + status row displayed underneath the bubble
+        _MessageTimestampRow(message: message),
       ],
     );
   }
 
+  /// Determines if the message has media attached (images or pdf)
+  /// This affects the padding inside the message bubble container.
   bool get _hasMedia =>
       (message.imageUrls != null && message.imageUrls!.isNotEmpty) ||
       message.pdfName != null;
 
+  /// Copies the text content to clipboard and shows a toast
   void _copyToClipboard(BuildContext context) {
     Clipboard.setData(ClipboardData(text: message.content));
     context.showSuccessToast(
       AppLocalizations.of(context)!.translate('copied_to_clipboard'),
+    );
+  }
+}
+
+/// A private widget that renders the timestamp and status icon beneath a message.
+class _MessageTimestampRow extends StatelessWidget {
+  final MessageModel message;
+
+  const _MessageTimestampRow({required this.message});
+
+  bool get _isUser => message.role == MessageRole.user;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Display the localized time string (e.g. 10:42 AM)
+          Text(
+            message.timestamp.toTimeString,
+            style: context.textTheme.bodySmall,
+          ),
+          // For user messages, display a status indicator (sending/delivered/failed)
+          if (_isUser) ...[
+            const SizedBox(width: 4),
+            _StatusIcon(status: message.status),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -147,7 +165,9 @@ class _MessageBubbleContent extends StatelessWidget {
             ),
           );
 
+    // Compile the children based on what attachments the message has.
     final children = <Widget>[
+      // 1. If images are present, render the image grid.
       if (message.imageUrls != null && message.imageUrls!.isNotEmpty)
         // Wrap(
         //   spacing: 8,
@@ -155,11 +175,15 @@ class _MessageBubbleContent extends StatelessWidget {
         //   children: message.imageUrls!.map((url) => _ChatImage(url: url)).toList(),
         // ),
         _ChatImage(images: message.imageUrls!, size: message.imageSize ?? AiImageSize.square),
+      
+      // 2. If a PDF is present, render the PDF card.
       if (message.pdfName != null)
         _PdfAttachmentCard(
           name: message.pdfName!,
           isUser: isUser,
         ),
+      
+      // 3. If there is text, render it below the attachments (with padding if media exists).
       if (textWidget != null) ...[
         if ((message.imageUrls != null && message.imageUrls!.isNotEmpty) ||
             message.pdfName != null)
@@ -168,10 +192,12 @@ class _MessageBubbleContent extends StatelessWidget {
       ],
     ];
 
+    // If there's no media, just return the text widget directly to avoid an extra Column
     if (children.isEmpty) {
       return textWidget ?? const SizedBox.shrink();
     }
 
+    // Wrap the content in a column so attachments sit above the text
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment:
@@ -180,8 +206,10 @@ class _MessageBubbleContent extends StatelessWidget {
     );
   }
 
+  /// Gets the localized error text if the message failed to send, or the raw content.
   String _displayText(BuildContext context) {
     if (message.status == MessageStatus.failed) {
+      // Try to translate the failure reason, fallback to raw message
       return AppLocalizations.of(context)?.translate(message.content) ??
           message.content;
     }
@@ -283,9 +311,6 @@ class _OneImage extends StatelessWidget {
   final AiImageSize size;
   @override
   Widget build(BuildContext context) {
-    final width =
-        MediaQuery.sizeOf(context).width * (context.isTablet ? 0.55 : 0.72);
-
     return AspectRatio(
       aspectRatio: size.aspectRatio,
       child: _buildImage(image),
@@ -304,9 +329,6 @@ class _TwoImages extends StatelessWidget {
     const spacing = 8.0;
 
     final landscape = size == AiImageSize.landscape;
-
-    final width =
-        MediaQuery.sizeOf(context).width * (context.isTablet ? 0.55 : 0.72);
 
     if (landscape) {
       return Column(
@@ -352,8 +374,6 @@ class _ThreeImages extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width =
-        MediaQuery.sizeOf(context).width * (context.isTablet ? 0.55 : 0.72);
     const spacing = 8.0;
 
     return Column(
@@ -393,8 +413,6 @@ class _FourImages extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width =
-        MediaQuery.sizeOf(context).width * (context.isTablet ? 0.55 : 0.72);
     const spacing = 8.0;
 
     return Column(

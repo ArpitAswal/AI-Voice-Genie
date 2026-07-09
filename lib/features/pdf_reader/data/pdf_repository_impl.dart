@@ -1,13 +1,8 @@
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import '../../../../core/constants/app_constants.dart';
-import '../../../../core/enums/app_enums.dart';
-import '../../chat_prompt/data/chat_repository_impl.dart';
-import '../../chat_prompt/domain/chat_repository.dart';
-import '../../chat_prompt/domain/message_model.dart';
 import '../domain/pdf_doc_model.dart';
 import '../domain/pdf_repository.dart';
 
@@ -24,10 +19,7 @@ import '../domain/pdf_repository.dart';
 ///   Reuses ChatRepositoryImpl to create the conversation + messages.
 ///   This avoids duplicating Firestore write logic.
 class PdfRepositoryImpl implements PdfRepository {
-  final ChatRepository _chatRepository;
-
-  PdfRepositoryImpl({ChatRepository? chatRepository})
-      : _chatRepository = chatRepository ?? ChatRepositoryImpl();
+  PdfRepositoryImpl();
 
   // ── File Size Validation ───────────────────────────────────────────────────
 

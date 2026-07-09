@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:ai_voice_genie/features/pdf_reader/domain/pdf_doc_model.dart';
 
-import '../../../core/enums/app_enums.dart';
 
 /// Abstract repository for PDF operations.
 ///

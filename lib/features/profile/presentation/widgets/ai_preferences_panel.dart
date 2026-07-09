@@ -6,10 +6,10 @@ import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/preferences/ai_preferences_provider.dart';
-import '../../../chat_prompt/presentation/widgets/chat_model_selector_dropdown.dart';
-import '../../../chat_prompt/presentation/widgets/image_generate_count.dart';
-import '../../../chat_prompt/presentation/widgets/image_generate_size.dart';
-import '../../../chat_prompt/presentation/widgets/model_image_quality.dart';
+import '../../../chat/presentation/widgets/chat_model_selector_dropdown.dart';
+import '../../../chat/presentation/widgets/image_generate_count.dart';
+import '../../../chat/presentation/widgets/image_generate_size.dart';
+import '../../../chat/presentation/widgets/model_image_quality.dart';
 import 'profile_common_widgets.dart';
 
 class ProfileAiPreferencesPanel extends StatelessWidget {

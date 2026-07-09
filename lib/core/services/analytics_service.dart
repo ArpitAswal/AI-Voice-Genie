@@ -110,11 +110,11 @@ class AnalyticsService {
 
   /// Log when a conversation is started (new conversation created)
   Future<void> logConversationStarted({
-    required ConversationCapability capability,
+    required AiCapability capability,
     required AiProviderId provider,
   }) async {
     await _safeLog(FirebaseCollections.eventConversationStarted, {
-      FirebaseCollections.paramCapability: capability.value,
+      FirebaseCollections.paramCapability: capability.id,
       FirebaseCollections.paramModelUsed: provider.id,
     });
   }

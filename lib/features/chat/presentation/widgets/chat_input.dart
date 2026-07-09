@@ -86,13 +86,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   void initState() {
     super.initState();
+    // Attach this state instance to the controller so parent can command it
     widget.controller?._attach(this);
+    // Listen to text changes to toggle the send button visibility
     _controller.addListener(_handleTextChanged);
   }
 
   @override
   void didUpdateWidget(covariant ChatInputBar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Rebind the controller if the parent widget swapped it during a rebuild
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller?._detach(this);
       widget.controller?._attach(this);
@@ -111,12 +114,15 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   void _handleTextChanged() {
+    // Update the send button state based on whether there's input
     _syncCanSend();
+    // Notify parent to reset idle timers or hide UI overlays when user types
     if (!_isApplyingTemplate && _controller.text.trim().isNotEmpty) {
       widget.onUserInteracted?.call();
     }
   }
 
+  /// Enables the send button if there's text OR an attachment present.
   void _syncCanSend() {
     final canSend = _controller.text.trim().isNotEmpty || _attachment != null;
     if (canSend != _canSend) {
@@ -126,6 +132,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   Future<void> _handleSend() async {
     final prompt = _controller.text.trim();
+    // Validate text prompt limits unless an attachment is providing the context
     final error = _attachment == null
         ? Validators.validatePrompt(prompt, context: context)
         : prompt.length > 10000

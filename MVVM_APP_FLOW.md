@@ -674,13 +674,14 @@ USER types "Explain black holes in simple terms" → taps Send
         → Replace optimistic user message with confirmed (status: delivered, isOptimistic: false)
         → _messages.add(aiMessage)
 
-        STEP 6: Persist to Firestore (non-blocking via EffectBus.safeEffect)
-        → ChatRepositoryImpl.saveMessages(uid, conversationId, [userMessage, aiMessage])
+        STEP 6: Persist to Firestore & Cloudinary (non-blocking via EffectBus.safeEffect)
+        → ChatRepositoryImpl.saveMessagePair()
+            → If AI message contains massive base64 image data:
+                → Uploads to Cloudinary via CloudinaryService.
+                → Replaces base64 payload with secure Cloudinary URL.
             → Firestore batch write:
                 set('messages/{userMsgId}', userMessage.toFirestore())
                 set('messages/{aiMsgId}',   sanitizedAiMessage.toFirestore())
-                  → if response contains generated image data, image payload is stripped
-                    before Firestore write so the document stays under Firestore limits
         → ChatRepositoryImpl.updateConversationMetadata(
               uid, conversationId,
               lastMessage: 'Black holes are regions...',
@@ -690,7 +691,7 @@ USER types "Explain black holes in simple terms" → taps Send
         STEP 7: Update Hive cache (non-blocking via EffectBus.safeEffect)
         → ChatRepositoryImpl.cacheMessages(conversationId, _messages)
             → jsonEncode(messages) → StorageService.setConversationCache('messages_{id}', json)
-            → generated image payloads remain available locally for replay after reopen
+            → The Cloudinary URL is cached locally for fast replay on reopen.
 
         STEP 8: Analytics
         → AnalyticsService.logFeatureUsed(AppFeature.textChat)

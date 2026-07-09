@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -64,7 +65,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
 
       final choices = data['choices'] as List?;
       if (choices == null || choices.isEmpty) {
@@ -116,7 +117,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
 
       // Testing data
       // final Map<String, dynamic> data = {'data': [
@@ -206,7 +207,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         },
       ).timeout(AppConstants.aiRequestTimeout);
 
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
       final choices = data['choices'] as List?;
       if (choices == null || choices.isEmpty) {
         throw const AiTransientException(
@@ -265,7 +266,7 @@ class OpenAiAdapter extends AiProviderAdapter {
           'temperature': 0.3, // Lower temp for factual document Q&A
         },
       ).timeout(AppConstants.aiRequestTimeout);
-      final data = _parseResponse(response, request.requestId);
+      final data = await _parseResponse(response, request.requestId);
       final choices = data['choices'] as List?;
       if (choices == null || choices.isEmpty) {
         throw const AiTransientException(
@@ -313,16 +314,21 @@ class OpenAiAdapter extends AiProviderAdapter {
   }
 
   /// Parse HTTP response and map status codes to typed AiExceptions.
-  Map<String, dynamic> _parseResponse(
+  Future<Map<String, dynamic>> _parseResponse(
     http.Response response,
     String requestId,
-  ) {
+  ) async {
     debugPrint(
       '🤖 OpenAI [${response.request?.url.path}]: ${response.statusCode}',
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+      final bodyString = response.body;
+      // Offload heavy JSON parsing to a background isolate.
+      // For large responses (like multiple base64 images), decoding on the
+      // main thread would cause severe UI stuttering and frozen frames.
+      return await Isolate.run(
+          () => jsonDecode(bodyString) as Map<String, dynamic>);
     }
 
     debugPrint('🤖 OpenAI error body: ${response.body}');

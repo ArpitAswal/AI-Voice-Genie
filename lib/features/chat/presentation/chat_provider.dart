@@ -153,7 +153,7 @@ class ChatProvider extends ChangeNotifier {
     required String uid,
     required String prompt,
     required AiProviderId? selectedProvider,
-    ConversationCapability capability = ConversationCapability.textChat,
+    AiCapability capability = AiCapability.textGeneration,
     ChatAttachment? attachment,
   }) async {
     final trimmedPrompt = prompt.trim();
@@ -164,10 +164,7 @@ class ChatProvider extends ChangeNotifier {
       prompt: trimmedPrompt,
       attachment: attachment,
     );
-    final conversationCapability = _resolveConversationCapability(
-      requestCapability: requestCapability,
-      fallback: capability,
-    );
+    final conversationCapability = requestCapability;
     final effectivePrompt = _effectivePrompt(
       prompt: trimmedPrompt,
       attachment: attachment,
@@ -176,6 +173,8 @@ class ChatProvider extends ChangeNotifier {
         selectedProvider == null ? const <AiProviderId>[] : [selectedProvider];
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
+    // We add the user message to the UI instantly so the app feels responsive.
+    // If the request later fails, this optimistic message will be marked as failed.
     final userMessage = MessageModel.userMessage(
       trimmedPrompt,
       validProviders: selectedProviders,
@@ -187,7 +186,7 @@ class ChatProvider extends ChangeNotifier {
       imageCount: attachment?.isImage == true ? preferredImageCount : null,
     );
     _messages.add(userMessage);
-    _isGenerating = true;
+    _isGenerating = true; // Shows the typing indicator in the UI
     notifyListeners();
 
     // ── Step 2: Create conversation if this is the first message ──────────────
@@ -200,7 +199,7 @@ class ChatProvider extends ChangeNotifier {
         final conversationId = const Uuid().v4();
         newConversation = ConversationModel(
           id: conversationId,
-          title: '', // Empty initially to show shimmer
+          title: '', // Empty initially to show shimmer until AI generates a real title
           lastMessage: _conversationPreview(effectivePrompt, attachment),
           capability: conversationCapability,
           lastProvider: selectedProvider,
@@ -211,10 +210,11 @@ class ChatProvider extends ChangeNotifier {
           provider: selectedProvider ?? AiProviderId.openAi,
         ));
       } catch (e) {
-        // Conversation creation failed — roll back and show error
+        // Conversation creation failed — roll back optimistic state and show error
         _isGenerating = false;
         _errorMessage = 'something_went_wrong';
         notifyListeners();
+        return;
       }
     }
 
@@ -225,7 +225,7 @@ class ChatProvider extends ChangeNotifier {
 
     // ── Step 4: Execute via orchestrator ─────────────────────────────────────
     try {
-      // Replace optimistic user message with confirmed version
+      // Replace optimistic user message with confirmed version so it persists correctly
       final optimisticIndex =
           _messages.indexWhere((m) => m.id == userMessage.id);
       if (optimisticIndex != -1) {
@@ -235,6 +235,7 @@ class ChatProvider extends ChangeNotifier {
         );
       }
 
+      // Generate a title synchronously (if new chat) while the AI request processes
       if (isNewConversation) {
         final actualTitle = effectivePrompt.generateConversationTitle();
         _activeConversation = _activeConversation!.copyWith(title: actualTitle);
@@ -453,23 +454,7 @@ class ChatProvider extends ChangeNotifier {
     return AiCapability.textGeneration;
   }
 
-  ConversationCapability _resolveConversationCapability({
-    required AiCapability requestCapability,
-    required ConversationCapability fallback,
-  }) {
-    switch (requestCapability) {
-      case AiCapability.imageGeneration:
-        return ConversationCapability.imageGeneration;
-      case AiCapability.imageUnderstanding:
-        return ConversationCapability.imageReading;
-      case AiCapability.pdfParsing:
-        return ConversationCapability.pdfReader;
-      case AiCapability.textGeneration:
-      case AiCapability.speechToText:
-      case AiCapability.textToSpeech:
-        return fallback;
-    }
-  }
+
 
   MessageContentType _userContentTypeFor(ChatAttachment? attachment) {
     if (attachment?.isImage == true) return MessageContentType.imageUrl;

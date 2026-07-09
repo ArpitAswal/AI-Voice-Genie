@@ -1,5 +1,5 @@
-import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_input.dart';
-import 'package:ai_voice_genie/features/chat_prompt/presentation/widgets/chat_model_selector_dropdown.dart';
+import 'package:ai_voice_genie/features/chat/presentation/widgets/chat_input.dart';
+import 'package:ai_voice_genie/features/chat/presentation/widgets/chat_model_selector_dropdown.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:ai_voice_genie/shared/widgets/image_view.dart';
 import 'package:flutter/material.dart';
@@ -67,7 +67,7 @@ class _ChatScreenState extends State<ChatScreen> {
       uid: uid,
       prompt: prompt,
       selectedProvider: selectedProvider,
-      capability: ConversationCapability.textChat,
+      capability: AiCapability.textGeneration,
       attachment: attachment,
     );
 
