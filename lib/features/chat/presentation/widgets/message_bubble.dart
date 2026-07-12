@@ -573,13 +573,9 @@ class _StatusIcon extends StatelessWidget {
 // =============================================================================
 
 class TypingIndicator extends StatefulWidget {
-  final AiProviderId? provider;
-  final bool isTablet;
 
   const TypingIndicator({
     super.key,
-    this.provider,
-    required this.isTablet,
   });
 
   @override
@@ -612,8 +608,8 @@ class _TypingIndicatorState extends State<TypingIndicator>
       children: [
         Container(
           padding: EdgeInsets.symmetric(
-            horizontal: widget.isTablet ? 18 : 14,
-            vertical: widget.isTablet ? 14 : 10,
+            horizontal: context.isTablet ? 18 : 14,
+            vertical: context.isTablet ? 14 : 10,
           ),
           decoration: BoxDecoration(
             color: context.isDark
@@ -639,7 +635,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
               (index) => _AnimatedDot(
                 controller: _controller,
                 delay: index * 0.2,
-                isTablet: widget.isTablet,
+                isTablet: context.isTablet,
               ),
             ),
           ),

@@ -195,7 +195,7 @@ class ChatProvider extends ChangeNotifier {
     );
 
     _messages.add(userMessage);
-    // _isGenerating = true; // Shows the typing indicator in the UI
+    _isGenerating = true; // Shows the typing indicator in the UI
     notifyListeners();
 
     // Replace optimistic user message with confirmed version so it persists correctly
@@ -221,7 +221,7 @@ class ChatProvider extends ChangeNotifier {
         _activeConversation = newConversation;
       } catch (e) {
         // Conversation creation failed — roll back optimistic state and show error
-        // _isGenerating = false;
+        _isGenerating = false;
 
         if (optimisticIndex != -1) {
           _messages[optimisticIndex] = userMessage.copyWith(
@@ -247,6 +247,7 @@ class ChatProvider extends ChangeNotifier {
           status: MessageStatus.delivered,
           isOptimistic: false,
         );
+        notifyListeners();
       }
 
       final aiResponse = await _orchestrator.execute(

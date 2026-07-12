@@ -131,6 +131,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   Future<void> _handleSend() async {
+    _focusNode.unfocus();
     final prompt = _controller.text.trim();
     // Validate text prompt limits unless an attachment is providing the context
     final error = _attachments.isEmpty

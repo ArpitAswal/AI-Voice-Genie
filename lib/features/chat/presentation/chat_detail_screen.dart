@@ -50,19 +50,23 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   ChatProvider? _chatProvider;
+  int _lastMessageCount = 0;
+  bool _wasGenerating = false;
 
   @override
   void initState() {
     super.initState();
 
     _chatProvider = context.read<ChatProvider>();
+    _lastMessageCount = _chatProvider!.messages.length;
+    _wasGenerating = _chatProvider!.isGenerating;
+
     if (_chatProvider!.messages.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _scrollToBottom();
+        if (mounted) _scrollToBottom(animated: false);
       });
-    } else {
-      _chatProvider!.addListener(_onChatProviderChange);
     }
+    _chatProvider!.addListener(_onChatProviderChange);
 
     if (widget.initialTitle != null) {
       _loadConversation();
@@ -70,10 +74,26 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _onChatProviderChange() {
-    if (_chatProvider != null && _chatProvider!.messages.isNotEmpty) {
-      _chatProvider!.removeListener(_onChatProviderChange);
+    if (_chatProvider == null || !mounted) return;
+
+    final currentMessageCount = _chatProvider!.messages.length;
+    final currentGenerating = _chatProvider!.isGenerating;
+
+    bool shouldScroll = false;
+
+    if (currentMessageCount > _lastMessageCount) {
+      shouldScroll = true;
+    }
+    if (currentGenerating && !_wasGenerating) {
+      shouldScroll = true;
+    }
+
+    _lastMessageCount = currentMessageCount;
+    _wasGenerating = currentGenerating;
+
+    if (shouldScroll) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _scrollToBottom();
+        if (mounted) _scrollToBottom(animated: true);
       });
     }
   }
@@ -91,7 +111,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   /// Scroll to the bottom of the message list
-  void _scrollToBottom() async {
+  void _scrollToBottom({bool animated = true}) async {
     if (!_scrollController.hasClients) return;
 
     // Short delay gives the layout engine time to fully calculate
@@ -99,22 +119,40 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     await Future.delayed(const Duration(milliseconds: 150));
     if (!mounted || !_scrollController.hasClients) return;
 
-    _doScroll(isFirst: true);
+    _doScroll(animated: animated);
   }
 
-  void _doScroll({required bool isFirst}) {
+  void _doScroll({required bool animated}) {
     if (!mounted || !_scrollController.hasClients) return;
 
     final target = _scrollController.position.maxScrollExtent;
+    final offset = _scrollController.offset;
+    final distance = target - offset;
+
     // Keep scrolling if we are not at the very bottom
-    if (target - _scrollController.offset <= 10.0) return;
+    if (distance <= 10.0) return;
+
+    // If we have to travel a huge distance (e.g., initial load of a large chat),
+    // jump instantly to avoid rendering hundreds of items and freezing the main thread.
+    if (!animated || distance > 2000) {
+      _scrollController.jumpTo(target);
+      // After jumping, maxScrollExtent might increase because new items were lazily built.
+      // Schedule a trailing jump.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          if (_scrollController.position.maxScrollExtent >
+              _scrollController.offset + 10.0) {
+            _doScroll(animated: false);
+          }
+        }
+      });
+      return;
+    }
 
     _scrollController
         .animateTo(
       target,
-      // Maintain the 900ms duration for the main scroll,
-      // but use snappier 300ms if trailing scrolls are needed
-      duration: Duration(milliseconds: isFirst ? 900 : 300),
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     )
         .then((_) {
@@ -123,7 +161,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         // We catch this change and run a trailing scroll if needed.
         if (_scrollController.position.maxScrollExtent >
             _scrollController.offset + 10.0) {
-          _doScroll(isFirst: false);
+          _doScroll(animated: true);
         }
       }
     });
@@ -148,11 +186,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           attachments: attachments,
         );
 
-    // Show error if any
+    // Error handling
     if (!mounted) return;
-
-    // Scroll to bottom after response
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
     final error = context.read<ChatProvider>().errorMessage;
     if (error != null) {
@@ -350,11 +385,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             );
           }
 
-          if (chatProvider.isGenerating) {
-            WidgetsBinding.instance
-                .addPostFrameCallback((_) => _scrollToBottom());
-          }
-
           return ListView.builder(
             controller: _scrollController,
             padding: EdgeInsets.symmetric(
@@ -385,10 +415,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               // Typing indicator at bottom
               if (adjustedIndex == messages.length &&
                   chatProvider.isGenerating) {
-                return TypingIndicator(
-                  provider: chatProvider.activeConversation?.lastProvider,
-                  isTablet: isTablet,
-                );
+                return const TypingIndicator();
               }
 
               if (adjustedIndex < 0 || adjustedIndex >= messages.length) {
