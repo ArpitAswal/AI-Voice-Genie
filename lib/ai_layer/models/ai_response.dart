@@ -66,6 +66,9 @@ class AiResponse {
   /// Approximate token count used in this response (from provider metadata)
   final int tokenCount;
 
+  /// Why the model stopped generating (e.g., 'stop', 'length', 'content_filter')
+  final String? finishReason;
+
   const AiResponse({
     required this.modelUsed,
     required this.capability,
@@ -77,6 +80,7 @@ class AiResponse {
     this.imageBase64,
     this.generatedImages,
     this.tokenCount = 0,
+    this.finishReason,
   });
 
   // ── Named Constructors ─────────────────────────────────────────────────────
@@ -89,6 +93,7 @@ class AiResponse {
     required int responseTimeMs,
     required String text,
     int tokenCount = 0,
+    String? finishReason,
   }) {
     return AiResponse(
       modelUsed: modelUsed,
@@ -98,12 +103,14 @@ class AiResponse {
       responseTimeMs: responseTimeMs,
       text: text,
       tokenCount: tokenCount,
+      finishReason: finishReason,
     );
   }
 
   /// Create an image URL response (imageGeneration)
   factory AiResponse.imageUrl({
     required AiProviderId modelUsed,
+    required AiCapability capability,
     required String requestId,
     required int responseTimeMs,
     required String imageUrl,

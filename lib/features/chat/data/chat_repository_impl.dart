@@ -68,7 +68,7 @@ class ChatRepositoryImpl implements ChatRepository {
         final updatedModel = conversationModel.copyWith(
           lastMessage: effectiveLastMessage,
           lastMessageAt: effectiveLastMessageAt,
-          lastProvider: aiMessage.modelUsed,
+          lastProvider: aiMessage.modelRequest,
         );
 
         batch.set(convRef, {
@@ -89,7 +89,7 @@ class ChatRepositoryImpl implements ChatRepository {
           FirebaseCollections.fieldConversationLastMessageAt:
               effectiveLastMessageAt,
           FirebaseCollections.fieldConversationLastProvider:
-          aiMessage.modelUsed?.id,
+              aiMessage.modelRequest?.id,
         });
       }
 
@@ -159,15 +159,12 @@ class ChatRepositoryImpl implements ChatRepository {
         if (cached == null) return message;
 
         return message.copyWith(
-          content:
-              message.content.isNotEmpty ? message.content : cached.content,
-          contentType: message.contentType,
-          imageUrls: message.imageUrls ?? cached.imageUrls,
-          pdfName: message.pdfName ?? cached.pdfName,
-          validProviders: message.validProviders.isNotEmpty
-              ? message.validProviders
-              : cached.validProviders,
-        );
+            content:
+                message.content.isNotEmpty ? message.content : cached.content,
+            contentType: message.contentType,
+            imageUrls: message.imageUrls ?? cached.imageUrls,
+            pdfPaths: message.pdfPaths ?? cached.pdfPaths,
+            pdfName: message.pdfName ?? cached.pdfName);
       }).toList();
 
       final missingCachedMessages = cachedMessages

@@ -12,7 +12,6 @@ class ChatAttachment {
   final String? path;
   final String? mimeType;
   final int? fileSizeBytes;
-  final String? extractedText;
 
   const ChatAttachment({
     required this.type,
@@ -21,7 +20,6 @@ class ChatAttachment {
     this.path,
     this.mimeType,
     this.fileSizeBytes,
-    this.extractedText,
   });
 
   bool get isImage => type == ChatAttachmentType.image;

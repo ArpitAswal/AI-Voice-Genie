@@ -13,6 +13,10 @@ class AiPreferencesProvider extends ChangeNotifier {
     _preferredProvider = _service.preferredProvider;
     _preferredImageQuality = _service.preferredImageQuality;
     _preferredImageSize = _service.preferredImageSize;
+    _preferredVisionImageCount = _service.preferredVisionImageCount;
+    _preferredVisionPdfCount = _service.preferredVisionPdfCount;
+    _preferredVisionDetailLevel = _service.preferredVisionDetailLevel;
+    _preferredResponseLength = _service.preferredResponseLength;
     _preferredImageCount = _service.preferredImageCount;
   }
 
@@ -27,6 +31,17 @@ class AiPreferencesProvider extends ChangeNotifier {
   ImageQuality get preferredImageQuality => _preferredImageQuality;
   AiImageSize get preferredImageSize => _preferredImageSize;
   int get preferredImageCount => _preferredImageCount;
+
+  int _preferredVisionImageCount = 1;
+  int _preferredVisionPdfCount = 1;
+  VisionDetailLevel _preferredVisionDetailLevel = VisionDetailLevel.auto;
+  ResponseLength _preferredResponseLength = ResponseLength.balanced;
+
+  int get preferredVisionImageCount => _preferredVisionImageCount;
+  int get preferredVisionPdfCount => _preferredVisionPdfCount;
+  VisionDetailLevel get preferredVisionDetailLevel => _preferredVisionDetailLevel;
+  ResponseLength get preferredResponseLength => _preferredResponseLength;
+
 
   Future<void> setPreferredProvider(AiProviderId provider) async {
     if (_preferredProvider == provider) return;
@@ -46,6 +61,36 @@ class AiPreferencesProvider extends ChangeNotifier {
     if (_preferredImageSize == imageSize) return;
     _preferredImageSize = imageSize;
     await _service.setPreferredImageSize(imageSize);
+    notifyListeners();
+  }
+
+  Future<void> setPreferredVisionImageCount(int count) async {
+    final clamped = count.clamp(1, 4).toInt();
+    if (_preferredVisionImageCount == clamped) return;
+    _preferredVisionImageCount = clamped;
+    await _service.setPreferredVisionImageCount(clamped);
+    notifyListeners();
+  }
+
+  Future<void> setPreferredVisionPdfCount(int count) async {
+    final clamped = count.clamp(1, 4).toInt();
+    if (_preferredVisionPdfCount == clamped) return;
+    _preferredVisionPdfCount = clamped;
+    await _service.setPreferredVisionPdfCount(clamped);
+    notifyListeners();
+  }
+
+  Future<void> setPreferredVisionDetailLevel(VisionDetailLevel level) async {
+    if (_preferredVisionDetailLevel == level) return;
+    _preferredVisionDetailLevel = level;
+    await _service.setPreferredVisionDetailLevel(level);
+    notifyListeners();
+  }
+
+  Future<void> setPreferredResponseLength(ResponseLength length) async {
+    if (_preferredResponseLength == length) return;
+    _preferredResponseLength = length;
+    await _service.setPreferredResponseLength(length);
     notifyListeners();
   }
 

@@ -102,7 +102,7 @@ class ClaudeAdapter extends AiProviderAdapter {
     );
   }
 
-  // ── Image Understanding ────────────────────────────────────────────────────
+  // ── Image Understanding (Vision) ─────────────────────────────────────────
 
   @override
   Future<AiResponse> analyzeImage({
@@ -111,11 +111,39 @@ class ClaudeAdapter extends AiProviderAdapter {
   }) async {
     final stopwatch = Stopwatch()..start();
 
-    final base64Image = base64Encode(request.imageBytes ?? []);
-    final mimeType = request.imageMimeType ?? 'image/jpeg';
-
     try {
-      // Claude's multimodal format uses content blocks within a message
+      // Claude's multimodal format uses content blocks within a message.
+      // Build the content array:
+      final List<Map<String, dynamic>> contentParts = [];
+
+      if (request.imageBytes != null) {
+        // Preferred path: multi-image support
+        for (final att in request.imageBytes!) {
+          contentParts.add({
+            'type': 'image',
+            'source': {
+              'type': 'base64',
+              'media_type': request.imageMimeType,
+              'data': base64Encode(att),
+            },
+          });
+        }
+      } else if (request.imageBytes != null && request.imageBytes!.isNotEmpty) {
+        // Legacy single-image fallback
+        final mimeType = request.imageMimeType ?? 'image/jpeg';
+        contentParts.add({
+          'type': 'image',
+          'source': {
+            'type': 'base64',
+            'media_type': mimeType,
+            'data': base64Encode(request.imageBytes!.first),
+          },
+        });
+      }
+
+      // Add the user's text prompt
+      contentParts.add({'type': 'text', 'text': request.prompt});
+
       final response = await _post(
         apiKey: apiKey,
         body: {
@@ -124,17 +152,7 @@ class ClaudeAdapter extends AiProviderAdapter {
           'messages': [
             {
               'role': 'user',
-              'content': [
-                {
-                  'type': 'image',
-                  'source': {
-                    'type': 'base64',
-                    'media_type': mimeType,
-                    'data': base64Image,
-                  },
-                },
-                {'type': 'text', 'text': request.prompt},
-              ],
+              'content': contentParts,
             },
           ],
         },
@@ -170,24 +188,36 @@ class ClaudeAdapter extends AiProviderAdapter {
   }) async {
     final stopwatch = Stopwatch()..start();
 
-    final systemPrompt = 'You are a document analysis assistant. '
-        'The following is extracted text from a PDF titled '
-        '"${request.pdfFileName ?? "document"}".\n\n'
-        'Document content:\n\n${request.pdfText ?? ""}\n\n'
-        'Answer questions based only on the document content above. '
-        'Be precise and cite relevant sections when possible.';
-
     try {
+      final List<Map<String, dynamic>> contentParts = [];
+
+      // 1. Native PDF support via document blocks
+      if (request.pdfBytes != null && request.pdfBytes!.isNotEmpty) {
+        for (final b64 in request.pdfBytes!) {
+          contentParts.add({
+            'type': 'document',
+            'source': {
+              'type': 'base64',
+              'media_type': 'application/pdf',
+              'data': base64Encode(b64),
+            },
+          });
+        }
+      }
+      contentParts.add({'type': 'text', 'text': request.prompt});
+
+      final body = <String, dynamic>{
+        'model': AppConstants
+            .claudeVisionModel, // 3.5 Sonnet supports vision and PDFs
+        'max_tokens': 2048,
+        'messages': [
+          {'role': 'user', 'content': contentParts},
+        ],
+      };
+
       final response = await _post(
         apiKey: apiKey,
-        body: {
-          'model': AppConstants.claudeTextModel,
-          'max_tokens': 2048,
-          'system': systemPrompt,
-          'messages': [
-            {'role': 'user', 'content': request.prompt},
-          ],
-        },
+        body: body,
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = await _parseResponse(response, request.requestId);

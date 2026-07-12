@@ -62,6 +62,13 @@ enum AiCapability {
       orElse: () => AiCapability.textGeneration,
     );
   }
+
+  static AiCapability fromValue(String value) {
+    return AiCapability.values.firstWhere(
+      (e) => e.id == value || e.displayName == value,
+      orElse: () => AiCapability.textGeneration,
+    );
+  }
 }
 
 /// Roles in a conversation message.
@@ -325,4 +332,66 @@ enum AiResponseContentType {
 
   /// Base64-encoded image data
   imageBase64,
+}
+
+/// Vision detail level for OpenAI image analysis requests.
+///
+/// Controls the resolution the model uses when analysing each image:
+///   auto → model picks low or high based on input size (cheapest + smartest)
+///   low  → always use low-res 512×512 tile (faster, cheaper, less accurate)
+///   high → use high-res tiles (slower, more expensive, better for fine detail)
+///
+/// Maps directly to the `detail` field in OpenAI's image_url content block.
+enum VisionDetailLevel {
+  /// Let the model decide — best default for general use
+  auto('auto', 'Auto'),
+
+  /// Force low-res 512×512 analysis — fastest and cheapest
+  low('low', 'Low'),
+
+  /// Force high-res tiling — best for fine details, text in images
+  high('high', 'High');
+
+  /// API value sent to OpenAI in the `detail` field
+  final String apiValue;
+
+  /// Human-readable label for the UI
+  final String displayName;
+
+  const VisionDetailLevel(this.apiValue, this.displayName);
+
+  static VisionDetailLevel fromValue(String value) {
+    return VisionDetailLevel.values.firstWhere(
+      (e) => e.apiValue == value,
+      orElse: () => VisionDetailLevel.auto,
+    );
+  }
+}
+
+/// Represents the user's preferred AI response length (max output tokens).
+enum ResponseLength {
+  short(250, 'Short', 'Good for quick and simple answers.'),
+  balanced(1000, 'Balanced', 'Best for standard conversations and general-purpose chat.'),
+  detailed(2048, 'Detailed', 'Best for long-form content, analyzing documents or generating code.'),
+  maximum(4096, 'Maximum', 'Ideal for extensive research articles or generating large code files.');
+
+  final int maxTokens;
+  final String displayName;
+  final String description;
+
+  const ResponseLength(this.maxTokens, this.displayName, this.description);
+
+  static ResponseLength fromValue(int value) {
+    return ResponseLength.values.firstWhere(
+      (e) => e.maxTokens == value,
+      orElse: () => ResponseLength.balanced,
+    );
+  }
+
+  static ResponseLength fromName(String name) {
+    return ResponseLength.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => ResponseLength.balanced,
+    );
+  }
 }

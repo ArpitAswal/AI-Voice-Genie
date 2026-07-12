@@ -137,6 +137,7 @@ class FirebaseCollections {
   static const String fieldMessageImageUrl = 'imageUrl';
   static const String fieldMessageLocalImageKey = 'localImageKey';
   static const String fieldMessagePdfName = 'pdfName';
+  static const String fieldMessagePdfPaths = 'pdfPaths';
   static const String fieldMessageValidProviders = 'validProviders';
 
   // ── Analytics Event Names ─────────────────────────────────────────────────

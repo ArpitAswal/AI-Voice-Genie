@@ -47,7 +47,8 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  Future<void> _handleSend(String prompt, ChatAttachment? attachment) async {
+  Future<void> _handleSend(
+      String prompt, List<ChatAttachment> attachments) async {
     _hideSuggestions();
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
@@ -68,7 +69,7 @@ class _ChatScreenState extends State<ChatScreen> {
       prompt: prompt,
       selectedProvider: selectedProvider,
       capability: AiCapability.textGeneration,
-      attachment: attachment,
+      attachments: attachments,
     );
 
     if (!mounted) return;
@@ -241,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
     ));
   }
 
-  AiProviderId? _currentSelectedProvider(
+  AiProviderId _currentSelectedProvider(
     List<AiProviderId> validProviders,
     AiProviderId preferredProvider,
   ) {
@@ -249,7 +250,8 @@ class _ChatScreenState extends State<ChatScreen> {
       availableProviders: validProviders,
       selectedProvider: preferredProvider,
       preferredProvider: preferredProvider,
-    );
+    ) ??
+        preferredProvider;
   }
 }
 

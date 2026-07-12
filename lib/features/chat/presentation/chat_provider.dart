@@ -12,7 +12,6 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/error/ai_exception.dart';
 import '../../../core/services/ai_preferences_service.dart';
 import '../../../core/services/cloudinary_service.dart';
-import '../../../core/services/analytics_service.dart';
 import '../data/chat_repository_impl.dart';
 import '../domain/chat_attachment.dart';
 import '../domain/chat_repository.dart';
@@ -43,17 +42,14 @@ import '../domain/message_model.dart';
 class ChatProvider extends ChangeNotifier {
   final ChatRepository _repository;
   final AiOrchestrator _orchestrator;
-  final AnalyticsService _analytics;
   final AiPreferencesService _preferences;
 
   ChatProvider({
     ChatRepository? repository,
     AiOrchestrator? orchestrator,
-    AnalyticsService? analytics,
     AiPreferencesService? preferences,
   })  : _repository = repository ?? ChatRepositoryImpl(),
         _orchestrator = orchestrator ?? AiOrchestrator.instance,
-        _analytics = analytics ?? AnalyticsService.instance,
         _preferences = preferences ?? AiPreferencesService.instance;
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -76,6 +72,8 @@ class ChatProvider extends ChangeNotifier {
   AiImageSize get preferredImageSize => _preferences.preferredImageSize;
   ImageQuality get preferredImageQuality => _preferences.preferredImageQuality;
   int get preferredImageCount => _preferences.preferredImageCount;
+  ResponseLength get preferredResponseLength =>
+      _preferences.preferredResponseLength;
 
   // ── Load Conversation ──────────────────────────────────────────────────────
 
@@ -152,42 +150,56 @@ class ChatProvider extends ChangeNotifier {
   Future<void> sendMessage({
     required String uid,
     required String prompt,
-    required AiProviderId? selectedProvider,
+    required AiProviderId selectedProvider,
     AiCapability capability = AiCapability.textGeneration,
-    ChatAttachment? attachment,
+    List<ChatAttachment> attachments = const [],
   }) async {
     final trimmedPrompt = prompt.trim();
-    if (trimmedPrompt.isEmpty && attachment == null) return;
+    if (trimmedPrompt.isEmpty && attachments.isEmpty) return;
 
     _errorMessage = null;
     final requestCapability = _resolveRequestCapability(
       prompt: trimmedPrompt,
-      attachment: attachment,
+      attachments: attachments,
     );
-    final conversationCapability = requestCapability;
     final effectivePrompt = _effectivePrompt(
       prompt: trimmedPrompt,
-      attachment: attachment,
+      capability: requestCapability,
     );
-    final selectedProviders =
-        selectedProvider == null ? const <AiProviderId>[] : [selectedProvider];
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
     // We add the user message to the UI instantly so the app feels responsive.
     // If the request later fails, this optimistic message will be marked as failed.
     final userMessage = MessageModel.userMessage(
-      trimmedPrompt,
-      validProviders: selectedProviders,
-      contentType: _userContentTypeFor(attachment),
-      imageUrls: attachment?.isImage == true ? [attachment!.path!] : null,
-      pdfName: attachment?.isPdf == true ? attachment!.name : null,
-      imageSize: attachment?.isImage == true ? preferredImageSize : null,
-      imageQuality: attachment?.isImage == true ? preferredImageQuality : null,
-      imageCount: attachment?.isImage == true ? preferredImageCount : null,
+      effectivePrompt,
+      selectedProvider,
+      contentType: requestCapability,
+      imagePaths: attachments.isNotEmpty && attachments.first.isImage == true
+          ? attachments.map((e) => e.path!).toList()
+          : null,
+      pdfPaths: attachments.isNotEmpty && attachments.first.isPdf
+          ? attachments.map((e) => e.path!).toList()
+          : null,
+      pdfName: attachments.isNotEmpty && attachments.first.isPdf
+          ? attachments.map((e) => e.name).toList()
+          : null,
+      imageSize: (requestCapability == AiCapability.imageGeneration)
+          ? preferredImageSize
+          : null,
+      imageQuality: (requestCapability == AiCapability.imageGeneration)
+          ? preferredImageQuality
+          : null,
+      imageCount: (requestCapability == AiCapability.imageGeneration)
+          ? preferredImageCount
+          : null,
     );
+
     _messages.add(userMessage);
-    _isGenerating = true; // Shows the typing indicator in the UI
+    // _isGenerating = true; // Shows the typing indicator in the UI
     notifyListeners();
+
+    // Replace optimistic user message with confirmed version so it persists correctly
+    final optimisticIndex = _messages.indexWhere((m) => m.id == userMessage.id);
 
     // ── Step 2: Create conversation if this is the first message ──────────────
     final isNewConversation = _activeConversation == null;
@@ -197,21 +209,26 @@ class ChatProvider extends ChangeNotifier {
         // Build the conversation model in memory — written to Firestore
         // together with the first message pair in one batch (Step 6)
         final conversationId = const Uuid().v4();
+        final actualTitle = effectivePrompt.generateConversationTitle();
+
         newConversation = ConversationModel(
           id: conversationId,
-          title: '', // Empty initially to show shimmer until AI generates a real title
-          lastMessage: _conversationPreview(effectivePrompt, attachment),
-          capability: conversationCapability,
+          title: actualTitle,
+          lastMessage: _conversationPreview(effectivePrompt, attachments),
+          capability: requestCapability,
           lastProvider: selectedProvider,
         );
         _activeConversation = newConversation;
-        unawaited(_analytics.logConversationStarted(
-          capability: conversationCapability,
-          provider: selectedProvider ?? AiProviderId.openAi,
-        ));
       } catch (e) {
         // Conversation creation failed — roll back optimistic state and show error
-        _isGenerating = false;
+        // _isGenerating = false;
+
+        if (optimisticIndex != -1) {
+          _messages[optimisticIndex] = userMessage.copyWith(
+            status: MessageStatus.failed,
+            isOptimistic: false,
+          );
+        }
         _errorMessage = 'something_went_wrong';
         notifyListeners();
         return;
@@ -225,20 +242,11 @@ class ChatProvider extends ChangeNotifier {
 
     // ── Step 4: Execute via orchestrator ─────────────────────────────────────
     try {
-      // Replace optimistic user message with confirmed version so it persists correctly
-      final optimisticIndex =
-          _messages.indexWhere((m) => m.id == userMessage.id);
       if (optimisticIndex != -1) {
         _messages[optimisticIndex] = userMessage.copyWith(
           status: MessageStatus.delivered,
           isOptimistic: false,
         );
-      }
-
-      // Generate a title synchronously (if new chat) while the AI request processes
-      if (isNewConversation) {
-        final actualTitle = effectivePrompt.generateConversationTitle();
-        _activeConversation = _activeConversation!.copyWith(title: actualTitle);
       }
 
       final aiResponse = await _orchestrator.execute(
@@ -247,12 +255,28 @@ class ChatProvider extends ChangeNotifier {
           uid: uid,
           prompt: effectivePrompt,
           conversationHistory: history,
-          imageBytes: attachment?.isImage == true ? attachment!.bytes : null,
-          imageSize: preferredImageSize,
-          imageQuality: preferredImageQuality,
-          imageCount: preferredImageCount,
-          pdfText: attachment?.isPdf == true ? attachment!.extractedText : null,
-          pdfFileName: attachment?.isPdf == true ? attachment!.name : null,
+          responseLength: preferredResponseLength,
+          imageSize: (requestCapability == AiCapability.imageGeneration)
+              ? preferredImageSize
+              : null,
+          imageQuality: (requestCapability == AiCapability.imageGeneration)
+              ? preferredImageQuality
+              : null,
+          imageCount: (requestCapability == AiCapability.imageGeneration)
+              ? preferredImageCount
+              : null,
+          imageBytes:
+              attachments.isNotEmpty && attachments.first.isImage == true
+                  ? attachments.map((e) => e.bytes).toList()
+                  : null,
+          imageMimeType:
+              attachments.isNotEmpty ? attachments.first.mimeType : null,
+          pdfBytes: attachments.isNotEmpty && attachments.first.isPdf == true
+              ? attachments.map((e) => (e.bytes)).toList()
+              : null,
+          pdfNames: attachments.isNotEmpty && attachments.first.isPdf == true
+              ? attachments.map((e) => e.name).toList()
+              : null,
         ),
         selectedProvider: selectedProvider,
       );
@@ -262,25 +286,26 @@ class ChatProvider extends ChangeNotifier {
       if (aiResponse.contentType == AiResponseContentType.imageBase64 &&
           aiResponse.generatedImages != null &&
           aiResponse.generatedImages!.isNotEmpty) {
-        
-        final futures = aiResponse.generatedImages!
-            .where((img) => img.b64Json != null && img.b64Json!.isNotEmpty)
-            .map((img) => CloudinaryService.instance.uploadBase64Image(img.b64Json!));
+        // final futures = aiResponse.generatedImages!
+        //     .where((img) => img.b64Json != null && img.b64Json!.isNotEmpty)
+        //     .map((img) =>
+        //         CloudinaryService.instance.uploadBase64Image(img.b64Json!));
 
         // Testing with local images
-        // List<String> imageUrls  = [
-        //   "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-        //   "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-        //   "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-        // ];
-        // final futures =  imageUrls.map((img) => Future.value(img));
-            
+        List<String> imageUrls  = [
+          "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+          "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+          "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+        ];
+        final futures =  imageUrls.map((img) => Future.value(img));
+
         final results = await Future.wait(futures);
         uploadedUrls = results.whereType<String>().toList();
       }
 
       // ── Step 5: Build AI response message ──────────────────────────────────
-      aiMessage = _buildAiMessage(aiResponse, attachment: attachment, uploadedUrls: uploadedUrls);
+      aiMessage = _buildAiMessage(aiResponse,
+          attachments: attachments, uploadedUrls: uploadedUrls);
 
       // Step 6 to 8 follow in finally, because whether the response is success or fail it has to store.
     } on AiExhaustedException catch (e) {
@@ -318,7 +343,7 @@ class ChatProvider extends ChangeNotifier {
         await _repository.saveMessagePair(
           uid: uid,
           conversationId: conversationId,
-          userMessage: userMessage,
+          userMessage: userMessage.copyWith(status: MessageStatus.delivered),
           aiMessage: messageToPersist,
           isFirstMessage: isNewConversation,
           conversationModel: isNewConversation ? conversationToPersist : null,
@@ -326,7 +351,7 @@ class ChatProvider extends ChangeNotifier {
 
         // ── Step 7: Update UI with AI response ──────────────────────────────
         _messages.add(messageToPersist);
-        
+
         // ── Step 8: Update Hive cache ───────────────────────────────────────
         await _repository.cacheMessages(
           conversationId: conversationId,
@@ -444,52 +469,59 @@ class ChatProvider extends ChangeNotifier {
 
   AiCapability _resolveRequestCapability({
     required String prompt,
-    required ChatAttachment? attachment,
+    List<ChatAttachment> attachments = const [],
   }) {
-    if (attachment?.isImage == true) return AiCapability.imageUnderstanding;
-    if (attachment?.isPdf == true) return AiCapability.pdfParsing;
+    if (attachments.isNotEmpty && attachments.first.isImage == true) {
+      return AiCapability.imageUnderstanding;
+    }
+    if (attachments.isNotEmpty && attachments.first.isPdf == true) {
+      return AiCapability.pdfParsing;
+    }
     if (_looksLikeImageGenerationPrompt(prompt)) {
       return AiCapability.imageGeneration;
     }
     return AiCapability.textGeneration;
   }
 
-
-
-  MessageContentType _userContentTypeFor(ChatAttachment? attachment) {
-    if (attachment?.isImage == true) return MessageContentType.imageUrl;
-    if (attachment?.isPdf == true) return MessageContentType.pdfSummary;
-    return MessageContentType.text;
-  }
-
   String _effectivePrompt({
     required String prompt,
-    required ChatAttachment? attachment,
+    required AiCapability capability,
   }) {
     if (prompt.isNotEmpty) return prompt;
-    if (attachment?.isImage == true) return AppConstants.defaultImageQuestion;
-    if (attachment?.isPdf == true) return AppConstants.defaultPdfQuestion;
+    if (capability == AiCapability.imageUnderstanding) {
+      return AppConstants.defaultImageQuestion;
+    }
+    if (capability == AiCapability.pdfParsing) {
+      return AppConstants.defaultPdfQuestion;
+    }
     return prompt;
   }
 
-  String _conversationPreview(String prompt, ChatAttachment? attachment) {
-    if (attachment?.isImage == true) return 'Image: $prompt';
-    if (attachment?.isPdf == true) return 'PDF: ${attachment!.name}';
+  String _conversationPreview(
+    String prompt,
+    List<ChatAttachment> attachments,
+  ) {
+    if (attachments.isNotEmpty && attachments.first.isImage == true) {
+      return 'Image: $prompt';
+    }
+    if (attachments.isNotEmpty && attachments.first.isPdf == true) {
+      final firstName = attachments.first.name;
+      return firstName.isEmpty ? 'PDF' : 'PDF: $firstName';
+    }
     return prompt;
   }
 
   MessageModel _buildAiMessage(
     AiResponse response, {
-    required ChatAttachment? attachment,
+    List<ChatAttachment> attachments = const [],
     List<String> uploadedUrls = const [],
   }) {
     if (response.contentType == AiResponseContentType.imageUrl ||
         response.contentType == AiResponseContentType.imageBase64) {
-      
       return MessageModel.aiResponse(
         content: response.text ?? '',
         modelUsed: response.modelUsed,
-        contentType: MessageContentType.imageUrl,
+        contentType: AiCapability.imageGeneration,
         imageUrls: uploadedUrls.isNotEmpty ? uploadedUrls : null,
         tokenCount: response.tokenCount,
         imageSize: preferredImageSize,
@@ -501,9 +533,11 @@ class ChatProvider extends ChangeNotifier {
     return MessageModel.aiResponse(
       content: response.text ?? '',
       modelUsed: response.modelUsed,
-      contentType: attachment?.isPdf == true
-          ? MessageContentType.pdfSummary
-          : MessageContentType.text,
+      contentType: attachments.isNotEmpty && attachments.first.isPdf == true
+          ? AiCapability.pdfParsing
+          : attachments.isNotEmpty && attachments.first.isImage == true
+              ? AiCapability.imageUnderstanding
+              : AiCapability.textGeneration,
       tokenCount: response.tokenCount,
     );
   }
@@ -518,7 +552,7 @@ class ChatProvider extends ChangeNotifier {
       role: MessageRole.assistant,
       content: content,
       timestamp: DateTime.now(),
-      modelUsed: _providerForError(error, selectedProvider),
+      modelRequest: _providerForError(error, selectedProvider),
       status: MessageStatus.failed,
     );
   }

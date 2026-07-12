@@ -129,7 +129,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     });
   }
 
-  Future<void> _handleSend(String prompt, ChatAttachment? attachment) async {
+  Future<void> _handleSend(
+      String prompt, List<ChatAttachment> attachments) async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
@@ -144,7 +145,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           uid: uid,
           prompt: prompt,
           selectedProvider: selectedProvider,
-          attachment: attachment,
+          attachments: attachments,
         );
 
     // Show error if any
@@ -405,7 +406,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  AiProviderId? _currentSelectedProvider(
+  AiProviderId _currentSelectedProvider(
     List<AiProviderId> validProviders,
     AiProviderId preferredProvider,
   ) {
@@ -413,6 +414,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       availableProviders: validProviders,
       selectedProvider: preferredProvider,
       preferredProvider: preferredProvider,
-    );
+    ) ??
+        preferredProvider;
   }
 }

@@ -30,6 +30,16 @@ class StorageKeys {
   // The user's preferred number of generated images
   static const String preferredImageCount = 'preferredImageCount';
 
+  // ── AI Vision Preferences ─────────────────────────────────────────────────
+  // Max number of images to analyze in a single vision request (1–4)
+  static const String preferredVisionImageCount = 'preferredVisionImageCount';
+  // Max number of PDFs to analyze in a single vision request (1–4)
+  static const String preferredVisionPdfCount = 'preferredVisionPdfCount';
+  // Detail level for vision analysis: 'auto', 'low', or 'high'
+  static const String preferredVisionDetailLevel = 'preferredVisionDetailLevel';
+  // The user's preferred response length/max tokens
+  static const String preferredResponseLength = 'preferredResponseLength';
+
   // ── Active Conversation Cache ──────────────────────────────────────────────
   // ID of the last open conversation (to restore on app resume)
   static const String lastOpenConversationId = 'lastOpenConversationId';

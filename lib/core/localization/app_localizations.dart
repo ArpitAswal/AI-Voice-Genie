@@ -203,9 +203,24 @@ class AppLocalizations {
       'take_photo': 'Take Photo',
       'choose_from_gallery': 'Choose from Gallery',
       'analyzing_image': 'Analyzing image...',
+      'cannot_mix_images_and_pdfs': 'You cannot mix images and PDFs in one request.',
+      'max_image_attachments': 'Maximum {count} image attachments allowed',
+      'max_pdf_attachments': 'Maximum {count} PDF attachments allowed',
       'image_attached': 'Image attached',
       'remove_image': 'Remove image',
       'remove_file': 'Remove file',
+
+      // ── AI Preferences ─────────────────────────────────────────────────────
+      'response_length': 'Response Length',
+      'response_length_hint': 'Adjust the maximum length of model replies.',
+      'vision_image_count': 'Vision Image Count',
+      'vision_image_count_hint':
+          'Set the default limit for multi-modal image attachments.',
+      'vision_pdf_count': 'Vision PDF Count',
+      'vision_pdf_count_hint':
+          'Set the default limit for multi-modal PDF attachments.',
+      'vision_detail_level': 'Vision Detail Level',
+      'vision_detail_level_hint': 'Set detail level for vision requests.',
 
       // ── PDF Reader ─────────────────────────────────────────────────────────
       'pdf_reader': 'PDF Reader',
@@ -541,9 +556,25 @@ class AppLocalizations {
       'take_photo': 'फ़ोटो लें',
       'choose_from_gallery': 'गैलरी से चुनें',
       'analyzing_image': 'चित्र विश्लेषण हो रहा है...',
+      'cannot_mix_images_and_pdfs':
+          'आप एक ही अनुरोध में इमेज और PDF को साथ नहीं जोड़ सकते।',
+      'max_image_attachments': 'अधिकतम {count} इमेज अटैचमेंट की अनुमति है',
+      'max_pdf_attachments': 'अधिकतम {count} PDF अटैचमेंट की अनुमति है',
       'image_attached': 'चित्र जोड़ा गया',
       'remove_image': 'चित्र हटाएं',
       'remove_file': 'फ़ाइल हटाएं',
+
+      // ── AI Preferences ─────────────────────────────────────────────────────
+      'response_length': 'उत्तर लंबाई',
+      'response_length_hint': 'मॉडल के उत्तर की अधिकतम लंबाई बदलें।',
+      'vision_image_count': 'विज़न इमेज संख्या',
+      'vision_image_count_hint':
+          'बहु-मोडल इमेज अटैचमेंट की डिफ़ॉल्ट सीमा तय करें।',
+      'vision_pdf_count': 'विज़न PDF संख्या',
+      'vision_pdf_count_hint':
+          'बहु-मोडल PDF अटैचमेंट की डिफ़ॉल्ट सीमा तय करें।',
+      'vision_detail_level': 'विज़न विवरण स्तर',
+      'vision_detail_level_hint': 'विज़न अनुरोधों के लिए विवरण स्तर तय करें।',
 
       // ── PDF Reader ─────────────────────────────────────────────────────────
       'pdf_reader': 'PDF रीडर',

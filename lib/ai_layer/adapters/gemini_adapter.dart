@@ -158,7 +158,7 @@ class GeminiAdapter extends AiProviderAdapter {
     }
   }
 
-  // ── Image Understanding ────────────────────────────────────────────────────
+  // ── Image Understanding (Vision) ─────────────────────────────────────────
 
   @override
   Future<AiResponse> analyzeImage({
@@ -167,27 +167,39 @@ class GeminiAdapter extends AiProviderAdapter {
   }) async {
     final stopwatch = Stopwatch()..start();
 
-    final base64Image = base64Encode(request.imageBytes ?? []);
-    final mimeType = request.imageMimeType ?? 'image/jpeg';
-
     try {
-      // Gemini multimodal: image and text in same parts array
+      // Build the parts array for Gemini's multimodal format
+      final List<Map<String, dynamic>> parts = [];
+
+      if (request.imageBytes != null) {
+        // Preferred path: multi-image support using visionAttachments list
+        for (final att in request.imageBytes!) {
+          parts.add({
+            'inlineData': {
+              'mimeType': request.imageMimeType,
+              'data': base64Encode(att),
+            },
+          });
+        }
+      } else if (request.imageBytes != null && request.imageBytes!.isNotEmpty) {
+        // Legacy single-image fallback
+        parts.add({
+          'inlineData': {
+            'mimeType': request.imageMimeType ?? 'image/jpeg',
+            'data': base64Encode(request.imageBytes!.first),
+          },
+        });
+      }
+
+      // Add the user's text prompt as the final part
+      parts.add({'text': request.prompt});
+
       final response = await _post(
         model: AppConstants.geminiVisionModel,
         apiKey: apiKey,
         body: {
           'contents': [
-            {
-              'parts': [
-                {
-                  'inlineData': {
-                    'mimeType': mimeType,
-                    'data': base64Image,
-                  },
-                },
-                {'text': request.prompt},
-              ],
-            },
+            {'parts': parts},
           ],
           'generationConfig': {'maxOutputTokens': 1024},
         },
@@ -220,23 +232,34 @@ class GeminiAdapter extends AiProviderAdapter {
   }) async {
     final stopwatch = Stopwatch()..start();
 
-    final systemContext = 'You are a document analysis assistant. '
-        'The following is extracted text from a PDF titled '
-        '"${request.pdfFileName ?? "document"}".\n\n'
-        'Document:\n${request.pdfText ?? ""}\n\n'
-        'Answer questions based only on this document.';
-
     try {
+      final List<Map<String, dynamic>> parts = [];
+
+      // 1. Add native PDF attachments as inlineData blocks
+      // Gemini 1.5 Pro and Flash models support native PDF parsing.
+      final hasPdfs = request.pdfBytes != null && request.pdfBytes!.isNotEmpty;
+      if (hasPdfs) {
+        for (final b64 in request.pdfBytes!) {
+          parts.add({
+            'inlineData': {
+              'mimeType': 'application/pdf',
+              'data': base64Encode(b64),
+            },
+          });
+        }
+      }
+      parts.add({'text': request.prompt});
+
+      final model = hasPdfs
+          ? AppConstants.geminiVisionModel
+          : AppConstants.geminiTextModel;
+
       final response = await _post(
-        model: AppConstants.geminiTextModel,
+        model: model,
         apiKey: apiKey,
         body: {
           'contents': [
-            {
-              'parts': [
-                {'text': '$systemContext\n\nQuestion: ${request.prompt}'},
-              ],
-            },
+            {'parts': parts},
           ],
           'generationConfig': {
             'maxOutputTokens': 2048,

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../core/enums/app_enums.dart';
 
 /// Unified request object passed to AiOrchestrator.execute().
@@ -44,8 +46,8 @@ import '../../core/enums/app_enums.dart';
 ///   capability: AiCapability.pdfParsing,
 ///   uid: uid,
 ///   prompt: 'Summarise this document',
-///   pdfText: extractedPdfText,
-///   pdfFileName: 'report.pdf',
+///   pdfBytes: ['base64...'],
+///   pdfNames: ['report.pdf'],
 /// );
 /// ```
 class AiRequest {
@@ -66,32 +68,42 @@ class AiRequest {
   /// Each entry: {'role': 'user'|'assistant', 'content': '...'}
   final List<Map<String, String>> conversationHistory;
 
-  // ── Image Understanding ────────────────────────────────────────────────────
+  // ── Image Understanding (Vision) ─────────────────────────────────────────
 
-  /// Raw image bytes — used for imageUnderstanding capability
-  final List<int>? imageBytes;
+  /// Raw image bytes — used for single-image imageUnderstanding capability.
+  /// Deprecated in favour of [visionAttachments] for multi-image support;
+  /// kept for backward compatibility with Gemini / Claude single-image flow.
+  final List<Uint8List>? imageBytes;
 
-  /// MIME type of the image — e.g. 'image/jpeg', 'image/png'
+  /// MIME type of the image — e.g. 'image/jpeg', 'image/png'.
+  /// Used when [imageBytes] is set (single-image legacy path).
   final String? imageMimeType;
+
+  /// Detail level for image vision requests — maps to OpenAI's `detail` field.
+  /// Gemini and Claude ignore this parameter (they do not expose a detail flag).
+  final VisionDetailLevel visionDetailLevel;
 
   // ── Image Generation ───────────────────────────────────────────────────────
 
   /// Desired output image size for generation requests
-  final AiImageSize imageSize;
+  final AiImageSize? imageSize;
 
   /// Desired output image quality for generation requests
-  final ImageQuality imageQuality;
+  final ImageQuality? imageQuality;
 
   /// Number of images to generate for a single request
-  final int imageCount;
+  final int? imageCount;
 
   // ── PDF Parsing ────────────────────────────────────────────────────────────
 
-  /// Text extracted from the PDF — passed as context to the AI
-  final String? pdfText;
+  /// Base64 encoded bytes of PDF documents.
+  final List<Uint8List>? pdfBytes;
 
-  /// Original file name of the PDF — for display purposes in response
-  final String? pdfFileName;
+  /// File names of the PDF documents.
+  final List<String>? pdfNames;
+
+  /// The user's preferred response length/max tokens.
+  final ResponseLength responseLength;
 
   // ── Request Metadata ───────────────────────────────────────────────────────
 
@@ -108,15 +120,16 @@ class AiRequest {
     this.conversationHistory = const [],
     this.imageBytes,
     this.imageMimeType,
+    this.visionDetailLevel = VisionDetailLevel.auto,
+    this.responseLength = ResponseLength.balanced,
     this.imageSize = AiImageSize.square,
     this.imageQuality = ImageQuality.low,
-    int imageCount = 1,
-    this.pdfText,
-    this.pdfFileName,
+    this.imageCount = 1,
+    this.pdfBytes,
+    this.pdfNames,
     String? requestId,
     DateTime? createdAt,
-  })  : imageCount = imageCount.clamp(1, 10),
-        requestId = requestId ?? _generateId(),
+  })  : requestId = requestId ?? _generateId(),
         createdAt = createdAt ?? DateTime.now();
 
   /// Estimated token count of the prompt + history.
@@ -128,7 +141,7 @@ class AiRequest {
     for (final msg in conversationHistory) {
       charCount += (msg['content'] ?? '').length;
     }
-    if (pdfText != null) charCount += pdfText!.length;
+
     return (charCount / 4).ceil();
   }
 

@@ -1,17 +1,16 @@
-import 'dart:typed_data';
-
 import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_validators.dart';
 import '../../../../core/utils/status_message_utils.dart';
-import '../../../pdf_reader/data/pdf_repository_impl.dart';
+import '../../../../core/preferences/ai_preferences_provider.dart';
 import '../../../voice_speech/presentation/widgets/voice_input_button.dart';
 import '../../domain/chat_attachment.dart';
 
@@ -55,7 +54,8 @@ class ChatInputController {
 class ChatInputBar extends StatefulWidget {
   final bool isGenerating;
   final bool isTablet;
-  final Future<void> Function(String prompt, ChatAttachment? attachment) onSend;
+  final Future<void> Function(String prompt, List<ChatAttachment> attachments)
+      onSend;
   final ChatInputController? controller;
   final VoidCallback? onUserInteracted;
 
@@ -76,10 +76,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
-  final PdfRepositoryImpl _pdfRepository = PdfRepositoryImpl();
   final FocusNode _focusNode = FocusNode();
 
-  ChatAttachment? _attachment;
+  final List<ChatAttachment> _attachments = [];
   bool _canSend = false;
   bool _isApplyingTemplate = false;
 
@@ -124,7 +123,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   /// Enables the send button if there's text OR an attachment present.
   void _syncCanSend() {
-    final canSend = _controller.text.trim().isNotEmpty || _attachment != null;
+    final canSend =
+        _controller.text.trim().isNotEmpty || _attachments.isNotEmpty;
     if (canSend != _canSend) {
       setState(() => _canSend = canSend);
     }
@@ -133,24 +133,22 @@ class _ChatInputBarState extends State<ChatInputBar> {
   Future<void> _handleSend() async {
     final prompt = _controller.text.trim();
     // Validate text prompt limits unless an attachment is providing the context
-    final error = _attachment == null
+    final error = _attachments.isEmpty
         ? Validators.validatePrompt(prompt, context: context)
-        : prompt.length > 10000
-            ? AppLocalizations.of(context)!.promptTooLong
-            : null;
+        : null;
     if (error != null) {
       context.showError(error);
       return;
     }
 
-    final attachment = _attachment;
+    final attachments = List<ChatAttachment>.from(_attachments);
     _controller.clear();
     setState(() {
-      _attachment = null;
+      _attachments.clear();
       _canSend = false;
     });
 
-    await widget.onSend(prompt, attachment);
+    await widget.onSend(prompt, attachments);
   }
 
   Future<void> _showAttachmentSheet() async {
@@ -194,40 +192,90 @@ class _ChatInputBarState extends State<ChatInputBar> {
     );
   }
 
+  bool _canAddAttachmentType(ChatAttachmentType newType) {
+    if (_attachments.isEmpty) return true;
+    if (_attachments.first.type != newType) {
+      if (mounted) {
+        context.showError(
+          AppLocalizations.of(context)!.translate('cannot_mix_images_and_pdfs'),
+        );
+      }
+      return false;
+    }
+    final prefs = context.read<AiPreferencesProvider>();
+    final maxLimit = newType == ChatAttachmentType.image
+        ? prefs.preferredVisionImageCount
+        : prefs.preferredVisionPdfCount;
+    if (_attachments.length >= maxLimit) {
+      if (mounted) {
+        context.showError(
+          AppLocalizations.of(context)!
+              .translate(
+                newType == ChatAttachmentType.image
+                    ? 'max_image_attachments'
+                    : 'max_pdf_attachments',
+              )
+              .replaceAll('{count}', '$maxLimit'),
+        );
+      }
+      return false;
+    }
+    return true;
+  }
+
   Future<bool> _pickImage(
     ImageSource source, {
     String? promptTemplate,
   }) async {
     try {
-      final image = await _imagePicker.pickImage(source: source);
-      if (image == null) return false;
-
-      final bytes = await image.readAsBytes();
-      if (bytes.lengthInBytes > AppConstants.maxImageSizeBytes) {
-        if (mounted) context.showError('error_image_too_large');
-        return false;
+      final List<XFile> images;
+      if (source == ImageSource.gallery) {
+        images = await _imagePicker.pickMultiImage();
+      } else {
+        final image = await _imagePicker.pickImage(source: source);
+        images = image != null ? [image] : [];
       }
+
+      if (images.isEmpty) return false;
 
       if (!mounted) return false;
-      setState(() {
-        _attachment = ChatAttachment(
-          type: ChatAttachmentType.image,
-          name: image.name,
-          bytes: bytes,
-          path: image.path,
-          mimeType: _imageMimeType(image.name),
-          fileSizeBytes: bytes.lengthInBytes,
-        );
-        _canSend = true;
-      });
-      if (promptTemplate != null) {
-        _applyPromptTemplate(promptTemplate);
-      } else {
-        widget.onUserInteracted?.call();
+      bool addedAny = false;
+
+      for (final image in images) {
+        if (!_canAddAttachmentType(ChatAttachmentType.image)) break;
+
+        final bytes = await image.readAsBytes();
+        if (bytes.lengthInBytes > AppConstants.maxImageSizeBytes) {
+          debugPrint('⚠️ Image file too large — '
+              '${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(1)} MB');
+          if (mounted) context.showError('error_image_too_large');
+          continue;
+        }
+
+        setState(() {
+          _attachments.add(ChatAttachment(
+            type: ChatAttachmentType.image,
+            name: image.name,
+            bytes: bytes,
+            path: image.path,
+            mimeType: _imageMimeType(image.name),
+            fileSizeBytes: bytes.lengthInBytes,
+          ));
+          _canSend = true;
+        });
+        addedAny = true;
       }
-      return true;
+
+      if (addedAny) {
+        if (promptTemplate != null) {
+          _applyPromptTemplate(promptTemplate);
+        } else {
+          widget.onUserInteracted?.call();
+        }
+      }
+      return addedAny;
     } catch (_) {
-      if (mounted) context.showError('something_went_wrong');
+      if (mounted) context.showError(context.l10n.somethingWentWrong);
       return false;
     }
   }
@@ -235,54 +283,58 @@ class _ChatInputBarState extends State<ChatInputBar> {
   Future<bool> _pickPdf({String? promptTemplate}) async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-        withData: true,
-      );
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+          withData: true,
+          allowMultiple: true);
       if (result == null || result.files.isEmpty) return false;
 
-      final file = result.files.first;
-      final bytes = file.bytes;
-      if (bytes == null) {
-        if (mounted) context.showError('pdf_read_failed');
-        return false;
-      }
-
-      final sizeError = _pdfRepository.validateFileSize(bytes.lengthInBytes);
-      if (sizeError != null) {
-        if (mounted) context.showError(sizeError);
-        return false;
-      }
-
-      final doc = await _pdfRepository.extractText(
-        pdfBytes: bytes,
-        fileName: file.name,
-        fileSizeBytes: bytes.lengthInBytes,
-      );
-      if (!doc.hasText) {
+      final files = result.files;
+      if (files.isEmpty) {
         if (mounted) context.showError('pdf_read_failed');
         return false;
       }
 
       if (!mounted) return false;
-      setState(() {
-        _attachment = ChatAttachment(
-          type: ChatAttachmentType.pdf,
-          name: doc.fileName,
-          bytes: Uint8List.fromList(bytes),
-          path: file.path,
-          mimeType: 'application/pdf',
-          fileSizeBytes: doc.fileSizeBytes,
-          extractedText: doc.extractedText,
-        );
-        _canSend = true;
-      });
-      if (promptTemplate != null) {
-        _applyPromptTemplate(promptTemplate);
-      } else {
-        widget.onUserInteracted?.call();
+      bool addedAny = false;
+
+      for (final file in files) {
+        if (!_canAddAttachmentType(ChatAttachmentType.pdf)) return false;
+
+        final bytes = file.bytes;
+        if (bytes == null) {
+          if (mounted) context.showError('pdf_read_failed');
+          continue;
+        }
+        if (bytes.lengthInBytes > AppConstants.maxPdfSizeBytes) {
+          debugPrint(
+            '⚠️ Pdf file too large — '
+            '${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(1)} MB',
+          );
+          if (mounted) context.showError('pdf_too_large');
+          continue;
+        }
+        setState(() {
+          _attachments.add(ChatAttachment(
+            type: ChatAttachmentType.pdf,
+            name: file.name,
+            bytes: bytes,
+            path: file.path,
+            mimeType: 'application/pdf',
+            fileSizeBytes: bytes.lengthInBytes,
+          ));
+          _canSend = true;
+        });
+        addedAny = true;
       }
-      return true;
+      if (addedAny) {
+        if (promptTemplate != null) {
+          _applyPromptTemplate(promptTemplate);
+        } else {
+          widget.onUserInteracted?.call();
+        }
+      }
+      return addedAny;
     } catch (_) {
       if (mounted) context.showError('pdf_read_failed');
       return false;
@@ -298,7 +350,6 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   void _onTranscriptReady(String transcript) {
-    debugPrint("transcript");
     if (transcript.isEmpty) return;
 
     // Voice input behaves like manual composition once a transcript is ready.
@@ -327,18 +378,27 @@ class _ChatInputBarState extends State<ChatInputBar> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (_attachment != null) ...[
-          Flexible(
-            flex: 1,
-            child: _AttachmentPreview(
-              attachment: _attachment!,
-              isTablet: widget.isTablet,
-              onRemove: widget.isGenerating
-                  ? null
-                  : () {
-                      setState(() => _attachment = null);
-                      _syncCanSend();
-                    },
+        if (_attachments.isNotEmpty) ...[
+          Container(
+            height: 100,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _attachments.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final att = _attachments[index];
+                return _AttachmentPreview(
+                  attachment: att,
+                  isTablet: widget.isTablet,
+                  onRemove: widget.isGenerating
+                      ? null
+                      : () {
+                          setState(() => _attachments.removeAt(index));
+                          _syncCanSend();
+                        },
+                );
+              },
             ),
           ),
         ],

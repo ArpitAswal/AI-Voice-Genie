@@ -78,11 +78,7 @@ class AppConstants {
   // Default models used for each capability
   static const String openAiTextModel = 'gpt-4o';
   static const String openAiImageGenModel = 'gpt-image-1';
-  static const String openAiVisionModel =
-      'gpt-4o'; // same model, vision capable
-  static const String openAiSttModel = 'whisper-1';
-  static const String openAiTtsModel = 'tts-1';
-  static const String openAiTtsVoice = 'alloy'; // default voice
+  static const String openAiVisionModel = 'gpt-4.1';
 
   // ── Gemini Model Names ────────────────────────────────────────────────────
   static const String geminiTextModel = 'gemini-2.5-flash';

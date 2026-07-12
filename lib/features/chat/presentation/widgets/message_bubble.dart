@@ -42,11 +42,11 @@ class MessageBubble extends StatelessWidget {
           _isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         // AI model chip — shown above AI responses
-        if (!_isUser && message.modelUsed != null) ...[
+        if (!_isUser && message.modelRequest != null) ...[
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 4),
             child: ModelIndicatorChip(
-              provider: message.modelUsed!,
+              provider: message.modelRequest!,
               isTablet: isTablet,
             ),
           ),
@@ -94,7 +94,7 @@ class MessageBubble extends StatelessWidget {
   /// This affects the padding inside the message bubble container.
   bool get _hasMedia =>
       (message.imageUrls != null && message.imageUrls!.isNotEmpty) ||
-      message.pdfName != null;
+      (message.pdfName != null && message.pdfName!.isNotEmpty);
 
   /// Copies the text content to clipboard and shows a toast
   void _copyToClipboard(BuildContext context) {
@@ -169,24 +169,25 @@ class _MessageBubbleContent extends StatelessWidget {
     final children = <Widget>[
       // 1. If images are present, render the image grid.
       if (message.imageUrls != null && message.imageUrls!.isNotEmpty)
-        // Wrap(
-        //   spacing: 8,
-        //   runSpacing: 8,
-        //   children: message.imageUrls!.map((url) => _ChatImage(url: url)).toList(),
-        // ),
-        _ChatImage(images: message.imageUrls!, size: message.imageSize ?? AiImageSize.square),
-      
-      // 2. If a PDF is present, render the PDF card.
-      if (message.pdfName != null)
-        _PdfAttachmentCard(
-          name: message.pdfName!,
-          isUser: isUser,
-        ),
-      
+        _ChatImage(
+            images: message.imageUrls!,
+            size: message.imageSize ?? AiImageSize.square),
+
+      // 2. If PDFs are present, render the PDF cards.
+      if ((message.pdfName != null && message.pdfName!.isNotEmpty) &&
+          message.pdfName!.isNotEmpty)
+        ...message.pdfName!.map((pdf) => Padding(
+              padding: const EdgeInsets.only(bottom: 6.0),
+              child: _PdfAttachmentCard(
+                name: pdf,
+                isUser: isUser,
+              ),
+            )),
+
       // 3. If there is text, render it below the attachments (with padding if media exists).
       if (textWidget != null) ...[
         if ((message.imageUrls != null && message.imageUrls!.isNotEmpty) ||
-            message.pdfName != null)
+            (message.pdfName != null && message.pdfName!.isNotEmpty))
           const SizedBox(height: 10),
         textWidget,
       ],

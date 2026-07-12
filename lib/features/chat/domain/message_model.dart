@@ -19,183 +19,200 @@ const _unset = Object();
 ///
 /// Supports all content types: text, image URL, PDF summary, voice transcript.
 class MessageModel {
+  /// The unique identifier of the message (typically a UUID).
   final String id;
+
+  /// The role of the sender, indicating if it's from the 'user' or the 'assistant'.
   final MessageRole role;
+
+  /// The text content of the message (either user prompt or AI response).
   final String content;
-  final MessageContentType contentType;
+
+  /// The type of content represented by this message (text, imageUrl, pdfSummary, etc.).
+  final AiCapability contentType;
+
+  /// The timestamp indicating when the message was created.
   final DateTime timestamp;
-  final AiProviderId? modelUsed;
+
+  /// The AI provider (model) used or requested for this message.
+  /// Nullable because user messages do not request themselves, but required in constructor.
+  final AiProviderId? modelRequest;
+
+  /// The token count consumed by this message (mostly relevant for AI responses).
   final int tokenCount;
+
+  /// The delivery status of this message (sending, delivered, failed).
   final MessageStatus status;
 
   /// Optional image URLs — populated for imageGeneration responses.
   /// Holds Cloudinary URLs after generation.
   final List<String>? imageUrls;
 
-  /// Optional PDF file name — populated for pdfParsing responses
-  final String? pdfName;
+  /// Optional PDF file paths — populated for pdfParsing responses.
+  final List<String>? pdfPaths;
 
-  /// Whether this message is a temporary optimistic insert (not yet in Firestore)
+  /// Optional PDF file name — populated for pdfParsing responses.
+  final List<String>? pdfName;
+
+  /// Whether this message is a temporary optimistic insert (not yet persisted in Firestore).
   final bool isOptimistic;
 
-  /// List of valid providers available when this message was sent
-  final List<AiProviderId> validProviders;
-
-  /// Optional image size for image generation responses
+  /// Optional image size for image generation responses.
   final AiImageSize? imageSize;
 
-  /// Optional image count for image generation responses
+  /// Optional image count for image generation responses.
   final int? imageCount;
 
-  /// Optional decoded image bytes for fast rendering in the UI without main-thread base64 decoding
+  /// Optional decoded image bytes for fast rendering in the UI without main-thread base64 decoding.
   final Uint8List? imageBytes;
 
-  /// Optional image quality for image generation responses
+  /// Optional image quality for image generation responses.
   final ImageQuality? imageQuality;
 
-  const MessageModel(
-      {required this.id,
-      required this.role,
-      required this.content,
-      this.contentType = MessageContentType.text,
-      required this.timestamp,
-      this.modelUsed,
-      this.tokenCount = 0,
-      this.status = MessageStatus.delivered,
-      this.imageUrls,
-      this.pdfName,
-      this.isOptimistic = false,
-      this.validProviders = const [],
-      this.imageSize,
-      this.imageCount,
-      this.imageBytes,
-      this.imageQuality});
+  /// Standard constructor for [MessageModel]. All key fields are required.
+  const MessageModel({
+    required this.id,
+    required this.role,
+    required this.content,
+    required this.timestamp,
+    required this.modelRequest,
+    this.contentType = AiCapability.textGeneration,
+    this.tokenCount = 0,
+    this.status = MessageStatus.partial,
+    this.imageUrls,
+    this.pdfPaths,
+    this.pdfName,
+    this.isOptimistic = false,
+    this.imageSize,
+    this.imageCount,
+    this.imageBytes,
+    this.imageQuality,
+  });
 
-  // ── Factory: New user message (optimistic) ────────────────────────────────
-
+  /// Factory constructor to build a new optimistic User message.
+  /// Used to instantly show the user's message in the UI before sending it to the server.
   factory MessageModel.userMessage(
-    String content, {
-    List<AiProviderId> validProviders = const [],
-    MessageContentType contentType = MessageContentType.text,
-    List<String>? imageUrls,
-    String? pdfName,
+    String content,
+    AiProviderId? validProvider, {
+    AiCapability contentType = AiCapability.textGeneration,
+    List<String>? imagePaths,
+    List<String>? pdfPaths,
+    List<String>? pdfName,
     AiImageSize? imageSize,
     int? imageCount,
     ImageQuality? imageQuality,
   }) {
     return MessageModel(
-        id: const Uuid().v4(),
-        role: MessageRole.user,
-        content: content,
-        contentType: contentType,
-        timestamp: DateTime.now(),
-        status: MessageStatus.sending,
-        imageUrls: imageUrls,
-        pdfName: pdfName,
-        isOptimistic: true,
-        validProviders: validProviders,
-        imageSize: imageSize,
-        imageCount: imageCount,
-        imageQuality: imageQuality);
+      id: const Uuid().v4(),
+      role: MessageRole.user,
+      content: content,
+      contentType: contentType,
+      timestamp: DateTime.now(),
+      modelRequest: validProvider,
+      status: MessageStatus.sending,
+      imageUrls: imagePaths,
+      pdfPaths: pdfPaths,
+      pdfName: pdfName,
+      isOptimistic: true,
+      imageSize: imageSize,
+      imageCount: imageCount,
+      imageQuality: imageQuality,
+    );
   }
 
-  // ── Factory: New AI response ──────────────────────────────────────────────
-
+  /// Factory constructor to build a new AI response message.
+  /// Used when the AI completes its generation successfully.
   factory MessageModel.aiResponse({
     required String content,
     required AiProviderId modelUsed,
-    MessageContentType contentType = MessageContentType.text,
+    AiCapability contentType = AiCapability.textGeneration,
     int tokenCount = 0,
     List<String>? imageUrls,
-    String? pdfName,
+    List<String>? pdfPaths,
+    List<String>? pdfName,
     AiImageSize? imageSize,
     int? imageCount,
     Uint8List? imageBytes,
     ImageQuality? imageQuality,
   }) {
     return MessageModel(
-        id: const Uuid().v4(),
-        role: MessageRole.assistant,
-        content: content,
-        contentType: contentType,
-        timestamp: DateTime.now(),
-        modelUsed: modelUsed,
-        tokenCount: tokenCount,
-        status: MessageStatus.delivered,
-        imageUrls: imageUrls,
-        pdfName: pdfName,
-        imageSize: imageSize,
-        imageCount: imageCount,
-        imageBytes: imageBytes,
-        imageQuality: imageQuality);
+      id: const Uuid().v4(),
+      role: MessageRole.assistant,
+      content: content,
+      contentType: contentType,
+      timestamp: DateTime.now(),
+      modelRequest: modelUsed,
+      tokenCount: tokenCount,
+      status: MessageStatus.delivered,
+      imageUrls: imageUrls,
+      pdfPaths: pdfPaths,
+      pdfName: pdfName,
+      imageSize: imageSize,
+      imageCount: imageCount,
+      imageBytes: imageBytes,
+      imageQuality: imageQuality,
+    );
   }
 
-  // ── Factory: from Firestore ───────────────────────────────────────────────
-
+  /// Deserializes a [MessageModel] from a Firestore document snapshot.
+  /// Reads standard keys mapped from [FirebaseCollections].
   factory MessageModel.fromFirestore(String id, Map<String, dynamic> data) {
     return MessageModel(
-        id: _normalizeStoredMessageId(id),
-        role: MessageRole.fromValue(
-          data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
-        ),
-        content: data[FirebaseCollections.fieldMessageContent] as String? ?? '',
-        contentType: MessageContentType.fromValue(
-          data[FirebaseCollections.fieldMessageContentType] as String? ??
-              'text',
-        ),
-        timestamp:
-            (data[FirebaseCollections.fieldMessageTimestamp] as Timestamp?)
-                    ?.toDate() ??
-                DateTime.now(),
-        modelUsed: data[FirebaseCollections.fieldMessageModelUsed] is String
-            ? AiProviderId.fromId(
-                data[FirebaseCollections.fieldMessageModelUsed] as String,
-              )
-            : null,
-        tokenCount:
-            data[FirebaseCollections.fieldMessageTokenCount] as int? ?? 0,
-        status: MessageStatus.fromValue(
-          data[FirebaseCollections.fieldMessageStatus] as String? ??
-              'delivered',
-        ),
-        imageUrls:
-            _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]),
-        pdfName: data[FirebaseCollections.fieldMessagePdfName] as String?,
-        validProviders: (data[FirebaseCollections.fieldMessageValidProviders]
-                    as List<dynamic>?)
-                ?.map((e) => AiProviderId.fromId(e as String))
-                .toList() ??
-            [],
-        imageSize: data[FirebaseCollections.fieldImageSize] is String
-            ? AiImageSize.fromValue(
-                data[FirebaseCollections.fieldImageSize] as String)
-            : null,
-        imageCount: data[FirebaseCollections.fieldImageCount] as int?,
-        imageQuality: data[FirebaseCollections.fieldImageQuality] is String
-            ? ImageQuality.fromValue(
-                data[FirebaseCollections.fieldImageQuality] as String)
-            : null);
+      id: _normalizeStoredMessageId(id),
+      role: MessageRole.fromValue(
+        data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
+      ),
+      content: data[FirebaseCollections.fieldMessageContent] as String? ?? '',
+      contentType: AiCapability.fromValue(
+        data[FirebaseCollections.fieldMessageContentType] as String? ??
+            'text_generation',
+      ),
+      timestamp: (data[FirebaseCollections.fieldMessageTimestamp] as Timestamp?)
+              ?.toDate() ??
+          DateTime.now(),
+      modelRequest: data[FirebaseCollections.fieldMessageModelUsed] is String
+          ? AiProviderId.fromId(
+              data[FirebaseCollections.fieldMessageModelUsed] as String)
+          : null,
+      tokenCount: data[FirebaseCollections.fieldMessageTokenCount] as int? ?? 0,
+      status: MessageStatus.fromValue(
+        data[FirebaseCollections.fieldMessageStatus] as String? ?? 'delivered',
+      ),
+      imageUrls:
+          _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]),
+      pdfPaths: _parseImageUrls(data[FirebaseCollections.fieldMessagePdfPaths]),
+      pdfName: _parseImageUrls(data[FirebaseCollections.fieldMessagePdfName]),
+      imageSize: data[FirebaseCollections.fieldImageSize] is String
+          ? AiImageSize.fromValue(
+              data[FirebaseCollections.fieldImageSize] as String)
+          : null,
+      imageCount: data[FirebaseCollections.fieldImageCount] as int?,
+      imageQuality: data[FirebaseCollections.fieldImageQuality] is String
+          ? ImageQuality.fromValue(
+              data[FirebaseCollections.fieldImageQuality] as String)
+          : null,
+    );
   }
 
-  // ── Serialization ─────────────────────────────────────────────────────────
-
+  /// Serializes the message model for storage in Firestore.
+  /// Maps object properties to standard database keys.
   Map<String, dynamic> toFirestore() {
     return {
       FirebaseCollections.fieldMessageID: id,
       FirebaseCollections.fieldMessageRole: role.value,
       FirebaseCollections.fieldMessageContent: content,
-      FirebaseCollections.fieldMessageContentType: contentType.value,
+      FirebaseCollections.fieldMessageContentType: contentType.id,
       FirebaseCollections.fieldMessageTimestamp: FieldValue.serverTimestamp(),
       FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
-      if (modelUsed != null)
-        FirebaseCollections.fieldMessageModelUsed: modelUsed!.id,
+      if (modelRequest != null)
+        FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
       if (imageUrls != null && imageUrls!.isNotEmpty)
         FirebaseCollections.fieldMessageImageUrl: imageUrls,
-      if (pdfName != null) FirebaseCollections.fieldMessagePdfName: pdfName,
-      if (validProviders.isNotEmpty)
-        FirebaseCollections.fieldMessageValidProviders:
-            validProviders.map((e) => e.id).toList(),
+      if (pdfPaths != null && pdfPaths!.isNotEmpty)
+        FirebaseCollections.fieldMessagePdfPaths: pdfPaths,
+      if (pdfName != null && pdfName!.isNotEmpty)
+        FirebaseCollections.fieldMessagePdfName: pdfName,
       if (imageSize != null)
         FirebaseCollections.fieldImageSize: imageSize!.name,
       if (imageCount != null) FirebaseCollections.fieldImageCount: imageCount,
@@ -204,21 +221,22 @@ class MessageModel {
     };
   }
 
-  /// Serialize for Hive/JSON cache — uses ISO 8601 string instead of FieldValue.
+  /// Serializes the message model for local Hive / JSON cache.
+  /// Converts the [DateTime] to ISO 8601 string as Firestore FieldValue isn't supported locally.
   Map<String, dynamic> toCacheMap() {
     return {
       'id': id,
       FirebaseCollections.fieldMessageRole: role.value,
       FirebaseCollections.fieldMessageContent: content,
-      FirebaseCollections.fieldMessageContentType: contentType.value,
+      FirebaseCollections.fieldMessageContentType: contentType.id,
       FirebaseCollections.fieldMessageTimestamp: timestamp.toIso8601String(),
       FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
-      if (modelUsed != null)
-        FirebaseCollections.fieldMessageModelUsed: modelUsed!.id,
+      if (modelRequest != null)
+        FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
       if (imageUrls != null && imageUrls!.isNotEmpty) 'imageUrls': imageUrls,
-      if (pdfName != null) FirebaseCollections.fieldMessagePdfName: pdfName,
-      'validProviders': validProviders.map((e) => e.id).toList(),
+      if (pdfPaths != null && pdfPaths!.isNotEmpty) 'pdfPaths': pdfPaths,
+      if (pdfName != null && pdfName!.isNotEmpty) 'pdfName': pdfName,
       if (imageSize != null) 'imageSize': imageSize!.name,
       if (imageCount != null) 'imageCount': imageCount,
       if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
@@ -226,54 +244,49 @@ class MessageModel {
     };
   }
 
-  /// Deserialize from Hive/JSON cache — reads ISO 8601 timestamp string.
+  /// Deserializes a [MessageModel] from local Hive / JSON cache.
+  /// Parses the ISO 8601 string back to a [DateTime] object.
   factory MessageModel.fromCacheMap(Map<String, dynamic> data) {
     return MessageModel(
-        id: data['id'] as String? ?? '',
-        role: MessageRole.fromValue(
-          data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
-        ),
-        content: data[FirebaseCollections.fieldMessageContent] as String? ?? '',
-        contentType: MessageContentType.fromValue(
-          data[FirebaseCollections.fieldMessageContentType] as String? ??
-              'text',
-        ),
-        timestamp: DateTime.tryParse(
-              data[FirebaseCollections.fieldMessageTimestamp] as String? ?? '',
-            ) ??
-            DateTime.now(),
-        modelUsed: data[FirebaseCollections.fieldMessageModelUsed] is String
-            ? AiProviderId.fromId(
-                data[FirebaseCollections.fieldMessageModelUsed] as String,
-              )
-            : null,
-        tokenCount:
-            data[FirebaseCollections.fieldMessageTokenCount] as int? ?? 0,
-        status: MessageStatus.fromValue(
-          data[FirebaseCollections.fieldMessageStatus] as String? ??
-              'delivered',
-        ),
-        imageUrls: _parseImageUrls(data['imageUrls']),
-        pdfName: data[FirebaseCollections.fieldMessagePdfName] as String?,
-        validProviders: (data['validProviders'] as List<dynamic>?)
-                ?.map((e) => AiProviderId.fromId(e as String))
-                .toList() ??
-            [],
-        imageSize: data['imageSize'] is String
-            ? AiImageSize.fromValue(data['imageSize'] as String)
-            : null,
-        imageCount: data['imageCount'] as int?,
-        imageBytes: data['imageBytes'] is String
-            ? base64Decode(data['imageBytes'] as String)
-            : null,
-        imageQuality: data['imageQuality'] is String
-            ? ImageQuality.fromValue(data['imageQuality'] as String)
-            : null);
+      id: data['id'] as String? ?? '',
+      role: MessageRole.fromValue(
+        data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
+      ),
+      content: data[FirebaseCollections.fieldMessageContent] as String? ?? '',
+      contentType: AiCapability.fromValue(
+        data[FirebaseCollections.fieldMessageContentType] as String? ??
+            'text_generation',
+      ),
+      timestamp: DateTime.tryParse(
+            data[FirebaseCollections.fieldMessageTimestamp] as String? ?? '',
+          ) ??
+          DateTime.now(),
+      modelRequest: data[FirebaseCollections.fieldMessageModelUsed] is String
+          ? AiProviderId.fromId(
+              data[FirebaseCollections.fieldMessageModelUsed] as String)
+          : null,
+      tokenCount: data[FirebaseCollections.fieldMessageTokenCount] as int? ?? 0,
+      status: MessageStatus.fromValue(
+        data[FirebaseCollections.fieldMessageStatus] as String? ?? 'delivered',
+      ),
+      imageUrls: _parseImageUrls(data['imageUrls']),
+      pdfPaths: _parseImageUrls(data['pdfPaths']),
+      pdfName: _parseImageUrls(data['pdfName']),
+      imageSize: data['imageSize'] is String
+          ? AiImageSize.fromValue(data['imageSize'] as String)
+          : null,
+      imageCount: data['imageCount'] as int?,
+      imageBytes: data['imageBytes'] is String
+          ? base64Decode(data['imageBytes'] as String)
+          : null,
+      imageQuality: data['imageQuality'] is String
+          ? ImageQuality.fromValue(data['imageQuality'] as String)
+          : null,
+    );
   }
 
-  // ── Context history format ────────────────────────────────────────────────
-
-  /// Convert to the format expected by AI provider adapters for history.
+  /// Converts the message model to a standard map entry suitable for conveying
+  /// chat history context to standard AI provider APIs.
   Map<String, String> toHistoryEntry() {
     return {
       'role': role.value,
@@ -281,22 +294,13 @@ class MessageModel {
     };
   }
 
-  // ── Paired Firestore Serialization ────────────────────────────────────────
-  //
-  // Firestore stores each prompt + response as ONE document.
-  // The pairId is the user message's UUID.
-  // When reading back, we split into two MessageModels with deterministic IDs:
-  //   user    → '{pairId}_user'
-  //   assistant → '{pairId}_ai'
-
-  /// Combine a user prompt and AI response into a single Firestore document.
+  /// Combines a user prompt and AI response message into a single Firestore document.
   ///
   /// Uses [userMessage.id] as the Firestore document ID (the pair ID).
   ///
   /// IMPORTANT: Raw image payloads (base64/data-URI) must never be written to
   /// Firestore — they exceed the 1 MB document limit and cause INVALID_ARGUMENT.
-  /// Before calling this, ensure [aiMessage.imageUrl] contains a Cloudinary URL,
-  /// not a raw base64 string.
+  /// Before calling this, ensure [aiMessage.imageUrls] contains Cloudinary URLs.
   static Map<String, dynamic> pairToFirestore({
     required MessageModel userMessage,
     required MessageModel aiMessage,
@@ -304,17 +308,17 @@ class MessageModel {
     return {
       FirebaseCollections.fieldPrompt: userMessage.content,
       FirebaseCollections.fieldResponse: aiMessage.content,
-      FirebaseCollections.fieldModelUsed: aiMessage.modelUsed?.id,
+      FirebaseCollections.fieldModelUsed: aiMessage.modelRequest?.id,
       FirebaseCollections.fieldTokenCount: aiMessage.tokenCount,
-      FirebaseCollections.fieldContentType: aiMessage.contentType.value,
+      FirebaseCollections.fieldContentType: aiMessage.contentType.id,
       FirebaseCollections.fieldStatus: aiMessage.status.value,
       FirebaseCollections.fieldTimestamp: FieldValue.serverTimestamp(),
       if (aiMessage.imageUrls != null && aiMessage.imageUrls!.isNotEmpty)
         FirebaseCollections.fieldMessageImageUrl: aiMessage.imageUrls,
-      if (aiMessage.pdfName != null)
+      if (aiMessage.pdfPaths != null && aiMessage.pdfPaths!.isNotEmpty)
+        FirebaseCollections.fieldMessagePdfPaths: aiMessage.pdfPaths,
+      if (aiMessage.pdfName != null && aiMessage.pdfName!.isNotEmpty)
         FirebaseCollections.fieldPdfName: aiMessage.pdfName,
-      FirebaseCollections.fieldValidProviders:
-          userMessage.validProviders.map((e) => e.id).toList(),
       if (aiMessage.imageSize != null)
         FirebaseCollections.fieldImageSize: aiMessage.imageSize!.name,
       if (aiMessage.imageCount != null)
@@ -324,9 +328,8 @@ class MessageModel {
     };
   }
 
-  /// Split a Firestore paired document back into two MessageModels.
-  ///
-  /// Returns [userMessage, aiMessage] in chronological order.
+  /// Splits a paired Firestore document back into two individual chronological [MessageModel]s
+  /// (first the user message, then the AI response).
   static List<MessageModel> pairFromFirestore(
     String docId,
     Map<String, dynamic> data,
@@ -343,67 +346,67 @@ class MessageModel {
           data[FirebaseCollections.fieldMessageContent] as String? ??
           '',
       timestamp: timestamp,
-      contentType: MessageContentType.fromValue(
-        data[FirebaseCollections.fieldContentType] as String? ?? 'prompt_text',
+      modelRequest: null,
+      contentType: AiCapability.fromValue(
+        data[FirebaseCollections.fieldContentType] as String? ??
+            'text_generation',
       ),
       status: MessageStatus.delivered,
-      validProviders:
-          (data[FirebaseCollections.fieldValidProviders] as List<dynamic>?)
-                  ?.map((e) => AiProviderId.fromId(e as String))
-                  .toList() ??
-              [],
+      pdfPaths: _parseImageUrls(data[FirebaseCollections.fieldMessagePdfPaths]),
+      pdfName: _parseImageUrls(data[FirebaseCollections.fieldPdfName]),
     );
 
     final aiMsg = MessageModel(
-        id: normalizedId,
-        role: MessageRole.assistant,
-        content: data[FirebaseCollections.fieldResponse] as String? ??
-            data[FirebaseCollections.fieldMessageContent] as String? ??
-            '',
-        contentType: MessageContentType.fromValue(
-          data[FirebaseCollections.fieldContentType] as String? ??
-              'prompt_text',
-        ),
-        timestamp: timestamp,
-        modelUsed: data[FirebaseCollections.fieldModelUsed] is String
-            ? AiProviderId.fromId(
-                data[FirebaseCollections.fieldModelUsed] as String,
-              )
-            : null,
-        tokenCount: data[FirebaseCollections.fieldTokenCount] as int? ?? 0,
-        status: MessageStatus.fromValue(
-          data[FirebaseCollections.fieldStatus] as String? ?? 'delivered',
-        ),
-        imageUrls: _parseImageUrls(data[FirebaseCollections.fieldImageUrl]),
-        pdfName: data[FirebaseCollections.fieldPdfName] as String?,
-        imageSize: data[FirebaseCollections.fieldImageSize] is String
-            ? AiImageSize.fromValue(
-                data[FirebaseCollections.fieldImageSize] as String)
-            : null,
-        imageCount: data[FirebaseCollections.fieldImageCount] as int?,
-        imageBytes: data[FirebaseCollections.fieldImageUrl] is String
-            ? base64Decode(data[FirebaseCollections.fieldImageUrl] as String)
-            : null,
-        imageQuality: data[FirebaseCollections.fieldImageQuality] is String
-            ? ImageQuality.fromValue(
-                data[FirebaseCollections.fieldImageQuality] as String)
-            : null);
+      id: normalizedId,
+      role: MessageRole.assistant,
+      content: data[FirebaseCollections.fieldResponse] as String? ??
+          data[FirebaseCollections.fieldMessageContent] as String? ??
+          '',
+      contentType: AiCapability.fromValue(
+        data[FirebaseCollections.fieldContentType] as String? ??
+            'text_generation',
+      ),
+      timestamp: timestamp,
+      modelRequest: data[FirebaseCollections.fieldModelUsed] is String
+          ? AiProviderId.fromId(
+              data[FirebaseCollections.fieldModelUsed] as String)
+          : null,
+      tokenCount: data[FirebaseCollections.fieldTokenCount] as int? ?? 0,
+      status: MessageStatus.fromValue(
+        data[FirebaseCollections.fieldStatus] as String? ?? 'delivered',
+      ),
+      imageUrls: _parseImageUrls(data[FirebaseCollections.fieldImageUrl]),
+      pdfPaths: _parseImageUrls(data[FirebaseCollections.fieldMessagePdfPaths]),
+      pdfName: _parseImageUrls(data[FirebaseCollections.fieldPdfName]),
+      imageSize: data[FirebaseCollections.fieldImageSize] is String
+          ? AiImageSize.fromValue(
+              data[FirebaseCollections.fieldImageSize] as String)
+          : null,
+      imageCount: data[FirebaseCollections.fieldImageCount] as int?,
+      imageBytes: data[FirebaseCollections.fieldImageUrl] is String
+          ? base64Decode(data[FirebaseCollections.fieldImageUrl] as String)
+          : null,
+      imageQuality: data[FirebaseCollections.fieldImageQuality] is String
+          ? ImageQuality.fromValue(
+              data[FirebaseCollections.fieldImageQuality] as String)
+          : null,
+    );
 
     return [userMsg, aiMsg];
   }
 
-  // ── copyWith ──────────────────────────────────────────────────────────────
-
+  /// Creates a copy of this message model with the given fields replaced.
   MessageModel copyWith({
     String? id,
     MessageRole? role,
     String? content,
-    MessageContentType? contentType,
+    AiCapability? contentType,
     DateTime? timestamp,
     Object? modelUsed = _unset,
     int? tokenCount,
     MessageStatus? status,
     Object? imageUrls = _unset,
+    Object? pdfPaths = _unset,
     Object? pdfName = _unset,
     bool? isOptimistic,
     List<AiProviderId>? validProviders,
@@ -418,17 +421,20 @@ class MessageModel {
       content: content ?? this.content,
       contentType: contentType ?? this.contentType,
       timestamp: timestamp ?? this.timestamp,
-      modelUsed: identical(modelUsed, _unset)
-          ? this.modelUsed
+      modelRequest: identical(modelUsed, _unset)
+          ? modelRequest
           : modelUsed as AiProviderId?,
       tokenCount: tokenCount ?? this.tokenCount,
       status: status ?? this.status,
       imageUrls: identical(imageUrls, _unset)
           ? this.imageUrls
           : imageUrls as List<String>?,
-      pdfName: identical(pdfName, _unset) ? this.pdfName : pdfName as String?,
+      pdfPaths: identical(pdfPaths, _unset)
+          ? this.pdfPaths
+          : pdfPaths as List<String>?,
+      pdfName:
+          identical(pdfName, _unset) ? this.pdfName : pdfName as List<String>?,
       isOptimistic: isOptimistic ?? this.isOptimistic,
-      validProviders: validProviders ?? this.validProviders,
       imageSize: identical(imageSize, _unset)
           ? this.imageSize
           : imageSize as AiImageSize?,
@@ -437,9 +443,9 @@ class MessageModel {
       imageBytes: identical(imageBytes, _unset)
           ? this.imageBytes
           : imageBytes as Uint8List?,
-      imageQuality: identical(imageBytes, _unset)
+      imageQuality: identical(imageQuality, _unset)
           ? this.imageQuality
-          : imageBytes as ImageQuality?,
+          : imageQuality as ImageQuality?,
     );
   }
 
@@ -458,6 +464,7 @@ class MessageModel {
       'status: ${status.value})';
 }
 
+/// Normalizes message IDs stored with references to prevent duplication.
 String _normalizeStoredMessageId(String id) {
   const prefixes = ['UserRef-', 'AIRef-'];
   for (final prefix in prefixes) {
@@ -468,6 +475,7 @@ String _normalizeStoredMessageId(String id) {
   return id;
 }
 
+/// Parses a dynamic object into a list of image URLs.
 List<String>? _parseImageUrls(dynamic data) {
   if (data == null) return null;
   if (data is String) return [data];
