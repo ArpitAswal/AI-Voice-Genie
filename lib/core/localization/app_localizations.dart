@@ -384,6 +384,7 @@ class AppLocalizations {
           'Please add at least one API key in Settings to use AI features.',
       'error_microphone': 'Microphone is not available on this device.',
       'model_rate_limit': 'rate limit exceeded. Please try again in a moment.',
+      'press_back_again_to_exit': 'Press back again to exit',
     },
 
     // ── HINDI ─────────────────────────────────────────────────────────────────
@@ -740,6 +741,7 @@ class AppLocalizations {
       'error_microphone': 'इस डिवाइस पर माइक्रोफ़ोन उपलब्ध नहीं है।',
       'model_rate_limit':
           'की दर सीमा पार हो गई है। कृपया कुछ देर बाद पुनः प्रयास करें।',
+      'press_back_again_to_exit': 'ऐप बंद करने के लिए एक बार फिर वापस दबाएं',
     },
   };
 
@@ -913,6 +915,7 @@ class AppLocalizations {
   String get galleryDeniedMessage => translate('gallery_permission_denied');
   String get uploadingPhoto => translate('uploading_photo');
   String get modelLimit => translate('model_rate_limit');
+  String get pressBackAgainToExit => translate('press_back_again_to_exit');
 }
 
 // ==========================================================================

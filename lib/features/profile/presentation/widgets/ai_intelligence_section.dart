@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:no_screenshot/no_screenshot.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/constants/app_colors.dart';
@@ -10,8 +11,36 @@ import '../../../../core/router/app_routes.dart';
 import '../../../key_setup/presentation/api_key_provider.dart';
 import 'profile_common_widgets.dart';
 
-class ProfileAiIntelligenceSection extends StatelessWidget {
+class ProfileAiIntelligenceSection extends StatefulWidget {
   const ProfileAiIntelligenceSection({super.key});
+
+  @override
+  State<ProfileAiIntelligenceSection> createState() => _ProfileAiIntelligenceSectionState();
+}
+
+class _ProfileAiIntelligenceSectionState extends State<ProfileAiIntelligenceSection> {
+
+  final _noScreenshot = NoScreenshot.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // Enable screenshot protection when entering this specific screen
+    _secureScreen();
+  }
+
+  Future<void> _secureScreen() async {
+    // CRITICAL: Disable screenshots when entering this specific screen
+    await _noScreenshot.screenshotOff();
+  }
+
+  @override
+  void dispose() {
+    // CRITICAL: Re-enable screenshots when the user leaves this screen,
+    // otherwise the rest of the app will remain locked down.
+    _noScreenshot.screenshotOn();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
