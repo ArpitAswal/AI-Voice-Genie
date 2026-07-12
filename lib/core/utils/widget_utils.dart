@@ -100,12 +100,12 @@ extension WidgetExtensions on BuildContext {
         errorBorder: border ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.error),
+              borderSide: const BorderSide(color: AppColors.lightError),
             ),
         focusedErrorBorder: border ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.error),
+              borderSide: const BorderSide(color: AppColors.lightError),
             ),
         contentPadding: contentPad ??
             const EdgeInsets.symmetric(
@@ -248,10 +248,10 @@ extension WidgetExtensions on BuildContext {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.error.withValues(
+          backgroundColor: AppColors.lightError.withValues(
             alpha: 0.1,
           ),
-          foregroundColor: AppColors.error,
+          foregroundColor: AppColors.lightError,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -268,7 +268,7 @@ extension WidgetExtensions on BuildContext {
               label,
               style: Theme.of(this).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.error,
+                    color: AppColors.lightError,
                   ),
             ),
           ],

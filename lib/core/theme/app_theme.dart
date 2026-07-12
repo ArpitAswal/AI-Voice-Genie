@@ -21,7 +21,7 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         primary: AppColors.primaryLight,
         secondary: AppColors.accentLight,
-        error: AppColors.error,
+        error: AppColors.lightError,
         onPrimary: AppColors.white,
         onSecondary: AppColors.white,
         onSurface: AppColors.lightTextPrimary,
@@ -79,16 +79,16 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.lightError, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error, width: 2),
+          borderSide: const BorderSide(color: AppColors.lightError, width: 2),
         ),
         labelStyle: AppTextStyles.lightTextTheme.labelLarge,
         hintStyle: AppTextStyles.lightTextTheme.bodyMedium,
         errorStyle: AppTextStyles.lightTextTheme.labelSmall?.copyWith(
-          color: AppColors.error,
+          color: AppColors.lightError,
         ),
       ),
 
@@ -214,7 +214,7 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primaryDark,
         secondary: AppColors.accentDark,
-        error: AppColors.error,
+        error: AppColors.lightError,
         onPrimary: AppColors.white,
         onSecondary: AppColors.black,
         onSurface: AppColors.darkTextPrimary,
@@ -261,16 +261,16 @@ class AppTheme {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+          borderSide: const BorderSide(color: AppColors.lightError, width: 1.5),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error, width: 2),
+          borderSide: const BorderSide(color: AppColors.lightError, width: 2),
         ),
         labelStyle: AppTextStyles.darkTextTheme.labelLarge,
         hintStyle: AppTextStyles.darkTextTheme.bodyMedium,
         errorStyle: AppTextStyles.darkTextTheme.labelSmall?.copyWith(
-          color: AppColors.error,
+          color: AppColors.lightError,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(

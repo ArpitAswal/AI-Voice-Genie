@@ -537,7 +537,7 @@ Map<String, Color> _getColors(MessageType type) {
     case MessageType.success:
       return {'background': AppColors.success, 'icon': Colors.white};
     case MessageType.error:
-      return {'background': AppColors.error, 'icon': Colors.white};
+      return {'background': AppColors.lightError, 'icon': Colors.white};
     case MessageType.warning:
       return {'background': AppColors.warning, 'icon': Colors.white};
   }

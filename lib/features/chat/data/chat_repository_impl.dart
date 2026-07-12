@@ -161,10 +161,8 @@ class ChatRepositoryImpl implements ChatRepository {
         return message.copyWith(
             content:
                 message.content.isNotEmpty ? message.content : cached.content,
-            contentType: message.contentType,
             imageUrls: message.imageUrls ?? cached.imageUrls,
-            pdfPaths: message.pdfPaths ?? cached.pdfPaths,
-            pdfName: message.pdfName ?? cached.pdfName);
+            pdfInfo: message.pdfInfo ?? cached.pdfInfo);
       }).toList();
 
       final missingCachedMessages = cachedMessages

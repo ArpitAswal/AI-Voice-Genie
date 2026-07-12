@@ -66,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => AppRoutes.pop(context, true),
             child: Text(
               context.l10n.signOut,
-              style: const TextStyle(color: AppColors.error),
+              style: const TextStyle(color: AppColors.lightError),
             ),
           ),
         ],

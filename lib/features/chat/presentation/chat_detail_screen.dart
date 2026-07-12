@@ -218,7 +218,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               l10n.translate('delete'),
-              style: const TextStyle(color: AppColors.error),
+              style: const TextStyle(color: AppColors.lightError),
             ),
           ),
         ],

@@ -134,10 +134,10 @@ class ConversationTile extends StatelessWidget {
       builder: (ctx) => SafeArea(
         child: ListTile(
           leading:
-              const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+              const Icon(Icons.delete_outline_rounded, color: AppColors.lightError),
           title: const Text(
             'Delete conversation',
-            style: TextStyle(color: AppColors.error),
+            style: TextStyle(color: AppColors.lightError),
           ),
           onTap: () {
             Navigator.pop(ctx);

@@ -120,6 +120,7 @@ class FirebaseCollections {
   static const String fieldTimestamp = 'timestamp';
   static const String fieldImageUrl = 'imageUrl';
   static const String fieldPdfName = 'pdfName';
+  static const String fieldPdfInfo = 'pdfInfo';
   static const String fieldValidProviders = 'validProviders';
   static const String fieldImageSize = 'imageSize';
   static const String fieldImageCount = 'imageCount';
@@ -138,6 +139,7 @@ class FirebaseCollections {
   static const String fieldMessageLocalImageKey = 'localImageKey';
   static const String fieldMessagePdfName = 'pdfName';
   static const String fieldMessagePdfPaths = 'pdfPaths';
+  static const String fieldMessagePdfInfo = 'pdfInfo';
   static const String fieldMessageValidProviders = 'validProviders';
 
   // ── Analytics Event Names ─────────────────────────────────────────────────

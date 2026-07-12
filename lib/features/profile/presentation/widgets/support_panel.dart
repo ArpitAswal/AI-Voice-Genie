@@ -32,8 +32,8 @@ class ProfileSupportPanel extends StatelessWidget {
           ProfileActionRow(
             icon: Icons.logout_rounded,
             title: context.l10n.signOut,
-            titleColor: AppColors.error,
-            iconColor: AppColors.error,
+            titleColor: AppColors.lightError,
+            iconColor: AppColors.lightError,
             onTap: onLogout,
           ),
         ],

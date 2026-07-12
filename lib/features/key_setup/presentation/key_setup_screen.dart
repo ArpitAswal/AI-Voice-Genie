@@ -226,7 +226,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
               onPressed: () => AppRoutes.pop(context, true),
               child: Text(
                 context.l10n.delete,
-                style: const TextStyle(color: AppColors.error),
+                style: const TextStyle(color: AppColors.lightError),
               ),
             ),
           ],
@@ -383,7 +383,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                       children: [
                         const Icon(
                           Icons.error_outline_rounded,
-                          color: AppColors.error,
+                          color: AppColors.lightError,
                           size: 16,
                         ),
                         const SizedBox(width: 6),
@@ -391,7 +391,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                           child: Text(
                             AppLocalizations.of(context)!.translate(error),
                             style: context.textTheme.labelSmall?.copyWith(
-                              color: AppColors.error,
+                              color: AppColors.lightError,
                             ),
                           ),
                         ),
@@ -500,7 +500,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
       case ApiKeyStatus.valid:
         return AppColors.success;
       case ApiKeyStatus.invalid:
-        return AppColors.error;
+        return AppColors.lightError;
       case ApiKeyStatus.validating:
         return AppColors.warning;
       case ApiKeyStatus.notAdded:
@@ -606,7 +606,7 @@ class _StatusChip extends StatelessWidget {
         ),
       ApiKeyStatus.invalid => (
           context.l10n.keyInvalid,
-          AppColors.error,
+          AppColors.lightError,
           Icons.cancel_rounded
         ),
       ApiKeyStatus.validating => (

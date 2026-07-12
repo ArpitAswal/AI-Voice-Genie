@@ -158,7 +158,7 @@ abstract final class _ProviderStyle {
       case ImageQuality.medium:
         return AppColors.warning;
       case ImageQuality.high:
-        return AppColors.error;
+        return AppColors.lightError;
     }
   }
 }

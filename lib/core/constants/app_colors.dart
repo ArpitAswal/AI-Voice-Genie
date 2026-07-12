@@ -10,7 +10,7 @@ class AppColors {
 
   // Primary brand color
   static const Color primaryLight = Color(0xFF7C9CFF);
-  static const Color primaryDark = Color(0xFF5571D1);
+  static const Color primaryDark = Color(0xFF2D3D70);
 
   // Accent Glow
   static const Color accentLight = Color(0xFFC1D4FB);
@@ -54,7 +54,8 @@ class AppColors {
 
   // ── Status / Feedback Colors ──────────────────────────────────────────────
   static const Color success = Color(0xFF03AC35);
-  static const Color error = Color(0xFFEF4444);
+  static const Color lightError = Color(0xFFFF716C);
+  static const Color darkError = Color(0xFFD7383B);
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF3B82F6);
 
@@ -74,17 +75,12 @@ class AppColors {
   static const Color claudeBrandDark = Color(0xFFB45309);
 
   // ── Chat Bubble Colors ────────────────────────────────────────────────────
-  // User message bubble
-  static const Color userBubbleLight = Color(0xFF5C6BC0);
-  static const Color userBubbleDark = Color(0xFF7986CB);
-  static const Color userBubbleTextLight = Color(0xFFFFFFFF);
-  static const Color userBubbleTextDark = Color(0xFFFFFFFF);
-
-  // AI message bubble
-  static const Color aiBubbleLight = Color(0xFFFFFFFF);
-  static const Color aiBubbleDark = Color(0xFF1E1E2E);
-  static const Color aiBubbleTextLight = Color(0xFF1A1A2E);
-  static const Color aiBubbleTextDark = Color(0xFFF0F0F5);
+  static const Color messageBubbleLight = Color(0xFFDEE5FF);
+  static const Color messageBubbleDark = Color(0xFF2D3D70);
+  static const Color messageBubbleTextLight = Color(0xFFFFFFFF);
+  static const Color messageBubbleTextDark = Color(0xFFFFFFFF);
+  static const Color pdfBackgroundLight = Color(0xFF6F8FF1);
+  static const Color pdfBackgroundDark = Color(0xFF0F172A);
 
   // ── Voice Input Colors ────────────────────────────────────────────────────
   // Microphone button active state (pulsing red — recording)

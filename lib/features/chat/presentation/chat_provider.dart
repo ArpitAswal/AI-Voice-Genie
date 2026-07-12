@@ -11,6 +11,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/error/ai_exception.dart';
 import '../../../core/services/ai_preferences_service.dart';
+// ignore: unused_import
 import '../../../core/services/cloudinary_service.dart';
 import '../data/chat_repository_impl.dart';
 import '../domain/chat_attachment.dart';
@@ -177,11 +178,10 @@ class ChatProvider extends ChangeNotifier {
       imagePaths: attachments.isNotEmpty && attachments.first.isImage == true
           ? attachments.map((e) => e.path!).toList()
           : null,
-      pdfPaths: attachments.isNotEmpty && attachments.first.isPdf
-          ? attachments.map((e) => e.path!).toList()
-          : null,
-      pdfName: attachments.isNotEmpty && attachments.first.isPdf
-          ? attachments.map((e) => e.name).toList()
+      pdfInfo: attachments.isNotEmpty && attachments.first.isPdf == true
+          ? attachments
+              .map((e) => PdfAttachmentInfo(path: e.path ?? '', name: e.name))
+              .toList()
           : null,
       imageSize: (requestCapability == AiCapability.imageGeneration)
           ? preferredImageSize

@@ -132,7 +132,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
                     boxShadow: isListening
                         ? [
                             BoxShadow(
-                              color: AppColors.error.withValues(alpha: 0.4),
+                              color: AppColors.lightError.withValues(alpha: 0.4),
                               blurRadius: 12,
                               spreadRadius: 2,
                             ),
@@ -152,7 +152,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
                               ? Icons.stop_rounded
                               : Icons.mic_none_rounded,
                           color: isListening
-                              ? AppColors.error
+                              ? AppColors.lightError
                               : AppColors.primaryLight),
                 ),
               ),
@@ -163,7 +163,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
               Text(
                 AppLocalizations.of(context)!.translate('listening'),
                 style: context.textTheme.bodySmall?.copyWith(
-                    color: AppColors.error, fontWeight: FontWeight.w500),
+                    color: AppColors.lightError, fontWeight: FontWeight.w500),
               ),
             ],
           ],

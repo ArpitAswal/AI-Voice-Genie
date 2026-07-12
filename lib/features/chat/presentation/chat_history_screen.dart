@@ -118,7 +118,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
         title: Row(
           children: [
             const Icon(Icons.warning_amber_rounded,
-                color: AppColors.error, size: 28),
+                color: AppColors.lightError, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

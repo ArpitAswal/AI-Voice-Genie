@@ -505,10 +505,10 @@ class _AttachmentPreview extends StatelessWidget {
                     : Container(
                         width: previewSize,
                         height: previewSize,
-                        color: AppColors.error.withValues(alpha: 0.12),
+                        color: AppColors.lightError.withValues(alpha: 0.12),
                         child: const Icon(
                           Icons.picture_as_pdf_rounded,
-                          color: AppColors.error,
+                          color: AppColors.lightError,
                         ),
                       ),
               ),

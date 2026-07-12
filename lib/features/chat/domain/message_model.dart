@@ -48,11 +48,8 @@ class MessageModel {
   /// Holds Cloudinary URLs after generation.
   final List<String>? imageUrls;
 
-  /// Optional PDF file paths — populated for pdfParsing responses.
-  final List<String>? pdfPaths;
-
-  /// Optional PDF file name — populated for pdfParsing responses.
-  final List<String>? pdfName;
+  /// Optional PDF attachments — populated for pdfParsing responses.
+  final List<PdfAttachmentInfo>? pdfInfo;
 
   /// Whether this message is a temporary optimistic insert (not yet persisted in Firestore).
   final bool isOptimistic;
@@ -80,8 +77,7 @@ class MessageModel {
     this.tokenCount = 0,
     this.status = MessageStatus.partial,
     this.imageUrls,
-    this.pdfPaths,
-    this.pdfName,
+    this.pdfInfo,
     this.isOptimistic = false,
     this.imageSize,
     this.imageCount,
@@ -96,8 +92,7 @@ class MessageModel {
     AiProviderId? validProvider, {
     AiCapability contentType = AiCapability.textGeneration,
     List<String>? imagePaths,
-    List<String>? pdfPaths,
-    List<String>? pdfName,
+    List<PdfAttachmentInfo>? pdfInfo,
     AiImageSize? imageSize,
     int? imageCount,
     ImageQuality? imageQuality,
@@ -111,8 +106,7 @@ class MessageModel {
       modelRequest: validProvider,
       status: MessageStatus.sending,
       imageUrls: imagePaths,
-      pdfPaths: pdfPaths,
-      pdfName: pdfName,
+      pdfInfo: pdfInfo,
       isOptimistic: true,
       imageSize: imageSize,
       imageCount: imageCount,
@@ -128,8 +122,7 @@ class MessageModel {
     AiCapability contentType = AiCapability.textGeneration,
     int tokenCount = 0,
     List<String>? imageUrls,
-    List<String>? pdfPaths,
-    List<String>? pdfName,
+    List<PdfAttachmentInfo>? pdfInfo,
     AiImageSize? imageSize,
     int? imageCount,
     Uint8List? imageBytes,
@@ -145,8 +138,7 @@ class MessageModel {
       tokenCount: tokenCount,
       status: MessageStatus.delivered,
       imageUrls: imageUrls,
-      pdfPaths: pdfPaths,
-      pdfName: pdfName,
+      pdfInfo: pdfInfo,
       imageSize: imageSize,
       imageCount: imageCount,
       imageBytes: imageBytes,
@@ -180,8 +172,7 @@ class MessageModel {
       ),
       imageUrls:
           _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]),
-      pdfPaths: _parseImageUrls(data[FirebaseCollections.fieldMessagePdfPaths]),
-      pdfName: _parseImageUrls(data[FirebaseCollections.fieldMessagePdfName]),
+      pdfInfo: _parsePdfInfo(data),
       imageSize: data[FirebaseCollections.fieldImageSize] is String
           ? AiImageSize.fromValue(
               data[FirebaseCollections.fieldImageSize] as String)
@@ -209,10 +200,8 @@ class MessageModel {
         FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
       if (imageUrls != null && imageUrls!.isNotEmpty)
         FirebaseCollections.fieldMessageImageUrl: imageUrls,
-      if (pdfPaths != null && pdfPaths!.isNotEmpty)
-        FirebaseCollections.fieldMessagePdfPaths: pdfPaths,
-      if (pdfName != null && pdfName!.isNotEmpty)
-        FirebaseCollections.fieldMessagePdfName: pdfName,
+      if (pdfInfo != null && pdfInfo!.isNotEmpty)
+        FirebaseCollections.fieldPdfInfo: pdfInfo!.map((e) => e.toMap()).toList(),
       if (imageSize != null)
         FirebaseCollections.fieldImageSize: imageSize!.name,
       if (imageCount != null) FirebaseCollections.fieldImageCount: imageCount,
@@ -235,8 +224,7 @@ class MessageModel {
       if (modelRequest != null)
         FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
       if (imageUrls != null && imageUrls!.isNotEmpty) 'imageUrls': imageUrls,
-      if (pdfPaths != null && pdfPaths!.isNotEmpty) 'pdfPaths': pdfPaths,
-      if (pdfName != null && pdfName!.isNotEmpty) 'pdfName': pdfName,
+      if (pdfInfo != null && pdfInfo!.isNotEmpty) 'pdfInfo': pdfInfo!.map((e) => e.toMap()).toList(),
       if (imageSize != null) 'imageSize': imageSize!.name,
       if (imageCount != null) 'imageCount': imageCount,
       if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
@@ -270,8 +258,7 @@ class MessageModel {
         data[FirebaseCollections.fieldMessageStatus] as String? ?? 'delivered',
       ),
       imageUrls: _parseImageUrls(data['imageUrls']),
-      pdfPaths: _parseImageUrls(data['pdfPaths']),
-      pdfName: _parseImageUrls(data['pdfName']),
+      pdfInfo: _parsePdfInfo(data),
       imageSize: data['imageSize'] is String
           ? AiImageSize.fromValue(data['imageSize'] as String)
           : null,
@@ -315,10 +302,8 @@ class MessageModel {
       FirebaseCollections.fieldTimestamp: FieldValue.serverTimestamp(),
       if (aiMessage.imageUrls != null && aiMessage.imageUrls!.isNotEmpty)
         FirebaseCollections.fieldMessageImageUrl: aiMessage.imageUrls,
-      if (aiMessage.pdfPaths != null && aiMessage.pdfPaths!.isNotEmpty)
-        FirebaseCollections.fieldMessagePdfPaths: aiMessage.pdfPaths,
-      if (aiMessage.pdfName != null && aiMessage.pdfName!.isNotEmpty)
-        FirebaseCollections.fieldPdfName: aiMessage.pdfName,
+      if (aiMessage.pdfInfo != null && aiMessage.pdfInfo!.isNotEmpty)
+        FirebaseCollections.fieldPdfInfo: aiMessage.pdfInfo!.map((e) => e.toMap()).toList(),
       if (aiMessage.imageSize != null)
         FirebaseCollections.fieldImageSize: aiMessage.imageSize!.name,
       if (aiMessage.imageCount != null)
@@ -352,8 +337,7 @@ class MessageModel {
             'text_generation',
       ),
       status: MessageStatus.delivered,
-      pdfPaths: _parseImageUrls(data[FirebaseCollections.fieldMessagePdfPaths]),
-      pdfName: _parseImageUrls(data[FirebaseCollections.fieldPdfName]),
+      pdfInfo: _parsePdfInfo(data),
     );
 
     final aiMsg = MessageModel(
@@ -376,8 +360,7 @@ class MessageModel {
         data[FirebaseCollections.fieldStatus] as String? ?? 'delivered',
       ),
       imageUrls: _parseImageUrls(data[FirebaseCollections.fieldImageUrl]),
-      pdfPaths: _parseImageUrls(data[FirebaseCollections.fieldMessagePdfPaths]),
-      pdfName: _parseImageUrls(data[FirebaseCollections.fieldPdfName]),
+      pdfInfo: _parsePdfInfo(data),
       imageSize: data[FirebaseCollections.fieldImageSize] is String
           ? AiImageSize.fromValue(
               data[FirebaseCollections.fieldImageSize] as String)
@@ -406,8 +389,7 @@ class MessageModel {
     int? tokenCount,
     MessageStatus? status,
     Object? imageUrls = _unset,
-    Object? pdfPaths = _unset,
-    Object? pdfName = _unset,
+    Object? pdfInfo = _unset,
     bool? isOptimistic,
     List<AiProviderId>? validProviders,
     Object? imageSize = _unset,
@@ -429,11 +411,9 @@ class MessageModel {
       imageUrls: identical(imageUrls, _unset)
           ? this.imageUrls
           : imageUrls as List<String>?,
-      pdfPaths: identical(pdfPaths, _unset)
-          ? this.pdfPaths
-          : pdfPaths as List<String>?,
-      pdfName:
-          identical(pdfName, _unset) ? this.pdfName : pdfName as List<String>?,
+      pdfInfo: identical(pdfInfo, _unset)
+          ? this.pdfInfo
+          : pdfInfo as List<PdfAttachmentInfo>?,
       isOptimistic: isOptimistic ?? this.isOptimistic,
       imageSize: identical(imageSize, _unset)
           ? this.imageSize
@@ -481,4 +461,65 @@ List<String>? _parseImageUrls(dynamic data) {
   if (data is String) return [data];
   if (data is List) return data.map((e) => e.toString()).toList();
   return null;
+}
+
+/// Helper method to parse PDF attachments from dynamic cache/Firestore structure.
+List<PdfAttachmentInfo>? _parsePdfInfo(Map<String, dynamic>? data) {
+  if (data == null) return null;
+  
+  if (data[FirebaseCollections.fieldPdfInfo] is List) {
+    return (data[FirebaseCollections.fieldPdfInfo] as List)
+        .map((e) => PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+  
+  if (data[FirebaseCollections.fieldMessagePdfInfo] is List) {
+    return (data[FirebaseCollections.fieldMessagePdfInfo] as List)
+        .map((e) => PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  if (data['pdfInfo'] is List) {
+    return (data['pdfInfo'] as List)
+        .map((e) => PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  // Legacy fallback
+  final paths = _parseImageUrls(data[FirebaseCollections.fieldMessagePdfPaths] ?? data['pdfPaths']);
+  final names = _parseImageUrls(data[FirebaseCollections.fieldPdfName] ?? data[FirebaseCollections.fieldMessagePdfName] ?? data['pdfName']);
+  if (paths != null && names != null) {
+    final pdfs = <PdfAttachmentInfo>[];
+    final len = paths.length < names.length ? paths.length : names.length;
+    for (int i = 0; i < len; i++) {
+      pdfs.add(PdfAttachmentInfo(path: paths[i], name: names[i]));
+    }
+    return pdfs;
+  }
+  return null;
+}
+
+/// Immutable class representing combined PDF attachment path and name.
+class PdfAttachmentInfo {
+  final String path;
+  final String name;
+
+  const PdfAttachmentInfo({required this.path, required this.name});
+
+  factory PdfAttachmentInfo.fromMap(Map<String, dynamic> map) {
+    return PdfAttachmentInfo(
+      path: map['path'] as String? ?? '',
+      name: map['name'] as String? ?? '',
+    );
+  }
+
+  Map<String, String> toMap() {
+    return {
+      'path': path,
+      'name': name,
+    };
+  }
+
+  @override
+  String toString() => 'PdfAttachmentInfo(name: $name, path: $path)';
 }
