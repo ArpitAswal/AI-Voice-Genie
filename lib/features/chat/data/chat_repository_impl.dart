@@ -223,6 +223,26 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
+  Future<void> updateConversationTitle({
+    required String uid,
+    required String conversationId,
+    required String newTitle,
+  }) async {
+    try {
+      await _firestore
+          .doc(FirebaseCollections.conversationDoc(uid, conversationId))
+          .update({
+        FirebaseCollections.fieldConversationTitle: newTitle,
+      });
+    } on FirebaseException catch (e) {
+      throw ChatException(
+        ChatErrorCodes.saveFailed,
+        technicalMessage: 'updateConversationTitle failed: ${e.code}',
+      );
+    }
+  }
+
+  @override
   Future<void> deleteConversation({
     required String uid,
     required String conversationId,

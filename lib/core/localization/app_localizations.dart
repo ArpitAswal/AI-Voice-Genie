@@ -120,6 +120,10 @@ class AppLocalizations {
       'keys': 'Keys',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
+      'rename_conversation_name': 'Rename this conversation',
+      'rename': 'Rename',
+      'renaming': 'Renaming...',
+      'conversation_updated_successfully': 'Conversation renamed successfully.',
       'new_conversation': 'New Conversation',
       'type_message': 'Type a message...',
       'send': 'Send',
@@ -476,6 +480,10 @@ class AppLocalizations {
       'keys': 'कुंजी',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
+      'rename_conversation_name': 'बातचीत का नाम बदलें',
+      'rename': 'नाम बदलें',
+      'renaming': 'नाम बदला जा रहा है...',
+      'conversation_updated_successfully': 'बातचीत का नाम सफलतापूर्वक बदल दिया गया।',
       'new_conversation': 'नई बातचीत',
       'type_message': 'संदेश लिखें...',
       'send': 'भेजें',

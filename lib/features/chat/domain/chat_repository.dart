@@ -45,6 +45,13 @@ abstract class ChatRepository {
     required String uid,
     required String conversationId,
   });
+  
+  /// Update the title of a specific conversation in Firestore.
+  Future<void> updateConversationTitle({
+    required String uid,
+    required String conversationId,
+    required String newTitle,
+  });
 
   /// Permanently delete all conversations and messages from Firestore for a given user,
   /// and wipe all conversation Hive caches.

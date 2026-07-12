@@ -163,16 +163,12 @@ class ChatProvider extends ChangeNotifier {
       prompt: trimmedPrompt,
       attachments: attachments,
     );
-    final effectivePrompt = _effectivePrompt(
-      prompt: trimmedPrompt,
-      capability: requestCapability,
-    );
 
     // ── Step 1: Optimistic user message ──────────────────────────────────────
     // We add the user message to the UI instantly so the app feels responsive.
     // If the request later fails, this optimistic message will be marked as failed.
     final userMessage = MessageModel.userMessage(
-      effectivePrompt,
+      trimmedPrompt,
       selectedProvider,
       contentType: requestCapability,
       imagePaths: attachments.isNotEmpty && attachments.first.isImage == true
@@ -209,12 +205,12 @@ class ChatProvider extends ChangeNotifier {
         // Build the conversation model in memory — written to Firestore
         // together with the first message pair in one batch (Step 6)
         final conversationId = const Uuid().v4();
-        final actualTitle = effectivePrompt.generateConversationTitle();
+        String actualTitle = trimmedPrompt.generateConversationTitle();
 
         newConversation = ConversationModel(
           id: conversationId,
-          title: actualTitle,
-          lastMessage: _conversationPreview(effectivePrompt, attachments),
+          title: (actualTitle.isNotEmpty) ? actualTitle : 'Untitled Conversation',
+          lastMessage: _conversationPreview(trimmedPrompt, attachments),
           capability: requestCapability,
           lastProvider: selectedProvider,
         );
@@ -254,7 +250,7 @@ class ChatProvider extends ChangeNotifier {
         request: AiRequest(
           capability: requestCapability,
           uid: uid,
-          prompt: effectivePrompt,
+          prompt: trimmedPrompt,
           conversationHistory: history,
           responseLength: preferredResponseLength,
           imageSize: (requestCapability == AiCapability.imageGeneration)
@@ -409,6 +405,23 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateConversationTitle(String newTitle, String uid) async {
+    if (_activeConversation == null) return;
+    try {
+      await _repository.updateConversationTitle(
+        uid: uid,
+        conversationId: _activeConversation!.id,
+        newTitle: newTitle,
+      );
+      _activeConversation = _activeConversation!.copyWith(title: newTitle);
+      _markConversationHistoryDirty();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('⚠️ ChatProvider.updateConversationTitle error: $e');
+      rethrow; // Rethrow to let the UI catch and show error toast
+    }
+  }
+
   // ── Clear State ────────────────────────────────────────────────────────────
 
   /// Reset all state — called when starting a new conversation.
@@ -482,20 +495,6 @@ class ChatProvider extends ChangeNotifier {
       return AiCapability.imageGeneration;
     }
     return AiCapability.textGeneration;
-  }
-
-  String _effectivePrompt({
-    required String prompt,
-    required AiCapability capability,
-  }) {
-    if (prompt.isNotEmpty) return prompt;
-    if (capability == AiCapability.imageUnderstanding) {
-      return AppConstants.defaultImageQuestion;
-    }
-    if (capability == AiCapability.pdfParsing) {
-      return AppConstants.defaultPdfQuestion;
-    }
-    return prompt;
   }
 
   String _conversationPreview(

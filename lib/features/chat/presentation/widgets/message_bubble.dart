@@ -96,12 +96,6 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  /// Determines if the message has media attached (images or pdf)
-  /// This affects the padding inside the message bubble container.
-  bool get _hasMedia =>
-      (message.imageUrls != null && message.imageUrls!.isNotEmpty) ||
-      (message.pdfInfo != null && message.pdfInfo!.isNotEmpty);
-
   /// Copies the text content to clipboard and shows a toast
   void _copyToClipboard(BuildContext context) {
     Clipboard.setData(ClipboardData(text: message.content));
@@ -269,12 +263,12 @@ Widget _buildImage(String url) {
 
   if (url.startsWith('http')) {
     return ClipRRect(
-      borderRadius: BorderRadiusGeometry.circular(16),
+      borderRadius: BorderRadius.circular(16),
       child: Image.network(
         url,
         fit: BoxFit.cover,
         filterQuality: FilterQuality.high,
-        alignment: AlignmentGeometry.center,
+        alignment: Alignment.center,
         errorBuilder: (_, __, ___) => const _ImageFallback(),
         loadingBuilder: (_, child, progress) =>
             progress == null ? child : const _ImageFallback(isLoading: true),
@@ -405,8 +399,12 @@ Widget _pdfView(BuildContext context, String name, {bool squareView = false}) {
 }
 
 class _OneAttachmentView extends StatelessWidget {
-  const _OneAttachmentView(
-      {required this.type, this.image, this.size, this.pdf});
+  const _OneAttachmentView({
+    required this.type,
+    this.image,
+    this.size,
+    this.pdf,
+  });
 
   final String? image;
   final AiImageSize? size;
@@ -415,18 +413,32 @@ class _OneAttachmentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return (type == ChatAttachmentType.image)
-        ? AspectRatio(
-            aspectRatio: size!.aspectRatio,
-            child: _buildImage(image!),
-          )
-        : _pdfView(context, pdf!.name);
+    if (type == ChatAttachmentType.image) {
+      final img = image;
+      final sz = size;
+      if (img != null && sz != null) {
+        return AspectRatio(
+          aspectRatio: sz.aspectRatio,
+          child: _buildImage(img),
+        );
+      }
+    } else {
+      final p = pdf;
+      if (p != null) {
+        return _pdfView(context, p.name);
+      }
+    }
+    return const SizedBox.shrink();
   }
 }
 
 class _TwoAttachmentView extends StatelessWidget {
-  const _TwoAttachmentView(
-      {this.pdfs, this.images, this.size, required this.type});
+  const _TwoAttachmentView({
+    this.pdfs,
+    this.images,
+    this.size,
+    required this.type,
+  });
 
   final List<String>? images;
   final AiImageSize? size;
@@ -436,66 +448,70 @@ class _TwoAttachmentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
+    final sz = size;
+    final landscape = sz == AiImageSize.landscape;
 
-    final landscape = size == AiImageSize.landscape;
-
-    if (landscape) {
-      return (type == ChatAttachmentType.image)
-          ? Column(
-              children: [
-                AspectRatio(
-                  aspectRatio: size!.aspectRatio,
-                  child: _buildImage(images![0]),
-                ),
-                const SizedBox(height: spacing),
-                AspectRatio(
-                  aspectRatio: size!.aspectRatio,
-                  child: _buildImage(images![1]),
-                ),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _pdfView(context, pdfs![0].name),
-                const SizedBox(height: spacing / 2),
-                _pdfView(context, pdfs![1].name),
-              ],
-            );
-    }
-
-    return (type == ChatAttachmentType.image)
-        ? Row(
+    if (type == ChatAttachmentType.image) {
+      final imgs = images;
+      if (imgs != null && imgs.length >= 2 && sz != null) {
+        if (landscape) {
+          return Column(
             children: [
-              Expanded(
-                child: AspectRatio(
-                  aspectRatio: size!.aspectRatio,
-                  child: _buildImage(images![0]),
-                ),
+              AspectRatio(
+                aspectRatio: sz.aspectRatio,
+                child: _buildImage(imgs[0]),
               ),
-              const SizedBox(width: spacing),
-              Expanded(
-                child: AspectRatio(
-                  aspectRatio: size!.aspectRatio,
-                  child: _buildImage(images![1]),
-                ),
+              const SizedBox(height: spacing),
+              AspectRatio(
+                aspectRatio: sz.aspectRatio,
+                child: _buildImage(imgs[1]),
               ),
-            ],
-          )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _pdfView(context, pdfs![0].name),
-              const SizedBox(height: spacing / 2),
-              _pdfView(context, pdfs![1].name),
             ],
           );
+        }
+
+        return Row(
+          children: [
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: sz.aspectRatio,
+                child: _buildImage(imgs[0]),
+              ),
+            ),
+            const SizedBox(width: spacing),
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: sz.aspectRatio,
+                child: _buildImage(imgs[1]),
+              ),
+            ),
+          ],
+        );
+      }
+    } else {
+      final p = pdfs;
+      if (p != null && p.length >= 2) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _pdfView(context, p[0].name),
+            const SizedBox(height: spacing / 2),
+            _pdfView(context, p[1].name),
+          ],
+        );
+      }
+    }
+    return const SizedBox.shrink();
   }
 }
 
 class _ThreeAttachmentView extends StatelessWidget {
-  const _ThreeAttachmentView(
-      {this.pdfs, this.images, this.size, required this.type});
+  const _ThreeAttachmentView({
+    this.pdfs,
+    this.images,
+    this.size,
+    required this.type,
+  });
 
   final List<String>? images;
   final AiImageSize? size;
@@ -505,59 +521,73 @@ class _ThreeAttachmentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
+    final sz = size;
 
-    return (type == ChatAttachmentType.image)
-        ? Column(
-            children: [
-              AspectRatio(
-                aspectRatio: size!.aspectRatio,
-                child: _buildImage(images![0]),
-              ),
-              const SizedBox(height: spacing),
-              Row(
-                children: [
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: size!.aspectRatio,
-                      child: _buildImage(images![1]),
-                    ),
+    if (type == ChatAttachmentType.image) {
+      final imgs = images;
+      if (imgs != null && imgs.length >= 3 && sz != null) {
+        return Column(
+          children: [
+            AspectRatio(
+              aspectRatio: sz.aspectRatio,
+              child: _buildImage(imgs[0]),
+            ),
+            const SizedBox(height: spacing),
+            Row(
+              children: [
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: sz.aspectRatio,
+                    child: _buildImage(imgs[1]),
                   ),
-                  const SizedBox(width: spacing),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: size!.aspectRatio,
-                      child: _buildImage(images![2]),
-                    ),
+                ),
+                const SizedBox(width: spacing),
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: sz.aspectRatio,
+                    child: _buildImage(imgs[2]),
                   ),
-                ],
-              ),
-            ],
-          )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _pdfView(context, pdfs![0].name),
-              const SizedBox(height: spacing / 2),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                      child:
-                          _pdfView(context, pdfs![1].name, squareView: true)),
-                  const SizedBox(width: spacing),
-                  Expanded(
-                      child:
-                          _pdfView(context, pdfs![2].name, squareView: true)),
-                ],
-              )
-            ],
-          );
+                ),
+              ],
+            ),
+          ],
+        );
+      }
+    } else {
+      final p = pdfs;
+      if (p != null && p.length >= 3) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _pdfView(context, p[0].name),
+            const SizedBox(height: spacing / 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: _pdfView(context, p[1].name, squareView: true),
+                ),
+                const SizedBox(width: spacing),
+                Expanded(
+                  child: _pdfView(context, p[2].name, squareView: true),
+                ),
+              ],
+            )
+          ],
+        );
+      }
+    }
+    return const SizedBox.shrink();
   }
 }
 
 class _FourAttachmentView extends StatelessWidget {
-  const _FourAttachmentView(
-      {this.pdfs, this.images, required this.size, required this.type});
+  const _FourAttachmentView({
+    this.pdfs,
+    this.images,
+    this.size,
+    required this.type,
+  });
 
   final List<String>? images;
   final AiImageSize? size;
@@ -567,77 +597,87 @@ class _FourAttachmentView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
+    final sz = size;
 
-    return (type == ChatAttachmentType.image)
-        ? Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: size!.aspectRatio,
-                      child: _buildImage(images![0]),
-                    ),
+    if (type == ChatAttachmentType.image) {
+      final imgs = images;
+      if (imgs != null && imgs.length >= 4 && sz != null) {
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: sz.aspectRatio,
+                    child: _buildImage(imgs[0]),
                   ),
-                  const SizedBox(width: spacing),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: size!.aspectRatio,
-                      child: _buildImage(images![1]),
-                    ),
+                ),
+                const SizedBox(width: spacing),
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: sz.aspectRatio,
+                    child: _buildImage(imgs[1]),
                   ),
-                ],
-              ),
-              const SizedBox(height: spacing),
-              Row(
-                children: [
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: size!.aspectRatio,
-                      child: _buildImage(images![2]),
-                    ),
+                ),
+              ],
+            ),
+            const SizedBox(height: spacing),
+            Row(
+              children: [
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: sz.aspectRatio,
+                    child: _buildImage(imgs[2]),
                   ),
-                  const SizedBox(width: spacing),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: size!.aspectRatio,
-                      child: _buildImage(images![3]),
-                    ),
+                ),
+                const SizedBox(width: spacing),
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: sz.aspectRatio,
+                    child: _buildImage(imgs[3]),
                   ),
-                ],
-              ),
-            ],
-          )
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                      child:
-                          _pdfView(context, pdfs![0].name, squareView: true)),
-                  const SizedBox(width: spacing),
-                  Expanded(
-                      child:
-                          _pdfView(context, pdfs![1].name, squareView: true)),
-                ],
-              ),
-              const SizedBox(height: spacing),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                      child:
-                          _pdfView(context, pdfs![2].name, squareView: true)),
-                  const SizedBox(width: spacing),
-                  Expanded(
-                      child:
-                          _pdfView(context, pdfs![3].name, squareView: true)),
-                ],
-              )
-            ],
-          );
+                ),
+              ],
+            ),
+          ],
+        );
+      }
+    } else {
+      final p = pdfs;
+      if (p != null && p.length >= 4) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: _pdfView(context, p[0].name, squareView: true),
+                ),
+                const SizedBox(width: spacing),
+                Expanded(
+                  child: _pdfView(context, p[1].name, squareView: true),
+                ),
+              ],
+            ),
+            const SizedBox(height: spacing),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: _pdfView(context, p[2].name, squareView: true),
+                ),
+                const SizedBox(width: spacing),
+                Expanded(
+                  child: _pdfView(context, p[3].name, squareView: true),
+                ),
+              ],
+            )
+          ],
+        );
+      }
+    }
+    return const SizedBox.shrink();
   }
 }
 
@@ -709,7 +749,7 @@ class _StatusIcon extends StatelessWidget {
         );
       case MessageStatus.delivered:
         return const Icon(
-          Icons.done_rounded,
+          Icons.done_all_rounded,
           size: 16,
           color: AppColors.success,
         );

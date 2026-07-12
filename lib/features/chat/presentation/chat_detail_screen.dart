@@ -20,6 +20,7 @@ import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/chat_attachment.dart';
 import 'chat_provider.dart';
+import 'widgets/change_title_dialog.dart';
 
 /// Active conversation screen showing full message history.
 ///
@@ -250,6 +251,40 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
+  Future<void> _handleEditTitle() async {
+    final chatProvider = context.read<ChatProvider>();
+    final currentTitle = chatProvider.activeConversation?.title ?? widget.initialTitle ?? '';
+
+    final newTitle = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => ChangeTitleDialog(initialTitle: currentTitle),
+    );
+
+    if (newTitle == null || newTitle.isEmpty || newTitle == currentTitle || !mounted) {
+      return;
+    }
+
+    final uid = context.read<AuthProvider>().currentUser?.uid;
+    if (uid == null) return;
+
+    LoadingOverlay.show(context, message: AppLocalizations.of(context)!.translate('renaming'));
+    try {
+      await chatProvider.updateConversationTitle(newTitle, uid);
+      if (mounted) {
+        context.showSuccessToast(
+          AppLocalizations.of(context)!.translate('title_updated_successfully'),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        context.showError('something_went_wrong');
+      }
+    } finally {
+      LoadingOverlay.hide();
+    }
+  }
+
   @override
   void dispose() {
     _chatProvider?.removeListener(_onChatProviderChange);
@@ -292,13 +327,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             return Text(
               titleStr.isEmpty ? l10n.translate('new_conversation') : titleStr,
               overflow: TextOverflow.ellipsis,
-              maxLines: 2,
+              maxLines: 1,
               style: context.textTheme.titleLarge,
             );
           },
         ),
         actionsPadding: const EdgeInsets.symmetric(horizontal: 8),
         actions: [
+          IconButton(
+            onPressed: _handleEditTitle,
+            icon: Icon(
+              Icons.edit,
+              color: context.isDark ? AppColors.primaryDark : AppColors.primaryLight,
+            ),
+          ),
           GestureDetector(
             onTap: _handleDelete,
             child: const ImageView(

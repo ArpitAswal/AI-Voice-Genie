@@ -40,64 +40,41 @@ extension StringExtension on String {
   ///automatic conversation title generation,
   ///similar to what systems like ChatGPT or Anthropic’s Claude do.
   String generateConversationTitle() {
-    if (trim().isEmpty) return "New Chat";
+    if (trim().isEmpty) return "Untitled Conversation";
 
-    // Normalize
-    String text = toLowerCase();
+    String text = trim();
 
-    // Remove common filler phrases
-    final fillers = [
-      "please",
-      "can you",
-      "could you",
-      "i want to",
-      "i need",
-      "help me",
-      "how to",
-    ];
+    // 1. Remove introductory fluff ONLY if it appears at the start of the prompt.
+    // This stops it from breaking phrases like "How to tie a tie".
+    final fluffRegex = RegExp(
+      r'^(hey[\w\s,]*|hi[\w\s,]*|hello[\w\s,]*|please|can you|could you|i want to|i need( to)?|help me( with)?|tell me( about)?|what is|how do i)\s+',
+      caseSensitive: false,
+    );
 
-    for (var filler in fillers) {
-      text = text.replaceAll(filler, "");
+    // Keep removing fluff if there are stacked phrases (e.g., "Hey Gemini, please can you...")
+    String previousText = "";
+    while (text != previousText) {
+      previousText = text;
+      text = text.replaceFirst(fluffRegex, '').trim();
     }
 
-    // Remove punctuation
-    text = text.replaceAll(RegExp(r'[^\w\s]'), '');
+    if (text.isEmpty) return "Untitled Conversation";
 
-    // Split words
+    // 2. Take the first 5-6 meaningful words, KEEPING stop words for grammar.
     List<String> words = text.split(RegExp(r'\s+'));
+    List<String> selected = words.take(5).toList();
 
-    // Remove stop words
-    final stopWords = [
-      "the",
-      "is",
-      "a",
-      "an",
-      "to",
-      "of",
-      "for",
-      "and",
-      "in",
-      "on",
-      "with"
-    ];
+    // 3. Rejoin and clean up trailing punctuation (so we don't end on a comma or question mark)
+    String rawTitle = selected.join(" ").replaceAll(RegExp(r'[^\w\s]+$'), '');
 
-    words.removeWhere((word) => stopWords.contains(word));
+    // 4. Convert to proper Title Case
+    String title = rawTitle.split(' ').map((word) {
+      if (word.isEmpty) return "";
+      // Capitalize first letter, lowercase the rest
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(" ");
 
-    // Take first 5–6 meaningful words
-    List<String> selected = words.take(6).toList();
-
-    if (selected.isEmpty) return "New Chat";
-
-    // Convert to Title Case
-    String title = selected
-        .map((word) {
-          if (word.isEmpty) return "";
-          return word[0].toUpperCase() + word.substring(1);
-        })
-        .where((s) => s.isNotEmpty)
-        .join(" ");
-
-    return title.isEmpty ? "New Chat" : title;
+    return title.isEmpty ? "Untitled Conversation" : title;
   }
 }
 
