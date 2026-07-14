@@ -37,6 +37,7 @@ class AppLocalizations {
       'app_name': 'AI Voice Genie',
       'app_tagline': 'Your intelligent AI assistant',
       'ai_assist': 'Your AI assistant is ready to assist you.',
+      'ask_genie_anything': 'Ask Genie Anything',
       'welcome_message': "Welcome To",
       'morning': 'Good Morning',
       'evening': 'Good Evening',
@@ -207,12 +208,14 @@ class AppLocalizations {
       'take_photo': 'Take Photo',
       'choose_from_gallery': 'Choose from Gallery',
       'analyzing_image': 'Analyzing image...',
-      'cannot_mix_images_and_pdfs': 'You cannot mix images and PDFs in one request.',
+      'cannot_mix_images_and_pdfs':
+          'You cannot mix images and PDFs in one request.',
       'max_image_attachments': 'Maximum {count} image attachments allowed',
       'max_pdf_attachments': 'Maximum {count} PDF attachments allowed',
       'image_attached': 'Image attached',
       'remove_image': 'Remove image',
       'remove_file': 'Remove file',
+      'failed_to_load_image': 'Failed to load image',
 
       // ── AI Preferences ─────────────────────────────────────────────────────
       'response_length': 'Response Length',
@@ -233,6 +236,7 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF uploaded.',
       'reading_pdf': 'Reading PDF...',
       'ask_about_pdf': 'Ask anything about this PDF...',
+      'file_already_attached': 'This file is already attached.',
       'pdf_too_large': 'PDF is too large. Maximum size is 10MB.',
       'pdf_read_failed': 'Could not read this PDF. Please try another file.',
       'pdf_attached': 'PDF attached',
@@ -397,6 +401,7 @@ class AppLocalizations {
       'app_name': 'AI वॉयस जीनी',
       'app_tagline': 'आपका बुद्धिमान AI सहायक',
       'ai_assist': 'आपका एआई सहायक आपकी सहायता के लिए तैयार है।',
+      'ask_genie_anything': 'जिनी से कुछ भी पूछें',
       'welcome_message': 'आपका स्वागत है',
       'morning': 'शुभ प्रभात',
       'evening': 'शुभ संध्या',
@@ -483,7 +488,8 @@ class AppLocalizations {
       'rename_conversation_name': 'बातचीत का नाम बदलें',
       'rename': 'नाम बदलें',
       'renaming': 'नाम बदला जा रहा है...',
-      'conversation_updated_successfully': 'बातचीत का नाम सफलतापूर्वक बदल दिया गया।',
+      'conversation_updated_successfully':
+          'बातचीत का नाम सफलतापूर्वक बदल दिया गया।',
       'new_conversation': 'नई बातचीत',
       'type_message': 'संदेश लिखें...',
       'send': 'भेजें',
@@ -572,6 +578,7 @@ class AppLocalizations {
       'image_attached': 'चित्र जोड़ा गया',
       'remove_image': 'चित्र हटाएं',
       'remove_file': 'फ़ाइल हटाएं',
+      'failed_to_load_image': 'इमेज लोड नहीं हो सकी',
 
       // ── AI Preferences ─────────────────────────────────────────────────────
       'response_length': 'उत्तर लंबाई',
@@ -592,6 +599,7 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF अपलोड हो गई।',
       'reading_pdf': 'PDF पढ़ी जा रही है...',
       'ask_about_pdf': 'इस PDF के बारे में कुछ भी पूछें...',
+      'file_already_attached': 'यह फ़ाइल पहले से ही जुड़ी हुई है।',
       'pdf_too_large': 'PDF बहुत बड़ी है। अधिकतम आकार 10MB है।',
       'pdf_read_failed': 'यह PDF नहीं पढ़ी जा सकी।',
       'pdf_attached': 'PDF जोड़ी गई',
@@ -773,6 +781,7 @@ class AppLocalizations {
   String get appName => translate('app_name');
   String get appTagline => translate('app_tagline');
   String get aiAssist => translate('ai_assist');
+  String get askGenie => translate('ask_genie_anything');
   String get ok => translate('ok');
   String get cancel => translate('cancel');
   String get save => translate('save');

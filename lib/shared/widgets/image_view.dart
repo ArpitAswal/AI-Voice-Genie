@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../model/image_model.dart';
 
-
 class ImageView extends StatelessWidget {
   final ImageViewData image;
 
@@ -19,31 +18,24 @@ class ImageView extends StatelessWidget {
   final Widget Function(BuildContext, Widget, int?, bool)? frameBuilder;
   final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
   final Widget Function(BuildContext, Widget, ImageChunkEvent?)? loadingBuilder;
-  final Widget Function(BuildContext)? placeholderBuilder;
-
-  const ImageView({
-    super.key,
-    required this.image,
-    this.width,
-    this.height,
-    this.fit = BoxFit.cover,
-    this.alignment = Alignment.center,
-    this.color,
-    this.filterQuality = FilterQuality.medium,
-    this.isAntiAlias = false,
-    this.frameBuilder,
-    this.errorBuilder,
-    this.loadingBuilder,
-    this.placeholderBuilder,
-    this.borderRadius
-  });
-
-  Widget _placeholder(BuildContext c) =>
-      placeholderBuilder?.call(c) ?? ImageBuilders.placeholder(c);
+  const ImageView(
+      {super.key,
+      required this.image,
+      this.width,
+      this.height,
+      this.fit = BoxFit.cover,
+      this.alignment = Alignment.center,
+      this.color,
+      this.filterQuality = FilterQuality.medium,
+      this.isAntiAlias = false,
+      this.frameBuilder,
+      this.errorBuilder,
+      this.loadingBuilder,
+      this.borderRadius});
 
   Widget _loading(BuildContext c) =>
       loadingBuilder?.call(c, const SizedBox(), null) ??
-          ImageBuilders.loading(c);
+      ImageBuilders.loading(c);
 
   Widget _error(BuildContext c) =>
       errorBuilder?.call(c, '', null) ?? ImageBuilders.error(c);
@@ -72,50 +64,59 @@ class ImageView extends StatelessWidget {
         );
 
       case AppImageSource.network:
-        return Image.network(
-          image.path!,
-          headers: image.headers,
-          width: width,
-          height: height,
-          fit: fit,
-          alignment: alignment,
-          color: color,
-          filterQuality: filterQuality,
-          isAntiAlias: isAntiAlias,
-          frameBuilder: _frame(),
-          errorBuilder: (c, e, s) => _error(c),
-          loadingBuilder: (c, child, progress) {
-            if (progress == null) return _loading(c);
-            return _placeholder(c);
-          },
+        return ClipRRect(
+          borderRadius: borderRadius ?? BorderRadius.zero,
+          child: Image.network(
+            image.path!,
+            headers: image.headers,
+            width: width,
+            height: height,
+            fit: fit,
+            alignment: alignment,
+            color: color,
+            filterQuality: filterQuality,
+            isAntiAlias: isAntiAlias,
+            frameBuilder: _frame(),
+            errorBuilder: (c, e, s) => _error(c),
+            loadingBuilder: (c, child, progress) {
+              if (progress == null) return child;
+              return _loading(c);
+            },
+          ),
         );
 
       case AppImageSource.file:
-        return Image.file(
-          File(image.path!),
-          width: width,
-          height: height,
-          fit: fit,
-          alignment: alignment,
-          color: color,
-          filterQuality: filterQuality,
-          isAntiAlias: isAntiAlias,
-          frameBuilder: _frame(),
-          errorBuilder: (c, e, s) => _error(c),
+        return ClipRRect(
+          borderRadius: borderRadius ?? BorderRadius.zero,
+          child: Image.file(
+            File(image.path!),
+            width: width,
+            height: height,
+            fit: fit,
+            alignment: alignment,
+            color: color,
+            filterQuality: filterQuality,
+            isAntiAlias: isAntiAlias,
+            frameBuilder: _frame(),
+            errorBuilder: (c, e, s) => _error(c),
+          ),
         );
 
       case AppImageSource.memory:
-        return Image.memory(
-          image.bytes!,
-          width: width,
-          height: height,
-          fit: fit,
-          alignment: alignment,
-          color: color,
-          filterQuality: filterQuality,
-          isAntiAlias: isAntiAlias,
-          frameBuilder: _frame(),
-          errorBuilder: (c, e, s) => _error(c),
+        return ClipRRect(
+          borderRadius: borderRadius ?? BorderRadius.zero,
+          child: Image.memory(
+            image.bytes!,
+            width: width,
+            height: height,
+            fit: fit,
+            alignment: alignment,
+            color: color,
+            filterQuality: filterQuality,
+            isAntiAlias: isAntiAlias,
+            frameBuilder: _frame(),
+            errorBuilder: (c, e, s) => _error(c),
+          ),
         );
     }
   }
@@ -143,11 +144,11 @@ class ImageBuilders {
   }
 
   static Widget fadeFrame(
-      BuildContext context,
-      Widget child,
-      int? frame,
-      bool wasSynchronouslyLoaded,
-      ) {
+    BuildContext context,
+    Widget child,
+    int? frame,
+    bool wasSynchronouslyLoaded,
+  ) {
     if (wasSynchronouslyLoaded) return child;
     return AnimatedOpacity(
       opacity: frame == null ? 0 : 1,

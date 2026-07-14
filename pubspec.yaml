@@ -87,6 +87,8 @@ dependencies:
   crypto: ^3.0.7
   # NoScreenshot for disabling screenshots
   no_screenshot: ^1.1.0
+  # compress image to store less byte data
+  flutter_image_compress: ^2.4.0
 
 dev_dependencies:
   flutter_test:
@@ -118,3 +120,4 @@ flutter:
     - assets/images/
     - assets/fonts/
     - assets/lottie/
+    - assets/gifs/

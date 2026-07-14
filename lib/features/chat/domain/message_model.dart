@@ -201,7 +201,8 @@ class MessageModel {
       if (imageUrls != null && imageUrls!.isNotEmpty)
         FirebaseCollections.fieldMessageImageUrl: imageUrls,
       if (pdfInfo != null && pdfInfo!.isNotEmpty)
-        FirebaseCollections.fieldPdfInfo: pdfInfo!.map((e) => e.toMap()).toList(),
+        FirebaseCollections.fieldPdfInfo:
+            pdfInfo!.map((e) => e.toMap()).toList(),
       if (imageSize != null)
         FirebaseCollections.fieldImageSize: imageSize!.name,
       if (imageCount != null) FirebaseCollections.fieldImageCount: imageCount,
@@ -224,7 +225,8 @@ class MessageModel {
       if (modelRequest != null)
         FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
       if (imageUrls != null && imageUrls!.isNotEmpty) 'imageUrls': imageUrls,
-      if (pdfInfo != null && pdfInfo!.isNotEmpty) 'pdfInfo': pdfInfo!.map((e) => e.toMap()).toList(),
+      if (pdfInfo != null && pdfInfo!.isNotEmpty)
+        'pdfInfo': pdfInfo!.map((e) => e.toMap()).toList(),
       if (imageSize != null) 'imageSize': imageSize!.name,
       if (imageCount != null) 'imageCount': imageCount,
       if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
@@ -303,7 +305,8 @@ class MessageModel {
       if (aiMessage.imageUrls != null && aiMessage.imageUrls!.isNotEmpty)
         FirebaseCollections.fieldMessageImageUrl: aiMessage.imageUrls,
       if (aiMessage.pdfInfo != null && aiMessage.pdfInfo!.isNotEmpty)
-        FirebaseCollections.fieldPdfInfo: aiMessage.pdfInfo!.map((e) => e.toMap()).toList(),
+        FirebaseCollections.fieldPdfInfo:
+            aiMessage.pdfInfo!.map((e) => e.toMap()).toList(),
       if (aiMessage.imageSize != null)
         FirebaseCollections.fieldImageSize: aiMessage.imageSize!.name,
       if (aiMessage.imageCount != null)
@@ -466,28 +469,34 @@ List<String>? _parseImageUrls(dynamic data) {
 /// Helper method to parse PDF attachments from dynamic cache/Firestore structure.
 List<PdfAttachmentInfo>? _parsePdfInfo(Map<String, dynamic>? data) {
   if (data == null) return null;
-  
+
   if (data[FirebaseCollections.fieldPdfInfo] is List) {
     return (data[FirebaseCollections.fieldPdfInfo] as List)
-        .map((e) => PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
+        .map((e) =>
+            PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
         .toList();
   }
-  
+
   if (data[FirebaseCollections.fieldMessagePdfInfo] is List) {
     return (data[FirebaseCollections.fieldMessagePdfInfo] as List)
-        .map((e) => PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
+        .map((e) =>
+            PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
         .toList();
   }
 
   if (data['pdfInfo'] is List) {
     return (data['pdfInfo'] as List)
-        .map((e) => PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
+        .map((e) =>
+            PdfAttachmentInfo.fromMap(Map<String, dynamic>.from(e as Map)))
         .toList();
   }
 
   // Legacy fallback
-  final paths = _parseImageUrls(data[FirebaseCollections.fieldMessagePdfPaths] ?? data['pdfPaths']);
-  final names = _parseImageUrls(data[FirebaseCollections.fieldPdfName] ?? data[FirebaseCollections.fieldMessagePdfName] ?? data['pdfName']);
+  final paths = _parseImageUrls(
+      data[FirebaseCollections.fieldMessagePdfPaths] ?? data['pdfPaths']);
+  final names = _parseImageUrls(data[FirebaseCollections.fieldPdfName] ??
+      data[FirebaseCollections.fieldMessagePdfName] ??
+      data['pdfName']);
   if (paths != null && names != null) {
     final pdfs = <PdfAttachmentInfo>[];
     final len = paths.length < names.length ? paths.length : names.length;
@@ -503,23 +512,39 @@ List<PdfAttachmentInfo>? _parsePdfInfo(Map<String, dynamic>? data) {
 class PdfAttachmentInfo {
   final String path;
   final String name;
+  final int? fileSizeBytes;
 
-  const PdfAttachmentInfo({required this.path, required this.name});
+  const PdfAttachmentInfo({
+    required this.path,
+    required this.name,
+    this.fileSizeBytes,
+  });
 
   factory PdfAttachmentInfo.fromMap(Map<String, dynamic> map) {
     return PdfAttachmentInfo(
       path: map['path'] as String? ?? '',
       name: map['name'] as String? ?? '',
+      fileSizeBytes: map['fileSizeBytes'] as int?,
     );
   }
 
-  Map<String, String> toMap() {
+  Map<String, dynamic> toMap() {
     return {
       'path': path,
       'name': name,
+      if (fileSizeBytes != null) 'fileSizeBytes': fileSizeBytes,
     };
   }
 
+  String get fileSizeLabel {
+    if (fileSizeBytes == null) return '';
+    if (fileSizeBytes! >= 1000 * 1000) {
+      return '${(fileSizeBytes! / (1000 * 1000)).toStringAsFixed(1)} MB';
+    }
+    return '${(fileSizeBytes! / 1000).toStringAsFixed(0)} KB';
+  }
+
   @override
-  String toString() => 'PdfAttachmentInfo(name: $name, path: $path)';
+  String toString() =>
+      'PdfAttachmentInfo(name: $name, path: $path, size: $fileSizeBytes)';
 }

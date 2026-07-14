@@ -253,7 +253,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   Future<void> _handleEditTitle() async {
     final chatProvider = context.read<ChatProvider>();
-    final currentTitle = chatProvider.activeConversation?.title ?? widget.initialTitle ?? '';
+    final currentTitle =
+        chatProvider.activeConversation?.title ?? widget.initialTitle ?? '';
 
     final newTitle = await showDialog<String>(
       context: context,
@@ -261,14 +262,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       builder: (ctx) => ChangeTitleDialog(initialTitle: currentTitle),
     );
 
-    if (newTitle == null || newTitle.isEmpty || newTitle == currentTitle || !mounted) {
+    if (newTitle == null ||
+        newTitle.isEmpty ||
+        newTitle == currentTitle ||
+        !mounted) {
       return;
     }
 
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
-    LoadingOverlay.show(context, message: AppLocalizations.of(context)!.translate('renaming'));
+    LoadingOverlay.show(context,
+        message: AppLocalizations.of(context)!.translate('renaming'));
     try {
       await chatProvider.updateConversationTitle(newTitle, uid);
       if (mounted) {
@@ -338,7 +343,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             onPressed: _handleEditTitle,
             icon: Icon(
               Icons.edit,
-              color: context.isDark ? AppColors.primaryDark : AppColors.primaryLight,
+              color: context.isDark
+                  ? AppColors.primaryDark
+                  : AppColors.primaryLight,
             ),
           ),
           GestureDetector(
@@ -386,7 +393,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                   child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding,
                       vertical: context.verticalSpacing,
                     ),
                     child: Column(
@@ -394,16 +400,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        ChatModelSelectorDropdown(
-                          providers: validProviders,
-                          selectedProvider: selectedProvider,
-                          isEnabled: !chatProvider.isGenerating,
-                          onChanged: (provider) {
-                            preferences.setPreferredProvider(provider);
-                          },
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: context.horizontalPadding,
+                          ),
+                          child: ChatModelSelectorDropdown(
+                            providers: validProviders,
+                            selectedProvider: selectedProvider,
+                            isEnabled: !chatProvider.isGenerating,
+                            onChanged: (provider) {
+                              preferences.setPreferredProvider(provider);
+                            },
+                          ),
                         ),
                         const SizedBox(height: 4.0),
-                        // The Input Component itself
                         Flexible(
                           child: ChatInputBar(
                             isGenerating: chatProvider.isGenerating,
@@ -480,10 +490,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     AiProviderId preferredProvider,
   ) {
     return ChatModelSelection.resolveSelectedProvider(
-      availableProviders: validProviders,
-      selectedProvider: preferredProvider,
-      preferredProvider: preferredProvider,
-    ) ??
+          availableProviders: validProviders,
+          selectedProvider: preferredProvider,
+          preferredProvider: preferredProvider,
+        ) ??
         preferredProvider;
   }
 }

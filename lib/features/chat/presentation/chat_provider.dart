@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import 'package:ai_voice_genie/core/extensions/string_extension.dart';
 import 'package:flutter/foundation.dart';
@@ -11,7 +14,6 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/error/ai_exception.dart';
 import '../../../core/services/ai_preferences_service.dart';
-// ignore: unused_import
 import '../../../core/services/cloudinary_service.dart';
 import '../data/chat_repository_impl.dart';
 import '../domain/chat_attachment.dart';
@@ -176,7 +178,14 @@ class ChatProvider extends ChangeNotifier {
           : null,
       pdfInfo: attachments.isNotEmpty && attachments.first.isPdf == true
           ? attachments
-              .map((e) => PdfAttachmentInfo(path: e.path ?? '', name: e.name))
+              .map(
+                (attachment) => PdfAttachmentInfo(
+                  path: attachment.path ?? '',
+                  name: attachment.name,
+                  fileSizeBytes: attachment.fileSizeBytes ??
+                      attachment.bytes.lengthInBytes,
+                ),
+              )
               .toList()
           : null,
       imageSize: (requestCapability == AiCapability.imageGeneration)
@@ -209,7 +218,7 @@ class ChatProvider extends ChangeNotifier {
 
         newConversation = ConversationModel(
           id: conversationId,
-          title: (actualTitle.isNotEmpty) ? actualTitle : 'Untitled Conversation',
+          title: actualTitle,
           lastMessage: _conversationPreview(trimmedPrompt, attachments),
           capability: requestCapability,
           lastProvider: selectedProvider,
@@ -291,8 +300,8 @@ class ChatProvider extends ChangeNotifier {
         // Testing with local images
         List<String> imageUrls = [
           "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-          "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-          "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+          // "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+          // "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
         ];
         final futures = imageUrls.map((img) => Future.value(img));
 
@@ -337,10 +346,27 @@ class ChatProvider extends ChangeNotifier {
       if (messageToPersist != null && conversationToPersist != null) {
         // ── Step 6: Persist to Firestore ──────────────────────────
         final conversationId = conversationToPersist.id;
+
+        // ── Compress Images for Persistence ────────────────────────
+        List<String>? persistImagePaths = userMessage.imageUrls;
+        if (persistImagePaths != null && persistImagePaths.isNotEmpty) {
+          persistImagePaths = await _compressImagesToBase64(persistImagePaths);
+        }
+
+        final userMessageToPersist = userMessage.copyWith(
+          status: MessageStatus.delivered,
+          imageUrls: persistImagePaths,
+        );
+
+        // Update in memory so cache also has base64
+        if (optimisticIndex != -1) {
+          _messages[optimisticIndex] = userMessageToPersist;
+        }
+
         await _repository.saveMessagePair(
           uid: uid,
           conversationId: conversationId,
-          userMessage: userMessage.copyWith(status: MessageStatus.delivered),
+          userMessage: userMessageToPersist,
           aiMessage: messageToPersist,
           isFirstMessage: isNewConversation,
           conversationModel: isNewConversation ? conversationToPersist : null,
@@ -516,8 +542,7 @@ class ChatProvider extends ChangeNotifier {
     List<ChatAttachment> attachments = const [],
     List<String> uploadedUrls = const [],
   }) {
-    if (response.contentType == AiResponseContentType.imageUrl ||
-        response.contentType == AiResponseContentType.imageBase64) {
+    if (response.contentType == AiResponseContentType.imageBase64) {
       return MessageModel.aiResponse(
         content: response.text ?? '',
         modelUsed: response.modelUsed,
@@ -528,16 +553,22 @@ class ChatProvider extends ChangeNotifier {
         imageQuality: preferredImageQuality,
         imageCount: preferredImageCount,
       );
+    } else if (response.contentType == AiResponseContentType.analysis) {
+      MessageModel.aiResponse(
+        content: response.text ?? '',
+        modelUsed: response.modelUsed,
+        contentType: attachments.isNotEmpty && attachments.first.isPdf == true
+            ? AiCapability.pdfParsing
+            : attachments.isNotEmpty && attachments.first.isImage == true
+                ? AiCapability.imageUnderstanding
+                : AiCapability.textGeneration,
+        tokenCount: response.tokenCount,
+      );
     }
 
     return MessageModel.aiResponse(
       content: response.text ?? '',
       modelUsed: response.modelUsed,
-      contentType: attachments.isNotEmpty && attachments.first.isPdf == true
-          ? AiCapability.pdfParsing
-          : attachments.isNotEmpty && attachments.first.isImage == true
-              ? AiCapability.imageUnderstanding
-              : AiCapability.textGeneration,
       tokenCount: response.tokenCount,
     );
   }
@@ -614,5 +645,33 @@ class ChatProvider extends ChangeNotifier {
 
   void _markConversationHistoryDirty() {
     _conversationHistoryVersion++;
+  }
+
+  Future<List<String>> _compressImagesToBase64(List<String> paths) async {
+    final List<String> result = [];
+    for (final path in paths) {
+      if (path.startsWith('data:image') || path.startsWith('http')) {
+        result.add(path); // Already processed or network url
+        continue;
+      }
+      try {
+        final compressedBytes = await FlutterImageCompress.compressWithFile(
+          path,
+          minWidth: 1024,
+          minHeight: 1024,
+          quality: 80,
+        );
+        if (compressedBytes != null) {
+          final base64String = base64Encode(compressedBytes);
+          result.add('data:image/jpeg;base64,$base64String');
+        } else {
+          result.add(path); // Fallback to original if compression fails
+        }
+      } catch (e) {
+        debugPrint('Error compressing image to thumbnail: $e');
+        result.add(path); // Fallback
+      }
+    }
+    return result;
   }
 }

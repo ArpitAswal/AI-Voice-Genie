@@ -284,7 +284,7 @@ class OpenAiAdapter extends AiProviderAdapter {
           '📥 OpenAI Response (Image Analysis): ${jsonEncode(mockResponse)}');
 
       stopwatch.stop();
-      return AiResponse.text(
+      return AiResponse.analysis(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.imageUnderstanding,
         requestId: request.requestId,
@@ -401,7 +401,7 @@ class OpenAiAdapter extends AiProviderAdapter {
           '📥 OpenAI Response (PDF Parsing): ${jsonEncode(mockResponse)}');
 
       stopwatch.stop();
-      return AiResponse.text(
+      return AiResponse.analysis(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.pdfParsing,
         requestId: request.requestId,

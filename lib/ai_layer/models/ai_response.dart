@@ -107,21 +107,24 @@ class AiResponse {
     );
   }
 
-  /// Create an image URL response (imageGeneration)
-  factory AiResponse.imageUrl({
+  factory AiResponse.analysis({
     required AiProviderId modelUsed,
-    required AiCapability capability,
     required String requestId,
     required int responseTimeMs,
-    required String imageUrl,
+    required AiCapability capability,
+    required String text,
+    int tokenCount = 0,
+    String? finishReason,
   }) {
     return AiResponse(
       modelUsed: modelUsed,
-      capability: AiCapability.imageGeneration,
-      contentType: AiResponseContentType.imageUrl,
+      capability: capability,
       requestId: requestId,
+      contentType: AiResponseContentType.analysis,
       responseTimeMs: responseTimeMs,
-      imageUrl: imageUrl,
+      text: text,
+      tokenCount: tokenCount,
+      finishReason: finishReason,
     );
   }
 

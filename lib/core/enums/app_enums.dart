@@ -327,8 +327,8 @@ enum AiResponseContentType {
   /// Plain or markdown text
   text,
 
-  /// Remote image URL
-  imageUrl,
+  /// Analysing image/pdf content and providing a summary
+  analysis,
 
   /// Base64-encoded image data
   imageBase64,

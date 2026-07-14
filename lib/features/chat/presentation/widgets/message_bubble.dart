@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
 
+import 'package:ai_voice_genie/core/constants/app_assets.dart';
 import 'package:ai_voice_genie/features/chat/domain/chat_attachment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +11,9 @@ import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/extensions/string_extension.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/status_message_utils.dart';
+import '../../../../core/widgets/shimmer_loading.dart';
+import '../../../../shared/model/image_model.dart';
+import '../../../../shared/widgets/image_view.dart';
 import '../../domain/message_model.dart';
 import 'model_indicator_chip.dart';
 
@@ -58,9 +61,9 @@ class MessageBubble extends StatelessWidget {
           onLongPress: () => _copyToClipboard(context),
           child: Container(
             constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width *
-                    (isTablet ? 0.65 : 0.85),
-                minWidth: MediaQuery.of(context).size.width * 0.4),
+              maxWidth:
+                  MediaQuery.of(context).size.width * (isTablet ? 0.65 : 0.85),
+            ),
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -253,54 +256,80 @@ class _ChatImage extends StatelessWidget {
 }
 
 Widget _buildImage(String url) {
+  ImageViewData imageData;
   if (url.startsWith('data:image')) {
     final base64Data = url.substring(url.indexOf(',') + 1);
-    return Image.memory(
-      base64Decode(base64Data),
-      fit: BoxFit.cover,
-    );
+    imageData = ImageViewData.memory(base64Decode(base64Data));
+  } else if (url.startsWith('http')) {
+    imageData = ImageViewData.network(url);
+  } else {
+    imageData = ImageViewData.file(url);
   }
 
-  if (url.startsWith('http')) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Image.network(
-        url,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.high,
-        alignment: Alignment.center,
-        errorBuilder: (_, __, ___) => const _ImageFallback(),
-        loadingBuilder: (_, child, progress) =>
-            progress == null ? child : const _ImageFallback(isLoading: true),
-      ),
-    );
-  }
-
-  return Image.file(
-    File(url),
+  return ImageView(
+    image: imageData,
     fit: BoxFit.cover,
+    alignment: Alignment.center,
+    borderRadius: BorderRadius.circular(10),
+    filterQuality: FilterQuality.high,
     errorBuilder: (_, __, ___) => const _ImageFallback(),
+    loadingBuilder: (_, __, ___) => const ShimmerLoading(borderRadius: 10),
   );
 }
 
 class _ImageFallback extends StatelessWidget {
-  final bool isLoading;
-
-  const _ImageFallback({this.isLoading = false});
+  const _ImageFallback();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.primaryLight.withValues(alpha: 0.08),
-      alignment: Alignment.center,
-      child: isLoading
-          ? const CircularProgressIndicator(strokeWidth: 2)
-          : const Icon(Icons.broken_image_rounded, color: AppColors.grey),
+    final l10n = AppLocalizations.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // final shortestSide = constraints.biggest.shortestSide;
+        // final fallbackSize = shortestSide.isFinite
+        //     ? shortestSide.clamp(32.0, 120.0).toDouble()
+        //     : 64.0;
+
+        // Calculate proportional sizes based on available space
+        final availableHeight = constraints.maxHeight;
+
+        // Make the GIF take up 70% of the smaller dimension
+        final gifSize = (availableHeight) * 0.7;
+
+        return Column(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ImageView(
+              image: const ImageViewData.asset(AppAssets.imageLoadError),
+              width: gifSize - (gifSize * 0.2),
+              height: gifSize,
+              filterQuality: FilterQuality.high,
+              fit: BoxFit.cover,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n?.translate('failed_to_load_image') ?? 'Failed to load image',
+              style: context.textTheme.headlineSmall?.copyWith(
+                  fontSize: (gifSize * 0.1), fontWeight: FontWeight.w500),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-Widget _pdfView(BuildContext context, String name, {bool squareView = false}) {
+Widget _pdfView(
+  BuildContext context,
+  PdfAttachmentInfo pdfInfo, {
+  bool squareView = false,
+}) {
   const spacing = 8.0;
   final pdfView = Container(
     width: 32,
@@ -352,15 +381,16 @@ Widget _pdfView(BuildContext context, String name, {bool squareView = false}) {
                 ],
               ),
               const SizedBox(height: spacing / 2),
-              Text(name,
+              Text(pdfInfo.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: context.textTheme.bodySmall?.copyWith(
                       color: Colors.white, fontWeight: FontWeight.w500)),
               const SizedBox(height: spacing / 2),
-              Text('2MB',
-                  style: context.textTheme.bodySmall?.copyWith(
-                      color: Colors.white, fontWeight: FontWeight.w500))
+              if (pdfInfo.fileSizeLabel.isNotEmpty)
+                Text(pdfInfo.fileSizeLabel,
+                    style: context.textTheme.bodySmall?.copyWith(
+                        color: Colors.white, fontWeight: FontWeight.w500))
             ],
           )
         : Row(
@@ -374,15 +404,16 @@ Widget _pdfView(BuildContext context, String name, {bool squareView = false}) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name,
+                    Text(pdfInfo.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: context.textTheme.bodySmall?.copyWith(
                             color: Colors.white, fontWeight: FontWeight.w500)),
                     const SizedBox(height: spacing / 2),
-                    Text('2MB',
-                        style: context.textTheme.bodySmall?.copyWith(
-                            color: Colors.white, fontWeight: FontWeight.w500))
+                    if (pdfInfo.fileSizeLabel.isNotEmpty)
+                      Text(pdfInfo.fileSizeLabel,
+                          style: context.textTheme.bodySmall?.copyWith(
+                              color: Colors.white, fontWeight: FontWeight.w500))
                   ],
                 ),
               ),
@@ -425,7 +456,7 @@ class _OneAttachmentView extends StatelessWidget {
     } else {
       final p = pdf;
       if (p != null) {
-        return _pdfView(context, p.name);
+        return _pdfView(context, p);
       }
     }
     return const SizedBox.shrink();
@@ -494,9 +525,9 @@ class _TwoAttachmentView extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _pdfView(context, p[0].name),
+            _pdfView(context, p[0]),
             const SizedBox(height: spacing / 2),
-            _pdfView(context, p[1].name),
+            _pdfView(context, p[1]),
           ],
         );
       }
@@ -559,17 +590,17 @@ class _ThreeAttachmentView extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _pdfView(context, p[0].name),
+            _pdfView(context, p[0]),
             const SizedBox(height: spacing / 2),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: _pdfView(context, p[1].name, squareView: true),
+                  child: _pdfView(context, p[1], squareView: true),
                 ),
                 const SizedBox(width: spacing),
                 Expanded(
-                  child: _pdfView(context, p[2].name, squareView: true),
+                  child: _pdfView(context, p[2], squareView: true),
                 ),
               ],
             )
@@ -652,11 +683,11 @@ class _FourAttachmentView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: _pdfView(context, p[0].name, squareView: true),
+                  child: _pdfView(context, p[0], squareView: true),
                 ),
                 const SizedBox(width: spacing),
                 Expanded(
-                  child: _pdfView(context, p[1].name, squareView: true),
+                  child: _pdfView(context, p[1], squareView: true),
                 ),
               ],
             ),
@@ -665,11 +696,11 @@ class _FourAttachmentView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: _pdfView(context, p[2].name, squareView: true),
+                  child: _pdfView(context, p[2], squareView: true),
                 ),
                 const SizedBox(width: spacing),
                 Expanded(
-                  child: _pdfView(context, p[3].name, squareView: true),
+                  child: _pdfView(context, p[3], squareView: true),
                 ),
               ],
             )
@@ -871,8 +902,8 @@ class _AnimatedDot extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: (context.isDark
-                    ? AppColors.primaryDark
-                    : AppColors.primaryLight)
+                    ? AppColors.messageBubbleLight
+                    : AppColors.messageBubbleDark)
                 .withValues(alpha: opacity),
           ),
         );

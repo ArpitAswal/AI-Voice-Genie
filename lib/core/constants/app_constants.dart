@@ -13,12 +13,6 @@ class AppConstants {
   static const String supportEmail = '';
   static const String helpCenterUrl = '';
 
-  // ── Validation ────────────────────────────────────────────────────────────
-  static const int minPasswordLength = 8;
-  static const int maxPasswordLength = 20;
-  static const int minNameLength = 3;
-  static const int maxNameLength = 30;
-
   // ── Regex Patterns ────────────────────────────────────────────────────────
   static const String emailPattern = r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$';
 
@@ -126,8 +120,6 @@ class AppConstants {
   // ── Image Handling ────────────────────────────────────────────────────────
   // Maximum image size for vision requests (compressed before sending)
   static const int maxImageSizeBytes = 5 * 1024 * 1024;
-  static const String defaultImageQuestion = 'Please analyze this image.';
-  static const String defaultPdfQuestion = 'Please summarize this PDF.';
 
   // ── Voice ─────────────────────────────────────────────────────────────────
   // Maximum recording duration in seconds

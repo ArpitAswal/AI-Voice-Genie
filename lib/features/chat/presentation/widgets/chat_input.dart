@@ -134,9 +134,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
     _focusNode.unfocus();
     final prompt = _controller.text.trim();
     // Validate text prompt limits unless an attachment is providing the context
-    final error = _attachments.isEmpty
-        ? Validators.validatePrompt(prompt, context: context)
-        : null;
+    final error = Validators.validatePrompt(prompt, context: context);
     if (error != null) {
       context.showError(error);
       return;
@@ -245,6 +243,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
       for (final image in images) {
         if (!_canAddAttachmentType(ChatAttachmentType.image)) break;
 
+        if (_attachments.any((a) => a.name == image.name)) {
+          if (mounted) context.showError('file_already_attached');
+          continue;
+        }
+
         final bytes = await image.readAsBytes();
         if (bytes.lengthInBytes > AppConstants.maxImageSizeBytes) {
           debugPrint('⚠️ Image file too large — '
@@ -301,6 +304,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
       for (final file in files) {
         if (!_canAddAttachmentType(ChatAttachmentType.pdf)) return false;
+
+        if (_attachments
+            .any((a) => a.name == file.name && a.fileSizeBytes == file.size)) {
+          if (mounted) context.showError('file_already_attached');
+          continue;
+        }
 
         final bytes = file.bytes;
         if (bytes == null) {
@@ -380,12 +389,15 @@ class _ChatInputBarState extends State<ChatInputBar> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (_attachments.isNotEmpty) ...[
-          Container(
-            height: 100,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+          SizedBox(
+            height: widget.isTablet ? 112 : 72,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _attachments.length,
+              padding: EdgeInsets.symmetric(
+                horizontal: context.horizontalPadding,
+                vertical: 4,
+              ),
               separatorBuilder: (context, index) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final att = _attachments[index];
@@ -405,56 +417,60 @@ class _ChatInputBarState extends State<ChatInputBar> {
         ],
         Flexible(
           flex: 3,
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _ActionButton(
-                icon: Icons.attach_file_rounded,
-                onTap: widget.isGenerating ? null : _showAttachmentSheet,
-                tooltip: l10n.translate('attach_file'),
-                isTablet: widget.isTablet,
-                color: AppColors.primaryLight,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Scrollbar(
-                  controller: _scrollController,
-                  thumbVisibility: false,
-                  child: context.themedTextField(
-                    controller: _controller,
-                    focus: _focusNode,
-                    scrollController: _scrollController,
-                    enabled: !widget.isGenerating,
-                    maxLines: null,
-                    keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.sentences,
-                    hint: l10n.translate('type_message'),
-                    border: InputBorder.none,
-                    contentPad: const EdgeInsets.all(8),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.horizontalPadding,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _ActionButton(
+                  icon: Icons.attach_file_rounded,
+                  onTap: widget.isGenerating ? null : _showAttachmentSheet,
+                  tooltip: l10n.translate('attach_file'),
+                  isTablet: widget.isTablet,
+                  color: AppColors.primaryLight,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Scrollbar(
+                    controller: _scrollController,
+                    thumbVisibility: false,
+                    child: context.themedTextField(
+                      controller: _controller,
+                      focus: _focusNode,
+                      scrollController: _scrollController,
+                      enabled: !widget.isGenerating,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      hint: l10n.askGenie,
+                      border: InputBorder.none,
+                      contentPad: const EdgeInsets.all(8),
+                    ),
                   ),
                 ),
-              ),
-              // ── Voice Input Button ↔ Send Button ─────────────────────────────
-              // Shows VoiceInputButton when field is empty.
-              // Switches to SendButton as soon as user starts typing.
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: _canSend
-                    ? _SendButton(
-                        key: const ValueKey('send'),
-                        onTap: widget.isGenerating ? null : _handleSend,
-                        isGenerating: widget.isGenerating,
-                        isTablet: widget.isTablet,
-                      )
-                    : VoiceInputButton(
-                        key: const ValueKey('voice'),
-                        onTranscriptReady: _onTranscriptReady,
-                        tooltip: l10n.translate('tap_to_speak'),
-                        isTablet: widget.isTablet,
-                      ),
-              ),
-            ],
+                // Shows VoiceInputButton when empty and SendButton once text or
+                // attachments are ready to submit.
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _canSend
+                      ? _SendButton(
+                          key: const ValueKey('send'),
+                          onTap: widget.isGenerating ? null : _handleSend,
+                          isGenerating: widget.isGenerating,
+                          isTablet: widget.isTablet,
+                        )
+                      : VoiceInputButton(
+                          key: const ValueKey('voice'),
+                          onTranscriptReady: _onTranscriptReady,
+                          tooltip: l10n.translate('tap_to_speak'),
+                          isTablet: widget.isTablet,
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -536,7 +552,11 @@ class _AttachmentPreview extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onRemove,
-                icon: const Icon(Icons.close_rounded),
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                  size: 21,
+                ),
                 tooltip: AppLocalizations.of(context)!.translate('remove_file'),
                 visualDensity: VisualDensity.compact,
               ),

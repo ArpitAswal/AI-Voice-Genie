@@ -38,11 +38,11 @@ class PdfDocumentModel {
 
   /// Human-readable file size label (e.g. "2.4 MB", "850 KB")
   String get fileSizeLabel {
-    if (fileSizeBytes >= 1024 * 1024) {
-      final mb = fileSizeBytes / (1024 * 1024);
+    if (fileSizeBytes >= 1000 * 1000) {
+      final mb = fileSizeBytes / (1000 * 1000);
       return '${mb.toStringAsFixed(1)} MB';
     }
-    final kb = fileSizeBytes / 1024;
+    final kb = fileSizeBytes / 1000;
     return '${kb.toStringAsFixed(0)} KB';
   }
 
@@ -68,7 +68,6 @@ class PdfDocumentModel {
   }
 
   @override
-  String toString() =>
-      'PdfDocumentModel(file: $fileName, pages: $pageCount, '
-          'chars: ${extractedText.length}, truncated: $wasTruncated)';
+  String toString() => 'PdfDocumentModel(file: $fileName, pages: $pageCount, '
+      'chars: ${extractedText.length}, truncated: $wasTruncated)';
 }
