@@ -5,7 +5,7 @@ enum AiProviderId {
   openAi(
     'openai',
     'ChatGPT',
-    '• GPT Image Gen \n• GPT-4o Text/Vision/PDF',
+    '• GPT-Image-1 Image Generation \n• GPT-4o Text Generation Image & PDF Analysis',
   ),
   gemini(
     'gemini',

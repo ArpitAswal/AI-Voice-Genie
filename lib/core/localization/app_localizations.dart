@@ -294,16 +294,42 @@ class AppLocalizations {
       'profile_updated': 'Profile updated successfully.',
       'profile_updating': 'Profile Updating...',
       'profile_update_failed': 'Could not update profile. Please try again.',
-      'active_models': 'Active Models',
-      'inactive_models': 'Inactive Models',
-      'activate_more_models': 'Activate more AI models',
-      'activate_more_models_message':
-          'Add API keys to unlock more reasoning styles, fallback routing, and feature coverage.',
+      'activate_models': 'Activate AI Models',
+      'activate_models_message': 'Connect your API keys to get started. Activating models unlocks advanced reasoning styles, custom feature coverage, and AI-powered workflows.',
+      'activate_more_models': 'Activate More AI Models',
+      'activate_more_models_message': 'Bring in additional API keys to maximize your setup. More active models allow for smart fallback routing, specialized problem-solving, and uninterrupted uptime.',
       'enabled': 'Enabled',
       'not_active': 'Not Active',
       'configure': 'Configure',
       'help_center': 'Help Center',
       'coming_soon': 'Coming soon.',
+
+      // ── Usage Tracking ─────────────────────────────────────────────────────
+      'usage_this_month': 'Estimated usage this month',
+      'usage_tokens': 'tokens',
+      'usage_requests': 'requests',
+      'usage_images': 'images',
+      'usage_pdfs': 'PDFs',
+      'usage_estimated_spend': 'Estimated spend',
+      'usage_no_activity': 'No activity this month',
+      'usage_budget_remaining': 'remaining',
+      'usage_budget_exceeded': 'Budget exceeded',
+      'usage_set_budget': 'Set a monthly budget',
+      'usage_set_budget_subtitle': 'Track your estimated spending with a personal monthly limit.',
+      'usage_disclaimer': 'Usage is estimated from AI Voice Genie requests only. It may not match your provider billing dashboard.',
+      'usage_of': 'of',
+      'budget_saved': 'Budget saved successfully!',
+      'budget_save_failed': 'Failed to save budget. Please try again.',
+      'budget_removed': 'Budget removed.',
+      'budget_remove_failed': 'Failed to remove budget. Please try again.',
+      'edit_monthly_budget': 'Edit Monthly Budget',
+      'set_monthly_budget': 'Set Monthly Budget',
+      'monthly_spending_limit': 'Monthly spending limit',
+      'enter_budget_amount': 'Enter a budget amount',
+      'enter_valid_amount': 'Enter a valid amount',
+      'update_budget': 'Update Budget',
+      'remove_budget': 'Remove Budget',
+      'set_budget': 'Set Budget',
       'about_app': 'About AI Voice Genie',
       'development_build': 'Development Build',
       'about_mission_title': 'Mission',
@@ -650,6 +676,33 @@ class AppLocalizations {
       'app_settings': 'ऐप सेटिंग',
       'ai_preferences': 'AI प्राथमिकताएं',
       'ai_intelligence': 'AI इंटेलिजेंस',
+
+      // ── Usage Tracking ─────────────────────────────────────────────────────────
+      'usage_this_month': 'इस महीने का अनुमानित उपयोग',
+      'usage_tokens': 'टोकन',
+      'usage_requests': 'अनुरोध',
+      'usage_images': 'चित्र',
+      'usage_pdfs': 'PDF',
+      'usage_estimated_spend': 'अनुमानित खर्च',
+      'usage_no_activity': 'इस महीने कोई गतिविधि नहीं',
+      'usage_budget_remaining': 'शेष',
+      'usage_budget_exceeded': 'बजट सीमा पार',
+      'usage_set_budget': 'मासिक बजट सेट करें',
+      'usage_set_budget_subtitle': 'अनुमानित खर्च को व्यक्तिगत मासिक सीमा से ट्रैक करें।',
+      'usage_disclaimer': 'उपयोग केवल AI Voice Genie अनुरोधों से अनुमानित है।',
+      'usage_of': 'में से',
+      'budget_saved': 'बजट सफलतापूर्वक सहेजा गया!',
+      'budget_save_failed': 'बजट सहेजने में विफल। कृपया पुनः प्रयास करें।',
+      'budget_removed': 'बजट हटा दिया गया।',
+      'budget_remove_failed': 'बजट हटाने में विफल। कृपया पुनः प्रयास करें।',
+      'edit_monthly_budget': 'मासिक बजट संपादित करें',
+      'set_monthly_budget': 'मासिक बजट सेट करें',
+      'monthly_spending_limit': 'मासिक खर्च सीमा',
+      'enter_budget_amount': 'बजट राशि दर्ज करें',
+      'enter_valid_amount': 'मान्य राशि दर्ज करें',
+      'update_budget': 'बजट अपडेट करें',
+      'remove_budget': 'बजट हटाएं',
+      'set_budget': 'बजट सेट करे',
       'support': 'सहायता',
       'edit_profile': 'प्रोफ़ाइल संपादित करें',
       'display_name': 'डिस्प्ले नाम',
@@ -659,11 +712,10 @@ class AppLocalizations {
       'profile_updating': 'प्रोफ़ाइल अपडेट हो रही है...',
       'profile_update_failed':
           'प्रोफ़ाइल अपडेट नहीं हो सकी। कृपया पुनः प्रयास करें।',
-      'active_models': 'सक्रिय मॉडल',
-      'inactive_models': 'निष्क्रिय मॉडल',
-      'activate_more_models': 'और AI मॉडल सक्रिय करें',
-      'activate_more_models_message':
-          'अधिक reasoning styles, fallback routing और feature coverage के लिए API keys जोड़ें।',
+      'activate_models': 'AI मॉडल सक्रिय करें',
+      'activate_models_message': 'शुरू करने के लिए अपनी API कीज़ कनेक्ट करें। मॉडल को एक्टिवेट करने से एडवांस्ड रीज़निंग स्टाइल, कस्टम फ़ीचर कवरेज और AI-पावर्ड वर्कफ़्लो का इस्तेमाल किया जा सकेगा।',
+      'activate_more_models': 'और AI मॉडल चालू करें',
+      'activate_more_models_message': 'अपने सेटअप को बेहतर बनाने के लिए और API कीज़ का इस्तेमाल करें। ज़्यादा एक्टिव मॉडल होने से स्मार्ट फ़ॉलबैक रूटिंग, खास समस्याओं को हल करने की क्षमता और बिना रुकावट के अपटाइम मिलता है।',
       'enabled': 'सक्षम',
       'not_active': 'सक्रिय नहीं',
       'configure': 'कॉन्फ़िगर करें',
@@ -886,7 +938,33 @@ class AppLocalizations {
   String get appSettings => translate('app_settings');
   String get aiPreferences => translate('ai_preferences');
   String get aiIntelligence => translate('ai_intelligence');
+  String get usageThisMonth => translate('usage_this_month');
+  String get usageTokens => translate('usage_tokens');
+  String get usageRequests => translate('usage_requests');
+  String get usageImages => translate('usage_images');
+  String get usagePdfs => translate('usage_pdfs');
+  String get usageEstimatedSpend => translate('usage_estimated_spend');
+  String get usageNoActivity => translate('usage_no_activity');
+  String get usageBudgetRemaining => translate('usage_budget_remaining');
+  String get usageBudgetExceeded => translate('usage_budget_exceeded');
+  String get usageSetBudget => translate('usage_set_budget');
+  String get usageSetBudgetSubtitle => translate('usage_set_budget_subtitle');
+  String get usageDisclaimer => translate('usage_disclaimer');
+  String get usageOf => translate('usage_of');
+  String get budgetSaved => translate('budget_saved');
+  String get budgetSaveFailed => translate('budget_save_failed');
+  String get budgetRemoved => translate('budget_removed');
+  String get budgetRemoveFailed => translate('budget_remove_failed');
+  String get editMonthlyBudget => translate('edit_monthly_budget');
+  String get setMonthlyBudget => translate('set_monthly_budget');
+  String get monthlySpendingLimit => translate('monthly_spending_limit');
+  String get enterBudgetAmount => translate('enter_budget_amount');
+  String get enterValidAmount => translate('enter_valid_amount');
+  String get updateBudget => translate('update_budget');
+  String get removeBudget => translate('remove_budget');
+  String get setBudget => translate('set_budget');
   String get support => translate('support');
+
   String get theme => translate('theme');
   String get language => translate('language');
   String get preferredModel => translate('preferred_model');
@@ -900,8 +978,10 @@ class AppLocalizations {
   String get qualityLow => translate('quality_low');
   String get qualityMedium => translate('quality_medium');
   String get qualityHigh => translate('quality_high');
-  String get activateModels => translate('activate_more_models');
-  String get activateModelsMessage => translate('activate_more_models_message');
+  String get activateMoreModels => translate('activate_more_models');
+  String get activateMoreModelsMessage => translate('activate_more_models_message');
+  String get activateModels => translate('activate_models');
+  String get activateModelsMessage => translate('activate_models_message');
   String get helpCenter => translate('help_center');
   String get about => translate('about');
   String get signOutConfirm => translate('sign_out_confirm');

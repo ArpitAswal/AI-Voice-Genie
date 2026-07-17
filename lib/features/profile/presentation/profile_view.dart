@@ -8,6 +8,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
+import '../../usage/presentation/usage_provider.dart';
 import '../domain/profile_view_model.dart';
 import 'widgets/ai_intelligence_section.dart';
 import 'widgets/ai_preferences_panel.dart';
@@ -19,6 +20,7 @@ import 'widgets/support_panel.dart';
 export 'screens/about_screen.dart';
 export 'screens/edit_profile_screen.dart';
 
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -28,23 +30,27 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late final ProfileViewModel _viewModel;
+  late final UsageProvider _usageProvider;
 
   @override
   void initState() {
     super.initState();
     _viewModel = ProfileViewModel();
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (!mounted) return;
-    //   _viewModel.loadApiKeys(
-    //     authProvider: context.read<AuthProvider>(),
-    //     apiKeyProvider: context.read<ApiKeyProvider>(),
-    //   );
-    // });
+    _usageProvider = UsageProvider();
+    // Load usage data after the first frame so we have auth context
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final uid = context.read<AuthProvider>().currentUser?.uid;
+      if (uid != null) {
+        _usageProvider.loadForMonth(uid);
+      }
+    });
   }
 
   @override
   void dispose() {
     _viewModel.dispose();
+    _usageProvider.dispose();
     super.dispose();
   }
 
@@ -86,8 +92,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _viewModel,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _viewModel),
+        ChangeNotifierProvider.value(value: _usageProvider),
+      ],
       child: Consumer2<AuthProvider, ProfileViewModel>(
         builder: (context, authProvider, viewModel, _) {
           return Scaffold(

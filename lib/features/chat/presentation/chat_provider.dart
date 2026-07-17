@@ -292,18 +292,18 @@ class ChatProvider extends ChangeNotifier {
       if (aiResponse.contentType == AiResponseContentType.imageBase64 &&
           aiResponse.generatedImages != null &&
           aiResponse.generatedImages!.isNotEmpty) {
-        // final futures = aiResponse.generatedImages!
-        //     .where((img) => img.b64Json != null && img.b64Json!.isNotEmpty)
-        //     .map((img) =>
-        //         CloudinaryService.instance.uploadBase64Image(img.b64Json!));
+        final futures = aiResponse.generatedImages!
+            .where((img) => img.b64Json != null && img.b64Json!.isNotEmpty)
+            .map((img) =>
+                CloudinaryService.instance.uploadBase64Image(img.b64Json!));
 
         // Testing with local images
-        List<String> imageUrls = [
-          "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-          // "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-          // "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-        ];
-        final futures = imageUrls.map((img) => Future.value(img));
+        // List<String> imageUrls = [
+        //   "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+        //   // "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+        //   // "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
+        // ];
+        // final futures = imageUrls.map((img) => Future.value(img));
 
         final results = await Future.wait(futures);
         uploadedUrls = results.whereType<String>().toList();

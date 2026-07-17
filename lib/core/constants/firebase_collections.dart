@@ -174,4 +174,58 @@ class FirebaseCollections {
   static const String paramTokenCount = 'token_count';
   static const String paramModelName = 'model_name';
   static const String paramModelFeatures = 'model_features';
+
+  // ── Usage Tracking Collection Names ───────────────────────────────────────
+  static const String usageEvents = 'usageEvents';
+  static const String usageSummaries = 'usageSummaries';
+  static const String usageBudgets = 'usageBudgets';
+
+  // ── Usage Tracking Path Builders ─────────────────────────────────────────
+
+  /// AI_Voice_Genie/Users/User_Model/{uid}/usageEvents
+  static String usageEventsCollection(String uid) =>
+      '$root/$users/$userModel/$uid/$usageEvents';
+
+  /// AI_Voice_Genie/Users/User_Model/{uid}/usageSummaries/{docId}
+  static String usageSummaryDoc(String uid, String docId) =>
+      '$root/$users/$userModel/$uid/$usageSummaries/$docId';
+
+  /// AI_Voice_Genie/Users/User_Model/{uid}/usageSummaries
+  static String usageSummariesCollection(String uid) =>
+      '$root/$users/$userModel/$uid/$usageSummaries';
+
+  /// AI_Voice_Genie/Users/User_Model/{uid}/usageBudgets/{providerId}
+  static String usageBudgetDoc(String uid, String providerId) =>
+      '$root/$users/$userModel/$uid/$usageBudgets/$providerId';
+
+  /// AI_Voice_Genie/Users/User_Model/{uid}/usageBudgets
+  static String usageBudgetsCollection(String uid) =>
+      '$root/$users/$userModel/$uid/$usageBudgets';
+
+  // ── Usage Event Field Names ──────────────────────────────────────────────
+  static const String usageFieldId = 'id';
+  static const String usageFieldProvider = 'provider';
+  static const String usageFieldModel = 'model';
+  static const String usageFieldCapability = 'capability';
+  static const String usageFieldRequestId = 'requestId';
+  static const String usageFieldConversationId = 'conversationId';
+  static const String usageFieldMessageId = 'messageId';
+  static const String usageFieldInputTokens = 'inputTokens';
+  static const String usageFieldOutputTokens = 'outputTokens';
+  static const String usageFieldTotalTokens = 'totalTokens';
+  static const String usageFieldImageCount = 'imageCount';
+  static const String usageFieldPdfCount = 'pdfCount';
+  static const String usageFieldEstimatedCostUsd = 'estimatedCostUsd';
+  static const String usageFieldCreatedAt = 'createdAt';
+  static const String usageFieldUpdatedAt = 'updatedAt';
+  static const String usageFieldMonthKey = 'monthKey';
+
+  // ── Usage Summary Field Names (on top of shared usage fields above) ──────
+  static const String summaryFieldRequestCount = 'requestCount';
+  static const String summaryFieldEstimatedCostUsd = 'estimatedCostUsd';
+
+  // ── Budget Field Names ───────────────────────────────────────────────────
+  static const String budgetFieldMonthlyBudgetUsd = 'monthlyBudgetUsd';
+  static const String budgetFieldEnabled = 'enabled';
 }
+

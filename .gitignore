@@ -28,8 +28,8 @@ firebase.json
 # Local project operating docs stay off the public repository.
 *.md
 !/README.md
-!/app_flow.md
-!/app_summary.md
+!/agentPlan/app_flow.md
+!agentPlan/app_summary.md
 
 # ===============================
 # 🧱 Flutter / Dart
