@@ -67,8 +67,8 @@ class ClaudeAdapter extends AiProviderAdapter {
 
       final data = await _parseResponse(response, request.requestId);
       final text = data['content']?[0]?['text'] as String? ?? '';
-      final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
-          (data['usage']?['output_tokens'] as int? ?? 0);
+      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -77,7 +77,8 @@ class ClaudeAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        tokenCount: tokenCount,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } on AiException {
       rethrow;
@@ -160,8 +161,8 @@ class ClaudeAdapter extends AiProviderAdapter {
 
       final data = await _parseResponse(response, request.requestId);
       final text = data['content']?[0]?['text'] as String? ?? '';
-      final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
-          (data['usage']?['output_tokens'] as int? ?? 0);
+      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -170,7 +171,8 @@ class ClaudeAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        tokenCount: tokenCount,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } on AiException {
       rethrow;
@@ -222,8 +224,8 @@ class ClaudeAdapter extends AiProviderAdapter {
 
       final data = await _parseResponse(response, request.requestId);
       final text = data['content']?[0]?['text'] as String? ?? '';
-      final tokenCount = (data['usage']?['input_tokens'] as int? ?? 0) +
-          (data['usage']?['output_tokens'] as int? ?? 0);
+      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -232,7 +234,8 @@ class ClaudeAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        tokenCount: tokenCount,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } on AiException {
       rethrow;

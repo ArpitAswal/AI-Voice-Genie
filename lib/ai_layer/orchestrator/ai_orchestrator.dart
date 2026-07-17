@@ -7,6 +7,11 @@ import '../../core/error/effect_bus.dart';
 import '../../core/services/analytics_service.dart';
 import '../../features/key_setup/domain/api_key_repository.dart';
 import '../../features/key_setup/data/api_key_repository_impl.dart';
+import '../../features/usage/data/usage_cost_estimator.dart';
+import '../../features/usage/data/usage_pricing_table.dart';
+import '../../features/usage/domain/usage_repository.dart';
+import '../../features/usage/data/usage_repository_impl.dart';
+import '../../features/usage/domain/usage_event_model.dart';
 import '../adapters/ai_provider_adapter.dart';
 import '../adapters/claude_adapter.dart';
 import '../adapters/gemini_adapter.dart';
@@ -52,6 +57,7 @@ class AiOrchestrator {
   final ApiKeyRepository _keyRepository = ApiKeyRepositoryImpl();
   final AnalyticsService _analytics = AnalyticsService.instance;
   final ProviderRegistry _registry = ProviderRegistry.instance;
+  final UsageRepository _usageRepo = UsageRepositoryImpl();
 
   /// Adapter map — each provider ID maps to its concrete adapter
   final Map<AiProviderId, AiProviderAdapter> _adapters = {
@@ -195,6 +201,9 @@ class AiOrchestrator {
           tokenCount: response.tokenCount,
         );
 
+        // Fire-and-forget usage tracking — must never block the AI response
+        _saveUsageEvent(uid: request.uid, request: request, response: response);
+
         debugPrint(
           '✅ Orchestrator: success on ${providerId.id} '
           '(${response.responseTimeMs}ms)',
@@ -230,5 +239,62 @@ class AiOrchestrator {
   @visibleForTesting
   void injectAdapter(AiProviderId providerId, AiProviderAdapter adapter) {
     _adapters[providerId] = adapter;
+  }
+
+  // ── Usage Tracking ─────────────────────────────────────────────────────────
+
+  /// Records usage data to Firestore after every successful AI request.
+  ///
+  /// This is a fire-and-forget call — any failure is silently logged and
+  /// never propagates back to the AI response caller.
+  void _saveUsageEvent({
+    required String uid,
+    required AiRequest request,
+    required AiResponse response,
+  }) {
+    debugPrint(
+        '📊 Orchestrator: _saveUsageEvent called for ${response.modelUsed.id}');
+    try {
+      final now = DateTime.now();
+      final monthKey = UsageEventModel.monthKeyFrom(now);
+      final capability = request.capability;
+
+      final imageCount = (capability == AiCapability.imageGeneration)
+          ? (request.imageCount ?? 1)
+          : 0;
+      final pdfCount = (capability == AiCapability.pdfParsing)
+          ? (request.pdfBytes?.length ?? 0)
+          : 0;
+
+      final estimatedCost = UsageCostEstimator.estimate(
+        provider: response.modelUsed,
+        capability: capability,
+        inputTokens: response.inputTokens,
+        outputTokens: response.outputTokens,
+        imageCount: imageCount,
+        imageQuality: request.imageQuality ?? ImageQuality.low,
+      );
+
+      final event = UsageEventModel(
+        id: '${request.requestId}_${now.millisecondsSinceEpoch}',
+        provider: response.modelUsed,
+        model: UsagePricingTable.modelName(response.modelUsed),
+        capability: capability,
+        requestId: request.requestId,
+        inputTokens: response.inputTokens,
+        outputTokens: response.outputTokens,
+        totalTokens: response.tokenCount,
+        imageCount: imageCount,
+        pdfCount: pdfCount,
+        estimatedCostUsd: estimatedCost,
+        createdAt: now,
+        monthKey: monthKey,
+      );
+
+      // Intentionally unawaited — usage must never block the chat UI
+      _usageRepo.saveEvent(uid: uid, event: event);
+    } catch (e) {
+      debugPrint('⚠️ Usage event construction failed (non-fatal): $e');
+    }
   }
 }

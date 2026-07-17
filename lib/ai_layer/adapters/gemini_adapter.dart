@@ -72,6 +72,10 @@ class GeminiAdapter extends AiProviderAdapter {
 
       final data = await _parseResponse(response, request.requestId);
       final text = _extractTextFromResponse(data);
+      final inputTokens =
+          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
+      final outputTokens =
+          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -80,6 +84,8 @@ class GeminiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } on AiException {
       rethrow;
@@ -207,6 +213,10 @@ class GeminiAdapter extends AiProviderAdapter {
 
       final data = await _parseResponse(response, request.requestId);
       final text = _extractTextFromResponse(data);
+      final inputTokens =
+          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
+      final outputTokens =
+          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -215,6 +225,8 @@ class GeminiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } on AiException {
       rethrow;
@@ -270,6 +282,10 @@ class GeminiAdapter extends AiProviderAdapter {
 
       final data = await _parseResponse(response, request.requestId);
       final text = _extractTextFromResponse(data);
+      final inputTokens =
+          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
+      final outputTokens =
+          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -278,6 +294,8 @@ class GeminiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } on AiException {
       rethrow;

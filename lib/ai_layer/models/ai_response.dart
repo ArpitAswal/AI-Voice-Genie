@@ -63,7 +63,14 @@ class AiResponse {
 
   // ── Usage Metadata ─────────────────────────────────────────────────────────
 
-  /// Approximate token count used in this response (from provider metadata)
+  /// Input/prompt tokens consumed (for per-tier pricing)
+  final int inputTokens;
+
+  /// Output/completion tokens generated (for per-tier pricing)
+  final int outputTokens;
+
+  /// Total tokens = inputTokens + outputTokens
+  /// (kept for backward compatibility with analytics)
   final int tokenCount;
 
   /// Why the model stopped generating (e.g., 'stop', 'length', 'content_filter')
@@ -79,6 +86,8 @@ class AiResponse {
     this.imageUrl,
     this.imageBase64,
     this.generatedImages,
+    this.inputTokens = 0,
+    this.outputTokens = 0,
     this.tokenCount = 0,
     this.finishReason,
   });
@@ -92,6 +101,8 @@ class AiResponse {
     required String requestId,
     required int responseTimeMs,
     required String text,
+    int inputTokens = 0,
+    int outputTokens = 0,
     int tokenCount = 0,
     String? finishReason,
   }) {
@@ -102,7 +113,9 @@ class AiResponse {
       requestId: requestId,
       responseTimeMs: responseTimeMs,
       text: text,
-      tokenCount: tokenCount,
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
+      tokenCount: tokenCount > 0 ? tokenCount : inputTokens + outputTokens,
       finishReason: finishReason,
     );
   }
@@ -113,6 +126,8 @@ class AiResponse {
     required int responseTimeMs,
     required AiCapability capability,
     required String text,
+    int inputTokens = 0,
+    int outputTokens = 0,
     int tokenCount = 0,
     String? finishReason,
   }) {
@@ -123,7 +138,9 @@ class AiResponse {
       contentType: AiResponseContentType.analysis,
       responseTimeMs: responseTimeMs,
       text: text,
-      tokenCount: tokenCount,
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
+      tokenCount: tokenCount > 0 ? tokenCount : inputTokens + outputTokens,
       finishReason: finishReason,
     );
   }

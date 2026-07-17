@@ -64,42 +64,27 @@ class OpenAiAdapter extends AiProviderAdapter {
       debugPrint(
           '📤 OpenAI Request (Text Generation): ${jsonEncode(requestBody)}');
 
-      // final response = await _post(
-      //   endpoint: '/chat/completions',
-      //   apiKey: apiKey,
-      //   body: requestBody,
-      // ).timeout(AppConstants.aiRequestTimeout);
-      //
-      // final data = await _parseResponse(response, request.requestId);
-      //
-      // final choices = data['choices'] as List?;
-      // if (choices == null || choices.isEmpty) {
-      //   throw const AiTransientException(
-      //     message: 'OpenAI returned empty choices',
-      //     provider: AiProviderId.openAi,
-      //   );
-      // }
-      //
-      // final text = choices[0]['message']?['content'] as String? ?? '';
-      // final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
-      // final finishReason = choices[0]['finish_reason'] as String?;
+      final response = await _post(
+        endpoint: '/chat/completions',
+        apiKey: apiKey,
+        body: requestBody,
+      ).timeout(AppConstants.aiRequestTimeout);
 
-      // Mock Response
-      const text = 'Mocked response for Text Generation.';
-      const tokenCount = 100;
-      const finishReason = 'stop';
+      final data = await _parseResponse(response, request.requestId);
 
-      final Map<String, dynamic> mockResponse = {
-        'choices': [
-          {
-            'message': {'content': text},
-            'finish_reason': finishReason
-          }
-        ],
-        'usage': {'total_tokens': tokenCount}
-      };
-      debugPrint(
-          '📥 OpenAI Response (Text Generation): ${jsonEncode(mockResponse)}');
+      final choices = data['choices'] as List?;
+      if (choices == null || choices.isEmpty) {
+        throw const AiTransientException(
+          message: 'OpenAI returned empty choices',
+          provider: AiProviderId.openAi,
+        );
+      }
+
+      final text = choices[0]['message']?['content'] as String? ?? '';
+      final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
+      final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
+      final finishReason = choices[0]['finish_reason'] as String?;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -108,6 +93,8 @@ class OpenAiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
         tokenCount: tokenCount,
         finishReason: finishReason,
       );
@@ -140,25 +127,13 @@ class OpenAiAdapter extends AiProviderAdapter {
       debugPrint(
           '📤 OpenAI Request (Image Generation): ${jsonEncode(requestBody)}');
 
-      // final response = await _post(
-      //   endpoint: '/images/generations',
-      //   apiKey: apiKey,
-      //   body: requestBody,
-      // ).timeout(AppConstants.aiRequestTimeout);
-      //
-      // final data = await _parseResponse(response, request.requestId);
+      final response = await _post(
+        endpoint: '/images/generations',
+        apiKey: apiKey,
+        body: requestBody,
+      ).timeout(AppConstants.aiRequestTimeout);
 
-      // Testing data
-      final Map<String, dynamic> data = {
-        'data': [
-          {
-            "url": "https://dummyimage.com/600x400/000/fff&text=Mock+Image",
-            "revised_prompt": "Mock revised prompt",
-          }
-        ]
-      };
-
-      debugPrint('📥 OpenAI Response (Image Generation): ${jsonEncode(data)}');
+      final data = await _parseResponse(response, request.requestId);
 
       // Parse all generated images and their attributes into AiImageData models
       final List<AiImageData> generatedImages = (data['data'] as List<dynamic>)
@@ -244,44 +219,28 @@ class OpenAiAdapter extends AiProviderAdapter {
           '📤 OpenAI Request (Image Analysis): ${jsonEncode(requestBody)}');
 
       // Use /v1/chat/completions — the standard, well-documented vision endpoint
-      // final response = await _post(
-      //   endpoint: '/chat/completions',
-      //   apiKey: apiKey,
-      //   body: requestBody,
-      // ).timeout(AppConstants.aiRequestTimeout);
-      //
-      // final data = await _parseResponse(response, request.requestId);
-      //
-      // // Extract text from standard choices[0].message.content path
-      // final choices = data['choices'] as List?;
-      // if (choices == null || choices.isEmpty) {
-      //   throw const AiTransientException(
-      //     message: 'OpenAI returned empty choices for image analysis',
-      //     provider: AiProviderId.openAi,
-      //   );
-      // }
-      //
-      // final text = choices[0]['message']?['content'] as String? ?? '';
-      // final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
-      // final finishReason = choices[0]['finish_reason'] as String?;
+      final response = await _post(
+        endpoint: '/chat/completions',
+        apiKey: apiKey,
+        body: requestBody,
+      ).timeout(AppConstants.aiRequestTimeout);
 
-      // Mocked Response
-      const text = 'Mocked response for Image Analysis.';
-      const tokenCount = 100;
-      const finishReason = 'stop';
+      final data = await _parseResponse(response, request.requestId);
 
-      final Map<String, dynamic> mockResponse = {
-        'choices': [
-          {
-            'message': {'content': text},
-            'finish_reason': finishReason
-          }
-        ],
-        'usage': {'total_tokens': tokenCount}
-      };
+      // Extract text from standard choices[0].message.content path
+      final choices = data['choices'] as List?;
+      if (choices == null || choices.isEmpty) {
+        throw const AiTransientException(
+          message: 'OpenAI returned empty choices for image analysis',
+          provider: AiProviderId.openAi,
+        );
+      }
 
-      debugPrint(
-          '📥 OpenAI Response (Image Analysis): ${jsonEncode(mockResponse)}');
+      final text = choices[0]['message']?['content'] as String? ?? '';
+      final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
+      final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
+      final finishReason = choices[0]['finish_reason'] as String?;
 
       stopwatch.stop();
       return AiResponse.analysis(
@@ -290,6 +249,8 @@ class OpenAiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
         tokenCount: tokenCount,
         finishReason: finishReason,
       );
@@ -347,58 +308,41 @@ class OpenAiAdapter extends AiProviderAdapter {
       debugPrint('📤 OpenAI Request (PDF Parsing): ${jsonEncode(requestBody)}');
 
       // POST to /v1/responses — the Responses API endpoint
-      // final response = await _post(
-      //   endpoint: '/responses',
-      //   apiKey: apiKey,
-      //   body: requestBody,
-      // ).timeout(AppConstants.aiRequestTimeout);
-      //
-      // final data = await _parseResponse(response, request.requestId);
-      //
-      // // Responses API stores result in output[].content[].text
-      // final output = data['output'] as List?;
-      // String text = '';
-      // String? finishReason;
-      // if (output != null) {
-      //   for (final item in output) {
-      //     if (item['type'] == 'message') {
-      //       final contentList = item['content'] as List?;
-      //       if (contentList != null) {
-      //         for (final c in contentList) {
-      //           if (c['type'] == 'output_text') {
-      //             text += (c['text'] as String? ?? '');
-      //           }
-      //         }
-      //       }
-      //       // Responses API output item contains status like 'completed'
-      //       finishReason = item['status'] as String?;
-      //     }
-      //   }
-      // }
-      //
-      // final tokenCount = (data['usage']?['output_tokens'] as int? ?? 0) +
-      //     (data['usage']?['input_tokens'] as int? ?? 0);
+      final response = await _post(
+        endpoint: '/responses',
+        apiKey: apiKey,
+        body: requestBody,
+      ).timeout(AppConstants.aiRequestTimeout);
 
-      // Mocked response
-      const text = "Mocked response for PDF Parsing.";
-      const tokenCount = 100;
-      const finishReason = "stop";
+      final data = await _parseResponse(response, request.requestId);
 
-      final Map<String, dynamic> mockResponse = {
-        'output': [
-          {
-            'type': 'message',
-            'status': finishReason,
-            'content': [
-              {'type': 'output_text', 'text': text}
-            ]
+      // Responses API stores result in output[].content[].text
+      final output = data['output'] as List?;
+      String text = '';
+      String? finishReason;
+      if (output != null) {
+        for (final item in output) {
+          if (item['type'] == 'message') {
+            final contentList = item['content'] as List?;
+            if (contentList != null) {
+              for (final c in contentList) {
+                if (c['type'] == 'output_text') {
+                  text += (c['text'] as String? ?? '');
+                }
+              }
+            }
+            // Responses API output item contains status like 'completed'
+            finishReason = item['status'] as String?;
           }
-        ],
-        'usage': {'output_tokens': 50, 'input_tokens': 50}
-      };
+        }
+      }
 
-      debugPrint(
-          '📥 OpenAI Response (PDF Parsing): ${jsonEncode(mockResponse)}');
+      final inputTokens = data['usage']?['prompt_tokens'] as int? ??
+          data['usage']?['input_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['completion_tokens'] as int? ??
+          data['usage']?['output_tokens'] as int? ?? 0;
+      final tokenCount = data['usage']?['total_tokens'] as int? ??
+          (inputTokens + outputTokens);
 
       stopwatch.stop();
       return AiResponse.analysis(
@@ -407,6 +351,8 @@ class OpenAiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
         tokenCount: tokenCount,
         finishReason: finishReason,
       );
