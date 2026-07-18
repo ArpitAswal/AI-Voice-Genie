@@ -19,14 +19,14 @@
 class FirebaseCollections {
   // ── Root Collection ───────────────────────────────────────────────────────
   // MUST be the app name — defined once here, never hardcoded elsewhere
-  static const String root = 'AI_Voice_Genie';
+  static const String root = 'AIVoiceGenie';
 
   // ── Subcollection/Document Names ───────────────────────────────────────────────────
-  static const String users = 'Users';
-  static const String userModel = 'User_Model';
-  static const String conversations = 'AI_Conversations';
-  static const String messages = 'Model_Messages';
-  static const String apiKeys = 'Users_API_Keys';
+  static const String users = 'AllUsers';
+  static const String userModel = 'UserModel';
+  static const String conversations = 'Conversations';
+  static const String messages = 'ModelMessages';
+  static const String apiKeys = 'UsersAPIKeys';
 
   // ── Firestore Path Builders ───────────────────────────────────────────────
   // Use these everywhere instead of manually constructing paths.
@@ -40,10 +40,10 @@ class FirebaseCollections {
   //   AI_Voice_Genie (collection) → AI_Conversations (doc) → {uid} (collection) → {conversationId} (doc)
   //     → messages (collection) → {messageId} (doc)
 
-  /// Path: AI_Voice_Genie/Users/User_Model/{uid}
-  static String userDoc(String uid) => '$root/$users/$userModel/$uid';
+  /// Path: AIVoiceGenie/AllUsers/{uid}
+  static String userDoc(String uid) => '$root/$users/$uid/$userModel';
 
-  /// Path: AI_Voice_Genie/Users_API_Keys/{uid}/{providerId}
+  /// Path: AIVoiceGenie/UsersAPIKeys/{uid}/{providerId}
   static String apiKeyDoc(String uid, String providerId) =>
       '$root/$apiKeys/$uid/$providerId';
 
@@ -83,10 +83,12 @@ class FirebaseCollections {
   static const String fieldPreferredProvider = 'preferredProvider';
   static const String fieldDailyQuotaUsed = 'dailyQuotaUsed';
   static const String fieldDailyQuotaLimit = 'dailyQuotaLimit';
+  static const String fieldNewUser = 'isNewUser';
 
   // ── API Key Document Field Names ──────────────────────────────────────────
   static const String fieldApiKey = 'apiKey';
-  static const String fieldProviderId = 'providerId';
+  static const String fieldProviderId = 'aiProviderId';
+  static const String fieldProviderModelFeatures = 'aiProviderModelFeatures';
   static const String fieldKeyAddedAt = 'keyAddedAt';
   static const String fieldKeyIsValid = 'isValid';
   static const String fieldKeyLastValidated = 'lastValidated';
@@ -143,17 +145,19 @@ class FirebaseCollections {
   static const String fieldMessageValidProviders = 'validProviders';
 
   // ── Analytics Event Names ─────────────────────────────────────────────────
-  static const String eventSignInButtonTapped = 'sign_in_button_tapped';
+  static const String eventAuthenticationButtonTapped =
+      'authentication_button_tapped';
   static const String eventUserSignedIn = 'user_signed_in';
   static const String eventUserRegistered = 'user_registered';
+  static const String eventUserSignedOut = 'user_signed_out';
   static const String eventAiRequestInitiated = 'ai_request_initiated';
   static const String eventAiRequestSuccess = 'ai_request_success';
   static const String eventAiRequestFailed = 'ai_request_failed';
   static const String eventAiFallbackTriggered = 'ai_fallback_triggered';
   static const String eventAiCapabilityGap = 'ai_capability_gap';
   static const String eventFeatureUsed = 'feature_used';
-  static const String eventModelKeyAdded = 'model_key_added';
-  static const String eventModelKeyRemoved = 'model_key_removed';
+  static const String eventModelAdded = 'ai_model_added';
+  static const String eventModelRemoved = 'ai_model_removed';
   static const String eventModelSwitched = 'model_switched';
   static const String eventConversationStarted = 'conversation_started';
   static const String eventVoiceInputUsed = 'voice_input_used';
@@ -174,6 +178,8 @@ class FirebaseCollections {
   static const String paramTokenCount = 'token_count';
   static const String paramModelName = 'model_name';
   static const String paramModelFeatures = 'model_features';
+  static const String paramUserId = 'user_id';
+  static const String paramUserEmail = 'user_email';
 
   // ── Usage Tracking Collection Names ───────────────────────────────────────
   static const String usageEvents = 'usageEvents';
@@ -228,4 +234,3 @@ class FirebaseCollections {
   static const String budgetFieldMonthlyBudgetUsd = 'monthlyBudgetUsd';
   static const String budgetFieldEnabled = 'enabled';
 }
-

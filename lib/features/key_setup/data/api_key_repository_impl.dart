@@ -78,7 +78,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
       throw ApiKeyException(
         ApiKeyErrorCodes.serviceUnavailable,
         technicalMessage:
-        'Provider ${providerId.id} returned ${response.statusCode}',
+            'Provider ${providerId.id} returned ${response.statusCode}',
       );
     } on ApiKeyException {
       rethrow;
@@ -105,7 +105,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
   }) async {
     switch (providerId) {
       case AiProviderId.openAi:
-      // GET /v1/models — lists available models, costs nothing
+        // GET /v1/models — lists available models, costs nothing
         return _httpClient.get(
           Uri.parse('${AppConstants.openAiBaseUrl}/models'),
           headers: {
@@ -115,7 +115,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
         );
 
       case AiProviderId.gemini:
-      // GET /v1beta/models?key={key} — lists available models
+        // GET /v1beta/models?key={key} — lists available models
         return _httpClient.get(
           Uri.parse(
             '${AppConstants.geminiBaseUrl}/models?key=$apiKey',
@@ -124,7 +124,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
         );
 
       case AiProviderId.claude:
-      // GET /v1/models — Claude requires both api key and version headers
+        // GET /v1/models — Claude requires both api key and version headers
         return _httpClient.get(
           Uri.parse('${AppConstants.claudeBaseUrl}/models'),
           headers: {
@@ -146,7 +146,8 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
   }) async {
     try {
       final model = ApiKeyModel(
-        providerId: providerId,
+        aiProviderId: providerId.id,
+        aiProviderModelFeatures: providerId.features,
         apiKey: apiKey.trim(),
         isValid: true,
       );
@@ -185,7 +186,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
     try {
       // Fetch all three provider docs in parallel — max 3 Firestore reads
       final futures = AiProviderId.values.map(
-            (provider) => _firestore
+        (provider) => _firestore
             .doc(FirebaseCollections.apiKeyDoc(uid, provider.id))
             .get(),
       );
@@ -195,7 +196,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
       for (final snapshot in snapshots) {
         if (snapshot.exists && snapshot.data() != null) {
           final model = ApiKeyModel.fromFirestore(snapshot.data()!);
-          result[model.providerId] = model;
+          result[AiProviderId.fromId(model.aiProviderId)] = model;
         }
       }
 
@@ -203,7 +204,8 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
       _memoryCache.clear();
       _memoryCache.addAll(result);
 
-      debugPrint('📦 Loaded ${result.length} keys for user $uid (and cached locally)');
+      debugPrint(
+          '📦 Loaded ${result.length} keys for user $uid (and cached locally)');
       return result;
     } on FirebaseException catch (e) {
       debugPrint('⚠️ loadKeys Firestore error: ${e.code}');
@@ -280,7 +282,6 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
       // Update user document — mark key setup complete
       await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
         FirebaseCollections.fieldKeySetupDone: true,
-        FirebaseCollections.fieldPreferredProvider: preferredProvider.id,
       });
 
       // Persist to Hive for fast splash-screen reads
@@ -296,8 +297,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
     } on FirebaseException catch (e) {
       throw ApiKeyException(
         ApiKeyErrorCodes.saveFailed,
-        technicalMessage:
-        'completeKeySetup Firestore failed: ${e.code}',
+        technicalMessage: 'completeKeySetup Firestore failed: ${e.code}',
       );
     }
   }

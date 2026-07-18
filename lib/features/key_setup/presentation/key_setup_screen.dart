@@ -36,21 +36,6 @@ class KeySetupScreen extends StatefulWidget {
 }
 
 class _KeySetupScreenState extends State<KeySetupScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Load any previously saved keys on mount
-    // WidgetsBinding.instance.addPostFrameCallback((_) async {
-    //   final uid = context.read<AuthProvider>().currentUser?.uid;
-    //   if (uid != null) {
-    //    bool success = await context.read<ApiKeyProvider>().loadExistingKeys(uid);
-    //    if(!success && mounted){
-    //      context.showError('key_fetch_error');
-    //    }
-    //   }
-    // });
-  }
-
   Future<void> _handleContinue() async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
@@ -114,16 +99,16 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
                   // ── Helper note ────────────────────────────────────
                   _SecurityNote(isTablet: isTablet),
 
-                  SizedBox(height: isTablet ? 36 : 24),
-
                   // ── Continue Button ──────────────────────────────────────────
-                  if (widget.isInitialSetup)
+                  if (widget.isInitialSetup) ...[
+                    SizedBox(height: isTablet ? 36 : 24),
                     _ContinueButton(
                       isTablet: isTablet,
                       isEnabled: keyProvider.hasAtLeastOneValidKey,
                       isLoading: keyProvider.isCompletingSetup,
                       onTap: _handleContinue,
-                    ),
+                    )
+                  ],
                 ],
               ),
             );
@@ -154,7 +139,7 @@ class _SetupHeader extends StatelessWidget {
         SizedBox(height: isTablet ? 8 : 6),
         Text(
           context.l10n.keySetupSubTitle,
-          style: context.textTheme.bodyLarge,
+          style: context.textTheme.bodySmall,
         ),
       ],
     );
@@ -198,6 +183,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
+    debugPrint("🔑 Validating key for ${widget.provider.displayName}");
     await context.read<ApiKeyProvider>().validateAndSaveKey(
           uid: uid,
           providerId: widget.provider,
@@ -212,25 +198,25 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
     final isConfirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(context.l10n.removeKey),
-          content: Text(context.l10n.keyRemoveMsg),
-          actions: [
-            TextButton(
-              onPressed: () => AppRoutes.pop(context, false),
-              child: Text(
-                context.l10n.cancel,
-                style: TextStyle(color: context.primaryColor),
-              ),
-            ),
-            TextButton(
-              onPressed: () => AppRoutes.pop(context, true),
-              child: Text(
-                context.l10n.delete,
-                style: const TextStyle(color: AppColors.lightError),
-              ),
-            ),
-          ],
-        ));
+              title: Text(context.l10n.removeKey),
+              content: Text(context.l10n.keyRemoveMsg),
+              actions: [
+                TextButton(
+                  onPressed: () => AppRoutes.pop(context, false),
+                  child: Text(
+                    context.l10n.cancel,
+                    style: TextStyle(color: context.primaryColor),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => AppRoutes.pop(context, true),
+                  child: Text(
+                    context.l10n.delete,
+                    style: const TextStyle(color: AppColors.lightError),
+                  ),
+                ),
+              ],
+            ));
 
     if (isConfirm != true || !mounted) return;
 
@@ -242,9 +228,11 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
           providerId: widget.provider,
         );
     LoadingOverlay.hide();
+    debugPrint("🔑 Deleting key for ${widget.provider.displayName}");
 
     if (!mounted) return;
-    MessageUtils.showSuccess(context, "$provider ${context.l10n.keyRemoveSuccess}");
+    MessageUtils.showSuccess(
+        context, "$provider ${context.l10n.keyRemoveSuccess}");
   }
 
   Future<void> _handlePaste() async {
@@ -295,7 +283,8 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
               children: [
                 // ── Card Header: provider logo + name + status chip ────────
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     _ProviderLogo(
                       provider: widget.provider,
@@ -303,25 +292,21 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                     ),
                     SizedBox(width: widget.isTablet ? 14 : 10),
                     Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.provider.displayName,
-                            style: context.textTheme.titleSmall?.copyWith(
-                                color: _providerColor(widget.provider)),
-                          ),
-                          Text(
-                            widget.provider.features,
-                            style: context.textTheme.bodySmall,
-                          ),
-                        ],
+                      child: Text(
+                        widget.provider.displayName,
+                        style: context.textTheme.titleSmall
+                            ?.copyWith(color: _providerColor(widget.provider)),
                       ),
                     ),
                     _StatusChip(status: status, isTablet: widget.isTablet),
                   ],
+                ),
+
+                SizedBox(height: widget.isTablet ? 14 : 10),
+
+                Text(
+                  widget.provider.features,
+                  style: context.textTheme.bodySmall,
                 ),
 
                 // ── Key input — hidden when valid ──────────────────────────
@@ -422,9 +407,8 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                           backgroundColor: _providerColor(widget.provider),
                           foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(
-                            horizontal: widget.isTablet ? 24 : 10,
-                            vertical: 0
-                          ),
+                              horizontal: widget.isTablet ? 24 : 10,
+                              vertical: 0),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -440,8 +424,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                               )
                             : Text(
                                 context.l10n.addKey,
-                                style:
-                                    context.textTheme.labelMedium?.copyWith(
+                                style: context.textTheme.labelMedium?.copyWith(
                                   color: AppColors.white,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -471,11 +454,10 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                           const Spacer(),
                           // Delete button — only shown when key is valid
                           GestureDetector(
-                            onTap: ()=> _handleDelete(widget.provider.displayName),
+                            onTap: () =>
+                                _handleDelete(widget.provider.displayName),
                             child: const ImageView(
-                              image: ImageViewData.asset(
-                               AppAssets.deleteIcon
-                              ),
+                              image: ImageViewData.asset(AppAssets.deleteIcon),
                               width: 18,
                               height: 18,
                             ),
@@ -498,11 +480,11 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
   Color _borderColor(ApiKeyStatus status) {
     switch (status) {
       case ApiKeyStatus.valid:
-        return AppColors.success;
+        return context.isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
       case ApiKeyStatus.invalid:
-        return AppColors.lightError;
+        return context.isDark ? AppColors.darkError : AppColors.lightError;
       case ApiKeyStatus.validating:
-        return AppColors.warning;
+        return context.isDark ? AppColors.darkWarning : AppColors.lightWarning;
       case ApiKeyStatus.notAdded:
         return context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
     }
@@ -511,11 +493,17 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
   Color _providerColor(AiProviderId provider) {
     switch (provider) {
       case AiProviderId.openAi:
-        return AppColors.openAiBrand;
+        return context.isDark
+            ? AppColors.openAiBrandDark
+            : AppColors.openAiBrand;
       case AiProviderId.gemini:
-        return AppColors.geminiBrand;
+        return context.isDark
+            ? AppColors.geminiBrandDark
+            : AppColors.geminiBrand;
       case AiProviderId.claude:
-        return AppColors.claudeBrand;
+        return context.isDark
+            ? AppColors.claudeBrandDark
+            : AppColors.claudeBrand;
     }
   }
 
@@ -565,11 +553,8 @@ class _ProviderLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.5),
       ),
       child: Center(
-        child: FaIcon(
-          _providerIcon(provider),
-          color: AppColors.white,
-          size: size * 0.6
-        ),
+        child: FaIcon(_providerIcon(provider),
+            color: AppColors.white, size: size * 0.6),
       ),
     );
   }
@@ -601,22 +586,24 @@ class _StatusChip extends StatelessWidget {
     final (label, color, icon) = switch (status) {
       ApiKeyStatus.valid => (
           context.l10n.keyValid,
-          AppColors.success,
+          context.isDark ? AppColors.darkSuccess : AppColors.lightSuccess,
           Icons.check_circle_rounded
         ),
       ApiKeyStatus.invalid => (
           context.l10n.keyInvalid,
-          AppColors.lightError,
+          context.isDark ? AppColors.darkError : AppColors.lightError,
           Icons.cancel_rounded
         ),
       ApiKeyStatus.validating => (
           context.l10n.keyValidating,
-          AppColors.warning,
+          context.isDark ? AppColors.darkWarning : AppColors.lightWarning,
           Icons.hourglass_top_rounded
         ),
       ApiKeyStatus.notAdded => (
           context.l10n.noKeyAdded,
-          AppColors.grey,
+          context.isDark
+              ? AppColors.darkTextTertiary
+              : AppColors.lightTextSecondary,
           Icons.add_circle_outline_rounded
         ),
     };
@@ -637,10 +624,7 @@ class _StatusChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: context.textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+            style: context.textTheme.labelSmall?.copyWith(color: color),
           ),
         ],
       ),

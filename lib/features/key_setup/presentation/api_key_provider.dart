@@ -1,3 +1,4 @@
+import 'package:ai_voice_genie/core/error/effect_bus.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/enums/app_enums.dart';
@@ -74,8 +75,8 @@ class ApiKeyProvider extends ChangeNotifier {
   }
 
   /// Whether at least one provider has a valid key
-  bool get hasAtLeastOneValidKey => _statuses.values
-      .any((status) => status == ApiKeyStatus.valid);
+  bool get hasAtLeastOneValidKey =>
+      _statuses.values.any((status) => status == ApiKeyStatus.valid);
 
   /// The first provider with a valid key — used as preferred provider
   AiProviderId? get firstValidProvider {
@@ -111,17 +112,17 @@ class ApiKeyProvider extends ChangeNotifier {
 
       for (final entry in keys.entries) {
         _storedKeys[entry.key] = entry.value;
-        _statuses[entry.key] = entry.value.isValid
-            ? ApiKeyStatus.valid
-            : ApiKeyStatus.invalid;
+        _statuses[entry.key] =
+            entry.value.isValid ? ApiKeyStatus.valid : ApiKeyStatus.invalid;
       }
 
-      notifyListeners();
       return true;
     } catch (e) {
       debugPrint('⚠️ ApiKeyProvider.loadExistingKeys error: $e');
       // Non-fatal — all cards will show notAdded state
       return false;
+    } finally {
+      notifyListeners();
     }
   }
 
@@ -141,9 +142,6 @@ class ApiKeyProvider extends ChangeNotifier {
     _setStatus(providerId, ApiKeyStatus.validating);
 
     try {
-      // Fire analytics BEFORE auth — tracks button taps independently of outcome
-      await _analytics.logModelKeyAdded(providerId);
-
       final isValid = await _repository.validateKey(
         providerId: providerId,
         apiKey: apiKey,
@@ -165,10 +163,16 @@ class ApiKeyProvider extends ChangeNotifier {
 
       // Cache locally for masked display
       _storedKeys[providerId] = ApiKeyModel(
-        providerId: providerId,
+        aiProviderId: providerId.id,
+        aiProviderModelFeatures: providerId.features,
         apiKey: apiKey,
         isValid: true,
       );
+
+      // Fire analytics BEFORE auth — tracks button taps independently of outcome
+      EffectBus.instance.safeEffect(() async {
+        _analytics.logModelKeyAdded(providerId, uid);
+      });
 
       _setStatus(providerId, ApiKeyStatus.valid);
     } on ApiKeyException catch (e) {
@@ -181,6 +185,8 @@ class ApiKeyProvider extends ChangeNotifier {
       debugPrint('❌ ApiKeyProvider unexpected error: $e');
       _errors[providerId] = 'something_went_wrong';
       _setStatus(providerId, ApiKeyStatus.invalid);
+    } finally {
+      notifyListeners();
     }
   }
 
@@ -198,8 +204,10 @@ class ApiKeyProvider extends ChangeNotifier {
 
       _storedKeys.remove(providerId);
       _errors[providerId] = null;
-      await _analytics.logModelKeyRemoved(providerId);
       _setStatus(providerId, ApiKeyStatus.notAdded);
+      EffectBus.instance.safeEffect(() async {
+        _analytics.logModelKeyRemoved(providerId, uid);
+      });
       notifyListeners();
     } on ApiKeyException catch (e) {
       debugPrint(
@@ -207,6 +215,8 @@ class ApiKeyProvider extends ChangeNotifier {
       );
       // Show error but keep current status
       _errors[providerId] = e.code;
+      notifyListeners();
+    } finally {
       notifyListeners();
     }
   }
@@ -231,15 +241,15 @@ class ApiKeyProvider extends ChangeNotifier {
       );
 
       _isCompletingSetup = false;
-      notifyListeners();
       return true;
     } on ApiKeyException catch (e) {
       debugPrint(
         '❌ ApiKeyProvider.completeSetup failed: ${e.technicalMessage}',
       );
       _isCompletingSetup = false;
-      notifyListeners();
       return false;
+    } finally {
+      notifyListeners();
     }
   }
 

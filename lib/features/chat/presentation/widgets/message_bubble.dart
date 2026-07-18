@@ -782,7 +782,7 @@ class _StatusIcon extends StatelessWidget {
         return const Icon(
           Icons.done_all_rounded,
           size: 16,
-          color: AppColors.success,
+          color: AppColors.lightSuccess,
         );
       case MessageStatus.failed:
         return const Icon(
@@ -794,7 +794,7 @@ class _StatusIcon extends StatelessWidget {
         return const Icon(
           Icons.schedule_rounded,
           size: 16,
-          color: AppColors.warning,
+          color: AppColors.lightWarning,
         );
     }
   }

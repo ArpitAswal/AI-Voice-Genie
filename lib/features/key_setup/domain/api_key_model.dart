@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../core/enums/app_enums.dart';
 import '../../../core/constants/firebase_collections.dart';
 
 /// Immutable domain entity representing a stored AI provider API key.
@@ -11,7 +10,10 @@ import '../../../core/constants/firebase_collections.dart';
 /// Firestore security rules must restrict access to the owning uid only.
 class ApiKeyModel {
   /// Which AI provider this key belongs to
-  final AiProviderId providerId;
+  final String aiProviderId;
+
+  /// AI model features supported by this key
+  final String aiProviderModelFeatures;
 
   /// The raw API key string — stored in Firestore, read at runtime
   final String apiKey;
@@ -26,9 +28,10 @@ class ApiKeyModel {
   final DateTime? lastValidated;
 
   const ApiKeyModel({
-    required this.providerId,
+    required this.aiProviderId,
     required this.apiKey,
     required this.isValid,
+    required this.aiProviderModelFeatures,
     this.keyAddedAt,
     this.lastValidated,
   });
@@ -37,16 +40,16 @@ class ApiKeyModel {
 
   factory ApiKeyModel.fromFirestore(Map<String, dynamic> data) {
     return ApiKeyModel(
-      providerId: AiProviderId.fromId(
-        data[FirebaseCollections.fieldProviderId] as String? ?? 'openai',
-      ),
+      aiProviderId: data[FirebaseCollections.fieldProviderId] as String? ?? '',
+      aiProviderModelFeatures:
+          data[FirebaseCollections.fieldProviderModelFeatures] as String? ?? '',
       apiKey: data[FirebaseCollections.fieldApiKey] as String? ?? '',
       isValid: data[FirebaseCollections.fieldKeyIsValid] as bool? ?? false,
       keyAddedAt:
-      (data[FirebaseCollections.fieldKeyAddedAt] as Timestamp?)?.toDate(),
+          (data[FirebaseCollections.fieldKeyAddedAt] as Timestamp?)?.toDate(),
       lastValidated:
-      (data[FirebaseCollections.fieldKeyLastValidated] as Timestamp?)
-          ?.toDate(),
+          (data[FirebaseCollections.fieldKeyLastValidated] as Timestamp?)
+              ?.toDate(),
     );
   }
 
@@ -55,7 +58,8 @@ class ApiKeyModel {
   /// Serialize to Firestore map for saving a new or updated key.
   Map<String, dynamic> toFirestore() {
     return {
-      FirebaseCollections.fieldProviderId: providerId.id,
+      FirebaseCollections.fieldProviderId: aiProviderId,
+      FirebaseCollections.fieldProviderModelFeatures: aiProviderModelFeatures,
       FirebaseCollections.fieldApiKey: apiKey,
       FirebaseCollections.fieldKeyIsValid: isValid,
       FirebaseCollections.fieldKeyLastValidated: FieldValue.serverTimestamp(),
@@ -65,14 +69,16 @@ class ApiKeyModel {
   // ── copyWith ──────────────────────────────────────────────────────────────
 
   ApiKeyModel copyWith({
-    AiProviderId? providerId,
+    String? providerId,
+    String? providerFeatures,
     String? apiKey,
     bool? isValid,
     DateTime? keyAddedAt,
     DateTime? lastValidated,
   }) {
     return ApiKeyModel(
-      providerId: providerId ?? this.providerId,
+      aiProviderId: providerId ?? aiProviderId,
+      aiProviderModelFeatures: providerFeatures ?? aiProviderModelFeatures,
       apiKey: apiKey ?? this.apiKey,
       isValid: isValid ?? this.isValid,
       keyAddedAt: keyAddedAt ?? this.keyAddedAt,
@@ -83,14 +89,13 @@ class ApiKeyModel {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is ApiKeyModel &&
-              runtimeType == other.runtimeType &&
-              providerId == other.providerId;
+      other is ApiKeyModel &&
+          runtimeType == other.runtimeType &&
+          aiProviderId == other.aiProviderId;
 
   @override
-  int get hashCode => providerId.hashCode;
+  int get hashCode => aiProviderId.hashCode;
 
   @override
-  String toString() =>
-      'ApiKeyModel(provider: ${providerId.id}, valid: $isValid)';
+  String toString() => 'ApiKeyModel(provider: $aiProviderId, valid: $isValid)';
 }

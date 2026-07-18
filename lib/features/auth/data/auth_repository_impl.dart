@@ -34,12 +34,13 @@ class AuthRepositoryImpl implements AuthRepository {
   final GoogleSignIn _googleSignIn;
   final StorageService _storage;
 
-  AuthRepositoryImpl({
-    FirebaseAuth? firebaseAuth,
-    FirebaseFirestore? firestore,
-    GoogleSignIn? googleSignIn,
-    StorageService? storage,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+  AuthRepositoryImpl(
+      {FirebaseAuth? firebaseAuth,
+      FirebaseFirestore? firestore,
+      GoogleSignIn? googleSignIn,
+      StorageService? storage,
+      EffectBus? effectBus})
+      : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
         _firestore = firestore ?? FirebaseFirestore.instance,
         _googleSignIn = googleSignIn ?? GoogleSignIn(),
         _storage = storage ?? StorageService();
@@ -89,6 +90,8 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
+      debugPrint(
+          "⚠️ AuthRepositoryImpl: signInWithGoogle and firebaseUser signInWithCredential");
       // Create or update Firestore document and return normalized UserModel
       return await _createOrUpdateUser(
         firebaseUser: firebaseUser,
@@ -195,7 +198,11 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<UserModel?> getCurrentUser() async {
     final firebaseUser = _firebaseAuth.currentUser;
-    if (firebaseUser == null) return null;
+    if (firebaseUser == null) {
+      debugPrint(
+          '⚠️ AuthRepository: getCurrentUser is null, means no user exist currently');
+      return null;
+    }
 
     try {
       // Fetch Firestore document to get full profile including flags
@@ -233,17 +240,18 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       // Sign out from Google Sign-In (clears cached Google account)
       await _googleSignIn.signOut();
+
+      // Sign out from Firebase Auth
+      await _firebaseAuth.signOut();
+
+      // Clear all local session data
+      _storage.clearUserData();
+      _storage.setBool(StorageKeys.isLoggedIn, false);
+      debugPrint('⚠️ AuthRepositoryImpl: User signed out successfully');
     } catch (e) {
       // Google sign-out failure is not critical — continue with Firebase signout
-      debugPrint('⚠️ AuthRepository: Google signOut error — $e');
+      debugPrint('⚠️ AuthRepository: Google/Firebase signOut error — $e');
     }
-
-    // Sign out from Firebase Auth
-    await _firebaseAuth.signOut();
-
-    // Clear all local session data
-    await _storage.clearUserData();
-    await _storage.setBool(StorageKeys.isLoggedIn, false);
   }
 
   // ── Private: Create or Update Firestore User Document ─────────────────────
@@ -270,6 +278,11 @@ class AuthRepositoryImpl implements AuthRepository {
       String resolvedDisplayName;
       String resolvedEmail;
       String resolvedPhotoUrl;
+      DateTime? createdAt;
+      DateTime? lastLoginAt;
+      DateTime? lastUpdatedAt;
+      int? age;
+      DateTime? dateOfBirth;
       bool onboardingDone = false;
       bool keySetupDone = false;
 
@@ -304,12 +317,9 @@ class AuthRepositoryImpl implements AuthRepository {
         );
 
         // Write new user document with server timestamps
-        await docRef.set({
-          ...newUser.toFirestoreNewUser(),
-          FirebaseCollections.fieldCreatedAt: FieldValue.serverTimestamp(),
-          FirebaseCollections.fieldLastLoginAt: FieldValue.serverTimestamp(),
-        });
-
+        await docRef.set(newUser.toFirestoreNewUser());
+        debugPrint(
+            "⚠️ AuthRepositoryImpl: User data set to firestore successfully");
         // Persist session to Hive
         await _persistSession(newUser);
 
@@ -332,10 +342,24 @@ class AuthRepositoryImpl implements AuthRepository {
         keySetupDone =
             existingData[FirebaseCollections.fieldKeySetupDone] as bool? ??
                 false;
+        age = existingData[FirebaseCollections.fieldAge] as int;
+        dateOfBirth =
+            (existingData[FirebaseCollections.fieldDateOfBirth] as Timestamp?)
+                ?.toDate();
+        createdAt =
+            (existingData[FirebaseCollections.fieldCreatedAt] as Timestamp?)
+                ?.toDate();
+        lastLoginAt =
+            (existingData[FirebaseCollections.fieldLastLoginAt] as Timestamp?)
+                ?.toDate();
+        lastUpdatedAt =
+            (existingData[FirebaseCollections.fieldLastUpdatedAt] as Timestamp?)
+                ?.toDate();
 
         // Update only lastLoginAt — preserve all other fields
         await docRef.update({
           FirebaseCollections.fieldLastLoginAt: FieldValue.serverTimestamp(),
+          FirebaseCollections.fieldNewUser: false
         });
 
         final returningUser = UserModel(
@@ -347,7 +371,15 @@ class AuthRepositoryImpl implements AuthRepository {
           isNewUser: false,
           onboardingDone: onboardingDone,
           keySetupDone: keySetupDone,
+          dateOfBirth: dateOfBirth,
+          createdAt: createdAt,
+          lastLoginAt: lastLoginAt,
+          age: age,
+          lastUpdatedAt: lastUpdatedAt,
         );
+
+        debugPrint(
+            "⚠️ AuthRepositoryImpl: User data get from firestore successfully");
 
         // Re-hydrate Hive with latest data from Firestore
         await _persistSession(returningUser);
@@ -487,7 +519,8 @@ class AuthRepositoryImpl implements AuthRepository {
 
     try {
       final uid = _firebaseAuth.currentUser?.uid ?? '';
-
+      debugPrint(
+          "⚠️ AuthRepository: updateUser $uid \n with update field data -> $field : $value");
       // Update only lastUpdatedAt and given field — preserve all other fields
       await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
         FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),

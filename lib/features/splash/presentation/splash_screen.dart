@@ -1,4 +1,3 @@
-
 import 'package:ai_voice_genie/core/constants/app_assets.dart';
 import 'package:ai_voice_genie/core/localization/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import 'package:ai_voice_genie/core/enums/app_enums.dart';
 import 'package:ai_voice_genie/core/router/app_routes.dart';
 import 'package:ai_voice_genie/features/auth/presentation/auth_provider.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 
@@ -95,8 +95,8 @@ class _SplashScreenState extends State<SplashScreen> {
       // Authenticated state but no user model — safety fallback
       _navigateUnauthenticated();
       return;
-    } else{
-     context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
+    } else {
+      context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
     }
 
     if (!user.onboardingDone) {
@@ -127,7 +127,26 @@ class _SplashScreenState extends State<SplashScreen> {
 
         return Scaffold(
           body: SafeArea(
-            child: _SplashContent(),
+            child: Container(
+                height: context.screenHeight,
+                width: context.screenWidth,
+                decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                  center: Alignment.topCenter,
+                  radius: context.isTablet ? 1.5 : 0.5,
+                  colors: (context.isDark)
+                      ? [
+                          AppColors.accentGlow,
+                          context.theme.scaffoldBackgroundColor,
+                        ]
+                      : [
+                          AppColors.accentGlow,
+                          context.theme.scaffoldBackgroundColor,
+                        ],
+                  focal: const Alignment(0.0, 0.9),
+                )),
+                alignment: AlignmentGeometry.center,
+                child: _SplashContent()),
           ),
         );
       },
@@ -192,9 +211,8 @@ class _SplashContent extends StatelessWidget {
     final isTablet = context.isTablet;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
         // ── App Logo ───────────────────────────────────────────────────────
         Center(
@@ -215,9 +233,7 @@ class _SplashContent extends StatelessWidget {
         _PulsingWidget(
           child: Text(
             context.l10n.appName,
-            style: context.textTheme.titleLarge?.copyWith(
-              fontSize: context.textTheme.displaySmall?.fontSize
-            ),
+            style: context.textTheme.displayMedium,
             textAlign: TextAlign.center,
           ),
         ),
@@ -228,9 +244,7 @@ class _SplashContent extends StatelessWidget {
         _PulsingWidget(
           child: Text(
             context.l10n.appTagline,
-            style: context.textTheme.titleSmall?.copyWith(
-                fontSize: context.textTheme.headlineLarge?.fontSize
-            ),
+            style: context.textTheme.bodyLarge,
             textAlign: TextAlign.center,
           ),
         ),

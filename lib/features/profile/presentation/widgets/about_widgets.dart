@@ -229,7 +229,7 @@ class AboutLinkRow extends StatelessWidget {
                   Text(
                     subtitle,
                     style: context.textTheme.bodySmall?.copyWith(
-                      color: AppColors.warning,
+                      color: AppColors.lightWarning,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -238,7 +238,7 @@ class AboutLinkRow extends StatelessWidget {
             ),
             Icon(
               isEnabled ? Icons.open_in_new_rounded : Icons.lock_clock_outlined,
-              color: AppColors.warning,
+              color: AppColors.lightWarning,
               size: 20,
             ),
           ],

@@ -13,7 +13,6 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../shared/widgets/image_view.dart';
-import '../../key_setup/presentation/api_key_provider.dart';
 import 'auth_provider.dart';
 
 /// Login screen for AI Voice Genie.
@@ -39,7 +38,6 @@ class _AuthScreenState extends State<AuthScreen> {
   // ── Sign-In Handlers ───────────────────────────────────────────────────────
 
   Future<void> _handleGoogleSignIn() async {
-    debugPrint("### _handleGoogleSignIn...");
     final authProvider = context.read<AuthProvider>();
 
     // Show loading before async gap — context is valid here
@@ -116,8 +114,6 @@ class _AuthScreenState extends State<AuthScreen> {
       // Stay on LoginScreen and show a generic error
       context.showError('something_went_wrong');
       return;
-    } else{
-      context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
     }
 
     if (!user.onboardingDone) {
@@ -132,101 +128,98 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final isTablet = context.isTablet;
     final l10n = context.l10n;
 
     return Scaffold(
-       body: SingleChildScrollView(
-         child: Stack(
-           children: [
-             ImageView(
-               image: ImageViewData.asset(
-                   context.isDark ? AppAssets.darkAuth : AppAssets.lightAuth),
-               height: context.screenHeight,
-               width: context.screenHeight,
-               fit: BoxFit.cover,
-               filterQuality: FilterQuality.high,
-             ),
-             ConstrainedBox(
-               constraints: BoxConstraints(
-                 minHeight: context.screenHeight -
-                     MediaQuery.of(context).padding.top -
-                     MediaQuery.of(context).padding.bottom,
-               ),
-               child: IntrinsicHeight(
-                 child: Padding(
-                   padding: EdgeInsets.symmetric(
-                       horizontal: context.horizontalPadding),
-                   child: Column(
-                     crossAxisAlignment: CrossAxisAlignment.center,
-                     children: [
-                       // ── Top Spacer ───────────────────────────────────────────
-                       SizedBox(
-                           height: (context.screenHeight *
-                               (isTablet ? 0.2 : 0.1))),
+      body: SingleChildScrollView(
+        child: Stack(
+          children: [
+            ImageView(
+              image: ImageViewData.asset(
+                  context.isDark ? AppAssets.darkAuth : AppAssets.lightAuth),
+              height: context.screenHeight,
+              width: context.screenHeight,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: context.screenHeight -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom,
+              ),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: context.horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // ── Top Spacer ───────────────────────────────────────────
+                      SizedBox(
+                          height:
+                              (context.screenHeight * (isTablet ? 0.2 : 0.1))),
 
-                        // ── Welcome Text ─────────────────────────────────────────────
-                        Text(
-                          l10n.welcome,
-                          style: context.textTheme.bodyLarge?.copyWith(
-                            fontSize: 21
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                      // ── Welcome Text ─────────────────────────────────────────────
+                      Text(
+                        l10n.welcome,
+                        style: context.textTheme.titleLarge?.copyWith(
+                            color: context.textTheme.bodyLarge?.color),
+                        textAlign: TextAlign.center,
+                      ),
 
-                       // ── App Name ─────────────────────────────────────────────
-                       Text(
-                         l10n.appName,
-                         style: context.textTheme.headlineLarge?.copyWith(
-                           fontSize: 28
-                         ),
-                         textAlign: TextAlign.center,
-                       ),
+                      // ── App Name ─────────────────────────────────────────────
+                      Text(
+                        l10n.appName,
+                        style: context.textTheme.displaySmall?.copyWith(
+                            color: context.textTheme.bodyLarge?.color),
+                        textAlign: TextAlign.center,
+                      ),
 
-                       // ── Spacer pushes buttons to bottom ──────────────────────
-                       const Spacer(),
+                      // ── Spacer pushes buttons to bottom ──────────────────────
+                      const Spacer(),
 
-                       AuthButtons(
-                           isTablet: isTablet,
-                           onTap: _handleGoogleSignIn,
-                           label: l10n.signInWithGoogle,
-                           authType: SocialAuthProvider.google),
+                      AuthButtons(
+                          isTablet: isTablet,
+                          onTap: _handleGoogleSignIn,
+                          label: l10n.signInWithGoogle,
+                          authType: SocialAuthProvider.google),
 
-                       // Apple Sign-In — iOS only
-                       if (Platform.isIOS) ...[
-                         SizedBox(height: isTablet ? 16 : 12),
-                         AuthButtons(
-                             isTablet: isTablet,
-                             onTap: _handleAppleSignIn,
-                             label: l10n.signInWithApple,
-                             authType: SocialAuthProvider.apple),
-                       ],
+                      // Apple Sign-In — iOS only
+                      if (Platform.isIOS) ...[
+                        SizedBox(height: isTablet ? 16 : 12),
+                        AuthButtons(
+                            isTablet: isTablet,
+                            onTap: _handleAppleSignIn,
+                            label: l10n.signInWithApple,
+                            authType: SocialAuthProvider.apple),
+                      ],
 
-                       SizedBox(height: isTablet ? 16 : 12),
+                      SizedBox(height: isTablet ? 16 : 12),
 
-                       // ── Privacy note ─────────────────────────────────────────
-                       Text(
-                         l10n.privacyNote,
-                         style: context.textTheme.bodySmall,
-                         textAlign: TextAlign.center,
-                       ),
+                      // ── Privacy note ─────────────────────────────────────────
+                      Text(
+                        l10n.privacyNote,
+                        style: context.textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
 
-                       SizedBox(
-                           height: (context.screenHeight *
-                               (Platform.isIOS
-                                   ? (isTablet ? 0.02 : 0.01)
-                                   : (isTablet ? 0.2 : 0.06))))
-                     ],
-                   ),
-                 ),
-               ),
-             ),
-           ],
-         ),
-       ),
+                      SizedBox(
+                          height: (context.screenHeight *
+                              (Platform.isIOS
+                                  ? (isTablet ? 0.02 : 0.01)
+                                  : (isTablet ? 0.2 : 0.06))))
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -10,7 +10,7 @@ class AppColors {
 
   // Primary brand color
   static const Color primaryLight = Color(0xFF7C9CFF);
-  static const Color primaryDark = Color(0xFF2D3D70);
+  static const Color primaryDark = Color(0xFF5571D1);
 
   // Accent Glow
   static const Color accentLight = Color(0xFFC1D4FB);
@@ -33,11 +33,11 @@ class AppColors {
   // ── Text Colors ───────────────────────────────────────────────────────────
   static const Color lightTextPrimary = Color(0xFF040404);
   static const Color lightTextSecondary = Color(0xFFFFFFFF);
-  static const Color lightTextTertiary = Color(0xFF838383);
+  static const Color lightTextTertiary = Color(0xFF40485D);
 
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
   static const Color darkTextSecondary = Color(0xFF000000);
-  static const Color darkTextTertiary = Color(0xFF7A839C);
+  static const Color darkTextTertiary = Color(0xFFDEE5FF);
 
   // ── Border Colors ─────────────────────────────────────────────────────────
   static const Color lightDivider = Color(0xFFD1D1D1);
@@ -50,13 +50,16 @@ class AppColors {
   static const Color purpleAccent = Color(0xFFC3B4FC);
   static const Color tealAccent = Color(0xFF6EE7F9);
   static const Color cyanAccent = Color(0xFF18FFFF);
+  static const Color accentGlow = Color.fromRGBO(29, 233, 182, 0);
   static const Color transparent = Colors.transparent;
 
   // ── Status / Feedback Colors ──────────────────────────────────────────────
-  static const Color success = Color(0xFF03AC35);
-  static const Color lightError = Color(0xFFFF716C);
-  static const Color darkError = Color(0xFFD7383B);
-  static const Color warning = Color(0xFFF59E0B);
+  static const Color lightSuccess = Color(0xFF10B981);
+  static const Color darkSuccess = Color(0xFF059669);
+  static const Color lightError = Color(0xFFEF4444);
+  static const Color darkError = Color(0xFFDC2626);
+  static const Color lightWarning = Color(0xFFF59E0B);
+  static const Color darkWarning = Color(0xFFD97706);
   static const Color info = Color(0xFF3B82F6);
 
   // ── AI Model Brand Colors ─────────────────────────────────────────────────
@@ -99,10 +102,7 @@ class AppColors {
   // ── Gradient Definitions ──────────────────────────────────────────────────
   // Used for hero sections and loading shimmer effects
   static final LinearGradient primaryGradientLight = LinearGradient(
-    colors: [
-      cyanAccent.withValues(alpha: 0.3),
-      transparent
-    ],
+    colors: [cyanAccent.withValues(alpha: 0.3), transparent],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );

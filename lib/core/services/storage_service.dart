@@ -1,5 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../constants/storage_keys.dart';
+
 /// Local storage service wrapping Hive.
 ///
 /// Single access point for all local key-value storage.
@@ -35,7 +37,8 @@ class StorageService {
     await Future.wait([
       Hive.openBox('settings_box').then((box) => _settingsBox = box),
       Hive.openBox('user_box').then((box) => _userBox = box),
-      Hive.openBox('conversation_cache_box').then((box) => _conversationCacheBox = box),
+      Hive.openBox('conversation_cache_box')
+          .then((box) => _conversationCacheBox = box),
     ]);
   }
 
@@ -106,6 +109,28 @@ class StorageService {
   /// Clear all user data (called on logout)
   Future<void> clearUserData() async {
     await _userBox.clear();
+    await _conversationCacheBox.clear();
+
+    // Clear user-specific AI preferences and session settings from settings box
+    // so they do not bleed over if a different user logs in.
+    final keysToRemove = [
+      StorageKeys.preferredProviderId,
+      StorageKeys.preferredImageQuality,
+      StorageKeys.preferredImageSize,
+      StorageKeys.preferredImageCount,
+      StorageKeys.preferredVisionImageCount,
+      StorageKeys.preferredVisionPdfCount,
+      StorageKeys.preferredVisionDetailLevel,
+      StorageKeys.preferredResponseLength,
+      StorageKeys.lastOpenConversationId,
+      StorageKeys.useAiTts,
+      StorageKeys.useAiStt,
+      StorageKeys.ttsSpeed,
+    ];
+
+    for (final key in keysToRemove) {
+      await _settingsBox.delete(key);
+    }
   }
 
   // ── Conversation Cache Box Operations ─────────────────────────────────────

@@ -1,3 +1,4 @@
+import 'package:ai_voice_genie/features/auth/domain/user_model.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 import '../constants/firebase_collections.dart';
@@ -136,8 +137,9 @@ class AnalyticsService {
   // ── Key Management Events ─────────────────────────────────────────────────
 
   /// Log when user successfully adds an API key for a provider
-  Future<void> logModelKeyAdded(AiProviderId provider) async {
-    await _safeLog(FirebaseCollections.eventModelKeyAdded, {
+  Future<void> logModelKeyAdded(AiProviderId provider, String uid) async {
+    await _safeLog(FirebaseCollections.eventModelAdded, {
+      FirebaseCollections.paramUserId: uid,
       FirebaseCollections.paramModelUsed: provider.id,
       FirebaseCollections.paramModelName: provider.displayName,
       FirebaseCollections.paramModelFeatures: provider.features,
@@ -145,8 +147,9 @@ class AnalyticsService {
   }
 
   /// Log when user removes an API key
-  Future<void> logModelKeyRemoved(AiProviderId provider) async {
-    await _safeLog(FirebaseCollections.eventModelKeyRemoved, {
+  Future<void> logModelKeyRemoved(AiProviderId provider, String uid) async {
+    await _safeLog(FirebaseCollections.eventModelRemoved, {
+      FirebaseCollections.paramUserId: uid,
       FirebaseCollections.paramModelUsed: provider.id,
       FirebaseCollections.paramModelName: provider.displayName,
       FirebaseCollections.paramModelFeatures: provider.features,
@@ -170,20 +173,35 @@ class AnalyticsService {
   ///
   /// This tracks button preference independently of whether auth succeeds.
   /// Even a cancelled sign-in is counted — tells us which provider users try.
-  Future<void> logSignInButtonTapped(SocialAuthProvider provider) async {
-    await _safeLog(FirebaseCollections.eventSignInButtonTapped, {
+  Future<void> authenticationButtonTapped(SocialAuthProvider provider) async {
+    await _safeLog(FirebaseCollections.eventAuthenticationButtonTapped, {
       FirebaseCollections.paramAuthProvider: provider.id,
     });
   }
 
   /// Log when a returning user signs in successfully
-  Future<void> logUserSignedIn() async {
-    await _safeLog(FirebaseCollections.eventUserSignedIn, {});
+  Future<void> logUserSignedIn(UserModel user) async {
+    await _safeLog(FirebaseCollections.eventUserSignedIn, {
+      FirebaseCollections.paramUserId: user.uid,
+      FirebaseCollections.paramAuthProvider: user.authProvider.id,
+      FirebaseCollections.paramUserEmail: user.email
+    });
   }
 
   /// Log when a brand new user signs up for the first time
-  Future<void> logUserRegistered() async {
-    await _safeLog(FirebaseCollections.eventUserRegistered, {});
+  Future<void> logUserRegistered(UserModel user) async {
+    await _safeLog(FirebaseCollections.eventUserRegistered, {
+      FirebaseCollections.paramUserId: user.uid,
+      FirebaseCollections.paramAuthProvider: user.authProvider.id,
+      FirebaseCollections.paramUserEmail: user.email
+    });
+  }
+
+  /// Log when the user signs out
+  Future<void> logUserSignedOut(String uid) async {
+    await _safeLog(FirebaseCollections.eventUserSignedOut, {
+      FirebaseCollections.paramUserId: uid,
+    });
   }
 
   /// Set the user ID for all subsequent analytics events

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/constants/firebase_collections.dart';
 import '../../../core/enums/app_enums.dart';
 
 /// Normalized user entity for AI Voice Genie.
@@ -54,22 +55,29 @@ class UserModel {
   /// Age (optional numeric input).
   final int? age;
 
-  /// Preferred AI Model (default: 'auto').
-  final String preferredAiModel;
+  /// The time this user was first created.
+  final DateTime? createdAt;
 
-  const UserModel({
-    required this.uid,
-    required this.email,
-    required this.displayName,
-    required this.photoUrl,
-    required this.authProvider,
-    this.isNewUser = false,
-    this.onboardingDone = false,
-    this.keySetupDone = false,
-    this.dateOfBirth,
-    this.age,
-    this.preferredAiModel = 'gemini',
-  });
+  /// The time this user last logged in.
+  final DateTime? lastLoginAt;
+
+  /// The time this user last updated.
+  final DateTime? lastUpdatedAt;
+
+  const UserModel(
+      {required this.uid,
+      required this.email,
+      required this.displayName,
+      required this.photoUrl,
+      required this.authProvider,
+      this.isNewUser = false,
+      this.onboardingDone = false,
+      this.keySetupDone = false,
+      this.dateOfBirth,
+      this.age,
+      this.createdAt,
+      this.lastLoginAt,
+      this.lastUpdatedAt});
 
   // ── Factory: from Firestore document ─────────────────────────────────────
 
@@ -92,7 +100,15 @@ class UserModel {
           ? (data['dateOfBirth'] as Timestamp).toDate()
           : null,
       age: data['age'] as int?,
-      preferredAiModel: data['preferredAiModel'] as String? ?? 'gemini',
+      createdAt: data[FirebaseCollections.fieldCreatedAt] != null
+          ? (data[FirebaseCollections.fieldCreatedAt] as Timestamp).toDate()
+          : null,
+      lastLoginAt: data[FirebaseCollections.fieldLastLoginAt] != null
+          ? (data[FirebaseCollections.fieldLastLoginAt] as Timestamp).toDate()
+          : null,
+      lastUpdatedAt: data[FirebaseCollections.fieldLastUpdatedAt] != null
+          ? (data[FirebaseCollections.fieldLastUpdatedAt] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -111,11 +127,11 @@ class UserModel {
       'authProvider': authProvider.id,
       'onboardingDone': false,
       'keySetupDone': false,
-      'dailyQuotaUsed': 0,
-      'dailyQuotaLimit': 50,
       'dateOfBirth': null,
       'age': null,
-      'preferredAiModel': preferredAiModel,
+      FirebaseCollections.fieldCreatedAt: FieldValue.serverTimestamp(),
+      FirebaseCollections.fieldLastLoginAt: FieldValue.serverTimestamp(),
+      FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
     };
   }
 
@@ -133,21 +149,25 @@ class UserModel {
     bool? keySetupDone,
     DateTime? dateOfBirth,
     int? age,
+    DateTime? createdAt,
+    DateTime? lastLoginAt,
+    DateTime? lastUpdatedAt,
     String? preferredAiModel,
   }) {
     return UserModel(
-      uid: uid ?? this.uid,
-      email: email ?? this.email,
-      displayName: displayName ?? this.displayName,
-      photoUrl: photoUrl ?? this.photoUrl,
-      authProvider: authProvider ?? this.authProvider,
-      isNewUser: isNewUser ?? this.isNewUser,
-      onboardingDone: onboardingDone ?? this.onboardingDone,
-      keySetupDone: keySetupDone ?? this.keySetupDone,
-      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
-      age: age ?? this.age,
-      preferredAiModel: preferredAiModel ?? this.preferredAiModel,
-    );
+        uid: uid ?? this.uid,
+        email: email ?? this.email,
+        displayName: displayName ?? this.displayName,
+        photoUrl: photoUrl ?? this.photoUrl,
+        authProvider: authProvider ?? this.authProvider,
+        isNewUser: isNewUser ?? this.isNewUser,
+        onboardingDone: onboardingDone ?? this.onboardingDone,
+        keySetupDone: keySetupDone ?? this.keySetupDone,
+        dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+        age: age ?? this.age,
+        createdAt: createdAt ?? this.createdAt,
+        lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+        lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt);
   }
 
   // ── Equality ──────────────────────────────────────────────────────────────

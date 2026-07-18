@@ -92,7 +92,7 @@ class _AboutScreenState extends State<AboutScreen> {
                       AboutStatusChip(
                         label: context.l10n.developmentBuild,
                         icon: Icons.construction_rounded,
-                        color: AppColors.warning,
+                        color: AppColors.lightWarning,
                       ),
                     ],
                   ),

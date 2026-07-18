@@ -107,9 +107,8 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
     );
 
     // Bottom slot → slide from below; Top slot → slide from above.
-    final beginOffset = widget.slot == _Slot.bottom
-        ? const Offset(0, 1)
-        : const Offset(0, -1);
+    final beginOffset =
+        widget.slot == _Slot.bottom ? const Offset(0, 1) : const Offset(0, -1);
 
     _slideAnimation = Tween<Offset>(
       begin: beginOffset,
@@ -181,9 +180,9 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
                     child: Text(
                       widget.displayMessage,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
                     ),
                   ),
                   if (widget.actionLabel != null && widget.onAction != null)
@@ -274,9 +273,8 @@ class _MessageManager {
     }
 
     // Check whether the OTHER channel already occupies the same slot.
-    final otherChannel = channel == _Channel.snackbar
-        ? _Channel.toast
-        : _Channel.snackbar;
+    final otherChannel =
+        channel == _Channel.snackbar ? _Channel.toast : _Channel.snackbar;
     final otherMsg = _channelMessage(otherChannel);
     final bool needsStack = otherMsg != null && otherMsg.slot == targetSlot;
 
@@ -314,13 +312,13 @@ class _MessageManager {
   }
 
   void _insert(
-      OverlayState overlay,
-      MessageConfig config,
-      String displayMessage,
-      _Slot slot,
-      _Channel channel, {
-        double stackOffset = 0,
-      }) {
+    OverlayState overlay,
+    MessageConfig config,
+    String displayMessage,
+    _Slot slot,
+    _Channel channel, {
+    double stackOffset = 0,
+  }) {
     late OverlayEntry entry;
     final key = GlobalKey<_AnimatedMessageOverlayState>();
 
@@ -365,12 +363,12 @@ class MessageUtils {
 
   /// Show a success message (appears at the bottom, slides up).
   static void showSuccess(
-      BuildContext context,
-      String message, {
-        Duration? duration,
-        String? actionLabel,
-        VoidCallback? onAction,
-      }) {
+    BuildContext context,
+    String message, {
+    Duration? duration,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     _showMessage(
       context,
       MessageConfig(
@@ -386,12 +384,12 @@ class MessageUtils {
 
   /// Show an error message (appears at the top, slides down).
   static void showError(
-      BuildContext context,
-      String message, {
-        Duration? duration,
-        String? actionLabel,
-        VoidCallback? onAction,
-      }) {
+    BuildContext context,
+    String message, {
+    Duration? duration,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     _showMessage(
       context,
       MessageConfig(
@@ -407,12 +405,12 @@ class MessageUtils {
 
   /// Show a warning message (appears at the top, slides down).
   static void showWarning(
-      BuildContext context,
-      String message, {
-        Duration? duration,
-        String? actionLabel,
-        VoidCallback? onAction,
-      }) {
+    BuildContext context,
+    String message, {
+    Duration? duration,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     _showMessage(
       context,
       MessageConfig(
@@ -432,10 +430,10 @@ class MessageUtils {
 
   /// Show a success toast message (bottom, slides up).
   static void showSuccessToast(
-      BuildContext context,
-      String message, {
-        Duration? duration,
-      }) {
+    BuildContext context,
+    String message, {
+    Duration? duration,
+  }) {
     _showMessage(
       context,
       MessageConfig(
@@ -449,10 +447,10 @@ class MessageUtils {
 
   /// Show an error toast message (top, slides down).
   static void showErrorToast(
-      BuildContext context,
-      String message, {
-        Duration? duration,
-      }) {
+    BuildContext context,
+    String message, {
+    Duration? duration,
+  }) {
     _showMessage(
       context,
       MessageConfig(
@@ -466,10 +464,10 @@ class MessageUtils {
 
   /// Show a warning toast message (top, slides down).
   static void showWarningToast(
-      BuildContext context,
-      String message, {
-        Duration? duration,
-      }) {
+    BuildContext context,
+    String message, {
+    Duration? duration,
+  }) {
     _showMessage(
       context,
       MessageConfig(
@@ -486,10 +484,10 @@ class MessageUtils {
   /// Safe to call after async gaps. [resolvedMessage] should already be
   /// translated.
   static void showSuccessToastWithOverlay(
-      OverlayState overlay,
-      String resolvedMessage, {
-        Duration? duration,
-      }) {
+    OverlayState overlay,
+    String resolvedMessage, {
+    Duration? duration,
+  }) {
     _MessageManager.instance.show(
       overlay: overlay,
       config: MessageConfig(
@@ -508,10 +506,10 @@ class MessageUtils {
 
   /// Unified entry-point: resolve localisation, then delegate to the manager.
   static void _showMessage(
-      BuildContext context,
-      MessageConfig config,
-      _Channel channel,
-      ) {
+    BuildContext context,
+    MessageConfig config,
+    _Channel channel,
+  ) {
     final overlay = Overlay.maybeOf(context);
     if (overlay == null || !overlay.mounted) return;
 
@@ -535,11 +533,11 @@ class MessageUtils {
 Map<String, Color> _getColors(MessageType type) {
   switch (type) {
     case MessageType.success:
-      return {'background': AppColors.success, 'icon': Colors.white};
+      return {'background': AppColors.lightSuccess, 'icon': Colors.white};
     case MessageType.error:
       return {'background': AppColors.lightError, 'icon': Colors.white};
     case MessageType.warning:
-      return {'background': AppColors.warning, 'icon': Colors.white};
+      return {'background': AppColors.lightWarning, 'icon': Colors.white};
   }
 }
 
@@ -565,11 +563,11 @@ extension MessageExtensions on BuildContext {
 
   /// Show success snackbar
   void showSuccess(
-      String message, {
-        String? actionLabel,
-        VoidCallback? onAction,
-        Duration? dur,
-      }) {
+    String message, {
+    String? actionLabel,
+    VoidCallback? onAction,
+    Duration? dur,
+  }) {
     MessageUtils.showSuccess(
       this,
       message,
@@ -581,11 +579,11 @@ extension MessageExtensions on BuildContext {
 
   /// Show error snackbar
   void showError(
-      String message, {
-        String? actionLabel,
-        VoidCallback? onAction,
-        Duration? dur,
-      }) {
+    String message, {
+    String? actionLabel,
+    VoidCallback? onAction,
+    Duration? dur,
+  }) {
     MessageUtils.showError(
       this,
       message,
@@ -597,11 +595,11 @@ extension MessageExtensions on BuildContext {
 
   /// Show warning snackbar
   void showWarning(
-      String message, {
-        String? actionLabel,
-        VoidCallback? onAction,
-        Duration? dur,
-      }) {
+    String message, {
+    String? actionLabel,
+    VoidCallback? onAction,
+    Duration? dur,
+  }) {
     MessageUtils.showWarning(
       this,
       message,

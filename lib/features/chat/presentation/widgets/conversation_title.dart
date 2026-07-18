@@ -175,7 +175,7 @@ class _CapabilityIcon extends StatelessWidget {
         ),
       AiCapability.pdfParsing => (
           Icons.picture_as_pdf_outlined,
-          AppColors.warning,
+          AppColors.lightWarning,
         ),
     };
 

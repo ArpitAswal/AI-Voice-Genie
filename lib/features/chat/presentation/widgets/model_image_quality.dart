@@ -154,9 +154,9 @@ abstract final class _ProviderStyle {
   static Color colorFor(ImageQuality provider) {
     switch (provider) {
       case ImageQuality.low:
-        return AppColors.success;
+        return AppColors.lightSuccess;
       case ImageQuality.medium:
-        return AppColors.warning;
+        return AppColors.lightWarning;
       case ImageQuality.high:
         return AppColors.lightError;
     }

@@ -128,10 +128,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             height: 8,
                             decoration: BoxDecoration(
                               color: _currentPage == index
-                                  ? AppColors.primaryLight
+                                  ? (context.isDark)
+                                      ? AppColors.primaryDark
+                                      : AppColors.primaryLight
                                   : (context.isDark
-                                      ? AppColors.darkDivider
-                                      : AppColors.lightDivider),
+                                      ? AppColors.darkTextTertiary
+                                      : AppColors.lightTextTertiary),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -216,17 +218,13 @@ class _OnboardingPage extends StatelessWidget {
           SizedBox(
               height: isTablet
                   ? context.screenHeight * 0.1
-                  : context.screenHeight * 0.01),
+                  : context.screenHeight * 0.03),
 
           // ── Title ─────────────────────────────────────────────────────────
-          Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: context.horizontalPadding * 2),
-            child: Text(
-              data.titleKey,
-              style: context.textTheme.headlineMedium,
-              textAlign: TextAlign.center,
-            ),
+          Text(
+            data.titleKey,
+            style: context.textTheme.headlineMedium,
+            textAlign: TextAlign.center,
           ),
 
           SizedBox(height: isTablet ? 16 : 8),
@@ -237,8 +235,7 @@ class _OnboardingPage extends StatelessWidget {
                 EdgeInsets.symmetric(horizontal: context.horizontalPadding * 3),
             child: Text(
               data.descKey,
-              style:
-                  context.textTheme.bodyLarge?.copyWith(color: AppColors.grey),
+              style: context.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
           ),

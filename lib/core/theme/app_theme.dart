@@ -96,7 +96,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryLight,
-            foregroundColor: AppColors.lightTextSecondary,
+            foregroundColor: AppColors.white,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
             elevation: 0,
             shape: RoundedRectangleBorder(
@@ -276,7 +276,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryDark,
-          foregroundColor: AppColors.darkTextPrimary,
+          foregroundColor: AppColors.white,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
           elevation: 0,
           shape: RoundedRectangleBorder(

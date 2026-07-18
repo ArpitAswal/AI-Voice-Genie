@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:ai_voice_genie/core/constants/firebase_collections.dart';
+import 'package:ai_voice_genie/core/error/effect_bus.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/enums/app_enums.dart';
@@ -47,6 +48,7 @@ class AuthProvider extends ChangeNotifier {
   AuthState _authState = AuthState.initial;
   UserModel? _currentUser;
   String? _authError;
+  final EffectBus _effectBus = EffectBus.instance;
 
   /// Current authentication state — drives SplashScreen navigation.
   AuthState get authState => _authState;
@@ -82,8 +84,10 @@ class AuthProvider extends ChangeNotifier {
       } else {
         _setAuthState(AuthState.unauthenticated);
       }
+      debugPrint(
+          '⚠️ AuthProvider initialize with either authenticate or unauthenticated state');
     } catch (e) {
-      debugPrint('⚠️ AuthProvider.initialize error: $e');
+      debugPrint('⚠️ AuthProvider initialize error: $e');
       // On any initialization error, treat as unauthenticated
       // Never leave the user stuck on the splash screen
       _setAuthState(AuthState.unauthenticated);
@@ -98,8 +102,11 @@ class AuthProvider extends ChangeNotifier {
   /// Sets authError on failure — UI observes and shows it.
   Future<bool> signInWithGoogle() async {
     // Fire analytics BEFORE auth — tracks button taps independently of outcome
-    await _analytics.logSignInButtonTapped(SocialAuthProvider.google);
+    _effectBus.safeEffect(() async {
+      _analytics.authenticationButtonTapped(SocialAuthProvider.google);
+    });
 
+    debugPrint('⚠️ AuthProvider performing signInWithGoogle');
     return _performSignIn(
       () => _repository.signInWithGoogle(),
       provider: SocialAuthProvider.google,
@@ -114,7 +121,8 @@ class AuthProvider extends ChangeNotifier {
   /// Sets authError on failure — UI observes and shows it.
   Future<bool> signInWithApple() async {
     // Fire analytics BEFORE auth — tracks button taps independently of outcome
-    await _analytics.logSignInButtonTapped(SocialAuthProvider.apple);
+    await _analytics.authenticationButtonTapped(SocialAuthProvider.apple);
+    debugPrint('⚠️ AuthProvider performing signInWithApple');
 
     return _performSignIn(
       () => _repository.signInWithApple(),
@@ -129,14 +137,16 @@ class AuthProvider extends ChangeNotifier {
   /// Clears all session data and sets state to unauthenticated.
   Future<void> signOut() async {
     try {
+      debugPrint("⚠️ AuthProvider Signing Out");
       await _repository.signOut();
       await _analytics.clearUserId();
-      await Future.delayed(const Duration(seconds: 3),(){
-        _currentUser = null;
-        _setAuthState(AuthState.unauthenticated);
-      });
+      if (_currentUser != null) {
+        _analytics.logUserSignedOut(_currentUser!.uid);
+      }
+      _currentUser = null;
+      _setAuthState(AuthState.unauthenticated);
     } catch (e) {
-      debugPrint('⚠️ AuthProvider.signOut error: $e');
+      debugPrint('⚠️ AuthProvider signOut error: $e');
       // Even on error, clear local state so user is not stuck
       _currentUser = null;
       _setAuthState(AuthState.unauthenticated);
@@ -173,14 +183,14 @@ class AuthProvider extends ChangeNotifier {
 
       if (!success) return false;
 
-      // Re-fetch the user from repository to get the updated photoUrl (Base64) 
+      // Re-fetch the user from repository to get the updated photoUrl (Base64)
       // and other server-calculated fields if any.
       final updatedUser = await _repository.getCurrentUser();
       if (updatedUser != null) {
         _currentUser = updatedUser;
         notifyListeners();
       }
-      
+
       return true;
     } catch (e) {
       debugPrint('❌ AuthProvider.updateProfile error: $e');
@@ -230,9 +240,9 @@ class AuthProvider extends ChangeNotifier {
 
       // Fire the correct analytics event based on new vs returning
       if (user.isNewUser) {
-        await _analytics.logUserRegistered();
+        await _analytics.logUserRegistered(user);
       } else {
-        await _analytics.logUserSignedIn();
+        await _analytics.logUserSignedIn(user);
       }
 
       await _analytics.setUserId(user.uid);
@@ -283,9 +293,11 @@ class AuthProvider extends ChangeNotifier {
       // read the correct value without fetching from Firestore again
       _currentUser = _currentUser?.copyWith(onboardingDone: true);
 
-      await _repository.updateUser(_currentUser,
-          field: FirebaseCollections.fieldOnboardingDone,
-          value: currentUser?.onboardingDone ?? false);
+      _effectBus.safeEffect(() async {
+        _repository.updateUser(_currentUser,
+            field: FirebaseCollections.fieldOnboardingDone,
+            value: currentUser?.onboardingDone ?? false);
+      });
     } catch (e) {
       debugPrint('❌ AuthProvider onboarding error: $e');
       _authError = 'something_went_wrong';
