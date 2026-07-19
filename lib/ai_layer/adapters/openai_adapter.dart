@@ -213,6 +213,7 @@ class OpenAiAdapter extends AiProviderAdapter {
           },
         ],
         'max_tokens': request.responseLength.maxTokens,
+        'temperature': 0.4,
       };
 
       debugPrint(
@@ -303,6 +304,8 @@ class OpenAiAdapter extends AiProviderAdapter {
             'content': contentParts,
           },
         ],
+        'max_tokens': request.responseLength.maxTokens,
+        'temperature': 0.3,
       };
 
       debugPrint('📤 OpenAI Request (PDF Parsing): ${jsonEncode(requestBody)}');
@@ -338,9 +341,11 @@ class OpenAiAdapter extends AiProviderAdapter {
       }
 
       final inputTokens = data['usage']?['prompt_tokens'] as int? ??
-          data['usage']?['input_tokens'] as int? ?? 0;
+          data['usage']?['input_tokens'] as int? ??
+          0;
       final outputTokens = data['usage']?['completion_tokens'] as int? ??
-          data['usage']?['output_tokens'] as int? ?? 0;
+          data['usage']?['output_tokens'] as int? ??
+          0;
       final tokenCount = data['usage']?['total_tokens'] as int? ??
           (inputTokens + outputTokens);
 
@@ -371,7 +376,6 @@ class OpenAiAdapter extends AiProviderAdapter {
     required String apiKey,
     required Map<String, dynamic> body,
   }) {
-    debugPrint('🤖 OpenAI request: $endpoint');
     return _client.post(
       Uri.parse('${AppConstants.openAiBaseUrl}$endpoint'),
       headers: {
@@ -409,22 +413,22 @@ class OpenAiAdapter extends AiProviderAdapter {
     );
   }
 
-  /// Map non-HTTP errors (network, timeout, etc.) to AiException.
+  /// Map non-HTTP errors (network, timeout, etc.) to typed AiException.
   AiException _mapError(Object error, String requestId) {
     if (error is SocketException) {
       return const AiTransientException(
-        message: 'No internet connection',
+        message: 'error_no_internet',
         provider: AiProviderId.openAi,
       );
     }
     if (error is http.ClientException) {
-      return AiTransientException(
-        message: 'Network error: ${error.message}',
+      return const AiTransientException(
+        message: 'error_unexpected_ai',
         provider: AiProviderId.openAi,
       );
     }
-    return AiTransientException(
-      message: 'Unexpected OpenAI error: $error',
+    return const AiTransientException(
+      message: 'error_unexpected_ai',
       provider: AiProviderId.openAi,
     );
   }

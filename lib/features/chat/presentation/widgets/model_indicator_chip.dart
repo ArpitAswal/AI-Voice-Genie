@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
@@ -34,7 +35,7 @@ class ModelIndicatorChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: isTablet ? 18 : 12, color: color),
+          FaIcon(icon, size: isTablet ? 18 : 12, color: color),
           const SizedBox(width: 4),
           Text(
             provider.displayName,
@@ -49,25 +50,26 @@ class ModelIndicatorChip extends StatelessWidget {
     );
   }
 
-  (Color, Color, IconData) _providerStyle(AiProviderId provider, bool isDark) {
+  (Color, Color, FaIconData) _providerStyle(
+      AiProviderId provider, bool isDark) {
     switch (provider) {
       case AiProviderId.openAi:
         return (
-            (isDark) ? AppColors.white : AppColors.openAiBrand,
-    (isDark) ? AppColors.openAiBrandDark : AppColors.white,
-          Icons.auto_awesome_rounded,
+          (isDark) ? AppColors.white : AppColors.openAiBrand,
+          (isDark) ? AppColors.openAiBrandDark : AppColors.white,
+          FontAwesomeIcons.openai
         );
       case AiProviderId.gemini:
         return (
-            (isDark) ? AppColors.white : AppColors.geminiBrand,
-    (isDark) ? AppColors.geminiBrandDark : AppColors.white,
-          Icons.diamond_outlined,
+          (isDark) ? AppColors.white : AppColors.geminiBrand,
+          (isDark) ? AppColors.geminiBrandDark : AppColors.white,
+          FontAwesomeIcons.gemini,
         );
       case AiProviderId.claude:
         return (
-            (isDark) ? AppColors.white : AppColors.claudeBrand,
-    (isDark) ? AppColors.claudeBrandDark : AppColors.white,
-          Icons.psychology_outlined,
+          (isDark) ? AppColors.white : AppColors.claudeBrand,
+          (isDark) ? AppColors.claudeBrandDark : AppColors.white,
+          FontAwesomeIcons.claude,
         );
     }
   }

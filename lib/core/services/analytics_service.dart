@@ -66,13 +66,13 @@ class AnalyticsService {
     required AiProviderId modelAttempted,
     required AiCapability capability,
     required AiFailureType failureType,
-    bool fallbackTriggered = false,
+    required String failureReason,
   }) async {
     await _safeLog(FirebaseCollections.eventAiRequestFailed, {
       FirebaseCollections.paramModelAttempted: modelAttempted.id,
       FirebaseCollections.paramCapability: capability.id,
       FirebaseCollections.paramFailureType: failureType.value,
-      FirebaseCollections.paramFallbackTriggered: fallbackTriggered.toString(),
+      FirebaseCollections.paramFailureReason: failureReason,
     });
   }
 
@@ -141,7 +141,6 @@ class AnalyticsService {
     await _safeLog(FirebaseCollections.eventModelAdded, {
       FirebaseCollections.paramUserId: uid,
       FirebaseCollections.paramModelUsed: provider.id,
-      FirebaseCollections.paramModelName: provider.displayName,
       FirebaseCollections.paramModelFeatures: provider.features,
     });
   }

@@ -13,6 +13,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../shared/widgets/image_view.dart';
+import '../../key_setup/presentation/api_key_provider.dart';
 import 'auth_provider.dart';
 
 /// Login screen for AI Voice Genie.
@@ -114,6 +115,8 @@ class _AuthScreenState extends State<AuthScreen> {
       // Stay on LoginScreen and show a generic error
       context.showError('something_went_wrong');
       return;
+    } else{
+      context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
     }
 
     if (!user.onboardingDone) {

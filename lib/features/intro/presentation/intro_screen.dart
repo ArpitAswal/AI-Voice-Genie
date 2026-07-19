@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/enums/app_enums.dart';
+import '../../../core/extensions/ai_provider_extensions.dart';
 
 class IntroScreen extends StatelessWidget {
   const IntroScreen({super.key});
@@ -40,13 +42,8 @@ class IntroScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _getGreeting(context),
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(
-              color: context.isDark
-                  ? AppColors.primaryLight
-                  : AppColors.primaryDark),
-        ),
+        Text(_getGreeting(context),
+            style: Theme.of(context).textTheme.displayMedium),
         const SizedBox(height: 4),
         Text(
           context.l10n.aiAssist,
@@ -73,15 +70,15 @@ class IntroScreen extends StatelessWidget {
             _QuickActionButton(
                 icon: Icons.chat_bubble_rounded,
                 label: context.l10n.askQuestion,
-                iconColor: AppColors.primaryLight),
+                iconColor: AppColors.tealAccent),
+            _QuickActionButton(
+                icon: Icons.upload_file_rounded,
+                label: context.l10n.uploadPdf,
+                iconColor: AppColors.voiceActive),
             _QuickActionButton(
                 icon: Icons.palette_rounded,
                 label: context.l10n.generateImage,
                 iconColor: AppColors.purpleAccent),
-            _QuickActionButton(
-                icon: Icons.upload_file_rounded,
-                label: context.l10n.uploadPdf,
-                iconColor: AppColors.tealAccent),
           ],
         ),
       ],
@@ -108,24 +105,21 @@ class IntroScreen extends StatelessWidget {
                 description: context.l10n.chatGPTModelMessage,
                 capability: AppConstants.openAICapabilities,
                 faIcon: FontAwesomeIcons.openai,
-                gradient: AppColors.openAIGradient,
-                shadowColor: AppColors.openAiBrand),
+                gradient: AppColors.openAIGradient),
             const SizedBox(height: 16),
             _EngineCard(
                 title: AppConstants.geminiDisplayName,
                 description: context.l10n.geminiModelMessage,
                 capability: AppConstants.geminiAICapabilities,
                 faIcon: FontAwesomeIcons.gemini,
-                gradient: AppColors.geminiGradient,
-                shadowColor: AppColors.geminiBrand),
+                gradient: AppColors.geminiGradient),
             const SizedBox(height: 16),
             _EngineCard(
                 title: AppConstants.claudeDisplayName,
                 description: context.l10n.claudeModelMessage,
                 capability: AppConstants.claudeAICapabilities,
                 faIcon: FontAwesomeIcons.claude,
-                gradient: AppColors.claudeGradient,
-                shadowColor: AppColors.claudeBrand),
+                gradient: AppColors.claudeGradient),
           ],
         ),
       ],
@@ -135,49 +129,48 @@ class IntroScreen extends StatelessWidget {
   Widget _buildTapToSpeak(BuildContext context) {
     return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(
-            width: 140,
-            height: 140,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: context.isDark
-                        ? AppColors.purpleAccent.withValues(alpha: 0.1)
-                        : AppColors.tealAccent.withValues(alpha: 0.1),
-                  ),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 110,
+                height: 110,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: context.isDark
+                      ? AppColors.purpleAccent.withValues(alpha: 0.1)
+                      : AppColors.tealAccent.withValues(alpha: 0.3),
                 ),
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: (context.isDark)
-                        ? AppColors.darkVoiceGradient
-                        : AppColors.lightVoiceGradient,
-                    boxShadow: [
-                      BoxShadow(
-                        color: (context.isDark)
-                            ? AppColors.primaryDark.withValues(alpha: 0.4)
-                            : AppColors.primaryLight.withValues(alpha: 0.4),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(Icons.mic_rounded,
-                        color: Colors.white, size: context.isTablet ? 44 : 36),
-                  ),
+              ),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: (context.isDark)
+                      ? AppColors.darkVoiceGradient
+                      : AppColors.lightVoiceGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (context.isDark)
+                          ? AppColors.primaryDark.withValues(alpha: 0.4)
+                          : AppColors.primaryLight.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+                child: Center(
+                  child: Icon(Icons.mic_rounded,
+                      color: Colors.white, size: context.isTablet ? 44 : 36),
+                ),
+              ),
+            ],
           ),
+          SizedBox(height: context.isTablet ? 16 : 8),
           Text(context.l10n.tapToSpeak.toUpperCase(),
               style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
@@ -206,7 +199,7 @@ class IntroScreen extends StatelessWidget {
                 AppRoutes.navigateTo(context, AppRoutes.chat);
               },
               icon: const FaIcon(
-                FontAwesomeIcons.message,
+                FontAwesomeIcons.solidMessage,
                 color: Colors.white,
               )),
         )
@@ -263,19 +256,22 @@ class _EngineCard extends StatelessWidget {
   final String capability;
   final FaIconData faIcon;
   final LinearGradient gradient;
-  final Color shadowColor;
 
-  const _EngineCard({
-    required this.title,
-    required this.description,
-    required this.capability,
-    required this.faIcon,
-    required this.gradient,
-    required this.shadowColor,
-  });
+  const _EngineCard(
+      {required this.title,
+      required this.description,
+      required this.capability,
+      required this.faIcon,
+      required this.gradient});
 
   @override
   Widget build(BuildContext context) {
+    final AiProviderId provider = (title == AiProviderId.openAi.displayName)
+        ? AiProviderId.openAi
+        : (title == AiProviderId.gemini.displayName)
+            ? AiProviderId.gemini
+            : AiProviderId.claude;
+    final Color modelColor = provider.brandColor(context);
     return Card(
       child: Padding(
         padding: EdgeInsets.all(context.horizontalPadding),
@@ -292,7 +288,7 @@ class _EngineCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: shadowColor.withValues(alpha: 0.3),
+                        color: modelColor.withValues(alpha: 0.3),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
@@ -304,7 +300,8 @@ class _EngineCard extends StatelessWidget {
                 Flexible(
                   child: Text(
                     title,
-                    style: context.textTheme.headlineLarge,
+                    style: context.textTheme.headlineLarge
+                        ?.copyWith(color: modelColor),
                   ),
                 ),
               ],
@@ -317,8 +314,7 @@ class _EngineCard extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               capability,
-              style: context.textTheme.bodySmall
-                  ?.copyWith(color: shadowColor, fontWeight: FontWeight.w600),
+              style: context.textTheme.labelMedium?.copyWith(color: modelColor),
             ),
           ],
         ),

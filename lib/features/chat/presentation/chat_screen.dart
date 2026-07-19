@@ -14,6 +14,7 @@ import '../../../../core/router/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/preferences/ai_preferences_provider.dart';
+import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/chat_attachment.dart';
@@ -54,11 +55,13 @@ class _ChatScreenState extends State<ChatScreen> {
     if (uid == null) return;
 
     final apiKeyProvider = context.read<ApiKeyProvider>();
-    final validProviders = apiKeyProvider.validProviders;
-    final selectedProvider = _currentSelectedProvider(
-      validProviders,
-      context.read<AiPreferencesProvider>().preferredProvider,
-    );
+    final selectedProvider =
+        context.read<AiPreferencesProvider>().preferredProvider;
+    if (!apiKeyProvider.validProviders.contains(selectedProvider)) {
+      MessageUtils.showErrorToast(context, context.l10n.noKeyForModel);
+      return;
+    }
+
     final chatProvider = context.read<ChatProvider>();
 
     // Start sending message without awaiting its completion.
@@ -68,7 +71,6 @@ class _ChatScreenState extends State<ChatScreen> {
       uid: uid,
       prompt: prompt,
       selectedProvider: selectedProvider,
-      capability: AiCapability.textGeneration,
       attachments: attachments,
     );
 
@@ -85,7 +87,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _hideSuggestions() {
     if (!_showSuggestions) return;
+    debugPrint('⚠️ Hiding suggestions');
     setState(() => _showSuggestions = false);
+  }
+
+  void _showSuggestionsState() {
+    if (_showSuggestions) return;
+    debugPrint('⚠️ Showing suggestions');
+    setState(() => _showSuggestions = true);
   }
 
   Future<void> _handleSummarizePdf() async {
@@ -128,16 +137,13 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.arrow_back,
-                      color: context.isDark
-                          ? AppColors.primaryLight
-                          : AppColors.primaryDark),
+                  icon: const Icon(Icons.arrow_back),
                   onPressed: () => Navigator.pop(context),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(l10n.newConversation,
-                      style: context.textTheme.titleLarge),
+                      style: context.textTheme.headlineMedium),
                 ),
               ],
             ),
@@ -183,13 +189,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 preferences,
                 __,
               ) {
-                final validProviders = apiKeyProvider.validProviders;
-                final selectedProvider =
-                    ChatModelSelection.resolveSelectedProvider(
-                  availableProviders: validProviders,
-                  selectedProvider: preferences.preferredProvider,
-                  preferredProvider: preferences.preferredProvider,
-                );
+                final selectedProvider = preferences.preferredProvider;
+
                 return Container(
                   decoration: BoxDecoration(
                     color: context.theme.cardTheme.color,
@@ -212,10 +213,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ChatModelSelectorDropdown(
-                          providers: validProviders,
+                          providers: AiProviderId.values,
                           selectedProvider: selectedProvider,
                           isEnabled: !chatProvider.isGenerating,
                           onChanged: (provider) {
+                            FocusManager.instance.primaryFocus?.unfocus();
                             preferences.setPreferredProvider(provider);
                           },
                         ),
@@ -228,6 +230,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             controller: _chatInputController,
                             onUserInteracted: _hideSuggestions,
                             onSend: _handleSend,
+                            onEmptyInput: _showSuggestionsState,
                           ),
                         ),
                       ],
@@ -240,18 +243,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     ));
-  }
-
-  AiProviderId _currentSelectedProvider(
-    List<AiProviderId> validProviders,
-    AiProviderId preferredProvider,
-  ) {
-    return ChatModelSelection.resolveSelectedProvider(
-      availableProviders: validProviders,
-      selectedProvider: preferredProvider,
-      preferredProvider: preferredProvider,
-    ) ??
-        preferredProvider;
   }
 }
 
@@ -280,88 +271,86 @@ class _WelcomeContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // App Logo Box
-          Container(
-            decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColors.primaryGradientDark),
-            child: ImageView(
-              image: const ImageViewData.asset(AppAssets.appLogo),
-              width: context.screenWidth / 4,
-              height: context.screenWidth / 4,
-              filterQuality: FilterQuality.high,
-              fit: BoxFit.cover,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // App Logo Box
+        Container(
+          decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: context.isDark
+                  ? AppColors.primaryGradientDark
+                  : AppColors.primaryGradientLight),
+          child: ImageView(
+            image: const ImageViewData.asset(AppAssets.appLogo),
+            width: context.screenWidth / 4,
+            height: context.screenWidth / 4,
+            filterQuality: FilterQuality.high,
+            fit: BoxFit.cover,
+          ),
+        ),
+
+        SizedBox(height: context.isTablet ? 24 : 12),
+        Text(
+          l10n.startConversation,
+          style: context.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w500, fontStyle: FontStyle.italic),
+          textAlign: TextAlign.center,
+        ),
+
+        SizedBox(height: isTablet ? 48 : 30),
+
+        // Suggestion actions are visible only while this is a fresh chat.
+        AnimatedSwitcher(
+          duration: AppConstants.mediumDuration,
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SizeTransition(
+              sizeFactor: animation,
+              axisAlignment: -1,
+              child: child,
             ),
           ),
+          child: showSuggestions
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: _SuggestionGrid(
+                      key: const ValueKey('chat_suggestions'),
+                      isTablet: isTablet,
+                      actions: [
+                        _SuggestionAction(
+                          icon: FontAwesomeIcons.filePdf,
+                          label: l10n.summarizePdf,
+                          onTap: onSummarizePdf,
+                        ),
+                        _SuggestionAction(
+                          icon: FontAwesomeIcons.laptopCode,
+                          label: l10n.generateCode,
+                          onTap: onGenerateCode,
+                        ),
+                        _SuggestionAction(
+                          icon: FontAwesomeIcons.magnifyingGlass,
+                          label: l10n.analyzeImage,
+                          onTap: onAnalyzeImage,
+                        ),
+                        _SuggestionAction(
+                          icon: FontAwesomeIcons.images,
+                          label: l10n.createImage,
+                          onTap: onCreateImage,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(key: ValueKey('chat_suggestions_gone')),
+        ),
 
-          SizedBox(height: context.isTablet ? 24 : 12),
-          Text(
-            l10n.startConversation,
-            style: context.textTheme.titleMedium?.copyWith(
-                color: context.theme.dividerColor,
-                fontWeight: FontWeight.w400,
-                fontStyle: FontStyle.italic),
-            textAlign: TextAlign.center,
-          ),
-
-          SizedBox(height: isTablet ? 48 : 30),
-
-          // Suggestion actions are visible only while this is a fresh chat.
-          AnimatedSwitcher(
-            duration: AppConstants.mediumDuration,
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SizeTransition(
-                sizeFactor: animation,
-                axisAlignment: -1,
-                child: child,
-              ),
-            ),
-            child: showSuggestions
-                ? _SuggestionGrid(
-                    key: const ValueKey('chat_suggestions'),
-                    isTablet: isTablet,
-                    actions: [
-                      _SuggestionAction(
-                        icon: FontAwesomeIcons.filePdf,
-                        label: l10n.summarizePdf,
-                        onTap: onSummarizePdf,
-                        iconColor: AppColors.tealAccent,
-                      ),
-                      _SuggestionAction(
-                        icon: FontAwesomeIcons.laptopCode,
-                        label: l10n.generateCode,
-                        onTap: onGenerateCode,
-                        iconColor: AppColors.purpleAccent,
-                      ),
-                      _SuggestionAction(
-                        icon: FontAwesomeIcons.magnifyingGlass,
-                        label: l10n.analyzeImage,
-                        onTap: onAnalyzeImage,
-                        iconColor: AppColors.info,
-                      ),
-                      _SuggestionAction(
-                        icon: FontAwesomeIcons.images,
-                        label: l10n.createImage,
-                        onTap: onCreateImage,
-                        iconColor: AppColors.primaryLight,
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(key: ValueKey('chat_suggestions_gone')),
-          ),
-
-          SizedBox(
-              height: context.bottomPadding > 0 ? context.bottomPadding : 20),
-        ],
-      ),
+        SizedBox(
+            height: context.bottomPadding > 0 ? context.bottomPadding : 20),
+      ],
     );
   }
 }
@@ -370,13 +359,11 @@ class _SuggestionAction {
   final FaIconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color iconColor;
 
   const _SuggestionAction({
     required this.icon,
     required this.label,
     required this.onTap,
-    required this.iconColor,
   });
 }
 
@@ -413,7 +400,6 @@ class _SuggestionGrid extends StatelessWidget {
             icon: action.icon,
             label: action.label,
             onTap: action.onTap,
-            iconColor: action.iconColor,
           );
         },
       ),
@@ -425,13 +411,11 @@ class _SuggestionActionCard extends StatelessWidget {
   final FaIconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color iconColor;
 
   const _SuggestionActionCard({
     required this.icon,
     required this.label,
     required this.onTap,
-    required this.iconColor,
   });
 
   @override
@@ -441,25 +425,31 @@ class _SuggestionActionCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(30),
       child: Container(
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        // padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: (context.isDark) ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-              color: context.theme.dividerTheme.color ?? AppColors.grey),
-        ),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: context.theme.dividerTheme.color!),
+            gradient: context.isDark
+                ? AppColors.primaryGradientDark
+                : AppColors.primaryGradientLight),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            FaIcon(icon, size: 20, color: iconColor),
+            FaIcon(icon,
+                size: 20,
+                color: context.isDark
+                    ? AppColors.darkTextTertiary
+                    : AppColors.lightTextPrimary),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w400),
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: context.isDark
+                        ? AppColors.darkTextTertiary
+                        : AppColors.lightTextPrimary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

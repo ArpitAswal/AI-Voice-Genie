@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/enums/app_enums.dart';
 import '../../../core/services/analytics_service.dart';
-import '../../../ai_layer/orchestrator/model_selector.dart';
 import '../data/api_key_repository_impl.dart';
 import '../domain/api_key_model.dart';
 import '../domain/api_key_repository.dart';
@@ -94,13 +93,6 @@ class ApiKeyProvider extends ChangeNotifier {
   /// Get valid providers for a specific capability.
   ///
   /// Uses ModelSelector to filter currently valid keys against capability requirements.
-  List<AiProviderId> validProvidersFor(AiCapability capability) {
-    return ModelSelector.select(
-      capability: capability,
-      userKeyedProviders: validProviders,
-    );
-  }
-
   // ── Load Existing Keys ─────────────────────────────────────────────────────
 
   /// Load any previously saved keys from Firestore on screen mount.

@@ -167,9 +167,9 @@ class FirebaseCollections {
   static const String paramAuthProvider = 'auth_provider';
   static const String paramModelAttempted = 'model_attempted';
   static const String paramModelUsed = 'model_used';
-  static const String paramCapability = 'capability';
+  static const String paramCapability = 'request_capability';
   static const String paramFailureType = 'failure_type';
-  static const String paramFallbackTriggered = 'fallback_triggered';
+  static const String paramFailureReason = 'failure_reason';
   static const String paramFromModel = 'from_model';
   static const String paramToModel = 'to_model';
   static const String paramReason = 'reason';

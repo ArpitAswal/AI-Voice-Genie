@@ -55,7 +55,7 @@ Create account, logout, and login again.
 | `_persistSession()` | Auth repository | Writes the session snapshot into Hive. | Saves user identity and onboarding/key flags locally. |
 | `AuthProvider.markBoardingComplete()` | Onboarding screen | Marks onboarding as complete in memory and in storage. | Updates the user doc and local onboarding flag. |
 | `ApiKeyProvider.validateAndSaveKey()` | Key setup screen | Validates a provider key, then saves it if valid. | Stores the API key in Firestore and memory cache. |
-| `ApiKeyProvider.completeSetup()` | Key setup screen | Marks setup complete after at least one valid key exists. | Stores `keySetupDone` and `preferredProvider`. |
+| `ApiKeyProvider.completeSetup()` | Key setup screen | Marks setup complete after at least one valid key exists. | Stores `keySetupDone` in Firestore and stores `preferredProvider` locally in Hive. |
 | `ProfileViewModel.signOut()` | Profile screen logout action | Wraps the sign-out sequence for the UI. | Returns control to the auth provider. |
 | `AuthProvider.signOut()` | Profile view model | Calls repository sign-out, clears analytics user ID, logs sign-out, then clears current user state. | Routes the app back to login. |
 | `AuthRepository.signOut()` | Auth provider | Signs out from Google, Firebase Auth, and local session storage. | Clears Firebase session and starts user-box cleanup. |
@@ -94,7 +94,7 @@ Create account, logout, and login again.
 | Returning sign-in success | Existing user doc updated with `lastLoginAt` and `isNewUser = false`. | Same session keys are refreshed from Firestore. | `authentication_button_tapped`, then `user_signed_in` with `user_id`, `auth_provider`, and `user_email`. |
 | Onboarding complete | `onboardingDone = true` and `lastUpdatedAt` are written on the user doc. | `onboardingCompleted = true` is written locally. | No onboarding analytics event is logged. |
 | API key saved | API key doc at `AIVoiceGenie/UsersAPIKeys/{uid}/{providerId}` with raw `apiKey`, `providerId`, `isValid`, `lastValidated`, and `keyAddedAt` when present. | Provider key is cached in memory for masked display. | `model_added` is logged after a successful save with user and model details. |
-| Key setup complete | `keySetupDone = true` and `preferredProvider` are written on the user doc. | `keySetupCompleted = true` and `preferredProviderId` are stored. | No dedicated key-setup-complete analytics event is logged. |
+| Key setup complete | `keySetupDone = true` is written on the user doc. | `keySetupCompleted = true` and `preferredProviderId` are stored. | No dedicated key-setup-complete analytics event is logged. |
 | Logout | No Firestore profile write from the logout path itself. | `user_box` cleanup is started and `isLoggedIn = false` cleanup is started. | Analytics user ID is cleared and `user_signed_out` logs `user_id`. |
 
 ## Async and Await Judgment
@@ -176,3 +176,192 @@ Create account, logout, and login again.
 - Missing but potentially useful:
   - a success/failure result or duration field for key validation if you want to study how often validation is slow or rejected
   - a sign-out source parameter if logout can later happen from more than Profile
+
+---
+
+## Feature
+First-time chat prompt with the selected AI model.
+
+## Purpose
+- Show how a first-time authenticated user starts a new chat from `IntroScreen`.
+- Show both prompt-start paths: predefined action and manually typed prompt.
+- Show which functions run, what data is saved, which analytics/usage events fire, and which heavy work is awaited or fire-and-forget.
+- Help QA verify the first prompt response on screen without reading the full Flutter code.
+
+## Start and End
+- Start: User is already authenticated, onboarding is complete, and at least one provider API key exists.
+- Entry screen: `IntroScreen()`.
+- End: `ChatDetailScreen` displays the user message and the AI response or a failed AI message.
+
+## Execution Flow Chart
+`IntroScreen`
+`-> top-right message button`
+`-> AppRoutes.navigateTo(context, AppRoutes.chat)`
+`-> ChatScreen.initState()`
+`-> ChatProvider.clearConversation()`
+`-> ChatScreen shows model dropdown + predefined actions + ChatInputBar`
+
+`Manual prompt path`
+`-> user types prompt`
+`-> ChatInputBar._syncCanSend() enables send`
+`-> ChatInputBar._handleSend()`
+`-> Validators.validatePrompt()`
+`-> ChatScreen._handleSend()`
+
+`Predefined action path`
+`-> user taps Summarize PDF / Analyze Image / Generate Code / Create Image`
+`-> ChatScreen action handler hides suggestions`
+`-> ChatInputController.setPrompt() OR pickPdfWithPrompt() OR pickImageWithPrompt()`
+`-> ChatInputBar inserts template and optionally attaches file`
+`-> user taps send`
+`-> ChatInputBar._handleSend()`
+`-> Validators.validatePrompt()`
+`-> ChatScreen._handleSend()`
+
+`Shared send path`
+`-> read AuthProvider.currentUser.uid`
+`-> read ApiKeyProvider.validProviders`
+`-> resolve selected provider from AiPreferencesProvider.preferredProvider`
+`-> ChatProvider.sendMessage() starts without await`
+`-> optimistic user MessageModel is added`
+`-> new ConversationModel is created in memory`
+`-> ChatScreen reads ChatProvider.activeConversation.id`
+`-> AppRoutes.navigateAndReplace(context, AppRoutes.chatDetail)`
+`-> ChatDetailScreen listens to existing ChatProvider state`
+`-> AiOrchestrator.execute()`
+`-> ApiKeyRepository.loadKey(uid, selectedProvider)`
+`-> selected provider adapter sends HTTP request`
+`-> Analytics logs initiated and success/failure`
+`-> Usage event is saved fire-and-forget on success`
+`-> ChatRepository.saveMessagePair() writes conversation + messages`
+`-> ChatRepository.cacheMessages() writes Hive cache`
+`-> ChatProvider adds AI message and stops generating`
+`-> ChatDetailScreen shows response`
+
+## Function Call Map
+
+| Function | Who Calls It | What It Does | Important Return or Side Effect |
+|---|---|---|---|
+| `IntroScreen._buildTopNavBar()` | `IntroScreen.build()` | Builds the working chat entry button. | Tapping the message icon navigates to `AppRoutes.chat`. |
+| `AppRoutes.navigateTo(context, AppRoutes.chat)` | Intro message button | Opens the new chat screen. | Keeps Intro in the back stack. |
+| `ChatScreen.initState()` | Flutter lifecycle | Schedules a fresh chat reset after the first frame. | Calls `ChatProvider.clearConversation()`. |
+| `ChatProvider.clearConversation()` | `ChatScreen.initState()` | Clears active conversation, messages, loading, generating, and error state. | Ensures the first prompt starts a new conversation. |
+| `ChatModelSelection.resolveSelectedProvider()` | `ChatScreen` dropdown | Chooses the current model from valid providers and saved preference. | UI selection is null when there are no valid providers. |
+| `AiPreferencesProvider.setPreferredProvider()` | Model dropdown change | Saves the preferred provider. | Later sends use the selected model first. |
+| `ChatScreen._handleGenerateCode()` / `_handleCreateImage()` | Predefined action taps | Inserts a localized prompt template. | Does not send automatically. User must tap send. |
+| `ChatScreen._handleSummarizePdf()` / `_handleAnalyzeImage()` | Predefined action taps | Opens PDF/image picker and inserts a localized prompt template. | Attachment and template are prepared before send. |
+| `ChatInputController.setPrompt()` | Chat screen predefined text actions | Imperatively tells `ChatInputBar` to insert a template. | Focuses composer and enables send. |
+| `ChatInputController.pickPdfWithPrompt()` / `pickImageWithPrompt()` | Chat screen attachment actions | Opens picker, validates attachment, then inserts template. | Adds `ChatAttachment` bytes/path/name/mime metadata. |
+| `ChatInputBar._handleSend()` | Send button | Validates prompt, copies attachments, clears composer, then calls parent `onSend`. | Awaited locally so the input cleanup completes in order. |
+| `ChatScreen._handleSend()` | `ChatInputBar.onSend` | Reads user, valid providers, selected provider, then starts `ChatProvider.sendMessage()`. | Does not await the AI request; navigates to detail immediately. |
+| `ChatProvider.sendMessage()` | Chat screen or chat detail | Resolves capability, creates optimistic user message, creates conversation, executes AI, persists result. | Updates provider state used by `ChatDetailScreen`. |
+| `ChatProvider._resolveRequestCapability()` | `sendMessage()` | Converts prompt/attachments into `textGeneration`, `imageGeneration`, `imageUnderstanding`, or `pdfParsing`. | Drives provider capability checks and request payload. |
+| `AiOrchestrator.execute()` | `ChatProvider.sendMessage()` | Validates selected provider, capability support, API key availability, retry rules, analytics, and adapter execution. | Returns `AiResponse` or throws an `AiException`. |
+| `ApiKeyRepository.loadKey()` | Orchestrator | Loads selected provider key from memory cache or Firestore. | First chat after setup can read from Firestore because provider and orchestrator use different repository instances. |
+| `OpenAiAdapter` / `GeminiAdapter` / `ClaudeAdapter` | Orchestrator | Sends the provider-specific HTTP request. | Returns normalized `AiResponse`. |
+| `ChatProvider._buildAiMessage()` | `sendMessage()` | Converts `AiResponse` into an assistant `MessageModel`. | Has a bug for `analysis` responses because the branch does not return. |
+| `ChatRepository.saveMessagePair()` | `ChatProvider.sendMessage()` | Batch writes the first conversation document and both user/AI message documents. | Persists success and failure responses. |
+| `ChatRepository.cacheMessages()` | `ChatProvider.sendMessage()` | JSON encodes messages in an isolate and stores them in Hive. | Enables fast history recovery for the conversation. |
+| `ChatDetailScreen._onChatProviderChange()` | Provider listener | Reacts to new messages or generation state changes. | Keeps the response visible and scrolls to latest content. |
+
+## Prompt Start Paths
+
+| Path | Tester Action | Expected Behavior | Notes |
+|---|---|---|---|
+| Manual text prompt | Type any valid prompt, then tap send. | User message appears, app navigates to chat detail, typing indicator appears, AI response appears. | This is the cleanest first-time chat path. |
+| Generate Code predefined action | Tap Generate Code, review/edit inserted template, tap send. | Template is sent as a normal text prompt. | No attachment is involved. |
+| Create Image predefined action | Tap Create Image, review/edit inserted template, tap send. | Prompt is detected as `imageGeneration` if it matches the image-generation heuristic. | Selected provider must support image generation. |
+| Summarize PDF predefined action | Tap Summarize PDF, select PDF, tap send. | PDF bytes and prompt are sent as `pdfParsing`. | Attachments cannot mix PDF and image types. |
+| Analyze Image predefined action | Tap Analyze Image, select image, tap send. | Image bytes and prompt are sent as `imageUnderstanding`. | Image count and size are validated before send. |
+| Voice input from chat composer | Tap mic, accept transcript, then send. | Transcript is inserted like manual text. | The actual send path is the same as manual text. |
+
+## Data Saved By Stage
+
+| Stage | Firestore | Hive / Local State | Analytics / Usage |
+|---|---|---|---|
+| Enter chat from Intro | No Firestore write. | `ChatProvider.clearConversation()` clears in-memory conversation and messages. | No dedicated event is logged for opening new chat. |
+| Change selected model | No Firestore write from this flow. | Preferred provider is saved through `AiPreferencesProvider` into Hive-backed storage. | No `model_switched` event is currently logged from `AiPreferencesProvider.setPreferredProvider()`. |
+| Attachment selection | No Firestore write yet. | Attachment bytes, name, path, MIME type, and file size live in `ChatInputBar` state until send. | No attachment-selection event is logged. |
+| First send starts | No Firestore write yet. | Optimistic user `MessageModel` and new `ConversationModel` are created in memory. | No `conversation_started` event is called, even though the analytics service supports it. |
+| AI request starts | API key is read from `AIVoiceGenie/UsersAPIKeys/{uid}/{providerId}`. | Request object stores `requestId`, prompt, history, capability, response length, image/PDF bytes, and image settings. | `ai_request_initiated` logs `model_attempted` and `capability`. |
+| AI request success | Usage event is saved at `AIVoiceGenie/AllUsers/UserModel/{uid}/usageEvents/{eventId}` by current constants. | Normalized `AiResponse` is converted into an assistant message. | `ai_request_success` logs `model_used`, `capability`, `response_time_ms`, and `token_count`; usage write is fire-and-forget. |
+| AI request failure | No usage event is saved. | Failed assistant `MessageModel` is created with a friendly error message. | `ai_request_failed` logs `model_attempted`, `capability`, `failure_type`, and `fallback_triggered=false`; capability gaps also log `ai_capability_gap`. |
+| Persist first conversation | Conversation doc at `AIVoiceGenie/Conversations/{uid}/{conversationId}`. Message docs at `AIVoiceGenie/Conversations/{uid}/{conversationId}/ModelMessages/UserRef-{id}` and `AIRef-{id}`. | The active conversation remains in provider memory. | No separate persistence event is logged. |
+| Cache messages | No new Firestore write. | Hive key `messages_{conversationId}` stores JSON list of user and AI messages. | No analytics event. |
+| Response visible | Already persisted. | `ChatDetailScreen` reads provider state and renders messages. | No dedicated response-rendered event. |
+
+## Provider API Calls
+
+| Capability | OpenAI | Gemini | Claude |
+|---|---|---|---|
+| Text prompt | `POST /v1/chat/completions` | `POST /v1beta/models/{model}:generateContent` | `POST /v1/messages` |
+| Image generation | `POST /v1/images/generations` | `POST /v1beta/models/{imageModel}:generateContent` | Not supported by registry/adapter flow. |
+| Image understanding | `POST /v1/chat/completions` with image content | `POST /v1beta/models/{model}:generateContent` with image content | `POST /v1/messages` with image content block. |
+| PDF parsing | `POST /v1/responses` | `POST /v1beta/models/{model}:generateContent` with PDF context | `POST /v1/messages` with PDF text/context. |
+
+## Async and Await Judgment
+
+| Operation | Current Behavior | Judgment |
+|---|---|---|
+| `ChatScreen._handleSend()` first send | Starts `ChatProvider.sendMessage()` without `await`, then navigates to detail. | Acceptable because `ChatProvider` creates the conversation ID synchronously before its first awaited call. QA should verify no empty conversation ID route occurs on invalid provider/uid edge cases. |
+| `ChatDetailScreen._handleSend()` subsequent sends | Awaits `ChatProvider.sendMessage()`. | Correct, because the user is already inside the conversation and should see completion/error handling in place. |
+| Provider API key load | Awaited. | Correct. The AI call must not start without the selected key. |
+| AI HTTP request | Awaited. | Correct. The UI response depends on it. |
+| Retry delay after transient provider error | Awaited. | Correct, but only for transient errors. Hard errors and rate limits correctly stop. |
+| Cloudinary upload for generated images | Awaited with `Future.wait`. | Correct if generated image URLs must be persisted and shown consistently. |
+| Firestore `saveMessagePair()` | Awaited. | Correct. Conversation history should not report success before the message pair is durable. |
+| Hive `cacheMessages()` | Awaited. | Acceptable for consistency. If it becomes slow, it can be moved after UI update with safe failure handling. |
+| Usage event save | Fire-and-forget. | Correct. Usage tracking must not block the AI response. |
+| Analytics request initiated/success/failure | Awaited inside orchestrator. | Should be reconsidered. Analytics is useful but should not add latency to chat response; fire-and-forget through `EffectBus.safeEffect` would be better unless strict ordering is required. |
+
+## QA Verdict
+
+### What Looks Correct
+- The first chat flow creates a clean new conversation because `ChatProvider.clearConversation()` runs when `ChatScreen` opens.
+- Manual prompt and predefined prompt actions converge into the same send pipeline, so QA can test one shared persistence/AI path after prompt preparation.
+- The first send navigates quickly because conversation creation happens before the AI network call.
+- The selected model is stored separately from the typed prompt, and every message records the requested/used provider.
+- AI success and AI failure both create assistant messages, so the conversation history can show what happened instead of silently losing failed requests.
+- Usage tracking is correctly fire-and-forget because it is not required to render the AI response.
+
+### Issues or Improvements
+- Medium: `IntroScreen` quick action chips are visual only. The real chat entry is the top-right message button, then the predefined actions inside `ChatScreen`. If product expects Intro quick actions to start prompting, that navigation is not implemented.
+- Medium: `ChatScreen._currentSelectedProvider()` can fall back to `preferredProvider` even when `ApiKeyProvider.validProviders` is empty. The UI dropdown shows no valid model, but send can still reach the orchestrator and fail later with `error_no_models_with_key`. Better UX is to block send before navigation and show an add-key message.
+- Medium: `ChatInputBar._syncCanSend()` enables send when only attachments exist, but `_handleSend()` always calls `Validators.validatePrompt()`, which rejects an empty prompt. Either require text in the UI or allow attachment-only sends intentionally.
+- Medium: `ChatProvider._buildAiMessage()` does not return the `analysis` message it creates. PDF/image analysis responses fall through to the default text response and can lose the correct `contentType`.
+- Medium: Persistence inside `ChatProvider.sendMessage()` happens in the `finally` block, but `saveMessagePair()` or `cacheMessages()` errors are not isolated there. A storage failure can prevent `_isGenerating = false` and `notifyListeners()` from running.
+- Low: `conversation_started` analytics exists but is not called when the first conversation is created. Add it only if conversation-start metrics are important, not for every low-value screen step.
+- Low: First-send error is represented as a failed assistant message, but `ChatScreen` does not await and does not show a toast after navigation. QA should verify the failed bubble is visible and understandable.
+
+## Analytics Parameter Judgment
+- Good and necessary:
+  - `ai_request_initiated.model_attempted` and `capability` identify which model/capability users attempted.
+  - `ai_request_success.model_used`, `capability`, `response_time_ms`, and `token_count` are important for model quality, cost, and latency analysis.
+  - `ai_request_failed.model_attempted`, `capability`, and `failure_type` are important for debugging bad keys, unsupported capability, rate limit, transient outage, and hard provider failures.
+  - usage event `requestId`, provider, model, capability, input/output/total tokens, image count, PDF count, estimated cost, and month key are useful and should stay.
+- Useful but missing:
+  - `request_id` in analytics events would connect initiated/success/failure analytics to the usage event.
+  - `conversation_id` and `message_id` in usage events already exist in the model but are not populated by the orchestrator, so cost cannot be traced back to a specific chat message.
+  - `source` for first prompt, such as `manual`, `generate_code`, `create_image`, `summarize_pdf`, or `analyze_image`, would help compare which entry path users actually use.
+- Not necessary right now:
+  - Dedicated events for every prompt-template tap are optional. The important measurable moment is the AI request that actually sends.
+
+## Testing Notes
+- First-time manual prompt:
+  - From `IntroScreen`, tap the top-right message button.
+  - Confirm `ChatScreen` opens with a selected valid model if a key exists.
+  - Type a prompt and tap send.
+  - Confirm navigation replaces the route with `ChatDetailScreen`.
+  - Confirm the user bubble appears immediately, a generating state appears, then the AI response appears.
+  - Verify Firestore conversation and two message docs are saved.
+  - Verify Hive key `messages_{conversationId}` is written.
+  - Verify `ai_request_initiated` and either success or failure analytics are logged.
+- First-time predefined prompt:
+  - Repeat the same entry path from `IntroScreen`.
+  - Tap Generate Code or Create Image and verify a prompt is inserted but not sent automatically.
+  - Tap Summarize PDF or Analyze Image and verify picker validation, attachment preview, template insertion, then send.
+  - Confirm the resolved capability matches the action: code/text is `textGeneration`, create image is `imageGeneration`, image attachment is `imageUnderstanding`, PDF attachment is `pdfParsing`.
+- Failure checks:
+  - Remove provider key or clear valid providers and attempt send; verify the app does not navigate to a confusing empty conversation state.
+  - Select a provider that does not support the capability and verify `ai_capability_gap` plus a failed assistant message.
+  - Simulate provider/network failure and verify the failed message persists and generating state stops.

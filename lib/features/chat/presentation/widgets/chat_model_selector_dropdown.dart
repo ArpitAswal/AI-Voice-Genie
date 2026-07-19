@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
+import '../../../../core/extensions/ai_provider_extensions.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
 
@@ -49,7 +50,7 @@ class ChatModelSelectorDropdown extends StatelessWidget {
       enabled: canSelect,
       initialValue: selectedProvider,
       onSelected: onChanged,
-      color: context.theme.colorScheme.surface,
+      color: context.isDark ? AppColors.cardDark : AppColors.cardLight,
       elevation: 8,
       offset: const Offset(0, 8),
       shape: RoundedRectangleBorder(
@@ -62,6 +63,7 @@ class ChatModelSelectorDropdown extends StatelessWidget {
           .map(
             (provider) => PopupMenuItem<AiProviderId>(
               value: provider,
+              padding: EdgeInsets.zero,
               child: _ProviderMenuItem(
                 provider: provider,
                 isSelected: provider == selectedProvider,
@@ -88,8 +90,7 @@ class _SelectorPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        provider == null ? AppColors.grey : _ProviderStyle.colorFor(provider!);
+    final bgColor = provider!.brandColor(context);
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -97,7 +98,7 @@ class _SelectorPill extends StatelessWidget {
         vertical: 4.0,
       ),
       decoration: BoxDecoration(
-        color: context.theme.colorScheme.surface,
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: context.theme.dividerTheme.color ?? AppColors.lightDivider,
@@ -109,24 +110,22 @@ class _SelectorPill extends StatelessWidget {
           Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(
-              color: color,
+            decoration: const BoxDecoration(
+              color: Colors.white,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: 8),
           Text(
             provider?.displayName ?? AppLocalizations.of(context)!.selectModel,
-            style: context.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: isEnabled ? color : context.textTheme.bodySmall?.color,
-            ),
+            style: context.textTheme.bodySmall
+                ?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
           ),
           const SizedBox(width: 4),
-          Icon(
+          const Icon(
             Icons.keyboard_arrow_down_rounded,
             size: 16,
-            color: isEnabled ? color : context.textTheme.bodySmall?.color,
+            color: Colors.white,
           ),
         ],
       ),
@@ -145,48 +144,49 @@ class _ProviderMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _ProviderStyle.colorFor(provider);
-
-    return Row(
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            provider.displayName,
-            style: context.textTheme.bodyMedium?.copyWith(
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: context.isDark ? AppColors.white : AppColors.primaryLight,
+    Color textColor =
+        context.isDark ? AppColors.primaryDark : AppColors.primaryLight;
+    Color bgColor = context.isDark ? AppColors.cardDark : AppColors.cardLight;
+    return Container(
+      width: double.infinity,
+      decoration: isSelected
+          ? BoxDecoration(
+              border: Border.all(color: bgColor),
+              color: bgColor,
+              // Don't add border radius here since it should stretch to the edges of the popup menu which has its own border radius, but wait, the popup menu has rounded corners (16).
+              // If the item reaches the top/bottom it might clip. But let's add a slight margin/borderRadius to make it look like a pill inside, or just fill.
+              // Actually, the image shows it filling the space but with rounded corners at the top? No, the image shows it filling the whole top area.
+            )
+          : null,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: textColor,
+              shape: BoxShape.circle,
             ),
           ),
-        ),
-        if (isSelected)
-          Icon(
-            Icons.check_rounded,
-            color: color,
-            size: 18,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              provider.displayName,
+              style: context.textTheme.bodyMedium?.copyWith(
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: textColor,
+              ),
+            ),
           ),
-      ],
+          if (isSelected)
+            Icon(
+              Icons.check_rounded,
+              size: 21,
+              color: textColor,
+            ),
+        ],
+      ),
     );
-  }
-}
-
-abstract final class _ProviderStyle {
-  static Color colorFor(AiProviderId provider) {
-    switch (provider) {
-      case AiProviderId.openAi:
-        return AppColors.openAiBrand;
-      case AiProviderId.gemini:
-        return AppColors.geminiBrand;
-      case AiProviderId.claude:
-        return AppColors.claudeBrand;
-    }
   }
 }

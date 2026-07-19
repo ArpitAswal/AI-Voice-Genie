@@ -342,7 +342,7 @@ class AuthRepositoryImpl implements AuthRepository {
         keySetupDone =
             existingData[FirebaseCollections.fieldKeySetupDone] as bool? ??
                 false;
-        age = existingData[FirebaseCollections.fieldAge] as int;
+        age = existingData[FirebaseCollections.fieldAge] as int?;
         dateOfBirth =
             (existingData[FirebaseCollections.fieldDateOfBirth] as Timestamp?)
                 ?.toDate();

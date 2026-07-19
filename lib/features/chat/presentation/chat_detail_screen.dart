@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/enums/app_enums.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
@@ -175,10 +174,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     final apiKeyProvider = context.read<ApiKeyProvider>();
     final validProviders = apiKeyProvider.validProviders;
-    final selectedProvider = _currentSelectedProvider(
-      validProviders,
-      context.read<AiPreferencesProvider>().preferredProvider,
-    );
+    final preferences = context.read<AiPreferencesProvider>();
+    final selectedProvider = ChatModelSelection.resolveSelectedProvider(
+          availableProviders: validProviders,
+          selectedProvider: preferences.preferredProvider,
+          preferredProvider: preferences.preferredProvider,
+        ) ??
+        preferences.preferredProvider;
+
+    if (!validProviders.contains(selectedProvider)) {
+      MessageUtils.showError(context, context.l10n.noKeyForModel);
+      return;
+    }
 
     await context.read<ChatProvider>().sendMessage(
           uid: uid,
@@ -378,10 +385,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 final validProviders = apiKeyProvider.validProviders;
                 final selectedProvider =
                     ChatModelSelection.resolveSelectedProvider(
-                  availableProviders: validProviders,
-                  selectedProvider: preferences.preferredProvider,
-                  preferredProvider: preferences.preferredProvider,
-                );
+                          availableProviders: validProviders,
+                          selectedProvider: preferences.preferredProvider,
+                          preferredProvider: preferences.preferredProvider,
+                        ) ??
+                        preferences.preferredProvider;
 
                 return Container(
                   decoration: BoxDecoration(
@@ -409,6 +417,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             selectedProvider: selectedProvider,
                             isEnabled: !chatProvider.isGenerating,
                             onChanged: (provider) {
+                              FocusManager.instance.primaryFocus?.unfocus();
                               preferences.setPreferredProvider(provider);
                             },
                           ),
@@ -483,17 +492,5 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         },
       ),
     );
-  }
-
-  AiProviderId _currentSelectedProvider(
-    List<AiProviderId> validProviders,
-    AiProviderId preferredProvider,
-  ) {
-    return ChatModelSelection.resolveSelectedProvider(
-          availableProviders: validProviders,
-          selectedProvider: preferredProvider,
-          preferredProvider: preferredProvider,
-        ) ??
-        preferredProvider;
   }
 }

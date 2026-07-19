@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:ai_voice_genie/core/error/effect_bus.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 import 'package:ai_voice_genie/core/extensions/string_extension.dart';
@@ -46,14 +47,17 @@ class ChatProvider extends ChangeNotifier {
   final ChatRepository _repository;
   final AiOrchestrator _orchestrator;
   final AiPreferencesService _preferences;
+  final EffectBus _effectBus;
 
-  ChatProvider({
-    ChatRepository? repository,
-    AiOrchestrator? orchestrator,
-    AiPreferencesService? preferences,
-  })  : _repository = repository ?? ChatRepositoryImpl(),
+  ChatProvider(
+      {ChatRepository? repository,
+      AiOrchestrator? orchestrator,
+      AiPreferencesService? preferences,
+      EffectBus? effectBus})
+      : _repository = repository ?? ChatRepositoryImpl(),
         _orchestrator = orchestrator ?? AiOrchestrator.instance,
-        _preferences = preferences ?? AiPreferencesService.instance;
+        _preferences = preferences ?? AiPreferencesService.instance,
+        _effectBus = effectBus ?? EffectBus.instance;
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -154,7 +158,6 @@ class ChatProvider extends ChangeNotifier {
     required String uid,
     required String prompt,
     required AiProviderId selectedProvider,
-    AiCapability capability = AiCapability.textGeneration,
     List<ChatAttachment> attachments = const [],
   }) async {
     final trimmedPrompt = prompt.trim();
@@ -241,7 +244,7 @@ class ChatProvider extends ChangeNotifier {
     }
 
     // ── Step 3: Build context-aware history ───────────────────────────────────
-    final history = _buildTruncatedHistory();
+    final history = _buildTruncatedHistory(selectedProvider);
 
     MessageModel? aiMessage;
 
@@ -376,10 +379,12 @@ class ChatProvider extends ChangeNotifier {
         _messages.add(messageToPersist);
 
         // ── Step 8: Update Hive cache ───────────────────────────────────────
-        await _repository.cacheMessages(
-          conversationId: conversationId,
-          messages: _messages,
-        );
+        _effectBus.safeEffect(() async {
+          await _repository.cacheMessages(
+            conversationId: conversationId,
+            messages: _messages,
+          );
+        });
 
         _markConversationHistoryDirty();
       }
@@ -470,9 +475,21 @@ class ChatProvider extends ChangeNotifier {
 
   // ── Private Helpers ────────────────────────────────────────────────────────
 
-  /// Build conversation history array for AI context, truncated to fit
-  /// within 70% of the selected provider's context window.
-  List<Map<String, String>> _buildTruncatedHistory() {
+  /// Builds a truncated conversation history to send as context for the AI prompt.
+  ///
+  /// AI APIs are stateless, meaning they have no memory of past messages unless
+  /// we include the history in every request. However, including too much history
+  /// increases token usage and can exceed the model's memory limit (context window),
+  /// causing the API request to fail.
+  ///
+  /// This method acts as a circuit breaker by:
+  /// 1. Calculating a safe character limit based on the [selectedProvider]'s token limit.
+  /// 2. Ensuring the history only fills up a safe percentage (e.g., 70%) of the
+  ///    AI's context window, leaving the rest for the current prompt and the AI's response.
+  /// 3. Iteratively forgetting (removing) the oldest messages if the history exceeds
+  ///    this calculated safety limit.
+  List<Map<String, String>> _buildTruncatedHistory(
+      AiProviderId selectedProvider) {
     // Exclude the last (optimistic) user message — it's sent as the prompt
     final historyMessages = _messages
         .where((m) => !m.isOptimistic)
@@ -487,11 +504,24 @@ class ChatProvider extends ChangeNotifier {
       (sum, msg) => sum + (msg['content']?.length ?? 0),
     );
 
-    // Apply safety margin — use 70% of the smallest provider's limit
+    // Apply safety margin — use 70% of the specific provider's limit
     const safetyMargin = AppConstants.contextSafetyMargin;
     const charsPerToken = AppConstants.charsPerToken;
-    final maxTokens =
-        (AppConstants.openAiContextTokenLimit * safetyMargin).floor();
+
+    int providerTokenLimit;
+    switch (selectedProvider) {
+      case AiProviderId.openAi:
+        providerTokenLimit = AppConstants.openAiContextTokenLimit;
+        break;
+      case AiProviderId.gemini:
+        providerTokenLimit = AppConstants.geminiContextTokenLimit;
+        break;
+      case AiProviderId.claude:
+        providerTokenLimit = AppConstants.claudeContextTokenLimit;
+        break;
+    }
+
+    final maxTokens = (providerTokenLimit * safetyMargin).floor();
     final maxChars = maxTokens * charsPerToken;
 
     // Truncate oldest messages until within limit
@@ -531,10 +561,9 @@ class ChatProvider extends ChangeNotifier {
       return 'Image: $prompt';
     }
     if (attachments.isNotEmpty && attachments.first.isPdf == true) {
-      final firstName = attachments.first.name;
-      return firstName.isEmpty ? 'PDF' : 'PDF: $firstName';
+      return 'PDF: $prompt';
     }
-    return prompt;
+    return 'Text: $prompt';
   }
 
   MessageModel _buildAiMessage(
@@ -614,16 +643,16 @@ class ChatProvider extends ChangeNotifier {
 
     if (askingAboutCapabilities) return false;
 
-    // 2. Strong match: Verb + nearby image noun + "of", "for", or "with"
+    // 2. Strong match: Verb + nearby image noun + optional "of", "for", or "with"
     final strongMatch = RegExp(
-      r'\b(create|generate|draw|make|design|render|paint|need|want|show me)\b.{0,20}\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b\s+(of|for|with)\b',
+      r'\b(create|generate|draw|make|design|render|paint|need|want|show me)\b.{0,80}\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b',
     ).hasMatch(lower);
 
     if (strongMatch) return true;
 
     // 3. Command at the very beginning of the prompt
     final commandAtStart = RegExp(
-      r'^(can you|could you|please|i want to|i need to)?\s*(create|generate|draw|make|design|render|paint)\b.{0,20}\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b',
+      r'^(can you|could you|please|i want to|i need to)?\s*(create|generate|draw|make|design|render|paint)\b.{0,80}\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b',
     ).hasMatch(lower);
 
     if (commandAtStart) return true;

@@ -392,7 +392,7 @@ class _FakeAnalyticsService implements AnalyticsService {
     required AiProviderId modelAttempted,
     required AiCapability capability,
     required AiFailureType failureType,
-    bool fallbackTriggered = false,
+    required String failureReason,
   }) async {}
 
   @override

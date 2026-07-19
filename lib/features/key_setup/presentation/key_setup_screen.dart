@@ -1,5 +1,7 @@
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:ai_voice_genie/features/key_setup/presentation/api_key_provider.dart';
+import 'package:ai_voice_genie/core/preferences/ai_preferences_provider.dart';
+import 'package:ai_voice_genie/core/extensions/ai_provider_extensions.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -183,12 +185,21 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
-    debugPrint("🔑 Validating key for ${widget.provider.displayName}");
-    await context.read<ApiKeyProvider>().validateAndSaveKey(
-          uid: uid,
-          providerId: widget.provider,
-          apiKey: _keyController.text,
-        );
+    final apiKeyProvider = context.read<ApiKeyProvider>();
+    await apiKeyProvider.validateAndSaveKey(
+      uid: uid,
+      providerId: widget.provider,
+      apiKey: _keyController.text,
+    );
+
+    // Auto-set as default preferred provider if this is the very first key added
+    if (mounted &&
+        apiKeyProvider.statusFor(widget.provider) == ApiKeyStatus.valid &&
+        apiKeyProvider.validProviders.length == 1) {
+      context
+          .read<AiPreferencesProvider>()
+          .setPreferredProvider(widget.provider);
+    }
   }
 
   Future<void> _handleDelete(String provider) async {
@@ -294,8 +305,8 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                     Expanded(
                       child: Text(
                         widget.provider.displayName,
-                        style: context.textTheme.titleSmall
-                            ?.copyWith(color: _providerColor(widget.provider)),
+                        style: context.textTheme.titleSmall?.copyWith(
+                            color: widget.provider.brandColor(context)),
                       ),
                     ),
                     _StatusChip(status: status, isTablet: widget.isTablet),
@@ -396,7 +407,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                         child: Text(
                           _getKeyText(widget.provider),
                           style: context.textTheme.labelSmall?.copyWith(
-                            color: _providerColor(widget.provider),
+                            color: widget.provider.brandColor(context),
                           ),
                         ),
                       ),
@@ -404,7 +415,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                       ElevatedButton(
                         onPressed: isValidating ? null : _handleValidate,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _providerColor(widget.provider),
+                          backgroundColor: widget.provider.brandColor(context),
                           foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(
                               horizontal: widget.isTablet ? 24 : 10,
@@ -446,7 +457,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                             maskedKey ?? '••••••••••••',
                             style: context.textTheme.bodySmall?.copyWith(
                               fontFamily: 'monospace',
-                              color: _providerColor(widget.provider),
+                              color: widget.provider.brandColor(context),
                               letterSpacing: 1,
                             ),
                             maxLines: 1,
@@ -487,23 +498,6 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
         return context.isDark ? AppColors.darkWarning : AppColors.lightWarning;
       case ApiKeyStatus.notAdded:
         return context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
-    }
-  }
-
-  Color _providerColor(AiProviderId provider) {
-    switch (provider) {
-      case AiProviderId.openAi:
-        return context.isDark
-            ? AppColors.openAiBrandDark
-            : AppColors.openAiBrand;
-      case AiProviderId.gemini:
-        return context.isDark
-            ? AppColors.geminiBrandDark
-            : AppColors.geminiBrand;
-      case AiProviderId.claude:
-        return context.isDark
-            ? AppColors.claudeBrandDark
-            : AppColors.claudeBrand;
     }
   }
 

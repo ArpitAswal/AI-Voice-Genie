@@ -88,10 +88,6 @@ class AppColors {
   // ── Voice Input Colors ────────────────────────────────────────────────────
   // Microphone button active state (pulsing red — recording)
   static const Color voiceActive = Color(0xFFEF4444);
-  static const Color voiceActiveLight = Color(0xFFFEE2E2);
-  // Microphone button idle state
-  static const Color voiceIdle = primaryLight;
-  static const Color voiceIdleDark = primaryDark;
 
   // ── Capability Indicator Colors ───────────────────────────────────────────
   // Shown on feature capability chips (supported / not supported)

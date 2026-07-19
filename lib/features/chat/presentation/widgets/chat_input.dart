@@ -58,6 +58,7 @@ class ChatInputBar extends StatefulWidget {
       onSend;
   final ChatInputController? controller;
   final VoidCallback? onUserInteracted;
+  final VoidCallback? onEmptyInput;
 
   const ChatInputBar({
     super.key,
@@ -66,6 +67,7 @@ class ChatInputBar extends StatefulWidget {
     required this.onSend,
     this.controller,
     this.onUserInteracted,
+    this.onEmptyInput,
   });
 
   @override
@@ -116,8 +118,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
     // Update the send button state based on whether there's input
     _syncCanSend();
     // Notify parent to reset idle timers or hide UI overlays when user types
-    if (!_isApplyingTemplate && _controller.text.trim().isNotEmpty) {
-      widget.onUserInteracted?.call();
+    if (!_isApplyingTemplate) {
+      if (_controller.text.trim().isNotEmpty) {
+        widget.onUserInteracted?.call();
+      } else {
+        widget.onEmptyInput?.call();
+      }
     }
   }
 
@@ -419,7 +425,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
           flex: 3,
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: context.horizontalPadding,
+              horizontal: context.horizontalPadding / 2,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.max,
@@ -606,7 +612,9 @@ class _SendButton extends StatelessWidget {
               )
             : Icon(
                 Icons.send_rounded,
-                color: AppColors.primaryLight,
+                color: context.isDark
+                    ? AppColors.primaryDark
+                    : AppColors.primaryLight,
                 size: isTablet ? 22 : 18,
               ),
       ),

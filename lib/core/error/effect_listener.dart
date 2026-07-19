@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../localization/app_localizations.dart';
 import '../utils/status_message_utils.dart';
+import 'ai_exception.dart';
 import 'effect_bus.dart';
 
 /// A top-level widget that listens for global side-effect failures
@@ -54,9 +56,17 @@ class _GlobalEffectListenerState extends State<GlobalEffectListener> {
       /// Debug logging for development visibility.
       debugPrint("✨SIDE EFFECT FAILED: ${f.error}");
 
+      String errorMsg;
+      if (f.error is AiException) {
+        final key = (f.error as AiException).message;
+        errorMsg = AppLocalizations.of(context)?.translate(key) ?? key;
+      } else {
+        errorMsg = f.error.toString();
+      }
+
       /// Show warning message globally.
       /// Centralized UI feedback layer.
-      MessageUtils.showWarning(context, "${f.error}");
+      MessageUtils.showWarning(context, errorMsg);
     });
   }
 

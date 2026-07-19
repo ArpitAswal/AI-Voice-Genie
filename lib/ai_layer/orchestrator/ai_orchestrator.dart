@@ -57,6 +57,7 @@ class AiOrchestrator {
   final ApiKeyRepository _keyRepository = ApiKeyRepositoryImpl();
   final AnalyticsService _analytics = AnalyticsService.instance;
   final ProviderRegistry _registry = ProviderRegistry.instance;
+  final EffectBus _effectBus = EffectBus.instance;
   final UsageRepository _usageRepo = UsageRepositoryImpl();
 
   /// Adapter map — each provider ID maps to its concrete adapter
@@ -77,29 +78,19 @@ class AiOrchestrator {
   /// Throws [AiException] if the selected provider fails or is invalid.
   Future<AiResponse> execute({
     required AiRequest request,
-    required AiProviderId? selectedProvider,
+    required AiProviderId selectedProvider,
   }) async {
     debugPrint(
-      '🎯 Orchestrator: ${selectedProvider?.displayName}, ${request.capability.id}, '
+      '🎯 Orchestrator: ${selectedProvider.displayName}, ${request.capability.id}, '
       '[requestId: ${request.requestId}]',
     );
 
-    // Step 1: Ensure the user has selected a provider with a saved key.
-    if (selectedProvider == null) {
-      const error = AiExhaustedException(
-        message: 'error_no_models_with_key',
-        triedProviders: [],
-      );
+    _effectBus.safeEffect(() async {
+      await _analytics.logAiRequestInitiated(
+          modelAttempted: selectedProvider, capability: request.capability);
+    });
 
-      debugPrint(
-        '⚠️ Orchestrator: no selected provider for ${request.capability.id}',
-      );
-
-      EffectBus.instance.emit(error, StackTrace.current);
-      throw error;
-    }
-
-    // Step 2: Fail fast if the selected provider cannot do this task.
+    // Step 1: Ensure: Fail fast if the selected provider cannot do this task.
     if (!_registry.supports(selectedProvider, request.capability)) {
       final error = AiCapabilityGapException(
         message: 'error_selected_model_capability_gap',
@@ -128,18 +119,17 @@ class AiOrchestrator {
       );
     } on AiException catch (e) {
       await _analytics.logAiRequestFailed(
-        modelAttempted: selectedProvider,
-        capability: request.capability,
-        failureType: e.failureType,
-        fallbackTriggered: false,
-      );
+          modelAttempted: selectedProvider,
+          capability: request.capability,
+          failureType: e.failureType,
+          failureReason: e.message);
 
       if (e is AiTransientException) {
         final exhaustedError = AiExhaustedException(
           message: 'error_all_models_failed',
           triedProviders: [selectedProvider],
         );
-        EffectBus.instance.emit(exhaustedError, StackTrace.current);
+        _effectBus.emit(exhaustedError, StackTrace.current);
       }
 
       rethrow;
@@ -184,29 +174,29 @@ class AiOrchestrator {
           '▶️ Orchestrator: attempt $attempt on ${providerId.id}',
         );
 
-        await _analytics.logAiRequestInitiated(
-          modelAttempted: providerId,
-          capability: request.capability,
-        );
-
         final response = await adapter.execute(
           request: request,
           apiKey: keyModel.apiKey,
         );
 
-        await _analytics.logAiRequestSuccess(
-          modelUsed: providerId,
-          capability: request.capability,
-          responseTimeMs: response.responseTimeMs,
-          tokenCount: response.tokenCount,
-        );
+        _effectBus.safeEffect(() async {
+          await _analytics.logAiRequestSuccess(
+            modelUsed: providerId,
+            capability: request.capability,
+            responseTimeMs: response.responseTimeMs,
+            tokenCount: response.tokenCount,
+          );
+        });
 
         // Fire-and-forget usage tracking — must never block the AI response
-        _saveUsageEvent(uid: request.uid, request: request, response: response);
+        _effectBus.safeEffect(() async {
+          _saveUsageEvent(
+              uid: request.uid, request: request, response: response);
+        });
 
         debugPrint(
-          '✅ Orchestrator: success on ${providerId.id} '
-          '(${response.responseTimeMs}ms)',
+          '✅ Orchestrator: success on ${providerId.id}, '
+          'completion time (${response.responseTimeMs}ms)',
         );
 
         return response;
