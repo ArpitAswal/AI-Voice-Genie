@@ -45,21 +45,14 @@ class _ChangeTitleDialogState extends State<ChangeTitleDialog> {
       contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
       content: SizedBox(
         width: double.maxFinite,
-        child: TextField(
+        child: context.themedTextField(
           controller: _controller,
-          autofocus: true,
           textCapitalization: TextCapitalization.sentences,
-          decoration: InputDecoration(
-            hintText: l10n.translate('rename_conversation_name'),
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: theme.primaryColor),
-              borderRadius: BorderRadius.circular(14)
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: theme.primaryColor),
-                borderRadius: BorderRadius.circular(14)
-            ),
-          ),
+          hint: l10n.translate('rename_conversation_name'),
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: context.primaryColor),
+            borderRadius: BorderRadius.circular(14),
+          )
         ),
       ),
       actions: [

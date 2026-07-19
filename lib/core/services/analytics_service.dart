@@ -35,22 +35,29 @@ class AnalyticsService {
 
   // ── AI Request Events ─────────────────────────────────────────────────────
 
-  /// Log when a user initiates an AI request (before the API call)
+  /// Log when a user initiates an AI request (before the API call).
+  ///
+  /// [requestId] links this event to the matching success/failure and usage event.
   Future<void> logAiRequestInitiated({
     required AiProviderId modelAttempted,
     required AiCapability capability,
+    required String requestId,
   }) async {
     await _safeLog(FirebaseCollections.eventAiRequestInitiated, {
       FirebaseCollections.paramModelAttempted: modelAttempted.id,
       FirebaseCollections.paramCapability: capability.id,
+      FirebaseCollections.paramRequestId: requestId,
     });
   }
 
-  /// Log when an AI request completes successfully
+  /// Log when an AI request completes successfully.
+  ///
+  /// [requestId] links this event to the matching initiated and usage event.
   Future<void> logAiRequestSuccess({
     required AiProviderId modelUsed,
     required AiCapability capability,
     required int responseTimeMs,
+    required String requestId,
     int tokenCount = 0,
   }) async {
     await _safeLog(FirebaseCollections.eventAiRequestSuccess, {
@@ -58,21 +65,26 @@ class AnalyticsService {
       FirebaseCollections.paramCapability: capability.id,
       FirebaseCollections.paramResponseTimeMs: responseTimeMs,
       FirebaseCollections.paramTokenCount: tokenCount,
+      FirebaseCollections.paramRequestId: requestId,
     });
   }
 
-  /// Log when an AI request fails
+  /// Log when an AI request fails.
+  ///
+  /// [requestId] links this event to the matching initiated and usage event.
   Future<void> logAiRequestFailed({
     required AiProviderId modelAttempted,
     required AiCapability capability,
     required AiFailureType failureType,
     required String failureReason,
+    required String requestId,
   }) async {
     await _safeLog(FirebaseCollections.eventAiRequestFailed, {
       FirebaseCollections.paramModelAttempted: modelAttempted.id,
       FirebaseCollections.paramCapability: capability.id,
       FirebaseCollections.paramFailureType: failureType.value,
       FirebaseCollections.paramFailureReason: failureReason,
+      FirebaseCollections.paramRequestId: requestId,
     });
   }
 

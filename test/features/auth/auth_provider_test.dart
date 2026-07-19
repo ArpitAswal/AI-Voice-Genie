@@ -393,12 +393,14 @@ class _FakeAnalyticsService implements AnalyticsService {
     required AiCapability capability,
     required AiFailureType failureType,
     required String failureReason,
+    required String requestId,
   }) async {}
 
   @override
   Future<void> logAiRequestInitiated({
     required AiProviderId modelAttempted,
     required AiCapability capability,
+    required String requestId,
   }) async {}
 
   @override
@@ -406,6 +408,7 @@ class _FakeAnalyticsService implements AnalyticsService {
     required AiProviderId modelUsed,
     required AiCapability capability,
     required int responseTimeMs,
+    required String requestId,
     int tokenCount = 0,
   }) async {}
 

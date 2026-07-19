@@ -180,6 +180,8 @@ class FirebaseCollections {
   static const String paramModelFeatures = 'model_features';
   static const String paramUserId = 'user_id';
   static const String paramUserEmail = 'user_email';
+  /// Shared request ID linking initiated/success/failure events to the usage event.
+  static const String paramRequestId = 'request_id';
 
   // ── Usage Tracking Collection Names ───────────────────────────────────────
   static const String usageEvents = 'usageEvents';

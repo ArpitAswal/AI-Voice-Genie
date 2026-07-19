@@ -285,7 +285,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       await chatProvider.updateConversationTitle(newTitle, uid);
       if (mounted) {
         context.showSuccessToast(
-          AppLocalizations.of(context)!.translate('title_updated_successfully'),
+          AppLocalizations.of(context)!.translate('conversation_name_update'),
         );
       }
     } catch (e) {
@@ -340,7 +340,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               titleStr.isEmpty ? l10n.translate('new_conversation') : titleStr,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
-              style: context.textTheme.titleLarge,
+              style: context.textTheme.headlineSmall,
             );
           },
         ),
@@ -348,11 +348,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         actions: [
           IconButton(
             onPressed: _handleEditTitle,
-            icon: Icon(
+            icon: const Icon(
               Icons.edit,
-              color: context.isDark
-                  ? AppColors.primaryDark
-                  : AppColors.primaryLight,
+              color: AppColors.info,
             ),
           ),
           GestureDetector(

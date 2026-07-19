@@ -157,7 +157,7 @@ class AppTextStyles {
     ),
     headlineSmall: TextStyle(
       fontSize: 16,
-      fontWeight: FontWeight.w400,
+      fontWeight: FontWeight.w500,
       color: AppColors.darkTextPrimary,
       fontFamily: fontFamily,
     ),

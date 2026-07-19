@@ -213,7 +213,6 @@ class ChatProvider extends ChangeNotifier {
     final isNewConversation = _activeConversation == null;
     ConversationModel? newConversation;
     if (isNewConversation) {
-      try {
         // Build the conversation model in memory — written to Firestore
         // together with the first message pair in one batch (Step 6)
         final conversationId = const Uuid().v4();
@@ -227,20 +226,6 @@ class ChatProvider extends ChangeNotifier {
           lastProvider: selectedProvider,
         );
         _activeConversation = newConversation;
-      } catch (e) {
-        // Conversation creation failed — roll back optimistic state and show error
-        _isGenerating = false;
-
-        if (optimisticIndex != -1) {
-          _messages[optimisticIndex] = userMessage.copyWith(
-            status: MessageStatus.failed,
-            isOptimistic: false,
-          );
-        }
-        _errorMessage = 'something_went_wrong';
-        notifyListeners();
-        return;
-      }
     }
 
     // ── Step 3: Build context-aware history ───────────────────────────────────
@@ -366,14 +351,23 @@ class ChatProvider extends ChangeNotifier {
           _messages[optimisticIndex] = userMessageToPersist;
         }
 
-        await _repository.saveMessagePair(
-          uid: uid,
-          conversationId: conversationId,
-          userMessage: userMessageToPersist,
-          aiMessage: messageToPersist,
-          isFirstMessage: isNewConversation,
-          conversationModel: isNewConversation ? conversationToPersist : null,
-        );
+        // Isolated Firestore save — a Firestore failure must NOT prevent
+        // _isGenerating = false and notifyListeners() from running below.
+        // Without this guard, a Firestore exception inside finally would
+        // propagate outward, skipping the cleanup code and freezing the UI.
+        try {
+          await _repository.saveMessagePair(
+            uid: uid,
+            conversationId: conversationId,
+            userMessage: userMessageToPersist,
+            aiMessage: messageToPersist,
+            isFirstMessage: isNewConversation,
+            conversationModel: isNewConversation ? conversationToPersist : null,
+          );
+        } catch (e) {
+          // Log but do not rethrow — we still need to update UI state below.
+          debugPrint('⚠️ ChatProvider.saveMessagePair failed: $e');
+        }
 
         // ── Step 7: Update UI with AI response ──────────────────────────────
         _messages.add(messageToPersist);
@@ -583,18 +577,24 @@ class ChatProvider extends ChangeNotifier {
         imageCount: preferredImageCount,
       );
     } else if (response.contentType == AiResponseContentType.analysis) {
-      MessageModel.aiResponse(
+      // Determine the specific analysis type from the attachment context
+      // (PDF vs image), since the orchestrator returns a generic 'analysis'
+      // content type for both.
+      final analysisCapability =
+          attachments.isNotEmpty && attachments.first.isPdf == true
+              ? AiCapability.pdfParsing
+              : attachments.isNotEmpty && attachments.first.isImage == true
+                  ? AiCapability.imageUnderstanding
+                  : AiCapability.textGeneration;
+      return MessageModel.aiResponse(
         content: response.text ?? '',
         modelUsed: response.modelUsed,
-        contentType: attachments.isNotEmpty && attachments.first.isPdf == true
-            ? AiCapability.pdfParsing
-            : attachments.isNotEmpty && attachments.first.isImage == true
-                ? AiCapability.imageUnderstanding
-                : AiCapability.textGeneration,
+        contentType: analysisCapability,
         tokenCount: response.tokenCount,
       );
     }
 
+    // Default: plain text generation response
     return MessageModel.aiResponse(
       content: response.text ?? '',
       modelUsed: response.modelUsed,

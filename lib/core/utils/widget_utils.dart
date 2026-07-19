@@ -38,6 +38,7 @@ extension WidgetExtensions on BuildContext {
     bool read = false,
     String? errorText,
     InputBorder? border,
+    InputBorder? errorBorder,
     EdgeInsets? contentPad,
     ScrollController? scrollController,
     ScrollPhysics? scrollPhysics,
@@ -97,15 +98,15 @@ extension WidgetExtensions on BuildContext {
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: theme.colorScheme.primary),
             ),
-        errorBorder: border ??
+        errorBorder: errorBorder ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.lightError),
+              borderSide: BorderSide(color: isDark ? AppColors.darkError : AppColors.lightError),
             ),
-        focusedErrorBorder: border ??
+        focusedErrorBorder: errorBorder ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.lightError),
+              borderSide: BorderSide(color: isDark ? AppColors.darkError : AppColors.lightError),
             ),
         contentPadding: contentPad ??
             const EdgeInsets.symmetric(

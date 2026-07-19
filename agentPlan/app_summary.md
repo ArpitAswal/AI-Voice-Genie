@@ -51,4 +51,5 @@
 - The first chat starts from the `IntroScreen` message button; the intro quick-action chips are currently visual only.
 - Predefined chat actions live inside `ChatScreen` and prepare the composer, but the user still taps send.
 - Manual prompts and predefined prompts share the same AI execution, Firestore save, Hive cache, analytics, and usage flow.
-- The main implementation risks are missing pre-send blocking when no valid provider key exists, attachment-only prompt validation inconsistency, and one analysis-message mapping bug that can lose PDF/image response content type.
+- First-send now blocks before navigation when the selected preferred provider has no saved valid API key.
+- The main implementation risks are new-chat model picker UX for unkeyed providers, different provider-selection rules between new chat and chat detail, attachment-only prompt validation inconsistency, and one analysis-message mapping bug that can lose PDF/image response content type.

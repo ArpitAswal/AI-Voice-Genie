@@ -87,7 +87,10 @@ class AiOrchestrator {
 
     _effectBus.safeEffect(() async {
       await _analytics.logAiRequestInitiated(
-          modelAttempted: selectedProvider, capability: request.capability);
+        modelAttempted: selectedProvider,
+        capability: request.capability,
+        requestId: request.requestId,
+      );
     });
 
     // Step 1: Ensure: Fail fast if the selected provider cannot do this task.
@@ -122,7 +125,8 @@ class AiOrchestrator {
           modelAttempted: selectedProvider,
           capability: request.capability,
           failureType: e.failureType,
-          failureReason: e.message);
+          failureReason: e.message,
+          requestId: request.requestId);
 
       if (e is AiTransientException) {
         final exhaustedError = AiExhaustedException(
@@ -185,6 +189,7 @@ class AiOrchestrator {
             capability: request.capability,
             responseTimeMs: response.responseTimeMs,
             tokenCount: response.tokenCount,
+            requestId: request.requestId,
           );
         });
 

@@ -95,6 +95,7 @@ class MessageBubble extends StatelessWidget {
 
         // Timestamp + status row displayed underneath the bubble
         _MessageTimestampRow(message: message),
+        const SizedBox(height: 4)
       ],
     );
   }
@@ -779,22 +780,22 @@ class _StatusIcon extends StatelessWidget {
           ),
         );
       case MessageStatus.delivered:
-        return const Icon(
+        return Icon(
           Icons.done_all_rounded,
           size: 16,
-          color: AppColors.lightSuccess,
+          color: context.isDark ? AppColors.darkSuccess : AppColors.lightSuccess,
         );
       case MessageStatus.failed:
-        return const Icon(
+        return Icon(
           Icons.error_outline_rounded,
           size: 16,
-          color: AppColors.lightError,
+          color: context.isDark ? AppColors.darkError : AppColors.lightError,
         );
       case MessageStatus.partial:
-        return const Icon(
+        return Icon(
           Icons.schedule_rounded,
           size: 16,
-          color: AppColors.lightWarning,
+          color: context.isDark ? AppColors.darkWarning : AppColors.lightWarning,
         );
     }
   }

@@ -161,6 +161,7 @@ class AppLocalizations {
           'Analyze this image and describe what is happening in detail. [Optional: Extract any visible text or UI elements].',
       'prompt_template_create_image':
           'Generate a high-quality, realistic image of [Describe your scene, style, lighting, and details here].',
+      'conversation_name_update': 'Conversation name changed',
 
       // ── AI Model Selection ─────────────────────────────────────────────────
       'select_model': 'Select AI Model',
@@ -551,6 +552,7 @@ class AppLocalizations {
           'इस चित्र का विश्लेषण करें और विस्तार से बताएं कि इसमें क्या हो रहा है। [वैकल्पिक: दिखने वाला टेक्स्ट या UI एलिमेंट निकालें].',
       'prompt_template_create_image':
           '[Describe your scene, style, lighting, and details here] की एक उच्च-गुणवत्ता, वास्तविक दिखने वाली छवि जनरेट करें।',
+      'conversation_name_update': 'बातचीत का नाम बदल दिया गया',
 
       // ── AI Model Selection ─────────────────────────────────────────────────
       'select_model': 'AI मॉडल चुनें',
