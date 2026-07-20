@@ -4,6 +4,7 @@ import 'package:ai_voice_genie/features/chat/presentation/widgets/message_bubble
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -18,6 +19,7 @@ import '../../../shared/widgets/image_view.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/chat_attachment.dart';
+import '../data/local_chat_store.dart';
 import 'chat_provider.dart';
 import 'widgets/change_title_dialog.dart';
 
@@ -52,6 +54,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   ChatProvider? _chatProvider;
   int _lastMessageCount = 0;
   bool _wasGenerating = false;
+  bool _isManualDeleting = false;
 
   @override
   void initState() {
@@ -78,6 +81,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     final currentMessageCount = _chatProvider!.messages.length;
     final currentGenerating = _chatProvider!.isGenerating;
+    final currentLoading = _chatProvider!.isLoadingMessages;
+
+    // Safely check if the conversation was completely deleted remotely
+    final uid = context.read<AuthProvider>().currentUser?.uid;
+    if (uid != null && !_isManualDeleting) {
+      final conv =
+          LocalChatStore.instance.getConversation(uid, widget.conversationId);
+      final isDeleted = conv == null || conv.isDeleted;
+      if (isDeleted && !currentLoading && !currentGenerating) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) AppRoutes.pop(context);
+        });
+        return;
+      }
+    }
 
     bool shouldScroll = false;
 
@@ -238,6 +256,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
+    setState(() {
+      _isManualDeleting = true;
+    });
+
     LoadingOverlay.show(context, message: context.l10n.deleting);
 
     final success = await context.read<ChatProvider>().deleteConversation(
@@ -248,12 +270,31 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     if (!mounted) return;
     LoadingOverlay.hide();
     if (success) {
-      context.showSuccessToast(
-        AppLocalizations.of(context)!.translate('conversation_deleted'),
-      );
+      bool isOffline = false;
+      try {
+        final connectivity = await Connectivity().checkConnectivity();
+        isOffline = connectivity.contains(ConnectivityResult.none);
+      } catch (e) {
+        debugPrint('Connectivity check failed: $e');
+      }
+
+      if (!mounted) return;
+
+      if (isOffline) {
+        context.showSuccessToast(
+          AppLocalizations.of(context)!.offlineDeleteQueued,
+        );
+      } else {
+        context.showSuccessToast(
+          AppLocalizations.of(context)!.translate('conversation_deleted'),
+        );
+      }
       // Pop with `true` so the history screen knows to reload its list.
       AppRoutes.pop<bool>(context, true);
     } else {
+      setState(() {
+        _isManualDeleting = false;
+      });
       context.showError('something_went_wrong');
     }
   }
@@ -300,6 +341,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void dispose() {
     _chatProvider?.removeListener(_onChatProviderChange);
+    _chatProvider?.closeActiveConversation();
     _scrollController.dispose();
     super.dispose();
   }

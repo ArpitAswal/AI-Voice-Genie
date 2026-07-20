@@ -126,6 +126,49 @@ enum MessageStatus {
   }
 }
 
+/// Sync state of a local Hive record relative to its Firestore counterpart.
+///
+/// Transitions:
+///   pendingCreate → synced           (after first successful Firestore write)
+///   pendingUpdate → synced           (after title/metadata write succeeds)
+///   pendingDelete → [hard deleted]   (after remote delete succeeds)
+///   synced        → pendingUpdate    (when user edits locally)
+///   any           → syncFailed       (after max retry attempts exhausted for non-retryable error)
+///   syncFailed    → pending*         (reset when connectivity restored, for retryable errors)
+enum SyncStatus {
+  /// Created locally, not yet written to Firestore.
+  pendingCreate('pending_create'),
+
+  /// Update queued locally, Firestore write pending.
+  pendingUpdate('pending_update'),
+
+  /// Marked for deletion locally; remote delete queued in outbox.
+  pendingDelete('pending_delete'),
+
+  /// Currently being written to Firestore by the sync worker.
+  syncing('syncing'),
+
+  /// Successfully written to Firestore and confirmed.
+  synced('synced'),
+
+  /// All retry attempts exhausted (non-retryable error only).
+  /// Retryable failures reset back to pendingCreate/pendingUpdate.
+  syncFailed('sync_failed'),
+
+  /// Remote and local states are in conflict — requires manual resolution.
+  conflict('conflict');
+
+  final String value;
+  const SyncStatus(this.value);
+
+  static SyncStatus fromValue(String value) {
+    return SyncStatus.values.firstWhere(
+      (e) => e.value == value,
+      orElse: () => SyncStatus.pendingCreate,
+    );
+  }
+}
+
 /// AI request failure classification — drives fallback behavior.
 ///
 /// The orchestrator uses this to decide: retry same model, skip to next, or hard fail.
@@ -182,7 +225,6 @@ enum AppFeature {
   final String analyticsId;
   const AppFeature(this.analyticsId);
 }
-
 
 /// API key validation status — shown in the key management UI.
 enum ApiKeyStatus {
@@ -371,9 +413,12 @@ enum VisionDetailLevel {
 /// Represents the user's preferred AI response length (max output tokens).
 enum ResponseLength {
   short(250, 'Short', 'Good for quick and simple answers.'),
-  balanced(1000, 'Balanced', 'Best for standard conversations and general-purpose chat.'),
-  detailed(2048, 'Detailed', 'Best for long-form content, analyzing documents or generating code.'),
-  maximum(4096, 'Maximum', 'Ideal for extensive research articles or generating large code files.');
+  balanced(1000, 'Balanced',
+      'Best for standard conversations and general-purpose chat.'),
+  detailed(2048, 'Detailed',
+      'Best for long-form content, analyzing documents or generating code.'),
+  maximum(4096, 'Maximum',
+      'Ideal for extensive research articles or generating large code files.');
 
   final int maxTokens;
   final String displayName;

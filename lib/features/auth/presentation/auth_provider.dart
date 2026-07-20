@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/enums/app_enums.dart';
 import '../../../core/services/analytics_service.dart';
+import '../../../core/services/storage_service.dart';
+import '../../../features/chat/data/chat_sync_service.dart';
 import '../domain/auth_repository.dart';
 import '../domain/user_model.dart';
 import '../data/auth_repository_impl.dart';
@@ -81,13 +83,17 @@ class AuthProvider extends ChangeNotifier {
         _currentUser = user;
         _analytics.setUserId(user.uid);
         _setAuthState(AuthState.authenticated);
+        // Start background sync as soon as an existing session is restored.
+        // This drains any outbox tasks from the previous session and activates
+        // Firestore streams for the conversation list.
+        await ChatSyncService.instance.start(user.uid);
       } else {
         _setAuthState(AuthState.unauthenticated);
       }
       debugPrint(
-          '⚠️ AuthProvider initialize with either authenticate or unauthenticated state');
+          '\u26a0\ufe0f AuthProvider initialize with either authenticate or unauthenticated state');
     } catch (e) {
-      debugPrint('⚠️ AuthProvider initialize error: $e');
+      debugPrint('\u26a0\ufe0f AuthProvider initialize error: $e');
       // On any initialization error, treat as unauthenticated
       // Never leave the user stuck on the splash screen
       _setAuthState(AuthState.unauthenticated);
@@ -137,16 +143,30 @@ class AuthProvider extends ChangeNotifier {
   /// Clears all session data and sets state to unauthenticated.
   Future<void> signOut() async {
     try {
-      debugPrint("⚠️ AuthProvider Signing Out");
+      debugPrint("\u26a0\ufe0f AuthProvider Signing Out");
+      final signingOutUid = _currentUser?.uid;
+
+      // Stop sync BEFORE clearing local data to ensure no in-flight Firestore
+      // operations run against stale credentials after the Firebase token expires.
+      await ChatSyncService.instance.stop();
+
       await _repository.signOut();
       await _analytics.clearUserId();
       if (_currentUser != null) {
         _analytics.logUserSignedOut(_currentUser!.uid);
       }
+
+      // Clear this user's chat data from Hive so the next user session starts clean.
+      // This is critical when two different accounts sign in on the same device.
+      if (signingOutUid != null) {
+        await StorageService().clearChatBoxes(signingOutUid);
+      }
+      await StorageService().clearUserData();
+
       _currentUser = null;
       _setAuthState(AuthState.unauthenticated);
     } catch (e) {
-      debugPrint('⚠️ AuthProvider signOut error: $e');
+      debugPrint('\u26a0\ufe0f AuthProvider signOut error: $e');
       // Even on error, clear local state so user is not stuck
       _currentUser = null;
       _setAuthState(AuthState.unauthenticated);
@@ -248,6 +268,9 @@ class AuthProvider extends ChangeNotifier {
       await _analytics.setUserId(user.uid);
 
       _setAuthState(AuthState.authenticated);
+      // Start background sync immediately after fresh sign-in so that
+      // any outbox tasks and Firestore streams are active from the first screen.
+      await ChatSyncService.instance.start(user.uid);
       return true;
     } on AuthException catch (e) {
       // Cancelled is not an error — just return false silently

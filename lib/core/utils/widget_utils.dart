@@ -20,30 +20,29 @@ extension WidgetExtensions on BuildContext {
   ///
   /// Uses [Theme.of(context)] for all colors and text styles.
   /// Supports validation, prefix icons, and keyboard types.
-  Widget themedTextField({
-    required TextEditingController controller,
-    String? label,
-    IconData? prefixIcon,
-    String? hint,
-    TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
-    void Function(String)? onChanged,
-    int? maxLength,
-    int? maxLines = 1,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    TextCapitalization textCapitalization = TextCapitalization.none,
-    List<TextInputFormatter>? inputFormatters,
-    bool enabled = true,
-    bool read = false,
-    String? errorText,
-    InputBorder? border,
-    InputBorder? errorBorder,
-    EdgeInsets? contentPad,
-    ScrollController? scrollController,
-    ScrollPhysics? scrollPhysics,
-    FocusNode? focus
-  }) {
+  Widget themedTextField(
+      {required TextEditingController controller,
+      String? label,
+      IconData? prefixIcon,
+      String? hint,
+      TextInputType keyboardType = TextInputType.text,
+      String? Function(String?)? validator,
+      void Function(String)? onChanged,
+      int? maxLength,
+      int? maxLines = 1,
+      bool obscureText = false,
+      Widget? suffixIcon,
+      TextCapitalization textCapitalization = TextCapitalization.none,
+      List<TextInputFormatter>? inputFormatters,
+      bool enabled = true,
+      bool read = false,
+      String? errorText,
+      InputBorder? border,
+      InputBorder? errorBorder,
+      EdgeInsets? contentPad,
+      ScrollController? scrollController,
+      ScrollPhysics? scrollPhysics,
+      FocusNode? focus}) {
     final theme = Theme.of(this);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -101,12 +100,14 @@ extension WidgetExtensions on BuildContext {
         errorBorder: errorBorder ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: isDark ? AppColors.darkError : AppColors.lightError),
+              borderSide: BorderSide(
+                  color: isDark ? AppColors.darkError : AppColors.lightError),
             ),
         focusedErrorBorder: errorBorder ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: isDark ? AppColors.darkError : AppColors.lightError),
+              borderSide: BorderSide(
+                  color: isDark ? AppColors.darkError : AppColors.lightError),
             ),
         contentPadding: contentPad ??
             const EdgeInsets.symmetric(
@@ -249,10 +250,14 @@ extension WidgetExtensions on BuildContext {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.lightError.withValues(
-            alpha: 0.1,
-          ),
-          foregroundColor: AppColors.lightError,
+          backgroundColor: isDark
+              ? AppColors.darkError.withValues(
+                  alpha: 0.2,
+                )
+              : AppColors.lightError.withValues(
+                  alpha: 0.1,
+                ),
+          foregroundColor: isDark ? AppColors.darkError : AppColors.lightError,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),

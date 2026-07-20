@@ -1,5 +1,5 @@
+import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
 
 /// ✨ NEW: Global loading overlay that blocks user interaction
 ///
@@ -115,9 +115,10 @@ class _LoadingOverlayWidget extends StatelessWidget {
       type: MaterialType.transparency,
       child: Center(
         child: Container(
+          width: context.screenWidth * 0.5,
           padding: EdgeInsets.symmetric(
-            horizontal: isTablet ? 48 : 32,
-            vertical: isTablet ? 36 : 24,
+            horizontal: isTablet ? 48 : 16,
+            vertical: isTablet ? 36 : 32,
           ),
           decoration: BoxDecoration(
             color: theme.scaffoldBackgroundColor,
@@ -135,8 +136,8 @@ class _LoadingOverlayWidget extends StatelessWidget {
             children: [
               // Circular Progress Indicator
               SizedBox(
-                width: isTablet ? 60 : 40,
-                height: isTablet ? 60 : 40,
+                width: isTablet ? 60 : 30,
+                height: isTablet ? 60 : 30,
                 child: CircularProgressIndicator(
                   strokeWidth: isTablet ? 4 : 3,
                   valueColor: AlwaysStoppedAnimation<Color>(
@@ -145,18 +146,16 @@ class _LoadingOverlayWidget extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: isTablet ? 24 : 16),
+              SizedBox(height: isTablet ? 24 : 24),
 
               // Loading text
               Text(
                 message ?? 'Loading...',
-                style: (isTablet ? theme.textTheme.titleMedium : theme.textTheme.bodyLarge)?.copyWith(
-                  color: isDark
-                      ? AppColors.darkTextPrimary
-                      : AppColors.lightTextPrimary,
+                style: (theme.textTheme.bodyLarge)?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
               ),
             ],
           ),

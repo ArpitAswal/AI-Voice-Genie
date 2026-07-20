@@ -1,6 +1,9 @@
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../constants/storage_keys.dart';
+import '../../features/chat/data/chat_outbox_store.dart';
+import '../../features/chat/data/chat_sync_service.dart';
+import '../../features/chat/data/local_chat_store.dart';
 
 /// Local storage service wrapping Hive.
 ///
@@ -24,6 +27,14 @@ class StorageService {
   late Box _userBox;
   late Box _conversationCacheBox;
 
+  // New offline-first chat boxes (replacing the old single JSON-blob cache)
+  late Box
+      _chatConversationsBox; // per-conversation metadata, keyed {uid}_{conversationId}
+  late Box
+      _chatMessagesBox; // per-message records, keyed {uid}_{conversationId}_{messageId}
+  late Box _chatOutboxBox; // durable outbox tasks for background Firestore sync
+  late Box _chatSyncStateBox; // per-user sync timestamps and delete-all cutoff
+
   // ── Initialization ────────────────────────────────────────────────────────
 
   /// Initialize Hive and open all required boxes.
@@ -37,9 +48,23 @@ class StorageService {
     await Future.wait([
       Hive.openBox('settings_box').then((box) => _settingsBox = box),
       Hive.openBox('user_box').then((box) => _userBox = box),
+      // Legacy JSON-blob cache — kept for backward compatibility during migration
       Hive.openBox('conversation_cache_box')
           .then((box) => _conversationCacheBox = box),
+      // New offline-first boxes
+      Hive.openBox('chat_conversations_box')
+          .then((box) => _chatConversationsBox = box),
+      Hive.openBox('chat_messages_box').then((box) => _chatMessagesBox = box),
+      Hive.openBox('chat_outbox_box').then((box) => _chatOutboxBox = box),
+      Hive.openBox('chat_sync_state_box')
+          .then((box) => _chatSyncStateBox = box),
     ]);
+
+    // Wire the store singletons with their respective Hive boxes.
+    // These singletons are used throughout the chat layer without rebuilding.
+    LocalChatStore.instance.init(_chatConversationsBox, _chatMessagesBox);
+    ChatOutboxStore.instance.init(_chatOutboxBox);
+    ChatSyncService.instance.initBox(_chatSyncStateBox);
   }
 
   // ── Settings Box Operations ───────────────────────────────────────────────
@@ -131,6 +156,20 @@ class StorageService {
     for (final key in keysToRemove) {
       await _settingsBox.delete(key);
     }
+  }
+
+  /// Clear all offline-first Hive chat data for a specific user.
+  ///
+  /// Called on logout BEFORE starting the next user session.
+  /// Uses the uid prefix to selectively remove only this user's records,
+  /// which is critical for multi-user / same-device correctness.
+  Future<void> clearChatBoxes(String uid) async {
+    // Delegate to LocalChatStore which manages the prefix-keyed boxes
+    await LocalChatStore.instance.clearAllForUser(uid);
+    // Clear outbox tasks queued for this user
+    await ChatOutboxStore.instance.clearForUser(uid);
+    // Clear the user's sync state (lastSyncAt, deleteAllCutoff, etc.)
+    await _chatSyncStateBox.delete(uid);
   }
 
   // ── Conversation Cache Box Operations ─────────────────────────────────────

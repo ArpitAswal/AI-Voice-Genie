@@ -234,10 +234,13 @@ First-time chat prompt with the selected AI model.
 `-> selected provider adapter sends HTTP request`
 `-> Analytics logs initiated and success/failure`
 `-> Usage event is saved fire-and-forget on success`
-`-> ChatRepository.saveMessagePair() writes conversation + messages`
-`-> ChatRepository.cacheMessages() writes Hive cache in a safe background effect`
+`-> ChatRepository.createOrAppendMessagePair() writes Hive records locally`
+`-> ChatOutboxStore.enqueue() stores a durable Firestore sync task`
+`-> ChatSyncService.processOutbox() tries Firestore sync in background`
 `-> ChatProvider adds AI message and stops generating`
 `-> ChatDetailScreen shows response`
+`-> RemoteChatStore.saveMessagePairBatch() writes Firestore when outbox drains`
+`-> LocalChatStore.markConversationSynced() updates local sync status after remote success`
 
 ## Function Call Map
 
@@ -261,9 +264,14 @@ First-time chat prompt with the selected AI model.
 | `ApiKeyRepository.loadKey()` | Orchestrator | Loads selected provider key from memory cache or Firestore. | First chat after setup can read from Firestore because provider and orchestrator use different repository instances. |
 | `OpenAiAdapter` / `GeminiAdapter` / `ClaudeAdapter` | Orchestrator | Sends the provider-specific HTTP request. | Returns normalized `AiResponse`. |
 | `ChatProvider._buildAiMessage()` | `sendMessage()` | Converts `AiResponse` into an assistant `MessageModel`. | Has a bug for `analysis` responses because the branch does not return. |
-| `ChatRepository.saveMessagePair()` | `ChatProvider.sendMessage()` | Batch writes the first conversation document and both user/AI message documents. | Persists success and failure responses. |
-| `ChatRepository.cacheMessages()` | `ChatProvider.sendMessage()` through `EffectBus.safeEffect()` | JSON encodes messages in an isolate and stores them in Hive. | Enables fast history recovery without blocking response rendering. |
-| `ChatDetailScreen._onChatProviderChange()` | Provider listener | Reacts to new messages or generation state changes. | Keeps the response visible and scrolls to latest content. |
+| `ChatRepository.createOrAppendMessagePair()` | `ChatProvider.sendMessage()` | Saves conversation metadata and both messages to Hive, then queues an outbox task. | UI/history can read local records immediately; Firestore sync is background. |
+| `LocalChatStore.saveConversation()` | Chat repository and sync service | Writes one conversation record to `chat_conversations_box`. | Stores local-only sync metadata such as `pendingCreate`, `pendingUpdate`, `pendingDelete`, `synced`, and `syncFailed`. |
+| `LocalChatStore.saveMessage()` | Chat repository and sync service | Writes one message record to `chat_messages_box`. | Replaces the old whole-conversation JSON cache for active offline-first flows. |
+| `ChatOutboxStore.enqueue()` | Chat repository | Stores a durable Hive task in `chat_outbox_box`. | Queued Firestore work survives app restarts and supports idempotency keys. |
+| `ChatSyncService.processOutbox()` | Repository enqueue, auth startup, retry timer, connectivity restore | Runs due outbox tasks sequentially. | Prevents parallel remote mutations from racing on the same conversation. |
+| `RemoteChatStore.saveMessagePairBatch()` | Sync service | Writes conversation, user message, and AI message to Firestore in a batch. | Uses deterministic local IDs, so retries do not duplicate messages. |
+| `ChatDetailScreen._onChatProviderChange()` | Provider listener | Reacts to new messages, generation state, loading state, and local deletion state. | Scrolls to latest content and pops the screen if the conversation is deleted. |
+| `ConversationHistoryScreen.watchConversations()` | History screen init | Listens to Hive conversation stream through the repository. | History renders from local records and updates when sync merges or local mutations happen. |
 
 ## Prompt Start Paths
 
@@ -284,13 +292,17 @@ First-time chat prompt with the selected AI model.
 | Change selected model | No Firestore write from this flow. | Preferred provider is saved through `AiPreferencesProvider` into Hive-backed storage. | No `model_switched` event is currently logged from `AiPreferencesProvider.setPreferredProvider()`. |
 | Attachment selection | No Firestore write yet. | Attachment bytes, name, path, MIME type, and file size live in `ChatInputBar` state until send. | No attachment-selection event is logged. |
 | Send with selected model missing a key | No Firestore write. | Composer remains on `ChatScreen`; no conversation is created. | No AI analytics event is logged because the request never reaches `AiOrchestrator`. |
-| First send starts | No Firestore write yet. | Optimistic user `MessageModel` and new `ConversationModel` are created in memory. | No `conversation_started` event is called, even though the analytics service supports it. |
+| First send starts | No Firestore write yet. | Optimistic user `MessageModel` and new `ConversationModel` are created in memory. New conversation message stream is subscribed. | No `conversation_started` event is called, even though the analytics service supports it. |
 | AI request starts | API key is read from `AIVoiceGenie/UsersAPIKeys/{uid}/{providerId}`. | Request object stores `requestId`, prompt, history, capability, response length, image/PDF bytes, and image settings. | `ai_request_initiated` logs `model_attempted` and `capability`. |
 | AI request success | Usage event is saved at `AIVoiceGenie/AllUsers/UserModel/{uid}/usageEvents/{eventId}` by current constants. | Normalized `AiResponse` is converted into an assistant message. | `ai_request_success` logs `model_used`, `capability`, `response_time_ms`, and `token_count`; usage write is fire-and-forget. |
 | AI request failure | No usage event is saved. | Failed assistant `MessageModel` is created with a friendly error message. | `ai_request_failed` logs `model_attempted`, `capability`, `failure_type`, and `fallback_triggered=false`; capability gaps also log `ai_capability_gap`. |
-| Persist first conversation | Conversation doc at `AIVoiceGenie/Conversations/{uid}/{conversationId}`. Message docs at `AIVoiceGenie/Conversations/{uid}/{conversationId}/ModelMessages/UserRef-{id}` and `AIRef-{id}`. | The active conversation remains in provider memory. | No separate persistence event is logged. |
-| Cache messages | No new Firestore write. | Hive key `messages_{conversationId}` stores JSON list of user and AI messages. | No analytics event. |
-| Response visible | Already persisted. | `ChatDetailScreen` reads provider state and renders messages. | No dedicated response-rendered event. |
+| Local-first persistence after AI result | No immediate Firestore write required. | `chat_conversations_box` stores one `LocalConversationRecord`; `chat_messages_box` stores one user `LocalMessageRecord` and one AI `LocalMessageRecord`; records start as pending sync. | No separate persistence event is logged. |
+| Outbox enqueue | No immediate Firestore write required. | `chat_outbox_box` stores an `upsert_message_pair` task with conversation payload, user message payload, AI message payload, message IDs, attempt metadata, and idempotency key. | No analytics event. |
+| Background Firestore sync | Conversation doc at `AIVoiceGenie/Conversations/{uid}/{conversationId}`. Message docs at `AIVoiceGenie/Conversations/{uid}/{conversationId}/ModelMessages/UserRef-{id}` and `AIRef-{id}`. | On success, local conversation sync status becomes `synced`; outbox task is removed. On retryable failure, task remains pending with backoff. | No analytics event. |
+| Response visible | Firestore may still be pending. | `ChatDetailScreen` renders from provider memory and Hive message stream. | No dedicated response-rendered event. |
+| History list load | Firestore may be queried by manual refresh/getConversations, but UI source is Hive stream. | `ConversationHistoryScreen` listens to `watchConversations()` and filters/searches local conversation records. | No analytics event. |
+| Delete individual conversation | Firestore deletion is queued, not blocking the UI result. | Conversation and its messages are soft-deleted locally with `pendingDelete`; outbox stores `delete_conversation`. Remote success hard-deletes Hive records. | Success toast changes if connectivity reports offline. |
+| Delete all conversations | Firestore deletion is queued through one `delete_all_conversations` task. | All local conversations/messages are soft-deleted; history stream becomes empty. | Success toast changes if connectivity reports offline. |
 
 ## Provider API Calls
 
@@ -311,8 +323,13 @@ First-time chat prompt with the selected AI model.
 | AI HTTP request | Awaited. | Correct. The UI response depends on it. |
 | Retry delay after transient provider error | Awaited. | Correct, but only for transient errors. Hard errors and rate limits correctly stop. |
 | Cloudinary upload for generated images | Awaited with `Future.wait`. | Correct if generated image URLs must be persisted and shown consistently. |
-| Firestore `saveMessagePair()` | Awaited. | Correct. Conversation history should not report success before the message pair is durable. |
-| Hive `cacheMessages()` | Fire-and-forget through `EffectBus.safeEffect()`. | Correct improvement. Cache refresh is useful for fast recovery, but Firestore is the source of truth and cache latency should not block response rendering. |
+| Hive local message pair write | Awaited after AI response message is built. | Correct for local durability. However, the user prompt itself is still only in memory until the AI call finishes or fails and the final pair is written. |
+| Outbox enqueue | Awaited as part of local persistence. | Correct. Firestore sync must not be attempted without a durable task. |
+| Firestore sync for message pair | Fire-and-forget through `ChatSyncService.processOutbox()`. | Correct for UI responsiveness. Remote writes retry from Hive outbox instead of blocking chat rendering. |
+| Firestore conversation/message streams | Long-lived subscriptions managed by `ChatSyncService`. | Correct direction. Conversation stream starts after auth; message stream starts when a conversation is opened. |
+| Delete individual remote work | Fire-and-forget through outbox. | Correct. Local soft delete hides the chat immediately and remote hard delete can finish later. |
+| Delete all remote work | Fire-and-forget through outbox, but the history UI currently waits one artificial second and does not await the delayed repository call. | Should be improved. The architecture is local-first, but the screen-level delay/non-awaited call can make QA timing flaky. |
+| Legacy `cacheMessages()` JSON cache | Still exists in repository/storage for backward compatibility. | Not the primary new flow. Keep only for migration or remove after stable offline-first rollout. |
 | Usage event save | Fire-and-forget. | Correct. Usage tracking must not block the AI response. |
 | Analytics request initiated/success/failure | Awaited inside orchestrator. | Should be reconsidered. Analytics is useful but should not add latency to chat response; fire-and-forget through `EffectBus.safeEffect` would be better unless strict ordering is required. |
 
@@ -326,10 +343,22 @@ First-time chat prompt with the selected AI model.
 - AI success and AI failure both create assistant messages, so the conversation history can show what happened instead of silently losing failed requests.
 - Usage tracking is correctly fire-and-forget because it is not required to render the AI response.
 - First-send now blocks before navigation when the selected preferred provider has no valid API key.
-- Hive chat-message caching after send is now non-blocking, which is appropriate because cache failure should not block the visible AI response.
+- Chat messages and conversation metadata now use Hive records instead of only the old `messages_{conversationId}` JSON blob.
+- History list now watches Hive through `watchConversations()`, so local records can render without waiting for Firestore.
+- Firestore write/delete work is now queued through a durable outbox and processed by `ChatSyncService`, which is the correct production direction.
+- Individual conversation delete is now local-first: it soft-deletes local records, queues remote deletion, and hard-deletes local records only after remote success.
+- Sync badges are exposed in the history card for pending and failed sync states.
 
 ### Issues or Improvements
 - Medium: `IntroScreen` quick action chips are visual only. The real chat entry is the top-right message button, then the predefined actions inside `ChatScreen`. If product expects Intro quick actions to start prompting, that navigation is not implemented.
+- Medium: First prompt durability is not fully local-first before the AI call. The optimistic user message is in memory, but the Hive message/outbox write happens only after the AI response or failure is built.
+- Medium: `ConversationHistoryScreen._loadConversations()` still calls `getConversations()`, which forces a Firestore server fetch before falling back to Hive. The stream is local-first, but refresh/load still performs a full remote collection read rather than purely incremental sync.
+- Medium: `RemoteChatStore.watchConversations()` does not use `lastConversationSyncAt`; it listens to the full conversation collection ordered by `lastMessageAt`. The sync-state field exists, but incremental conversation streaming is not implemented yet.
+- Medium: `ConversationHistoryScreen._deleteAll()` waits one artificial second and does not await the `deleteAllConversationsLocalFirst()` call inside the delayed callback. This can make UI timing and toast behavior unreliable.
+- Medium: `updateConversationTitle()` still updates Firestore directly through the old repository path. The outbox has an `updateConversationTitle` type, but the title-edit flow is not local-first yet.
+- Medium: `ChatOutboxStore.markProcessing()` can leave a task stuck as `processing` if the app is killed after marking processing but before success/failure is stored. Startup should reset stale processing tasks to pending.
+- Low: Retryable outbox failures after three attempts are kept pending with a 10-minute backoff, so conversation `syncFailed` is only marked for non-retryable upsert errors. QA should not expect a warning badge for normal offline retry states beyond pending.
+- Low: `StorageService.clearAll()` clears only settings, user, and legacy conversation cache boxes. If full account wipe uses this method, new chat boxes are not cleared there; logout uses `clearChatBoxes(uid)` correctly.
 - Low: `conversation_started` analytics exists but is not called when the first conversation is created. Add it only if conversation-start metrics are important, not for every low-value screen step.
 - Low: First-send error is represented as a failed assistant message, but `ChatScreen` does not await and does not show a toast after navigation. QA should verify the failed bubble is visible and understandable.
 
@@ -352,16 +381,33 @@ First-time chat prompt with the selected AI model.
   - Type a prompt and tap send.
   - Confirm navigation replaces the route with `ChatDetailScreen`.
   - Confirm the user bubble appears immediately, a generating state appears, then the AI response appears.
-  - Verify Firestore conversation and two message docs are saved.
-  - Verify Hive key `messages_{conversationId}` is written.
+  - Verify `chat_conversations_box` gets one `{uid}_{conversationId}` record with pending sync status before/while remote sync is pending.
+  - Verify `chat_messages_box` gets separate `{uid}_{conversationId}_{messageId}` records for the user and AI messages.
+  - Verify `chat_outbox_box` gets an `upsert_message_pair` task with conversation payload, user message payload, AI message payload, and idempotency key.
+  - Verify Firestore conversation and two message docs are saved after `ChatSyncService` drains the outbox.
+  - Verify the outbox task is removed and local conversation status becomes `synced` after Firestore success.
   - Verify `ai_request_initiated` and either success or failure analytics are logged.
 - First-time predefined prompt:
   - Repeat the same entry path from `IntroScreen`.
   - Tap Generate Code or Create Image and verify a prompt is inserted but not sent automatically.
   - Tap Summarize PDF or Analyze Image and verify picker validation, attachment preview, template insertion, then send.
   - Confirm the resolved capability matches the action: code/text is `textGeneration`, create image is `imageGeneration`, image attachment is `imageUnderstanding`, PDF attachment is `pdfParsing`.
+- History/detail offline-sync checks:
+  - Open conversation history and verify the list is rendered from `watchConversations()`/Hive records, not only from a Firestore response.
+  - Open an existing conversation and verify `ChatProvider.loadConversation()` reads local conversation metadata and subscribes to `watchMessages()`.
+  - Verify opening a conversation starts `ChatSyncService.watchOpenConversation()` so remote message changes can merge into Hive.
+  - Turn off network after a chat is locally saved but before outbox sync completes; verify the history card shows a pending sync badge and the outbox task remains pending.
+  - Restore network and verify `ChatOutboxStore.resetCooldownTasksForRetry()` plus `ChatSyncService.processOutbox()` eventually syncs Firestore and removes the task.
+- Delete checks:
+  - Delete one conversation while online and verify it disappears immediately from history because `LocalChatStore.softDeleteConversation()` marks `isDeleted = true`.
+  - Verify `chat_outbox_box` stores `delete_conversation` and Firestore deletion happens through `RemoteChatStore.deleteConversationRemote()`.
+  - Delete one conversation while offline and verify the app shows the offline queued success message and keeps the outbox task pending.
+  - Delete all conversations and verify local history clears through soft-deleted Hive records, then Firestore deletion is queued as one `delete_all_conversations` task.
+  - Specifically verify delete-all timing because the screen currently waits one second and does not await the delayed repository call.
 - Failure checks:
   - Select a provider with no saved key and attempt send; verify `no_key_for_model` appears and the app stays on `ChatScreen`.
   - If one provider has a valid key and another provider is preferred but unkeyed, verify the new-chat screen behavior. Current code blocks instead of falling back to the valid provider.
   - Select a provider that does not support the capability and verify `ai_capability_gap` plus a failed assistant message.
   - Simulate provider/network failure and verify the failed message persists and generating state stops.
+  - Simulate a non-retryable Firestore error for `upsert_message_pair`; verify local conversation moves to `syncFailed` and the history card shows the warning badge.
+  - Simulate app kill after an outbox task is marked `processing`; verify whether the task is retried on next launch. Current code may leave it stuck, so this should be treated as a bug if reproduced.

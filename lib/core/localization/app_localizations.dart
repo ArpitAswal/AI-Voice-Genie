@@ -61,6 +61,8 @@ class AppLocalizations {
       'deleting': 'Deleting...',
       'please_wait': 'Please wait...',
       'something_went_wrong': 'Something went wrong. Please try again.',
+      'offline_delete_queued':
+          'You are offline. The conversation will be deleted from the database when you reconnect.',
       'no_internet_connection':
           'No internet connection. Please check your network.',
       'request_timed_out': 'Request timed out. Please try again.',
@@ -134,7 +136,7 @@ class AppLocalizations {
       'delete_conversation_confirm':
           'Are you sure you want to delete this conversation? This cannot be undone.',
       'conversation_deleted': 'Conversation deleted.',
-      'delete_all_conversations': 'Delete All Conversations',
+      'delete_all_conversations': 'Deleting All Conversations...',
       'delete_all_confirm_message':
           'Are you sure you want to delete all conversations? This cannot be undone.',
       'deleting_all_conversations': 'Deleting All Conversations..',
@@ -296,9 +298,11 @@ class AppLocalizations {
       'profile_updating': 'Profile Updating...',
       'profile_update_failed': 'Could not update profile. Please try again.',
       'activate_models': 'Activate AI Models',
-      'activate_models_message': 'Connect your API keys to get started. Activating models unlocks advanced reasoning styles, custom feature coverage, and AI-powered workflows.',
+      'activate_models_message':
+          'Connect your API keys to get started. Activating models unlocks advanced reasoning styles, custom feature coverage, and AI-powered workflows.',
       'activate_more_models': 'Activate More AI Models',
-      'activate_more_models_message': 'Bring in additional API keys to maximize your setup. More active models allow for smart fallback routing, specialized problem-solving, and uninterrupted uptime.',
+      'activate_more_models_message':
+          'Bring in additional API keys to maximize your setup. More active models allow for smart fallback routing, specialized problem-solving, and uninterrupted uptime.',
       'enabled': 'Enabled',
       'not_active': 'Not Active',
       'configure': 'Configure',
@@ -316,8 +320,10 @@ class AppLocalizations {
       'usage_budget_remaining': 'remaining',
       'usage_budget_exceeded': 'Budget exceeded',
       'usage_set_budget': 'Set a monthly budget',
-      'usage_set_budget_subtitle': 'Track your estimated spending with a personal monthly limit.',
-      'usage_disclaimer': 'Usage is estimated from AI Voice Genie requests only. It may not match your provider billing dashboard.',
+      'usage_set_budget_subtitle':
+          'Track your estimated spending with a personal monthly limit.',
+      'usage_disclaimer':
+          'Usage is estimated from AI Voice Genie requests only. It may not match your provider billing dashboard.',
       'usage_of': 'of',
       'budget_saved': 'Budget saved successfully!',
       'budget_save_failed': 'Failed to save budget. Please try again.',
@@ -452,6 +458,8 @@ class AppLocalizations {
       'deleting': 'हटाया जा रहा है...',
       'please_wait': 'कृपया प्रतीक्षा करें...',
       'something_went_wrong': 'कुछ गलत हो गया। कृपया पुनः प्रयास करें।',
+      'offline_delete_queued':
+          'आप ऑफ़लाइन हैं। दोबारा कनेक्ट होने पर बातचीत डेटाबेस से हटा दी जाएगी।',
       'no_internet_connection': 'इंटरनेट कनेक्शन नहीं है। अपना नेटवर्क जांचें।',
       'request_timed_out': 'अनुरोध का समय समाप्त हो गया। पुनः प्रयास करें।',
       'privacy_note':
@@ -525,7 +533,7 @@ class AppLocalizations {
       'delete_conversation': 'बातचीत हटाएं',
       'delete_conversation_confirm': 'क्या आप इस बातचीत को हटाना चाहते हैं?',
       'conversation_deleted': 'बातचीत हटाई गई।',
-      'delete_all_conversations': 'सभी बातचीत हटाएं',
+      'delete_all_conversations': 'सभी बातचीत मिटाई जा रही हैं...',
       'delete_all_confirm_message':
           'क्या आप सभी बातचीत हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
       'deleting_all_conversations': 'सभी बातचीत हटाई जा रही हैं..',
@@ -690,7 +698,8 @@ class AppLocalizations {
       'usage_budget_remaining': 'शेष',
       'usage_budget_exceeded': 'बजट सीमा पार',
       'usage_set_budget': 'मासिक बजट सेट करें',
-      'usage_set_budget_subtitle': 'अनुमानित खर्च को व्यक्तिगत मासिक सीमा से ट्रैक करें।',
+      'usage_set_budget_subtitle':
+          'अनुमानित खर्च को व्यक्तिगत मासिक सीमा से ट्रैक करें।',
       'usage_disclaimer': 'उपयोग केवल AI Voice Genie अनुरोधों से अनुमानित है।',
       'usage_of': 'में से',
       'budget_saved': 'बजट सफलतापूर्वक सहेजा गया!',
@@ -715,9 +724,11 @@ class AppLocalizations {
       'profile_update_failed':
           'प्रोफ़ाइल अपडेट नहीं हो सकी। कृपया पुनः प्रयास करें।',
       'activate_models': 'AI मॉडल सक्रिय करें',
-      'activate_models_message': 'शुरू करने के लिए अपनी API कीज़ कनेक्ट करें। मॉडल को एक्टिवेट करने से एडवांस्ड रीज़निंग स्टाइल, कस्टम फ़ीचर कवरेज और AI-पावर्ड वर्कफ़्लो का इस्तेमाल किया जा सकेगा।',
+      'activate_models_message':
+          'शुरू करने के लिए अपनी API कीज़ कनेक्ट करें। मॉडल को एक्टिवेट करने से एडवांस्ड रीज़निंग स्टाइल, कस्टम फ़ीचर कवरेज और AI-पावर्ड वर्कफ़्लो का इस्तेमाल किया जा सकेगा।',
       'activate_more_models': 'और AI मॉडल चालू करें',
-      'activate_more_models_message': 'अपने सेटअप को बेहतर बनाने के लिए और API कीज़ का इस्तेमाल करें। ज़्यादा एक्टिव मॉडल होने से स्मार्ट फ़ॉलबैक रूटिंग, खास समस्याओं को हल करने की क्षमता और बिना रुकावट के अपटाइम मिलता है।',
+      'activate_more_models_message':
+          'अपने सेटअप को बेहतर बनाने के लिए और API कीज़ का इस्तेमाल करें। ज़्यादा एक्टिव मॉडल होने से स्मार्ट फ़ॉलबैक रूटिंग, खास समस्याओं को हल करने की क्षमता और बिना रुकावट के अपटाइम मिलता है।',
       'enabled': 'सक्षम',
       'not_active': 'सक्रिय नहीं',
       'configure': 'कॉन्फ़िगर करें',
@@ -843,6 +854,7 @@ class AppLocalizations {
   String get delete => translate('delete');
   String get pleaseWait => translate('please_wait');
   String get somethingWentWrong => translate('something_went_wrong');
+  String get offlineDeleteQueued => translate('offline_delete_queued');
   String get noInternet => translate('no_internet_connection');
   String get signInWithGoogle => translate('sign_in_with_google');
   String get signInWithApple => translate('sign_in_with_apple');
@@ -981,7 +993,8 @@ class AppLocalizations {
   String get qualityMedium => translate('quality_medium');
   String get qualityHigh => translate('quality_high');
   String get activateMoreModels => translate('activate_more_models');
-  String get activateMoreModelsMessage => translate('activate_more_models_message');
+  String get activateMoreModelsMessage =>
+      translate('activate_more_models_message');
   String get activateModels => translate('activate_models');
   String get activateModelsMessage => translate('activate_models_message');
   String get helpCenter => translate('help_center');

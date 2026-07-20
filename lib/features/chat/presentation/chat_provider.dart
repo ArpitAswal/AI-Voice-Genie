@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:ai_voice_genie/core/error/effect_bus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:ai_voice_genie/core/extensions/string_extension.dart';
-import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../ai_layer/models/ai_request.dart';
 import '../../../ai_layer/models/ai_response.dart';
@@ -17,6 +16,8 @@ import '../../../core/error/ai_exception.dart';
 import '../../../core/services/ai_preferences_service.dart';
 import '../../../core/services/cloudinary_service.dart';
 import '../data/chat_repository_impl.dart';
+import '../data/chat_sync_service.dart';
+import '../data/local_chat_store.dart';
 import '../domain/chat_attachment.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
@@ -47,17 +48,14 @@ class ChatProvider extends ChangeNotifier {
   final ChatRepository _repository;
   final AiOrchestrator _orchestrator;
   final AiPreferencesService _preferences;
-  final EffectBus _effectBus;
 
-  ChatProvider(
-      {ChatRepository? repository,
-      AiOrchestrator? orchestrator,
-      AiPreferencesService? preferences,
-      EffectBus? effectBus})
-      : _repository = repository ?? ChatRepositoryImpl(),
+  ChatProvider({
+    ChatRepository? repository,
+    AiOrchestrator? orchestrator,
+    AiPreferencesService? preferences,
+  })  : _repository = repository ?? ChatRepositoryImpl(),
         _orchestrator = orchestrator ?? AiOrchestrator.instance,
-        _preferences = preferences ?? AiPreferencesService.instance,
-        _effectBus = effectBus ?? EffectBus.instance;
+        _preferences = preferences ?? AiPreferencesService.instance;
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -67,6 +65,11 @@ class ChatProvider extends ChangeNotifier {
   bool _isLoadingMessages = false;
   String? _errorMessage;
   int _conversationHistoryVersion = 0;
+
+  /// Active subscription to the Hive messages stream for the current conversation.
+  /// Cancelled whenever a new conversation is loaded or the provider is disposed.
+  StreamSubscription<List<MessageModel>>? _messagesSubscription;
+  StreamSubscription<dynamic>? _conversationSubscription;
 
   ConversationModel? get activeConversation => _activeConversation;
   List<MessageModel> get messages => List.unmodifiable(_messages);
@@ -95,46 +98,31 @@ class ChatProvider extends ChangeNotifier {
     required String conversationId,
   }) async {
     _isLoadingMessages = true;
+    _isGenerating = false;
     _errorMessage = null;
     _activeConversation = null;
+    _messages.clear(); // Synchronously clear old messages immediately
     notifyListeners();
 
+    // Cancel any existing message stream before subscribing to a new conversation
+    _messagesSubscription?.cancel();
+    _messagesSubscription = null;
+    _conversationSubscription?.cancel();
+    _conversationSubscription = null;
+
     try {
-      // Fast path: load from Hive cache instantly
-      final cached = await _repository.getCachedMessages(conversationId);
-      if (cached.isNotEmpty) {
-        _messages
-          ..clear()
-          ..addAll(cached);
-        _isLoadingMessages = false;
-        notifyListeners();
+      // 1. Fetch conversation metadata from Local Hive
+      final localConv =
+          LocalChatStore.instance.getConversation(uid, conversationId);
+      if (localConv != null) {
+        _activeConversation = localConv.toConversationModel();
       }
 
-      // Fresh path: load ALL messages and conversation details from Firestore
-      final results = await Future.wait([
-        _repository.getMessages(
-          uid: uid,
-          conversationId: conversationId,
-        ),
-        _repository.getConversation(uid, conversationId),
-      ]);
+      // 2. We don't manually load messages here.
+      // _subscribeToMessages will immediately yield the current Hive state.
 
-      final freshMessages = results[0] as List<MessageModel>;
-      final conversationModel = results[1] as ConversationModel?;
-
-      if (conversationModel != null) {
-        _activeConversation = conversationModel;
-      }
-
-      _messages
-        ..clear()
-        ..addAll(freshMessages);
-
-      // Update cache with fresh data
-      await _repository.cacheMessages(
-        conversationId: conversationId,
-        messages: _messages,
-      );
+      debugPrint(
+          "🔄 ChatProvider.loadConversation loaded completely from local DB");
     } catch (e) {
       debugPrint('⚠️ ChatProvider.loadConversation error: $e');
       _errorMessage = 'something_went_wrong';
@@ -142,6 +130,66 @@ class ChatProvider extends ChangeNotifier {
       _isLoadingMessages = false;
       notifyListeners();
     }
+
+    _subscribeToMessages(uid, conversationId);
+    _subscribeToConversation(uid, conversationId);
+  }
+
+  void _subscribeToConversation(String uid, String conversationId) {
+    _conversationSubscription?.cancel();
+
+    _conversationSubscription = LocalChatStore.instance
+        .watchConversation(uid, conversationId)
+        .listen((record) {
+      if (record == null || record.isDeleted) {
+        // Conversation was hard-deleted or soft-deleted remotely.
+        // We set _activeConversation to a deleted state, or we just rely on UI checking
+        // Actually, if we just call notifyListeners(), ChatDetailScreen will see the update
+        // and its getConversation check will trigger the pop!
+        notifyListeners();
+      } else {
+        _activeConversation = record.toConversationModel();
+        notifyListeners();
+      }
+    });
+  }
+
+  void _subscribeToMessages(String uid, String conversationId) {
+    _messagesSubscription?.cancel();
+
+    // Subscribe to the Hive messages stream so future local writes and
+    // remote sync merges automatically update the UI without a reload.
+    // The very first emission is the current synchronous state of the Hive cache.
+    var stream =
+        _repository.watchMessages(uid: uid, conversationId: conversationId);
+
+    _messagesSubscription = stream.listen(
+      (messages) {
+        // Only update if messages actually changed to avoid redundant redraws
+        if (!_isGenerating) {
+          _messages
+            ..clear()
+            ..addAll(messages);
+          notifyListeners();
+        }
+      },
+      onError: (e) =>
+          debugPrint('\u26a0\ufe0f ChatProvider.watchMessages error: $e'),
+    );
+
+    // Tell ChatSyncService to activate the Firestore message stream for this
+    // conversation so that changes from other devices arrive in real time
+    ChatSyncService.instance.watchOpenConversation(uid, conversationId);
+  }
+
+  /// Closes the currently active conversation and stops listening to real-time message updates.
+  void closeActiveConversation() {
+    if (_activeConversation != null) {
+      ChatSyncService.instance
+          .stopWatchingConversation(_activeConversation!.id);
+      _activeConversation = null;
+    }
+    _messagesSubscription?.cancel();
   }
 
   // ── Send Message ───────────────────────────────────────────────────────────
@@ -213,19 +261,23 @@ class ChatProvider extends ChangeNotifier {
     final isNewConversation = _activeConversation == null;
     ConversationModel? newConversation;
     if (isNewConversation) {
-        // Build the conversation model in memory — written to Firestore
-        // together with the first message pair in one batch (Step 6)
-        final conversationId = const Uuid().v4();
-        String actualTitle = trimmedPrompt.generateConversationTitle();
+      // Build the conversation model in memory — written to Firestore
+      // together with the first message pair in one batch (Step 6)
+      final conversationId = const Uuid().v4();
+      String actualTitle = trimmedPrompt.generateConversationTitle();
 
-        newConversation = ConversationModel(
-          id: conversationId,
-          title: actualTitle,
-          lastMessage: _conversationPreview(trimmedPrompt, attachments),
-          capability: requestCapability,
-          lastProvider: selectedProvider,
-        );
-        _activeConversation = newConversation;
+      newConversation = ConversationModel(
+        id: conversationId,
+        title: actualTitle,
+        lastMessage: _conversationPreview(trimmedPrompt, attachments),
+        capability: requestCapability,
+        lastProvider: selectedProvider,
+      );
+      _activeConversation = newConversation;
+
+      // Start watching the newly created conversation stream so future
+      // updates (e.g. from other devices) arrive automatically.
+      _subscribeToMessages(uid, conversationId);
     }
 
     // ── Step 3: Build context-aware history ───────────────────────────────────
@@ -285,14 +337,6 @@ class ChatProvider extends ChangeNotifier {
             .map((img) =>
                 CloudinaryService.instance.uploadBase64Image(img.b64Json!));
 
-        // Testing with local images
-        // List<String> imageUrls = [
-        //   "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-        //   // "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-        //   // "https://res.cloudinary.com/lukl51sa/image/upload/v1783437057/m2qihiu06fwq4qegqes1.png",
-        // ];
-        // final futures = imageUrls.map((img) => Future.value(img));
-
         final results = await Future.wait(futures);
         uploadedUrls = results.whereType<String>().toList();
       }
@@ -332,8 +376,7 @@ class ChatProvider extends ChangeNotifier {
       final conversationToPersist = _activeConversation;
 
       if (messageToPersist != null && conversationToPersist != null) {
-        // ── Step 6: Persist to Firestore ──────────────────────────
-        final conversationId = conversationToPersist.id;
+        // ── Step 6: Persist ──────────────────────────
 
         // ── Compress Images for Persistence ────────────────────────
         List<String>? persistImagePaths = userMessage.imageUrls;
@@ -351,34 +394,25 @@ class ChatProvider extends ChangeNotifier {
           _messages[optimisticIndex] = userMessageToPersist;
         }
 
-        // Isolated Firestore save — a Firestore failure must NOT prevent
-        // _isGenerating = false and notifyListeners() from running below.
-        // Without this guard, a Firestore exception inside finally would
-        // propagate outward, skipping the cleanup code and freezing the UI.
+        _messages.add(messageToPersist);
+
+        // Isolated local-first save — writes to Hive immediately and enqueues
+        // a background Firestore sync task via the outbox. This replaces the old
+        // saveMessagePair which blocked on Firestore and could freeze the UI.
         try {
-          await _repository.saveMessagePair(
+          await _repository.createOrAppendMessagePair(
             uid: uid,
-            conversationId: conversationId,
+            conversation: conversationToPersist,
             userMessage: userMessageToPersist,
             aiMessage: messageToPersist,
             isFirstMessage: isNewConversation,
-            conversationModel: isNewConversation ? conversationToPersist : null,
           );
         } catch (e) {
-          // Log but do not rethrow — we still need to update UI state below.
-          debugPrint('⚠️ ChatProvider.saveMessagePair failed: $e');
+          // Local Hive write failed (extremely rare) — log and continue
+          // so _isGenerating=false is always reached below.
+          debugPrint(
+              '\u26a0\ufe0f ChatProvider.createOrAppendMessagePair failed: $e');
         }
-
-        // ── Step 7: Update UI with AI response ──────────────────────────────
-        _messages.add(messageToPersist);
-
-        // ── Step 8: Update Hive cache ───────────────────────────────────────
-        _effectBus.safeEffect(() async {
-          await _repository.cacheMessages(
-            conversationId: conversationId,
-            messages: _messages,
-          );
-        });
 
         _markConversationHistoryDirty();
       }
@@ -408,7 +442,9 @@ class ChatProvider extends ChangeNotifier {
     required String conversationId,
   }) async {
     try {
-      await _repository.deleteConversation(
+      // Local-first delete: hides the conversation from the UI instantly.
+      // The Firestore delete runs in the background via ChatSyncService.
+      await _repository.deleteConversationLocalFirst(
         uid: uid,
         conversationId: conversationId,
       );
@@ -425,7 +461,7 @@ class ChatProvider extends ChangeNotifier {
     } on ChatException {
       return false;
     } catch (e) {
-      debugPrint('⚠️ ChatProvider.deleteConversation error: $e');
+      debugPrint('\u26a0\ufe0f ChatProvider.deleteConversation error: $e');
       return false;
     }
   }
@@ -456,7 +492,20 @@ class ChatProvider extends ChangeNotifier {
     _isGenerating = false;
     _isLoadingMessages = false;
     _errorMessage = null;
+    // Cancel the Hive streams for the old conversation
+    _messagesSubscription?.cancel();
+    _messagesSubscription = null;
+    _conversationSubscription?.cancel();
+    _conversationSubscription = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    // Cancel stream subscription to prevent memory leaks
+    _messagesSubscription?.cancel();
+    _conversationSubscription?.cancel();
+    super.dispose();
   }
 
   /// Consume and clear the error message after it has been shown.

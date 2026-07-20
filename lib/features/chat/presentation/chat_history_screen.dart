@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:ai_voice_genie/core/constants/app_constants.dart';
-import 'package:ai_voice_genie/core/utils/loading_overlay.dart';
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:ai_voice_genie/shared/widgets/image_view.dart';
@@ -7,19 +8,21 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
+import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
-import 'chat_provider.dart';
 import '../data/chat_repository_impl.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
 import '../../../shared/widgets/dynamic_shimmer.dart';
+import '../../../core/enums/app_enums.dart';
 
 class ConversationHistoryScreen extends StatefulWidget {
   const ConversationHistoryScreen({super.key});
@@ -32,40 +35,39 @@ class ConversationHistoryScreen extends StatefulWidget {
 class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   final ChatRepository _repository = ChatRepositoryImpl();
   final TextEditingController _searchController = TextEditingController();
-  late final ChatProvider _chatProvider;
+  StreamSubscription<List<ConversationModel>>? _subscription;
 
   List<ConversationModel> _allConversations = [];
   List<ConversationModel> _filteredConversations = [];
-
   bool _isLoading = true;
   String _searchQuery = '';
-  int _lastHistoryVersion = -1;
 
   @override
   void initState() {
     super.initState();
-    _chatProvider = context.read<ChatProvider>();
-    _lastHistoryVersion = _chatProvider.conversationHistoryVersion;
-    _chatProvider.addListener(_onChatProviderChanged);
+    final uid = context.read<AuthProvider>().currentUser?.uid;
+    if (uid != null) {
+      _subscription = _repository.watchConversations(uid).listen(
+        (conversations) {
+          if (mounted) {
+            setState(() {
+              _allConversations = conversations;
+              _onSearchChanged(_searchQuery); // Update filtered list
+            });
+          }
+        },
+        onError: (e) => debugPrint('\u26a0\ufe0f watchConversations error: $e'),
+      );
+    }
     _loadConversations();
   }
 
-  void _onChatProviderChanged() {
-    if (!mounted) return;
-
-    final currentVersion = _chatProvider.conversationHistoryVersion;
-    if (currentVersion == _lastHistoryVersion) return;
-
-    _lastHistoryVersion = currentVersion;
-    _loadConversations();
-  }
-
-  Future<void> _loadConversations() async {
+  Future<void> _loadConversations({bool wait = false}) async {
     if (mounted) {
       setState(() => _isLoading = true);
     }
     final uid = context.read<AuthProvider>().currentUser?.uid;
-    await Future.delayed(const Duration(seconds: 1), () {});
+    // No artificial delay — Hive local data renders instantly
     if (uid == null) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -74,18 +76,24 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     }
 
     try {
-      final conversations = await _repository.getConversations(uid);
-      if (mounted) {
-        setState(() {
-          _allConversations = conversations;
-          _filteredConversations = conversations;
-          _isLoading = false;
+      // getConversations now fetches from Firestore, merges into Hive,
+      // and returns the local list. The stream subscription above will
+      // automatically receive the updated list and call setState.
+      if (wait) {
+        await Future.delayed(const Duration(seconds: 2), () async {
+          _repository.getConversations(uid);
         });
+      } else {
+        await _repository.getConversations(uid);
       }
+      return;
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
         context.showError('something_went_wrong');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -105,7 +113,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   }
 
   Future<void> _refresh() async {
-    await _loadConversations();
+    await _loadConversations(wait: true);
   }
 
   Future<void> _confirmDeleteAll() async {
@@ -120,7 +128,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
             const Icon(Icons.warning_amber_rounded,
                 color: AppColors.lightError, size: 28),
             const SizedBox(width: 12),
-            Expanded(
+            Flexible(
               child: Text(
                 context.l10n.deleteAllConversations,
                 style: context.textTheme.titleLarge
@@ -135,8 +143,6 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
             height: 1.4,
           ),
         ),
-        actionsPadding:
-            const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         actions: [
           Row(
             children: [
@@ -167,10 +173,36 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   Future<void> _deleteAll() async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
-    LoadingOverlay.show(context, message: context.l10n.deleteAllConversations);
+    // Local-first delete: conversations disappear immediately from the UI.
+    // No loading overlay is needed — Firestore deletion runs in the background.
     try {
-      await _repository.deleteAllConversations(uid);
+      LoadingOverlay.show(context,
+          message: context.l10n.deleteAllConversations);
+      await Future.delayed(const Duration(seconds: 1), () async {
+        _repository.deleteAllConversationsLocalFirst(uid);
+      });
+      // Reload from Hive — list will be empty since all are soft-deleted
       await _loadConversations();
+
+      bool isOffline = false;
+      try {
+        final connectivity = await Connectivity().checkConnectivity();
+        isOffline = connectivity.contains(ConnectivityResult.none);
+      } catch (e) {
+        debugPrint('Connectivity check failed: $e');
+      }
+
+      if (!mounted) return;
+
+      if (isOffline) {
+        context.showSuccessToast(
+          AppLocalizations.of(context)!.offlineDeleteQueued,
+        );
+      } else {
+        context.showSuccessToast(
+          AppLocalizations.of(context)!.translate('conversation_deleted'),
+        );
+      }
     } catch (e) {
       if (mounted) context.showError('something_went_wrong');
     } finally {
@@ -180,8 +212,8 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
 
   @override
   void dispose() {
-    _chatProvider.removeListener(_onChatProviderChanged);
     _searchController.dispose();
+    _subscription?.cancel();
     super.dispose();
   }
 
@@ -191,104 +223,86 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: _refresh,
-              child: Column(
-                children: [
-                  // Fixed Header Section
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: Column(
+            children: [
+              // Fixed Header Section
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.horizontalPadding,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              context.l10n.conversationHistory,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displayMedium
-                                  ?.copyWith(
-                                      color: context.isDark
-                                          ? AppColors.primaryLight
-                                          : AppColors.primaryDark),
-                            ),
-                            if (_allConversations.isNotEmpty && !_isLoading)
-                              GestureDetector(
-                                onTap: _confirmDeleteAll,
-                                child: const ImageView(
-                                  image: ImageViewData.asset(
-                                    AppAssets.deleteIcon,
-                                  ),
-                                  width: 24,
-                                  height: 24,
-                                ),
+                        Text(context.l10n.conversationHistory,
+                            style: Theme.of(context).textTheme.displayMedium),
+                        if (_allConversations.isNotEmpty)
+                          GestureDetector(
+                            onTap: _confirmDeleteAll,
+                            child: const ImageView(
+                              image: ImageViewData.asset(
+                                AppAssets.deleteIcon,
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          context.l10n.historySubtitle,
-                          style: context.textTheme.bodyLarge?.copyWith(
-                            color: context.isDark
-                                ? AppColors.darkTextTertiary
-                                : AppColors.lightTextTertiary,
+                              width: 24,
+                              height: 24,
+                            ),
                           ),
-                        ),
-
-                        // Search Container (Fixed)
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                              vertical: isTablet ? 24 : 16),
-                          child: context.themedTextField(
-                            enabled: !_isLoading,
-                            onChanged: _onSearchChanged,
-                            hint: context.l10n.searchPlaceholder,
-                            controller: _searchController,
-                          ),
-                        ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Text(context.l10n.historySubtitle,
+                        style: context.textTheme.bodyLarge),
 
-                  // Scrollable Content
-                  Expanded(
-                    child: CustomScrollView(
-                      slivers: [
-                        if (_isLoading)
-                          _buildShimmerList()
-                        else if (_filteredConversations.isEmpty &&
-                            _searchQuery.isEmpty)
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: _EmptyHistory(isTablet: isTablet),
-                          )
-                        else if (_filteredConversations.isEmpty &&
-                            _searchQuery.isNotEmpty)
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Center(
-                              child: Text(
-                                context.l10n.noResultsFound,
-                                style: context.textTheme.bodyLarge,
-                              ),
-                            ),
-                          )
-                        else
-                          ..._buildGroupedLists(),
-                      ],
+                    // Search Container (Fixed)
+                    Padding(
+                      padding:
+                          EdgeInsets.symmetric(vertical: isTablet ? 24 : 16),
+                      child: context.themedTextField(
+                        enabled: !_isLoading,
+                        onChanged: _onSearchChanged,
+                        hint: context.l10n.searchPlaceholder,
+                        controller: _searchController,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+
+              // Scrollable Content
+              Expanded(
+                child: CustomScrollView(
+                  slivers: [
+                    if (_isLoading)
+                      _buildShimmerList()
+                    else if (_filteredConversations.isEmpty &&
+                        _searchQuery.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyHistory(isTablet: isTablet),
+                      )
+                    else if (_filteredConversations.isEmpty &&
+                        _searchQuery.isNotEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Text(
+                            context.l10n.noResultsFound,
+                            style: context.textTheme.bodyLarge,
+                          ),
+                        ),
+                      )
+                    else
+                      ..._buildGroupedLists(),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -486,10 +500,10 @@ class CustomConversationCard extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                   color: (context.isDark)
-                      ? AppColors.tealAccent.withValues(alpha: 0.3)
-                      : AppColors.cyanAccent.withValues(alpha: 0.2),
+                      ? AppColors.tealAccent.withValues(alpha: 0.5)
+                      : AppColors.cyanAccent.withValues(alpha: 0.3),
                   blurRadius: 3.0,
-                  spreadRadius: 1.5)
+                  spreadRadius: 1)
             ]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -508,6 +522,36 @@ class CustomConversationCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                // ── Sync status indicators ─────────────────────────────────
+                // syncFailed — non-retryable write failure; user needs to know
+                if (conversation.syncStatus == SyncStatus.syncFailed)
+                  Tooltip(
+                    message: 'Sync failed — will retry when online',
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: context.isDark
+                            ? AppColors.darkWarning
+                            : AppColors.lightWarning,
+                      ),
+                    ),
+                  )
+                // pendingCreate/pendingUpdate — queued, not yet confirmed
+                else if (conversation.syncStatus == SyncStatus.pendingCreate ||
+                    conversation.syncStatus == SyncStatus.pendingUpdate)
+                  const Tooltip(
+                    message: 'Waiting to sync',
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 4),
+                      child: Icon(
+                        Icons.cloud_off_rounded,
+                        size: 16,
+                        color: AppColors.info,
+                      ),
+                    ),
+                  ),
                 Icon(
                   Icons.chevron_right,
                   color: context.isDark

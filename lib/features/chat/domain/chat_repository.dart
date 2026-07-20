@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'conversation_model.dart';
 import 'message_model.dart';
 
@@ -45,7 +47,7 @@ abstract class ChatRepository {
     required String uid,
     required String conversationId,
   });
-  
+
   /// Update the title of a specific conversation in Firestore.
   Future<void> updateConversationTitle({
     required String uid,
@@ -56,6 +58,51 @@ abstract class ChatRepository {
   /// Permanently delete all conversations and messages from Firestore for a given user,
   /// and wipe all conversation Hive caches.
   Future<void> deleteAllConversations(String uid);
+
+  // ── Offline-First Streams ─────────────────────────────────────────────────
+
+  /// Stream of all non-deleted conversations for a user, sourced from Hive.
+  ///
+  /// Emits immediately with cached local data, then re-emits whenever the
+  /// local store changes (from UI actions or background sync merges).
+  Stream<List<ConversationModel>> watchConversations(String uid);
+
+  /// Stream of all non-deleted messages for a conversation, sourced from Hive.
+  ///
+  /// Emits immediately with cached local data, then re-emits on any change.
+  Stream<List<MessageModel>> watchMessages({
+    required String uid,
+    required String conversationId,
+  });
+
+  // ── Offline-First Mutation Commands ──────────────────────────────────────
+
+  /// Save a message pair locally first, then queue a Firestore sync task.
+  ///
+  /// This replaces the old [saveMessagePair] for the active chat flow.
+  /// Returns immediately after local write — Firestore sync is background.
+  Future<void> createOrAppendMessagePair({
+    required String uid,
+    required ConversationModel conversation,
+    required MessageModel userMessage,
+    required MessageModel aiMessage,
+    required bool isFirstMessage,
+  });
+
+  /// Soft-delete a conversation locally, then queue a remote delete task.
+  ///
+  /// The conversation disappears from the UI immediately without a loading overlay.
+  /// Firestore delete runs in the background via ChatSyncService.
+  Future<void> deleteConversationLocalFirst({
+    required String uid,
+    required String conversationId,
+  });
+
+  /// Soft-delete ALL conversations locally, then queue a remote delete-all task.
+  ///
+  /// The history screen clears instantly. Firestore deletes run sequentially
+  /// in the background via ChatSyncService.
+  Future<void> deleteAllConversationsLocalFirst(String uid);
 
   // ── Hive Cache Operations ─────────────────────────────────────────────────
 

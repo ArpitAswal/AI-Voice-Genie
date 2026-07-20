@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,9 +7,15 @@ import 'package:flutter/foundation.dart';
 import '../../../../core/constants/firebase_collections.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/services/storage_service.dart';
+import '../domain/chat_outbox_task.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
+import '../domain/local_conversation_record.dart';
+import '../domain/local_message_record.dart';
 import '../domain/message_model.dart';
+import 'chat_outbox_store.dart';
+import 'chat_sync_service.dart';
+import 'local_chat_store.dart';
 
 /// Concrete implementation of ChatRepository.
 ///
@@ -205,20 +212,58 @@ class ChatRepositoryImpl implements ChatRepository {
   @override
   Future<List<ConversationModel>> getConversations(String uid) async {
     try {
+      // 1. Fetch fresh data from Firestore
       final snapshot = await _firestore
           .collection(FirebaseCollections.conversationsCollection(uid))
           .orderBy(FirebaseCollections.fieldConversationLastMessageAt,
               descending: true)
-          .get();
+          .get(const GetOptions(source: Source.server));
 
-      return snapshot.docs
-          .map((doc) => ConversationModel.fromFirestore(doc.id, doc.data()))
-          .toList();
+      // 2. Merge into Hive cache (respecting local pending/deleted states)
+      for (final doc in snapshot.docs) {
+        final remoteConv = ConversationModel.fromFirestore(doc.id, doc.data());
+        final localKey = '${uid}_${remoteConv.id}';
+        final rawLocal = LocalChatStore.instance.conversationsBox.get(localKey);
+
+        if (rawLocal != null) {
+          try {
+            final localRecord =
+                LocalConversationRecord.fromMap(rawLocal as Map);
+            // Skip overwrite if local has pending writes or was deleted
+            if (localRecord.syncStatus == SyncStatus.pendingCreate ||
+                localRecord.syncStatus == SyncStatus.pendingUpdate ||
+                localRecord.syncStatus == SyncStatus.pendingDelete ||
+                localRecord.isDeleted) {
+              continue;
+            }
+          } catch (_) {}
+        }
+
+        await LocalChatStore.instance.saveConversation(
+          LocalConversationRecord(
+            uid: uid,
+            conversationId: remoteConv.id,
+            title: remoteConv.title,
+            lastMessage: remoteConv.lastMessage,
+            lastMessageAt: remoteConv.lastMessageAt,
+            createdAt: remoteConv.createdAt,
+            messageCount: remoteConv.messageCount,
+            capability: remoteConv.capability,
+            lastProvider: remoteConv.lastProvider,
+            syncStatus: SyncStatus.synced,
+            localUpdatedAt: DateTime.now(),
+          ),
+        );
+      }
+
+      // 3. Return the latest from Hive (which applies local filters)
+      final localRecords = LocalChatStore.instance.getConversations(uid);
+      return localRecords.map(_toConversationModel).toList();
     } on FirebaseException catch (e) {
-      throw ChatException(
-        ChatErrorCodes.loadFailed,
-        technicalMessage: 'getConversations failed: ${e.code}',
-      );
+      // On failure, fallback to returning what we have in the Hive cache.
+      // Even if empty, it's a valid local state (e.g. they just deleted all).
+      final localRecords = LocalChatStore.instance.getConversations(uid);
+      return localRecords.map(_toConversationModel).toList();
     }
   }
 
@@ -381,5 +426,198 @@ class ChatRepositoryImpl implements ChatRepository {
       return a.id.compareTo(b.id);
     });
     return sorted;
+  }
+
+  // ── Offline-First Stream Methods ───────────────────────────────────────
+
+  @override
+  Stream<List<ConversationModel>> watchConversations(String uid) {
+    // Delegate to LocalChatStore, then map LocalConversationRecord -> ConversationModel
+    // so the rest of the app can continue using ConversationModel without change.
+    return LocalChatStore.instance
+        .watchConversations(uid)
+        .map((records) => records.map(_toConversationModel).toList());
+  }
+
+  @override
+  Stream<List<MessageModel>> watchMessages({
+    required String uid,
+    required String conversationId,
+  }) {
+    // Delegate to LocalChatStore and map LocalMessageRecord -> MessageModel
+    return LocalChatStore.instance
+        .watchMessages(uid, conversationId)
+        .map((records) => records.map((r) => r.toMessageModel()).toList());
+  }
+
+  // ── Offline-First Mutation Commands ───────────────────────────────────
+
+  @override
+  Future<void> createOrAppendMessagePair({
+    required String uid,
+    required ConversationModel conversation,
+    required MessageModel userMessage,
+    required MessageModel aiMessage,
+    required bool isFirstMessage,
+  }) async {
+    final conversationId = conversation.id;
+    final now = DateTime.now();
+
+    // ── Step 1: Write conversation metadata to Hive ───────────────────────────
+    // This is the local-first write. The UI stream updates immediately.
+    final hasAiContent = aiMessage.content.trim().isNotEmpty;
+    final effectiveLastMessage =
+        hasAiContent ? aiMessage.content : userMessage.content;
+    final effectiveLastMessageAt =
+        hasAiContent ? aiMessage.timestamp : userMessage.timestamp;
+
+    final existingRecord =
+        LocalChatStore.instance.getConversation(uid, conversationId);
+    final isNewConversation = existingRecord == null;
+
+    final convRecord = LocalConversationRecord(
+      uid: uid,
+      conversationId: conversationId,
+      title: conversation.title,
+      lastMessage: effectiveLastMessage,
+      lastMessageAt: effectiveLastMessageAt,
+      createdAt: isNewConversation ? now : (existingRecord.createdAt ?? now),
+      // Increment local message count by 2 (user + AI)
+      messageCount: (existingRecord?.messageCount ?? 0) + 2,
+      capability: conversation.capability,
+      lastProvider: aiMessage.modelRequest,
+      localUpdatedAt: now,
+      // New conversations start as pendingCreate; subsequent messages are pendingUpdate
+      syncStatus: isNewConversation
+          ? SyncStatus.pendingCreate
+          : SyncStatus.pendingUpdate,
+    );
+    await LocalChatStore.instance.saveConversation(convRecord);
+
+    // ── Step 2: Write both messages individually to Hive ─────────────────────
+    await LocalChatStore.instance.saveMessage(
+      LocalMessageRecord.fromMessageModel(
+        userMessage,
+        uid: uid,
+        conversationId: conversationId,
+        syncStatus: SyncStatus.pendingCreate,
+      ),
+    );
+    await LocalChatStore.instance.saveMessage(
+      LocalMessageRecord.fromMessageModel(
+        aiMessage,
+        uid: uid,
+        conversationId: conversationId,
+        syncStatus: SyncStatus.pendingCreate,
+      ),
+    );
+
+    // ── Step 3: Enqueue outbox task for background Firestore sync ─────────────
+    // Build the full Firestore payload now so the sync worker has everything
+    // it needs even if the conversation object is no longer in memory.
+    final updatedConv = conversation.copyWith(
+      lastMessage: effectiveLastMessage,
+      lastMessageAt: effectiveLastMessageAt,
+      lastProvider: aiMessage.modelRequest,
+    );
+
+    // Deterministic idempotency key prevents duplicate Firestore writes on retry
+    final idempotencyKey =
+        'upsertMessagePair:$uid:$conversationId:${userMessage.id}';
+
+    await ChatOutboxStore.instance.enqueue(
+      ChatOutboxTask(
+        uid: uid,
+        type: OutboxTaskType.upsertMessagePair,
+        conversationId: conversationId,
+        messageIds: [userMessage.id, aiMessage.id],
+        payload: {
+          'conversation': updatedConv.toFirestore(),
+          'userMessage': userMessage.toCacheMap(),
+          'aiMessage': aiMessage.toCacheMap(),
+          'userMessageId': userMessage.id,
+          'aiMessageId': aiMessage.id,
+          'isFirstMessage': isFirstMessage,
+        },
+        idempotencyKey: idempotencyKey,
+      ),
+    );
+
+    ChatSyncService.instance.processOutbox();
+
+    debugPrint(
+        '📬 ChatRepositoryImpl: queued upsertMessagePair for $conversationId');
+  }
+
+  @override
+  Future<void> deleteConversationLocalFirst({
+    required String uid,
+    required String conversationId,
+  }) async {
+    // ── Step 1: Mark locally as deleted — hides the conversation from UI instantly ─
+    await LocalChatStore.instance.softDeleteConversation(uid, conversationId);
+
+    // ── Step 2: Enqueue outbox task for Firestore delete ────────────────────────
+    // Idempotency key ensures retrying the same delete is safe (deleting a
+    // missing Firestore doc does not throw; it is a no-op).
+    await ChatOutboxStore.instance.enqueue(
+      ChatOutboxTask(
+        uid: uid,
+        type: OutboxTaskType.deleteConversation,
+        conversationId: conversationId,
+        idempotencyKey: 'deleteConversation:$uid:$conversationId',
+      ),
+    );
+
+    ChatSyncService.instance.processOutbox();
+
+    debugPrint(
+        '🗑️ ChatRepositoryImpl: soft-deleted $conversationId locally, queued remote delete');
+  }
+
+  @override
+  Future<void> deleteAllConversationsLocalFirst(String uid) async {
+    // Capture the cutoff before any local writes to prevent race conditions
+    final cutoff = DateTime.now();
+
+    // ── Step 1: Soft-delete all local conversations for this user instantly ─────
+    await LocalChatStore.instance.softDeleteAllConversations(uid);
+
+    // ── Step 2: Enqueue a single delete-all outbox task ──────────────────────────
+    // One task processes all conversations sequentially in the sync worker,
+    // avoiding unbounded Future.wait() that can hit rate limits.
+    await ChatOutboxStore.instance.enqueue(
+      ChatOutboxTask(
+        uid: uid,
+        type: OutboxTaskType.deleteAllConversations,
+        conversationId: '',
+        payload: {'deleteAllCutoff': cutoff.toIso8601String()},
+        idempotencyKey:
+            'deleteAllConversations:$uid:${cutoff.millisecondsSinceEpoch}',
+      ),
+    );
+
+    ChatSyncService.instance.processOutbox();
+
+    debugPrint(
+        '🗑️ ChatRepositoryImpl: soft-deleted all conversations for uid=$uid, queued remote delete-all');
+  }
+
+  // ── Conversion Helpers ───────────────────────────────────────────────────────
+
+  /// Convert a [LocalConversationRecord] to a [ConversationModel] for UI consumption.
+  ConversationModel _toConversationModel(LocalConversationRecord r) {
+    return ConversationModel(
+      id: r.conversationId,
+      title: r.title,
+      lastMessage: r.lastMessage,
+      lastMessageAt: r.lastMessageAt,
+      createdAt: r.createdAt,
+      messageCount: r.messageCount,
+      capability: r.capability,
+      lastProvider: r.lastProvider,
+      // Expose sync status so the UI can show a warning badge on syncFailed
+      syncStatus: r.syncStatus,
+    );
   }
 }

@@ -24,6 +24,10 @@ class ConversationModel {
   /// Which AI provider sent the last response
   final AiProviderId? lastProvider;
 
+  /// Local-only sync status — exposed for UI badge rendering (e.g., sync-failed warning).
+  /// This field is NOT stored in Firestore; it is populated from the Hive local record.
+  final SyncStatus syncStatus;
+
   const ConversationModel({
     required this.id,
     required this.title,
@@ -33,6 +37,7 @@ class ConversationModel {
     this.messageCount = 0,
     this.capability = AiCapability.textGeneration,
     this.lastProvider,
+    this.syncStatus = SyncStatus.synced,
   });
 
   // ── Factory: from Firestore ───────────────────────────────────────────────
@@ -94,6 +99,7 @@ class ConversationModel {
     int? messageCount,
     AiCapability? capability,
     AiProviderId? lastProvider,
+    SyncStatus? syncStatus,
   }) {
     return ConversationModel(
       id: id ?? this.id,
@@ -104,6 +110,7 @@ class ConversationModel {
       messageCount: messageCount ?? this.messageCount,
       capability: capability ?? this.capability,
       lastProvider: lastProvider ?? this.lastProvider,
+      syncStatus: syncStatus ?? this.syncStatus,
     );
   }
 
