@@ -6,6 +6,7 @@ import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:ai_voice_genie/shared/widgets/image_view.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -220,7 +221,6 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final isTablet = context.isTablet;
-
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
@@ -239,19 +239,34 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(context.l10n.conversationHistory,
-                            style: Theme.of(context).textTheme.displayMedium),
-                        if (_allConversations.isNotEmpty)
+                        Expanded(
+                          child: Text(context.l10n.conversationHistory,
+                              style: Theme.of(context).textTheme.displayMedium),
+                        ),
+                        if (_allConversations.isNotEmpty) ...[
+                          SizedBox(
+                            height: 28,
+                            child: IconButton(
+                              onPressed: () =>
+                                  AppRoutes.navigateTo(context, AppRoutes.chat),
+                              icon: const FaIcon(FontAwesomeIcons.solidMessage),
+                              tooltip: context.l10n.newConversation,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0, vertical: 0.0),
+                              color: AppColors.info,
+                            ),
+                          ),
                           GestureDetector(
                             onTap: _confirmDeleteAll,
                             child: const ImageView(
                               image: ImageViewData.asset(
                                 AppAssets.deleteIcon,
                               ),
-                              width: 24,
-                              height: 24,
+                              width: 28,
+                              height: 28,
                             ),
-                          ),
+                          )
+                        ],
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -289,11 +304,29 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                         _searchQuery.isNotEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
-                        child: Center(
-                          child: Text(
-                            context.l10n.noResultsFound,
-                            style: context.textTheme.bodyLarge,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: context.screenWidth * 0.8,
+                              height: context.screenWidth * 0.8,
+                              child: Lottie.asset(
+                                AppAssets.emptySearch,
+                                reverse: true,
+                                repeat: true,
+                                fit: BoxFit.cover,
+                                imageProviderFactory: (lottieImage) {
+                                  return const AssetImage(AppAssets.appLogo);
+                                },
+                              ),
+                            ),
+                            Text(
+                              context.l10n.noConversationFound(_searchQuery),
+                              style: context.textTheme.bodyLarge,
+                            )
+                          ],
                         ),
                       )
                     else
@@ -339,17 +372,17 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     }
 
     if (yesterday.isNotEmpty) {
-      if (today.isNotEmpty) {
-        slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
-      }
+      // if (today.isNotEmpty) {
+      //   slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
+      // }
       slivers.add(_buildSectionHeader(context.l10n.yesterday));
       slivers.add(_buildListSliver(yesterday));
     }
 
     if (older.isNotEmpty) {
-      if (today.isNotEmpty || yesterday.isNotEmpty) {
-        slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
-      }
+      // if (today.isNotEmpty || yesterday.isNotEmpty) {
+      //   slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
+      // }
       slivers.add(_buildSectionHeader(context.l10n.older));
       slivers.add(_buildListSliver(older));
     }
@@ -365,12 +398,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
       child: Padding(
         padding: EdgeInsets.symmetric(
             horizontal: context.horizontalPadding, vertical: 8),
-        child: Text(
-          title,
-          style: context.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: Text(title, style: context.textTheme.bodyLarge),
       ),
     );
   }
@@ -632,32 +660,32 @@ class _EmptyHistory extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.history_rounded,
-            size: isTablet ? 72 : 56,
-            color:
-                context.isDark ? AppColors.darkDivider : AppColors.lightDivider,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: context.screenWidth,
+          height: context.screenWidth,
+          child: Lottie.asset(
+            AppAssets.emptyConversation,
+            reverse: true,
+            repeat: true,
+            fit: BoxFit.cover,
+            imageProviderFactory: (lottieImage) {
+              return const AssetImage(AppAssets.appLogo);
+            },
           ),
-          SizedBox(height: isTablet ? 14 : 8),
-          Text(
-            l10n.noConversationsMessage,
-            style: context.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: isTablet ? 28 : 14),
-          SizedBox(
-            height: isTablet ? 52 : 46,
-            child: ElevatedButton(
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+          child: context.themedElevatedButton(
               onPressed: () => AppRoutes.navigateTo(context, AppRoutes.chat),
-              child: Text(l10n.translate('new_conversation')),
-            ),
-          ),
-        ],
-      ),
+              label: l10n.translate('new_conversation'),
+              align: Alignment.center),
+        ),
+      ],
     );
   }
 }

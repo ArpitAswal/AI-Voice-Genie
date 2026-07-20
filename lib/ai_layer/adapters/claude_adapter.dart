@@ -288,13 +288,13 @@ class ClaudeAdapter extends AiProviderAdapter {
   AiException _mapError(Object error) {
     if (error is SocketException) {
       return const AiTransientException(
-        message: 'No internet connection',
+        message: 'no_internet_connection',
         provider: AiProviderId.claude,
       );
     }
     if (error is http.ClientException) {
-      return AiTransientException(
-        message: 'Network error: ${error.message}',
+      return const AiTransientException(
+        message: 'error_unexpected_ai',
         provider: AiProviderId.claude,
       );
     }

@@ -1,6 +1,8 @@
 class AppAssets {
   ///------ Lottie Assets -----///
   static const String splashLottie = "assets/lottie/splash_lottie.json";
+  static const String emptySearch = "assets/lottie/empty_search.json";
+  static const String emptyConversation = "assets/lottie/conversation.json";
 
   ///----- GIF Assets ------///
   static const String imageLoadError = "assets/gifs/image_load_error.gif";

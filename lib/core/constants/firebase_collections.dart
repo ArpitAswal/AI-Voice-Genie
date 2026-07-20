@@ -192,23 +192,23 @@ class FirebaseCollections {
 
   /// AI_Voice_Genie/Users/User_Model/{uid}/usageEvents
   static String usageEventsCollection(String uid) =>
-      '$root/$users/$userModel/$uid/$usageEvents';
+      '$root/$users/$uid/$userModel/$usageEvents';
 
   /// AI_Voice_Genie/Users/User_Model/{uid}/usageSummaries/{docId}
   static String usageSummaryDoc(String uid, String docId) =>
-      '$root/$users/$userModel/$uid/$usageSummaries/$docId';
+      '$root/$users/$uid/$userModel/$usageSummaries/$docId';
 
   /// AI_Voice_Genie/Users/User_Model/{uid}/usageSummaries
   static String usageSummariesCollection(String uid) =>
-      '$root/$users/$userModel/$uid/$usageSummaries';
+      '$root/$users/$uid/$userModel/$usageSummaries';
 
   /// AI_Voice_Genie/Users/User_Model/{uid}/usageBudgets/{providerId}
   static String usageBudgetDoc(String uid, String providerId) =>
-      '$root/$users/$userModel/$uid/$usageBudgets/$providerId';
+      '$root/$users/$uid/$userModel/$usageBudgets/$providerId';
 
   /// AI_Voice_Genie/Users/User_Model/{uid}/usageBudgets
   static String usageBudgetsCollection(String uid) =>
-      '$root/$users/$userModel/$uid/$usageBudgets';
+      '$root/$users/$uid/$userModel/$usageBudgets';
 
   // ── Usage Event Field Names ──────────────────────────────────────────────
   static const String usageFieldId = 'id';

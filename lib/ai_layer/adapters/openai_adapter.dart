@@ -417,7 +417,7 @@ class OpenAiAdapter extends AiProviderAdapter {
   AiException _mapError(Object error, String requestId) {
     if (error is SocketException) {
       return const AiTransientException(
-        message: 'error_no_internet',
+        message: 'no_internet_connection',
         provider: AiProviderId.openAi,
       );
     }

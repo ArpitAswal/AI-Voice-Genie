@@ -130,12 +130,12 @@ class AiOrchestrator {
 
       if (e is AiTransientException) {
         final exhaustedError = AiExhaustedException(
-          message: 'error_all_models_failed',
+          message: 'server_busy',
           triedProviders: [selectedProvider],
         );
         _effectBus.emit(exhaustedError, StackTrace.current);
+        throw exhaustedError;
       }
-
       rethrow;
     }
   }
@@ -153,25 +153,25 @@ class AiOrchestrator {
     final adapter = _adapters[providerId]!;
     int attempt = 0;
 
+    // Retrieve API key from Firestore (uses local cache after first read)
+    final keyModel = await _keyRepository.loadKey(
+      uid: request.uid,
+      providerId: providerId,
+    );
+
+    if (keyModel == null || keyModel.apiKey.isEmpty) {
+      // Key was deleted mid-session — treat as unavailable
+      debugPrint(
+        '⚠️ Orchestrator: no key found for ${providerId.id}',
+      );
+      throw AiHardErrorException(
+        message: 'error_no_models_with_key',
+        provider: providerId,
+      );
+    }
+
     while (true) {
       attempt++;
-
-      // Retrieve API key from Firestore (uses local cache after first read)
-      final keyModel = await _keyRepository.loadKey(
-        uid: request.uid,
-        providerId: providerId,
-      );
-
-      if (keyModel == null || keyModel.apiKey.isEmpty) {
-        // Key was deleted mid-session — treat as unavailable
-        debugPrint(
-          '⚠️ Orchestrator: no key found for ${providerId.id}',
-        );
-        throw AiHardErrorException(
-          message: 'error_no_models_with_key',
-          provider: providerId,
-        );
-      }
 
       try {
         debugPrint(
@@ -214,6 +214,7 @@ class AiOrchestrator {
       } on AiTransientException {
         if (attempt >= AppConstants.maxRetryAttempts) {
           // Retries exhausted — surface failure for the selected provider.
+          debugPrint("🔄 Maximum orchestra retry attempts reached");
           rethrow;
         }
 

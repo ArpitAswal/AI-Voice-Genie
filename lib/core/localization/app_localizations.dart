@@ -140,13 +140,11 @@ class AppLocalizations {
       'delete_all_confirm_message':
           'Are you sure you want to delete all conversations? This cannot be undone.',
       'deleting_all_conversations': 'Deleting All Conversations..',
-      'no_conversations': 'No conversations yet',
-      'no_conversations_message': 'Ready when your are.',
       'start_conversation': 'Start a conversation with your AI assistant.',
       'conversation_history': 'History',
       'history_subtitle': 'Review your recent thoughts.',
       'search_placeholder': 'Search conversations...',
-      'no_results_found': 'No results found',
+      'no_search_found': 'No conversations found for "{0}"',
       'today': 'Today',
       'yesterday': 'Yesterday',
       'older': 'Older',
@@ -258,6 +256,7 @@ class AppLocalizations {
           'Microphone permission is required for voice input.',
       'open_settings': 'Open Settings',
       'speech_text_unavailable': 'Speech Text not available.',
+      'voice_assistant': 'Voice Assistant',
 
       // ── Settings ───────────────────────────────────────────────────────────
       'home': 'Home',
@@ -426,6 +425,8 @@ class AppLocalizations {
       'error_microphone': 'Microphone is not available on this device.',
       'model_rate_limit': 'rate limit exceeded. Please try again in a moment.',
       'press_back_again_to_exit': 'Press back again to exit',
+      'server_busy':
+          'Due to high traffic, our server is busy. Please try again later!',
     },
 
     // ── HINDI ─────────────────────────────────────────────────────────────────
@@ -537,13 +538,11 @@ class AppLocalizations {
       'delete_all_confirm_message':
           'क्या आप सभी बातचीत हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
       'deleting_all_conversations': 'सभी बातचीत हटाई जा रही हैं..',
-      'no_conversations': 'अभी कोई बातचीत नहीं',
-      'no_conversations_message': 'तैयार जब आप हैं।',
       'start_conversation': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
       'conversation_history': 'इतिहास',
       'history_subtitle': 'अपने हालिया विचारों की समीक्षा करें।',
       'search_placeholder': 'बातचीत खोजें...',
-      'no_results_found': 'कोई परिणाम नहीं मिला',
+      'no_search_found': '"{0}" के लिए कोई बातचीत नहीं मिली',
       'today': 'आज',
       'yesterday': 'कल',
       'older': 'पुराने',
@@ -655,6 +654,7 @@ class AppLocalizations {
           'वॉयस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
       'open_settings': 'सेटिंग खोलें',
       'speech_text_unavailable': 'भाषण का पाठ उपलब्ध नहीं है।',
+      'voice_assistant': 'वॉयस असिस्टेंट',
 
       // ── Settings ───────────────────────────────────────────────────────────
       'home': 'होम',
@@ -823,6 +823,8 @@ class AppLocalizations {
       'model_rate_limit':
           'की दर सीमा पार हो गई है। कृपया कुछ देर बाद पुनः प्रयास करें।',
       'press_back_again_to_exit': 'ऐप बंद करने के लिए एक बार फिर वापस दबाएं',
+      'server_busy':
+          'ज़्यादा ट्रैफ़िक की वजह से हमारा सर्वर व्यस्त है। कृपया बाद में फिर से कोशिश करें!',
     },
   };
 
@@ -915,7 +917,8 @@ class AppLocalizations {
   String get historySubtitle => translate('history_subtitle');
   String get conversationHistory => translate('conversation_history');
   String get searchPlaceholder => translate('search_placeholder');
-  String get noResultsFound => translate('no_results_found');
+  String noConversationFound(String query) =>
+      translate('no_search_found').replaceAll('{0}', query);
   String get today => translate('today');
   String get yesterday => translate('yesterday');
   String get older => translate('older');
@@ -941,8 +944,6 @@ class AppLocalizations {
   String get generateCodePrompt => translate('prompt_template_generate_code');
   String get analyzeImagePrompt => translate('prompt_template_analyze_image');
   String get createImagePrompt => translate('prompt_template_create_image');
-  String get noConversations => translate('no_conversations');
-  String get noConversationsMessage => translate('no_conversations_message');
   String get deleting => translate('deleting');
   String get profile => translate('profile');
   String get editProfile => translate('edit_profile');

@@ -68,12 +68,12 @@ class IntroScreen extends StatelessWidget {
           runSpacing: 12,
           children: [
             _QuickActionButton(
-                icon: Icons.chat_bubble_rounded,
+                icon: Icons.question_answer_rounded,
                 label: context.l10n.askQuestion,
                 iconColor: AppColors.tealAccent),
             _QuickActionButton(
                 icon: Icons.upload_file_rounded,
-                label: context.l10n.uploadPdf,
+                label: context.l10n.summarizePdf,
                 iconColor: AppColors.voiceActive),
             _QuickActionButton(
                 icon: Icons.palette_rounded,
@@ -171,7 +171,7 @@ class IntroScreen extends StatelessWidget {
             ],
           ),
           SizedBox(height: context.isTablet ? 16 : 8),
-          Text(context.l10n.tapToSpeak.toUpperCase(),
+          Text(context.l10n.translate('voice_assistant').toUpperCase(),
               style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
@@ -186,8 +186,8 @@ class IntroScreen extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _buildHero(context),
-        const Spacer(),
+        Expanded(child: _buildHero(context)),
+        const SizedBox(width: 16),
         Container(
           decoration: BoxDecoration(
               gradient: context.isDark

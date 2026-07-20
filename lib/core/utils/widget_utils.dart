@@ -95,7 +95,7 @@ extension WidgetExtensions on BuildContext {
         focusedBorder: border ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: theme.colorScheme.primary),
+              borderSide: BorderSide(color: isDark ? AppColors.primaryDark : AppColors.primaryLight),
             ),
         errorBorder: errorBorder ??
             OutlineInputBorder(

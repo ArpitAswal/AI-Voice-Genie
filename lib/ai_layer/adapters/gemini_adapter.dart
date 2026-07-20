@@ -467,7 +467,7 @@ class GeminiAdapter extends AiProviderAdapter {
   AiException _mapError(Object error) {
     if (error is SocketException) {
       return const AiTransientException(
-        message: 'error_no_internet',
+        message: 'no_internet_connection',
         provider: AiProviderId.gemini,
       );
     }

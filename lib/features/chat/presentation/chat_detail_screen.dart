@@ -217,7 +217,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     final error = context.read<ChatProvider>().errorMessage;
     if (error != null) {
-      context.showError(error);
+      context.showError(context.l10n.translate(error));
       context.read<ChatProvider>().clearError();
     }
   }
@@ -405,131 +405,137 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           ),
         ],
       ),
-      bottomSheet:
-          // ── Input Bar ──────────────────────────────────────────────────────
-          SafeArea(
-        bottom: false,
-        child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: context.screenHeight * 0.4,
-            ),
-            child:
-                Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
-              builder: (
-                _,
-                apiKeyProvider,
-                chatProvider,
-                preferences,
-                __,
-              ) {
-                final validProviders = apiKeyProvider.validProviders;
-                final selectedProvider =
-                    ChatModelSelection.resolveSelectedProvider(
-                          availableProviders: validProviders,
-                          selectedProvider: preferences.preferredProvider,
-                          preferredProvider: preferences.preferredProvider,
-                        ) ??
-                        preferences.preferredProvider;
+      body: Column(
+        children: [
+          Expanded(
+            child: Consumer<ChatProvider>(
+              builder: (context, chatProvider, _) {
+                final messages = chatProvider.messages;
+                if (chatProvider.isLoadingMessages && messages.isEmpty) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: context.theme.cardTheme.color,
-                    borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context.isTablet ? 30 : 20)),
-                    border: Border.all(
-                        color: context.theme.dividerTheme.color!, width: 1),
+                return ListView.builder(
+                  controller: _scrollController,
+                  padding: EdgeInsets.symmetric(
+                    vertical: isTablet ? 16 : 12,
+                    horizontal: isTablet ? 16 : 12,
                   ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: context.verticalSpacing,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: context.horizontalPadding,
-                          ),
-                          child: ChatModelSelectorDropdown(
-                            providers: validProviders,
-                            selectedProvider: selectedProvider,
-                            isEnabled: !chatProvider.isGenerating,
-                            onChanged: (provider) {
-                              FocusManager.instance.primaryFocus?.unfocus();
-                              preferences.setPreferredProvider(provider);
-                            },
+                  itemCount: messages.length +
+                      (chatProvider.isGenerating ? 1 : 0) +
+                      (chatProvider.isLoadingMessages ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    // Load more indicator at top
+                    if (index == 0 && chatProvider.isLoadingMessages) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
-                        const SizedBox(height: 4.0),
-                        Flexible(
-                          child: ChatInputBar(
-                            isGenerating: chatProvider.isGenerating,
-                            isTablet: isTablet,
-                            onSend: _handleSend,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                      );
+                    }
+
+                    final adjustedIndex =
+                        chatProvider.isLoadingMessages ? index - 1 : index;
+
+                    // Typing indicator at bottom
+                    if (adjustedIndex == messages.length &&
+                        chatProvider.isGenerating) {
+                      return const TypingIndicator();
+                    }
+
+                    if (adjustedIndex < 0 || adjustedIndex >= messages.length) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return MessageBubble(
+                      message: messages[adjustedIndex],
+                      isTablet: isTablet,
+                    );
+                  },
                 );
               },
-            )),
-      ),
-      body: Consumer<ChatProvider>(
-        builder: (context, chatProvider, _) {
-          final messages = chatProvider.messages;
-          if (chatProvider.isLoadingMessages && messages.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+            ),
+          ),
+          // ── Input Bar ──────────────────────────────────────────────────────
+          SafeArea(
+            bottom: true,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: context.screenHeight * 0.4,
+              ),
+              child: Consumer3<ApiKeyProvider, ChatProvider,
+                  AiPreferencesProvider>(
+                builder: (
+                  _,
+                  apiKeyProvider,
+                  chatProvider,
+                  preferences,
+                  __,
+                ) {
+                  final validProviders = apiKeyProvider.validProviders;
+                  final selectedProvider =
+                      ChatModelSelection.resolveSelectedProvider(
+                            availableProviders: validProviders,
+                            selectedProvider: preferences.preferredProvider,
+                            preferredProvider: preferences.preferredProvider,
+                          ) ??
+                          preferences.preferredProvider;
 
-          return ListView.builder(
-            controller: _scrollController,
-            padding: EdgeInsets.symmetric(
-              vertical: isTablet ? 16 : 12,
-              horizontal: isTablet ? 16 : 12,
-            ).copyWith(bottom: context.screenHeight * 0.2),
-            itemCount: messages.length +
-                (chatProvider.isGenerating ? 1 : 0) +
-                (chatProvider.isLoadingMessages ? 1 : 0),
-            itemBuilder: (context, index) {
-              // Load more indicator at top
-              if (index == 0 && chatProvider.isLoadingMessages) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: context.theme.cardTheme.color,
+                      borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(context.isTablet ? 30 : 20)),
+                      border: Border.all(
+                          color: context.theme.dividerTheme.color!, width: 1),
                     ),
-                  ),
-                );
-              }
-
-              final adjustedIndex =
-                  chatProvider.isLoadingMessages ? index - 1 : index;
-
-              // Typing indicator at bottom
-              if (adjustedIndex == messages.length &&
-                  chatProvider.isGenerating) {
-                return const TypingIndicator();
-              }
-
-              if (adjustedIndex < 0 || adjustedIndex >= messages.length) {
-                return const SizedBox.shrink();
-              }
-
-              return MessageBubble(
-                message: messages[adjustedIndex],
-                isTablet: isTablet,
-              );
-            },
-          );
-        },
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: context.verticalSpacing,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: context.horizontalPadding,
+                            ),
+                            child: ChatModelSelectorDropdown(
+                              providers: validProviders,
+                              selectedProvider: selectedProvider,
+                              isEnabled: !chatProvider.isGenerating,
+                              onChanged: (provider) {
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                preferences.setPreferredProvider(provider);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 4.0),
+                          Flexible(
+                            child: ChatInputBar(
+                              isGenerating: chatProvider.isGenerating,
+                              isTablet: isTablet,
+                              onSend: _handleSend,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
