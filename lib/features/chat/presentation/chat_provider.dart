@@ -84,6 +84,8 @@ class ChatProvider extends ChangeNotifier {
   int get preferredImageCount => _preferences.preferredImageCount;
   ResponseLength get preferredResponseLength =>
       _preferences.preferredResponseLength;
+  VisionDetailLevel get preferredVisionDetailLevel =>
+      _preferences.preferredVisionDetailLevel;
 
   // ── Load Conversation ──────────────────────────────────────────────────────
 
@@ -301,6 +303,7 @@ class ChatProvider extends ChangeNotifier {
           uid: uid,
           prompt: trimmedPrompt,
           conversationHistory: history,
+          visionDetailLevel: preferredVisionDetailLevel,
           responseLength: preferredResponseLength,
           imageSize: (requestCapability == AiCapability.imageGeneration)
               ? preferredImageSize

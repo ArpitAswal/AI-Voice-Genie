@@ -783,7 +783,8 @@ class _StatusIcon extends StatelessWidget {
         return Icon(
           Icons.done_all_rounded,
           size: 16,
-          color: context.isDark ? AppColors.darkSuccess : AppColors.lightSuccess,
+          color:
+              context.isDark ? AppColors.darkSuccess : AppColors.lightSuccess,
         );
       case MessageStatus.failed:
         return Icon(

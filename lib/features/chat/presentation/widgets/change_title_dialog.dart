@@ -46,38 +46,37 @@ class _ChangeTitleDialogState extends State<ChangeTitleDialog> {
       content: SizedBox(
         width: double.maxFinite,
         child: context.themedTextField(
-          controller: _controller,
-          textCapitalization: TextCapitalization.sentences,
-          hint: l10n.translate('rename_conversation_name'),
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: context.primaryColor),
-            borderRadius: BorderRadius.circular(14),
-          )
-        ),
+            controller: _controller,
+            textCapitalization: TextCapitalization.sentences,
+            hint: l10n.translate('rename_conversation_name'),
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: context.primaryColor),
+              borderRadius: BorderRadius.circular(14),
+            )),
       ),
       actions: [
-        Row(
-        children: [
-        Expanded(
-          child: context.themedOutlinedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            label:
-              l10n.translate('cancel'),
+        Row(children: [
+          Expanded(
+            child: context.themedOutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              label: l10n.translate('cancel'),
+            ),
           ),
-        ),
           const SizedBox(width: 16),
-        Expanded(
-          child: context.themedOutlinedButton(
-            onPressed: () {
-              final newTitle = _controller.text.trim();
-              if (newTitle.isNotEmpty && newTitle != widget.initialTitle) {
-                Navigator.of(context).pop(newTitle);
-              } else {
-                Navigator.of(context).pop();
-              }
-            }, label: l10n.translate('rename'),
-          ),
-        )])
+          Expanded(
+            child: context.themedOutlinedButton(
+              onPressed: () {
+                final newTitle = _controller.text.trim();
+                if (newTitle.isNotEmpty && newTitle != widget.initialTitle) {
+                  Navigator.of(context).pop(newTitle);
+                } else {
+                  Navigator.of(context).pop();
+                }
+              },
+              label: l10n.translate('rename'),
+            ),
+          )
+        ])
       ],
     );
   }
