@@ -218,6 +218,33 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
   }
 
   @override
+  Stream<Map<AiProviderId, ApiKeyModel>> watchKeys(String uid) {
+    // The collection path for a user's API keys is derived from the doc path
+    // by removing the specific providerId.
+    // Example doc path: AIVoiceGenie/apiKeys/{uid}/{providerId}
+    // So collection path is: AIVoiceGenie/apiKeys/{uid}
+    final collectionPath =
+        '${FirebaseCollections.root}/${FirebaseCollections.apiKeys}/$uid';
+
+    return _firestore.collection(collectionPath).snapshots().map((snapshot) {
+      final result = <AiProviderId, ApiKeyModel>{};
+
+      for (final doc in snapshot.docs) {
+        if (doc.data().isNotEmpty) {
+          final model = ApiKeyModel.fromFirestore(doc.data());
+          result[AiProviderId.fromId(model.aiProviderId)] = model;
+        }
+      }
+
+      // Sync memory cache
+      _memoryCache.clear();
+      _memoryCache.addAll(result);
+
+      return result;
+    });
+  }
+
+  @override
   Future<ApiKeyModel?> loadKey({
     required String uid,
     required AiProviderId providerId,

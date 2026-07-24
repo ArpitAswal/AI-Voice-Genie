@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/firebase_collections.dart';
+import '../../../core/security/encryption_service.dart';
 
 /// Immutable domain entity representing a stored AI provider API key.
 ///
@@ -43,7 +44,8 @@ class ApiKeyModel {
       aiProviderId: data[FirebaseCollections.fieldProviderId] as String? ?? '',
       aiProviderModelFeatures:
           data[FirebaseCollections.fieldProviderModelFeatures] as String? ?? '',
-      apiKey: data[FirebaseCollections.fieldApiKey] as String? ?? '',
+      apiKey: EncryptionService.decrypt(
+          data[FirebaseCollections.fieldApiKey] as String? ?? ''),
       isValid: data[FirebaseCollections.fieldKeyIsValid] as bool? ?? false,
       keyAddedAt:
           (data[FirebaseCollections.fieldKeyAddedAt] as Timestamp?)?.toDate(),
@@ -60,7 +62,7 @@ class ApiKeyModel {
     return {
       FirebaseCollections.fieldProviderId: aiProviderId,
       FirebaseCollections.fieldProviderModelFeatures: aiProviderModelFeatures,
-      FirebaseCollections.fieldApiKey: apiKey,
+      FirebaseCollections.fieldApiKey: EncryptionService.encrypt(apiKey),
       FirebaseCollections.fieldKeyIsValid: isValid,
       FirebaseCollections.fieldKeyLastValidated: FieldValue.serverTimestamp(),
     };

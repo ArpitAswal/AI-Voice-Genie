@@ -1,4 +1,6 @@
 import 'package:ai_voice_genie/core/error/effect_bus.dart';
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../core/enums/app_enums.dart';
@@ -35,6 +37,8 @@ class ApiKeyProvider extends ChangeNotifier {
   })  : _repository = repository ?? ApiKeyRepositoryImpl(),
         _analytics = analytics ?? AnalyticsService.instance;
 
+  StreamSubscription<Map<AiProviderId, ApiKeyModel>>? _keysSubscription;
+
   // ── State ──────────────────────────────────────────────────────────────────
 
   /// Validation status per provider — drives card UI state
@@ -70,7 +74,7 @@ class ApiKeyProvider extends ChangeNotifier {
     if (key == null || key.isEmpty) return null;
     // Show first 4 and last 4 characters only
     if (key.length <= 8) return '••••••••';
-    return '${key.substring(0, 4)}••••${key.substring(key.length - 4)}';
+    return '${key.substring(0, 4)}••••••••••${key.substring(key.length - 4)}';
   }
 
   /// Whether at least one provider has a valid key
@@ -115,7 +119,41 @@ class ApiKeyProvider extends ChangeNotifier {
       return false;
     } finally {
       notifyListeners();
+      // Start real-time sync after initial load
+      _startWatchingKeys(uid);
     }
+  }
+
+  /// Listens to real-time updates from Firestore to handle keys deleted
+  /// manually or from another device.
+  void _startWatchingKeys(String uid) {
+    _keysSubscription?.cancel();
+    _keysSubscription = _repository.watchKeys(uid).listen((keys) {
+      // First, set all to notAdded to catch deleted keys
+      for (final provider in AiProviderId.values) {
+        if (!keys.containsKey(provider) &&
+            _statuses[provider] != ApiKeyStatus.validating) {
+          _statuses[provider] = ApiKeyStatus.notAdded;
+          _storedKeys.remove(provider);
+        }
+      }
+
+      for (final entry in keys.entries) {
+        // Don't overwrite if currently validating to prevent jitter
+        if (_statuses[entry.key] == ApiKeyStatus.validating) continue;
+
+        _storedKeys[entry.key] = entry.value;
+        _statuses[entry.key] =
+            entry.value.isValid ? ApiKeyStatus.valid : ApiKeyStatus.invalid;
+      }
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _keysSubscription?.cancel();
+    super.dispose();
   }
 
   // ── Validate and Save ──────────────────────────────────────────────────────

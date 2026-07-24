@@ -45,6 +45,11 @@ abstract class ApiKeyRepository {
     required AiProviderId providerId,
   });
 
+  /// Listen to all existing API keys for a user in real-time.
+  ///
+  /// Returns a stream of providerId → ApiKeyModel map.
+  Stream<Map<AiProviderId, ApiKeyModel>> watchKeys(String uid);
+
   /// Delete the API key for a specific provider from Firestore.
   Future<void> deleteKey({
     required String uid,

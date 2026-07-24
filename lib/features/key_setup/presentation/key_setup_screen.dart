@@ -6,8 +6,10 @@ import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:no_screenshot/no_screenshot.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/widgets/app_alert_dialog.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/enums/app_enums.dart';
@@ -38,6 +40,34 @@ class KeySetupScreen extends StatefulWidget {
 }
 
 class _KeySetupScreenState extends State<KeySetupScreen> {
+  final noScreenshot = NoScreenshot.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    switchScreenShotState(true);
+  }
+
+  @override
+  void dispose() {
+    switchScreenShotState(false);
+    super.dispose();
+  }
+
+  Future<void> switchScreenShotState(bool value) async {
+    if (value) {
+      // Disable screenshots & screen recording
+      final result = await noScreenshot.screenshotOff();
+      debugPrint('screenshotOff: $result');
+    } else {
+      // Re-enable screenshots & screen recording
+      final result = await noScreenshot.screenshotOn();
+      debugPrint('screenshotOn: $result');
+    }
+    // Toggle between enabled / disabled
+    // await noScreenshot.toggleScreenshot();
+  }
+
   Future<void> _handleContinue() async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
@@ -208,7 +238,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
 
     final isConfirm = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => AppAlertDialog(
               title: Text(context.l10n.removeKey),
               content: Text(context.l10n.keyRemoveMsg),
               actions: [
@@ -239,7 +269,6 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
           providerId: widget.provider,
         );
     LoadingOverlay.hide();
-    debugPrint("🔑 Deleting key for ${widget.provider.displayName}");
 
     if (!mounted) return;
     MessageUtils.showSuccess(
@@ -276,7 +305,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
             color: context.isDark ? AppColors.cardDark : AppColors.cardLight,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _borderColor(status),
+              color: _borderColor(status, widget.provider),
               width: isValid ? 1.5 : 1,
             ),
             boxShadow: [
@@ -305,7 +334,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                     Expanded(
                       child: Text(
                         widget.provider.displayName,
-                        style: context.textTheme.titleSmall?.copyWith(
+                        style: context.textTheme.headlineMedium?.copyWith(
                             color: widget.provider.brandColor(context)),
                       ),
                     ),
@@ -344,9 +373,11 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                             ),
                             onPressed: () =>
                                 setState(() => _obscureKey = !_obscureKey),
+                            padding: EdgeInsets.zero,
                           ),
                           // Paste button
                           IconButton(
+                            padding: EdgeInsets.zero,
                             icon: const Icon(
                               Icons.content_paste_rounded,
                               size: 20,
@@ -401,6 +432,8 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                   // ── Provider link + Validate button row ─────────────────
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Link to get a key
                       Expanded(
@@ -452,25 +485,49 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                     builder: (context, maskedKey, _) => Padding(
                       padding: const EdgeInsets.fromLTRB(8.0, 8.0, 8.0, 0.0),
                       child: Row(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            maskedKey ?? '••••••••••••',
-                            style: context.textTheme.bodySmall?.copyWith(
-                              fontFamily: 'monospace',
-                              color: widget.provider.brandColor(context),
-                              letterSpacing: 1,
+                          Flexible(
+                            child: Text(
+                              maskedKey ?? '••••••••••••',
+                              style: context.textTheme.bodySmall?.copyWith(
+                                fontFamily: 'monospace',
+                                color: widget.provider.brandColor(context),
+                                letterSpacing: 1,
+                              ),
+                              maxLines: 2,
                             ),
-                            maxLines: 1,
                           ),
-                          const Spacer(),
                           // Delete button — only shown when key is valid
+                          // GestureDetector(
+                          //   onTap: () =>
+                          //       _handleDelete(widget.provider.displayName),
+                          //   child: const ImageView(
+                          //     image: ImageViewData.asset(AppAssets.deleteIcon),
+                          //     width: 18,
+                          //     height: 18,
+                          //   ),
+                          // ),
                           GestureDetector(
                             onTap: () =>
                                 _handleDelete(widget.provider.displayName),
-                            child: const ImageView(
-                              image: ImageViewData.asset(AppAssets.deleteIcon),
-                              width: 18,
-                              height: 18,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: context.isTablet ? 10 : 8,
+                                vertical: context.isTablet ? 5 : 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: widget.provider
+                                    .brandColor(context)
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                context.l10n.translate('delete_key'),
+                                style: context.textTheme.labelSmall?.copyWith(
+                                    color: widget.provider.brandColor(context)),
+                              ),
                             ),
                           ),
                         ],
@@ -488,10 +545,10 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
 
   // ── Helper Methods ──────────────────────────────────────────────────────────
 
-  Color _borderColor(ApiKeyStatus status) {
+  Color _borderColor(ApiKeyStatus status, AiProviderId provider) {
     switch (status) {
       case ApiKeyStatus.valid:
-        return context.isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+        return provider.brandColor(context);
       case ApiKeyStatus.invalid:
         return context.isDark ? AppColors.darkError : AppColors.lightError;
       case ApiKeyStatus.validating:
@@ -597,7 +654,7 @@ class _StatusChip extends StatelessWidget {
           context.l10n.noKeyAdded,
           context.isDark
               ? AppColors.darkTextTertiary
-              : AppColors.lightTextSecondary,
+              : AppColors.lightTextTertiary,
           Icons.add_circle_outline_rounded
         ),
     };
