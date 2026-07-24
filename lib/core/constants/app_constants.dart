@@ -3,6 +3,17 @@
 /// All magic values must be referenced from here.
 /// Never hardcode strings, numbers, or paths in feature code.
 class AppConstants {
+  AppConstants._();
+
+  // ── Secrets (loaded via compile-time environment variables) ────────────────
+  // Run or build with: flutter run --dart-define-from-file=secrets.json
+  // secrets.json is git-ignored and must never be bundled as an asset.
+  static const String encryptionKey = String.fromEnvironment(
+    'ENCRYPTION_KEY',
+    defaultValue: '',
+  );
+
+
   // ── App Info ───────────────────────────────────────────────────────────────
   static const String appVersion = '1.0.0 + 1';
   static const String copyrightOwner = 'AI Voice Genie';
@@ -23,8 +34,6 @@ class AppConstants {
   static const Duration voicePulseDuration = Duration(milliseconds: 800);
 
   // ── Network ───────────────────────────────────────────────────────────────
-  static const Duration connectionTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 60);
   // AI API calls can take longer — generous timeout for image generation
   static const Duration aiRequestTimeout = Duration(seconds: 90);
 

@@ -29,6 +29,8 @@ class StorageKeys {
   static const String preferredImageSize = 'preferredImageSize';
   // The user's preferred number of generated images
   static const String preferredImageCount = 'preferredImageCount';
+  // The user's preferred image background
+  static const String preferredImageBackground = 'preferredImageBackground';
 
   // ── AI Vision Preferences ─────────────────────────────────────────────────
   // Max number of images to analyze in a single vision request (1–4)

@@ -150,9 +150,21 @@ class AiResponse {
     required AiProviderId modelUsed,
     required String requestId,
     required int responseTimeMs,
-    String? imageBase64,
-    List<AiImageData>? generatedImages,
+    required String? imageBase64,
+    required List<AiImageData> generatedImages,
+    int inputTokens = 0,
+    int outputTokens = 0,
+    int tokenCount = 0,
   }) {
+    // OpenAI doesn't always return tokens for image generation, so we use pseudo-tokens as fallback.
+    final imageCount = generatedImages.length;
+    final int finalInputTokens =
+        inputTokens > 0 ? inputTokens : (35 * imageCount);
+    final int finalOutputTokens =
+        outputTokens > 0 ? outputTokens : (252 * imageCount);
+    final int finalTotalTokens =
+        tokenCount > 0 ? tokenCount : (finalInputTokens + finalOutputTokens);
+
     return AiResponse(
       modelUsed: modelUsed,
       capability: AiCapability.imageGeneration,
@@ -161,6 +173,9 @@ class AiResponse {
       responseTimeMs: responseTimeMs,
       imageBase64: imageBase64,
       generatedImages: generatedImages,
+      inputTokens: finalInputTokens,
+      outputTokens: finalOutputTokens,
+      tokenCount: finalTotalTokens,
     );
   }
 

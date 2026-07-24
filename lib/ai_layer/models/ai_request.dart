@@ -91,10 +91,13 @@ class AiRequest {
   /// Desired output image quality for generation requests
   final ImageQuality? imageQuality;
 
-  /// Number of images to generate for a single request
+  /// Number of images to generate (e.g. 1-10) — used in imageGeneration
   final int? imageCount;
 
-  // ── PDF Parsing ────────────────────────────────────────────────────────────
+  /// Background type for the generated image — used in imageGeneration
+  final ImageGenerateBackground? imageBackground;
+
+  // ── PDF Reading Data ────────────────────────────────────────────────────────────
 
   /// Base64 encoded bytes of PDF documents.
   final List<Uint8List>? pdfBytes;
@@ -125,6 +128,7 @@ class AiRequest {
     this.imageSize = AiImageSize.square,
     this.imageQuality = ImageQuality.low,
     this.imageCount = 1,
+    this.imageBackground = ImageGenerateBackground.auto,
     this.pdfBytes,
     this.pdfNames,
     String? requestId,

@@ -180,6 +180,7 @@ class FirebaseCollections {
   static const String paramModelFeatures = 'model_features';
   static const String paramUserId = 'user_id';
   static const String paramUserEmail = 'user_email';
+
   /// Shared request ID linking initiated/success/failure events to the usage event.
   static const String paramRequestId = 'request_id';
 
@@ -235,4 +236,5 @@ class FirebaseCollections {
   // ── Budget Field Names ───────────────────────────────────────────────────
   static const String budgetFieldMonthlyBudgetUsd = 'monthlyBudgetUsd';
   static const String budgetFieldEnabled = 'enabled';
+  static const String budgetFieldAlreadyUsedUsd = 'alreadyUsedUsd';
 }

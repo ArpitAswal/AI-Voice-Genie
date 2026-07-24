@@ -18,6 +18,7 @@ class AiPreferencesProvider extends ChangeNotifier {
     _preferredVisionDetailLevel = _service.preferredVisionDetailLevel;
     _preferredResponseLength = _service.preferredResponseLength;
     _preferredImageCount = _service.preferredImageCount;
+    _preferredImageBackground = _service.preferredImageBackground;
   }
 
   final AiPreferencesService _service;
@@ -26,11 +27,15 @@ class AiPreferencesProvider extends ChangeNotifier {
   ImageQuality _preferredImageQuality = ImageQuality.low;
   AiImageSize _preferredImageSize = AiImageSize.square;
   int _preferredImageCount = 1;
+  ImageGenerateBackground _preferredImageBackground =
+      ImageGenerateBackground.auto;
 
   AiProviderId get preferredProvider => _preferredProvider;
   ImageQuality get preferredImageQuality => _preferredImageQuality;
   AiImageSize get preferredImageSize => _preferredImageSize;
   int get preferredImageCount => _preferredImageCount;
+  ImageGenerateBackground get preferredImageBackground =>
+      _preferredImageBackground;
 
   int _preferredVisionImageCount = 1;
   int _preferredVisionPdfCount = 1;
@@ -39,9 +44,9 @@ class AiPreferencesProvider extends ChangeNotifier {
 
   int get preferredVisionImageCount => _preferredVisionImageCount;
   int get preferredVisionPdfCount => _preferredVisionPdfCount;
-  VisionDetailLevel get preferredVisionDetailLevel => _preferredVisionDetailLevel;
+  VisionDetailLevel get preferredVisionDetailLevel =>
+      _preferredVisionDetailLevel;
   ResponseLength get preferredResponseLength => _preferredResponseLength;
-
 
   Future<void> setPreferredProvider(AiProviderId provider) async {
     if (_preferredProvider == provider) return;
@@ -61,6 +66,14 @@ class AiPreferencesProvider extends ChangeNotifier {
     if (_preferredImageSize == imageSize) return;
     _preferredImageSize = imageSize;
     await _service.setPreferredImageSize(imageSize);
+    notifyListeners();
+  }
+
+  Future<void> setPreferredImageBackground(
+      ImageGenerateBackground background) async {
+    if (_preferredImageBackground == background) return;
+    _preferredImageBackground = background;
+    await _service.setPreferredImageBackground(background);
     notifyListeners();
   }
 

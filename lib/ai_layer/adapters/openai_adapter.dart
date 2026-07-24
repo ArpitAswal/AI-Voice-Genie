@@ -87,6 +87,7 @@ class OpenAiAdapter extends AiProviderAdapter {
       final finishReason = choices[0]['finish_reason'] as String?;
 
       stopwatch.stop();
+      debugPrint('📥 OpenAI Response (Text Generation): ${jsonEncode(data)}');
       return AiResponse.text(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.textGeneration,
@@ -122,7 +123,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         'n': request.imageCount ?? 1,
         'size': request.imageSize?.apiValue ?? AiImageSize.square.apiValue,
         'quality': request.imageQuality?.name ?? ImageQuality.low.name,
-        'style': 'natural',
+        'background': request.imageBackground?.name ?? ImageGenerateBackground.auto
       };
       debugPrint(
           '📤 OpenAI Request (Image Generation): ${jsonEncode(requestBody)}');
@@ -155,6 +156,23 @@ class OpenAiAdapter extends AiProviderAdapter {
       final String? firstImageBase64 = generatedImages.first.b64Json;
 
       stopwatch.stop();
+      final logData = Map<String, dynamic>.from(data);
+      if (logData['data'] is List) {
+        final List truncatedData = [];
+        for (var item in (logData['data'] as List)) {
+          final map = Map<String, dynamic>.from(item as Map);
+          if (map['b64_json'] != null) {
+            map['b64_json'] = '<base64_data_truncated>';
+          }
+          truncatedData.add(map);
+        }
+        logData['data'] = truncatedData;
+      }
+      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
+      final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
+
+      debugPrint('📥 OpenAI Response (Image Generation): ${jsonEncode(logData)}');
       // Store all the valid response attributes that will be returned by image generations
       return AiResponse.imageBase64(
         modelUsed: AiProviderId.openAi,
@@ -162,6 +180,9 @@ class OpenAiAdapter extends AiProviderAdapter {
         responseTimeMs: stopwatch.elapsedMilliseconds,
         imageBase64: firstImageBase64,
         generatedImages: generatedImages,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
+        tokenCount: tokenCount,
       );
     } on AiException {
       rethrow;
@@ -244,6 +265,7 @@ class OpenAiAdapter extends AiProviderAdapter {
       final finishReason = choices[0]['finish_reason'] as String?;
 
       stopwatch.stop();
+      debugPrint('📥 OpenAI Response (Image Analysis): ${jsonEncode(data)}');
       return AiResponse.analysis(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.imageUnderstanding,
@@ -297,14 +319,14 @@ class OpenAiAdapter extends AiProviderAdapter {
       }
       final requestBody = {
         // gpt-4o supports native PDF reading in the Responses API
-        'model': AppConstants.openAiTextModel,
+        'model': AppConstants.openAiVisionModel,
         'input': [
           {
             'role': 'user',
             'content': contentParts,
           },
         ],
-        'max_tokens': request.responseLength.maxTokens,
+        'max_output_tokens': request.responseLength.maxTokens,
         'temperature': 0.3,
       };
 
@@ -350,6 +372,7 @@ class OpenAiAdapter extends AiProviderAdapter {
           (inputTokens + outputTokens);
 
       stopwatch.stop();
+      debugPrint('📥 OpenAI Response (PDF Parsing): ${jsonEncode(data)}');
       return AiResponse.analysis(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.pdfParsing,

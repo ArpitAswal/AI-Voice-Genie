@@ -209,6 +209,24 @@ enum ThemeType {
   }
 }
 
+/// Image background preference for image generation.
+enum ImageGenerateBackground {
+  auto('auto', 'Auto'),
+  opaque('opaque', 'Opaque'),
+  transparent('transparent', 'Transparent');
+
+  final String apiValue;
+  final String displayName;
+  const ImageGenerateBackground(this.apiValue, this.displayName);
+
+  static ImageGenerateBackground fromString(String name) {
+    return ImageGenerateBackground.values.firstWhere(
+      (e) => e.apiValue == name,
+      orElse: () => ImageGenerateBackground.auto,
+    );
+  }
+}
+
 /// Feature identifiers used in analytics events.
 ///
 /// Logged as the 'feature' parameter in 'feature_used' analytics events.

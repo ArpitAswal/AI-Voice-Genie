@@ -13,6 +13,11 @@ import '../../features/key_setup/presentation/key_setup_screen.dart';
 ///
 /// All navigation must go through this class.
 /// Never use Navigator.push directly.
+
+/// Global route observer to track navigation events.
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
+
 ///
 /// Usage:
 /// ```dart

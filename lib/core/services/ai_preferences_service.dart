@@ -28,26 +28,35 @@ class AiPreferencesService {
     return saved == null ? AiImageSize.square : AiImageSize.fromValue(saved);
   }
 
+  ImageGenerateBackground get preferredImageBackground {
+    final saved = _storage.getString(StorageKeys.preferredImageBackground);
+    return saved == null ? ImageGenerateBackground.auto : ImageGenerateBackground.fromString(saved);
+  }
+
   int get preferredVisionImageCount {
     final count =
-        _storage.getInt(StorageKeys.preferredVisionImageCount, defaultValue: 4);
+        _storage.getInt(StorageKeys.preferredVisionImageCount, defaultValue: 1);
     return count.clamp(1, 4).toInt();
   }
 
   int get preferredVisionPdfCount {
     final count =
-        _storage.getInt(StorageKeys.preferredVisionPdfCount, defaultValue: 2);
+        _storage.getInt(StorageKeys.preferredVisionPdfCount, defaultValue: 1);
     return count.clamp(1, 4).toInt();
   }
 
   VisionDetailLevel get preferredVisionDetailLevel {
     final saved = _storage.getString(StorageKeys.preferredVisionDetailLevel);
-    return saved == null ? VisionDetailLevel.auto : VisionDetailLevel.fromValue(saved);
+    return saved == null
+        ? VisionDetailLevel.auto
+        : VisionDetailLevel.fromValue(saved);
   }
 
   ResponseLength get preferredResponseLength {
     final name = _storage.getString(StorageKeys.preferredResponseLength);
-    return name == null ? ResponseLength.balanced : ResponseLength.fromName(name);
+    return name == null
+        ? ResponseLength.balanced
+        : ResponseLength.fromName(name);
   }
 
   int get preferredImageCount {
@@ -69,6 +78,10 @@ class AiPreferencesService {
     await _storage.setString(StorageKeys.preferredImageSize, imageSize.name);
   }
 
+  Future<void> setPreferredImageBackground(ImageGenerateBackground background) async{
+    await _storage.setString(StorageKeys.preferredImageBackground, background.name);
+  }
+
   Future<void> setPreferredVisionImageCount(int count) async {
     await _storage.setInt(
       StorageKeys.preferredVisionImageCount,
@@ -84,7 +97,8 @@ class AiPreferencesService {
   }
 
   Future<void> setPreferredVisionDetailLevel(VisionDetailLevel level) async {
-    await _storage.setString(StorageKeys.preferredVisionDetailLevel, level.apiValue);
+    await _storage.setString(
+        StorageKeys.preferredVisionDetailLevel, level.apiValue);
   }
 
   Future<void> setPreferredResponseLength(ResponseLength length) async {

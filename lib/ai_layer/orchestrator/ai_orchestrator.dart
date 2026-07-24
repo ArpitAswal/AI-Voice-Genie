@@ -247,10 +247,17 @@ class AiOrchestrator {
     required String uid,
     required AiRequest request,
     required AiResponse response,
-  }) {
+  }) async {
     debugPrint(
         '📊 Orchestrator: _saveUsageEvent called for ${response.modelUsed.id}');
     try {
+      final summary =
+          await _usageRepo.getSummary(uid: uid, provider: response.modelUsed);
+      if (summary == null || !summary.enabled) {
+        debugPrint(
+            '📊 Orchestrator: Skipping usage event — usage tracking not enabled for ${response.modelUsed.id}');
+        return;
+      }
       final now = DateTime.now();
       final monthKey = UsageEventModel.monthKeyFrom(now);
       final capability = request.capability;
@@ -274,7 +281,8 @@ class AiOrchestrator {
       final event = UsageEventModel(
         id: '${request.requestId}_${now.millisecondsSinceEpoch}',
         provider: response.modelUsed,
-        model: UsagePricingTable.modelName(response.modelUsed),
+        model:
+            UsagePricingTable.modelName(response.modelUsed, request.capability),
         capability: capability,
         requestId: request.requestId,
         inputTokens: response.inputTokens,

@@ -330,12 +330,29 @@ class AppLocalizations {
       'budget_remove_failed': 'Failed to remove budget. Please try again.',
       'edit_monthly_budget': 'Edit Monthly Budget',
       'set_monthly_budget': 'Set Monthly Budget',
-      'monthly_spending_limit': 'Monthly spending limit',
-      'enter_budget_amount': 'Enter a budget amount',
-      'enter_valid_amount': 'Enter a valid amount',
+      'monthly_spending_limit': 'Monthly Spending Limit (\$)',
+      'already_used_credits': 'Already Used Credits (\$)',
+      'enter_budget_amount': 'Enter amount (e.g. 10.00)',
+      'enter_already_used_amount': 'Optional (e.g. 5.00)',
+      'enter_valid_amount': 'Please enter a valid amount',
+      'budget_calculation_warning':
+          'Note: Voice Genie calculates token costs locally. To ensure your remaining budget is accurate, please enter any amount you have already spent externally.',
       'update_budget': 'Update Budget',
       'remove_budget': 'Remove Budget',
       'set_budget': 'Set Budget',
+      // Budget: new total-spend terminology
+      'set_total_budget': 'Set Total Budget',
+      'edit_total_budget': 'Edit Total Budget',
+      'total_spending_limit': 'Total Spending Limit',
+      // Budget: remove confirmation dialog
+      'budget_remove_confirm_title': 'Remove Budget?',
+      'budget_remove_confirm_message':
+          'This will remove your total budget and spending limit for this provider. Your recorded token usage will not be affected.',
+      // Sync status tooltips in conversation list
+      'sync_failed_tooltip': 'Sync failed — will retry when online',
+      'waiting_to_sync_tooltip': 'Waiting to sync',
+      // Usage error
+      'usage_load_failed': 'Failed to load usage data.',
       'about_app': 'About AI Voice Genie',
       'development_build': 'Development Build',
       'about_mission_title': 'Mission',
@@ -371,6 +388,8 @@ class AppLocalizations {
       'image_size_hint': 'Choose the default output size for images.',
       'image_count': 'Image Count',
       'image_count_hint': 'Choose how many images to generate per request.',
+      'image_background': 'Image Background',
+      'image_background_hint': 'Set the default background for images.',
       'quality_low': 'Low',
       'quality_medium': 'Medium',
       'quality_high': 'High',
@@ -708,12 +727,29 @@ class AppLocalizations {
       'budget_remove_failed': 'बजट हटाने में विफल। कृपया पुनः प्रयास करें।',
       'edit_monthly_budget': 'मासिक बजट संपादित करें',
       'set_monthly_budget': 'मासिक बजट सेट करें',
-      'monthly_spending_limit': 'मासिक खर्च सीमा',
-      'enter_budget_amount': 'बजट राशि दर्ज करें',
-      'enter_valid_amount': 'मान्य राशि दर्ज करें',
+      'monthly_spending_limit': 'मासिक खर्च सीमा (\$)',
+      'already_used_credits': 'पहले से उपयोग किए गए क्रेडिट (\$)',
+      'enter_budget_amount': 'राशि दर्ज करें (जैसे 10.00)',
+      'enter_already_used_amount': 'वैकल्पिक (जैसे 5.00)',
+      'enter_valid_amount': 'कृपया एक वैध राशि दर्ज करें',
+      'budget_calculation_warning':
+          'नोट: Voice Genie टोकन लागत की गणना स्थानीय रूप से करता है। अपना शेष बजट सटीक रखने के लिए, कृपया वह राशि दर्ज करें जो आप पहले ही खर्च कर चुके हैं।',
       'update_budget': 'बजट अपडेट करें',
       'remove_budget': 'बजट हटाएं',
       'set_budget': 'बजट सेट करे',
+      // Budget: new total-spend terminology
+      'set_total_budget': 'कुल बजट सेट करें',
+      'edit_total_budget': 'कुल बजट संपादित करें',
+      'total_spending_limit': 'कुल खर्च सीमा',
+      // Budget: remove confirmation dialog
+      'budget_remove_confirm_title': 'बजट हटाएं?',
+      'budget_remove_confirm_message':
+          'इससे इस प्रदाता के लिए आपका कुल बजट और खर्च सीमा हट जाएगी। रिकॉर्ड किया गया टोकन उपयोग प्रभावित नहीं होगा।',
+      // Sync status tooltips in conversation list
+      'sync_failed_tooltip': 'सिंक विफल — ऑनलाइन होने पर पुनः प्रयास करेगा',
+      'waiting_to_sync_tooltip': 'सिंक की प्रतीक्षा',
+      // Usage error
+      'usage_load_failed': 'उपयोग डेटा लोड नहीं हो सका।',
       'support': 'सहायता',
       'edit_profile': 'प्रोफ़ाइल संपादित करें',
       'display_name': 'डिस्प्ले नाम',
@@ -865,6 +901,7 @@ class AppLocalizations {
   String get newConversation => translate('new_conversation');
   String get deleteAllConversations => translate('delete_all_conversations');
   String get deleteAllConfirmMessage => translate('delete_all_confirm_message');
+  String get deleteConversation => translate('delete_conversation');
   String get deletingAllConversations =>
       translate('deleting_all_conversations');
   String get typeMessage => translate('type_message');
@@ -973,11 +1010,23 @@ class AppLocalizations {
   String get editMonthlyBudget => translate('edit_monthly_budget');
   String get setMonthlyBudget => translate('set_monthly_budget');
   String get monthlySpendingLimit => translate('monthly_spending_limit');
+  String get alreadyUsedCredits => translate('already_used_credits');
   String get enterBudgetAmount => translate('enter_budget_amount');
+  String get enterAlreadyUsedAmount => translate('enter_already_used_amount');
   String get enterValidAmount => translate('enter_valid_amount');
+  String get budgetCalculationWarning =>
+      translate('budget_calculation_warning');
   String get updateBudget => translate('update_budget');
   String get removeBudget => translate('remove_budget');
   String get setBudget => translate('set_budget');
+  String get setTotalBudget => translate('set_total_budget');
+  String get editTotalBudget => translate('edit_total_budget');
+  String get totalSpendingLimit => translate('total_spending_limit');
+  String get budgetRemoveConfirmTitle => translate('budget_remove_confirm_title');
+  String get budgetRemoveConfirmMessage => translate('budget_remove_confirm_message');
+  String get syncFailedTooltip => translate('sync_failed_tooltip');
+  String get waitingToSyncTooltip => translate('waiting_to_sync_tooltip');
+  String get usageLoadFailed => translate('usage_load_failed');
   String get support => translate('support');
 
   String get theme => translate('theme');
@@ -990,6 +1039,8 @@ class AppLocalizations {
   String get imageSizeHint => translate('image_size_hint');
   String get imageCount => translate('image_count');
   String get imageCountHint => translate('image_count_hint');
+  String get imageBackground => translate('image_background');
+  String get imageBackgroundHint => translate('image_background_hint');
   String get qualityLow => translate('quality_low');
   String get qualityMedium => translate('quality_medium');
   String get qualityHigh => translate('quality_high');

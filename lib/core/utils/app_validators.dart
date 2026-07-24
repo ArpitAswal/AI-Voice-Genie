@@ -14,10 +14,10 @@ class Validators {
   // ── Email ─────────────────────────────────────────────────────────────────
 
   static String? validateEmail(
-      String? value, {
-        BuildContext? context,
-        String? errorMessage,
-      }) {
+    String? value, {
+    BuildContext? context,
+    String? errorMessage,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return context != null
           ? context.l10n.emailRequired
@@ -37,10 +37,10 @@ class Validators {
   // ── Required Field ────────────────────────────────────────────────────────
 
   static String? validateRequired(
-      String? value, {
-        BuildContext? context,
-        String? fieldName,
-      }) {
+    String? value, {
+    BuildContext? context,
+    String? fieldName,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return context != null
           ? context.l10n.fieldRequired
@@ -72,10 +72,10 @@ class Validators {
 
   /// Validates an AI provider API key before saving
   static String? validateApiKey(
-      String? value, {
-        required String providerName,
-        BuildContext? context,
-      }) {
+    String? value, {
+    required String providerName,
+    BuildContext? context,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return context != null
           ? context.l10n.apiKeyRequired
@@ -119,9 +119,9 @@ class Validators {
   // ── Conversation Title ────────────────────────────────────────────────────
 
   static String? validateConversationTitle(
-      String? value, {
-        BuildContext? context,
-      }) {
+    String? value, {
+    BuildContext? context,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return context != null
           ? context.l10n.titleRequired
@@ -140,10 +140,10 @@ class Validators {
   // ── Date Validators ───────────────────────────────────────────────────────
 
   static String? validateDate(
-      DateTime? date, {
-        BuildContext? context,
-        String? errorMessage,
-      }) {
+    DateTime? date, {
+    BuildContext? context,
+    String? errorMessage,
+  }) {
     if (date == null) {
       return context != null
           ? context.l10n.dateRequired
