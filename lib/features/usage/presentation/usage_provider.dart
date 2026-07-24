@@ -4,13 +4,12 @@ import 'package:flutter/foundation.dart';
 import '../../../core/enums/app_enums.dart';
 import '../domain/usage_repository.dart';
 import '../data/usage_repository_impl.dart';
-import '../domain/usage_budget_model.dart';
 import '../domain/usage_event_model.dart';
 import '../domain/usage_summary_model.dart';
 
 /// ChangeNotifier for AI usage tracking data shown in the Profile screen.
 ///
-/// Loads monthly summaries and budgets for all 3 providers from Firestore.
+/// Loads the unified profiles (summaries + budget settings) for all providers.
 /// Must be provided at the profile screen level.
 class UsageProvider extends ChangeNotifier {
   final UsageRepository _repo;
@@ -27,9 +26,6 @@ class UsageProvider extends ChangeNotifier {
   /// Usage summaries indexed by provider
   final Map<AiProviderId, UsageSummaryModel> _summaries = {};
 
-  /// Budgets indexed by provider
-  final Map<AiProviderId, UsageBudgetModel> _budgets = {};
-
   StreamSubscription<List<UsageSummaryModel>>? _summarySub;
 
   @override
@@ -45,22 +41,25 @@ class UsageProvider extends ChangeNotifier {
   String get currentMonthKey => _currentMonthKey;
 
   UsageSummaryModel? summaryFor(AiProviderId provider) => _summaries[provider];
-  UsageBudgetModel? budgetFor(AiProviderId provider) => _budgets[provider];
 
-  /// Estimated spend for a provider this month
-  double spendFor(AiProviderId provider) =>
-      _summaries[provider]?.estimatedCostUsd ?? 0.0;
+  /// Estimated lifetime spend for a provider
+  double lifetimeSpendFor(AiProviderId provider) =>
+      _summaries[provider]?.lifetimeSpend() ?? 0.0;
+
+  /// Estimated current month spend for a provider
+  double currentMonthSpendFor(AiProviderId provider) =>
+      _summaries[provider]?.getMonth(_currentMonthKey).estimatedCostUsd ?? 0.0;
 
   /// Budget amount for a provider (null = not set)
-  double? budgetAmountFor(AiProviderId provider) =>
-      _budgets[provider]?.monthlyBudgetUsd;
+  double? totalBudgetFor(AiProviderId provider) =>
+      _summaries[provider]?.totalBudgetUsd;
 
-  /// True if any provider has usage data this month
-  bool get hasAnyUsage => _summaries.values.any((s) => s.hasActivity);
+  /// True if any provider has usage data
+  bool get hasAnyUsage => _summaries.values.any((s) => s.hasAnyActivity);
 
   // ── Load ───────────────────────────────────────────────────────────────────
 
-  /// Load all summaries and budgets for the current month.
+  /// Load all summaries.
   ///
   /// Safe to call multiple times — re-loading will refresh data from Firestore.
   Future<void> loadForMonth(String uid, {String? monthKey}) async {
@@ -70,11 +69,9 @@ class UsageProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Start listening to summaries in real-time
+      // 1. Start listening to unified summaries in real-time
       _summarySub?.cancel();
-      _summarySub = _repo
-          .watchAllSummaries(uid: uid, monthKey: _currentMonthKey)
-          .listen((summaries) {
+      _summarySub = _repo.watchAllSummaries(uid: uid).listen((summaries) {
         _summaries.clear();
         for (final s in summaries) {
           _summaries[s.provider] = s;
@@ -83,24 +80,12 @@ class UsageProvider extends ChangeNotifier {
       }, onError: (e) {
         debugPrint('⚠️ UsageProvider stream error: $e');
       });
-
-      // 2. Load budgets once (they are rarely updated and updated locally)
-      final budgetFutures = await Future.wait([
-        ...AiProviderId.values
-            .map((p) => _repo.getBudget(uid: uid, provider: p)),
-      ]);
-
-      for (int i = 0; i < AiProviderId.values.length; i++) {
-        final budget = budgetFutures[i];
-        if (budget != null) {
-          _budgets[AiProviderId.values[i]] = budget;
-        } else {
-          _budgets.remove(AiProviderId.values[i]);
-        }
-      }
     } catch (e) {
-      _error = e.toString();
-      debugPrint('⚠️ UsageProvider.loadForMonth failed: $e');
+      // Store the localization key, not the translated string, so the UI can
+      // render the correct language at display time (agent rule: no hardcoded strings).
+      _error = 'usage_load_failed';
+      debugPrint('⚠️ UsageProvider load error: $e');
+      notifyListeners();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -109,21 +94,29 @@ class UsageProvider extends ChangeNotifier {
 
   // ── Budget CRUD ────────────────────────────────────────────────────────────
 
-  /// Set or update a monthly budget for a provider.
+  /// Set or update a total budget for a provider.
   Future<void> setBudget({
     required String uid,
     required AiProviderId provider,
     required double amountUsd,
+    double? alreadyUsedUsd,
   }) async {
-    final budget = UsageBudgetModel(
+    // We update the existing model or create a new one
+    final existing =
+        _summaries[provider] ?? UsageSummaryModel(provider: provider);
+
+    final updated = UsageSummaryModel(
       provider: provider,
-      monthlyBudgetUsd: amountUsd,
       enabled: true,
+      totalBudgetUsd: amountUsd,
+      alreadyUsedUsd: alreadyUsedUsd,
+      monthlyData: existing.monthlyData,
+      updatedAt: DateTime.now(),
     );
 
     try {
-      await _repo.saveBudget(uid: uid, budget: budget);
-      _budgets[provider] = budget;
+      await _repo.updateGlobalSettings(uid: uid, model: updated);
+      _summaries[provider] = updated;
       notifyListeners();
     } catch (e) {
       debugPrint('⚠️ setBudget failed: $e');
@@ -137,8 +130,20 @@ class UsageProvider extends ChangeNotifier {
     required AiProviderId provider,
   }) async {
     try {
-      await _repo.deleteBudget(uid: uid, provider: provider);
-      _budgets.remove(provider);
+      await _repo.disableBudget(uid: uid, provider: provider);
+
+      final existing = _summaries[provider];
+      if (existing != null) {
+        _summaries[provider] = UsageSummaryModel(
+          provider: provider,
+          enabled: false,
+          totalBudgetUsd: null,
+          alreadyUsedUsd: existing.alreadyUsedUsd, // keep usage intact
+          monthlyData: existing.monthlyData,
+          updatedAt: DateTime.now(),
+        );
+      }
+
       notifyListeners();
     } catch (e) {
       debugPrint('⚠️ removeBudget failed: $e');

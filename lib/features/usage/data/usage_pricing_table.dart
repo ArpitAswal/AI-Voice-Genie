@@ -96,14 +96,33 @@ abstract final class UsagePricingTable {
   }
 
   /// Model string shown on the profile/usage card for a provider
-  static String modelName(AiProviderId provider) {
+  static String modelName(AiProviderId provider, AiCapability capability) {
     switch (provider) {
       case AiProviderId.openAi:
-        return AppConstants.openAiTextModel;
+        switch (capability) {
+          case AiCapability.imageGeneration:
+            return AppConstants.openAiImageGenModel;
+          case AiCapability.textGeneration:
+            return AppConstants.openAiTextModel;
+          default:
+            return AppConstants.openAiVisionModel;
+        }
       case AiProviderId.gemini:
-        return AppConstants.geminiTextModel;
+        switch (capability) {
+          case AiCapability.imageGeneration:
+            return AppConstants.geminiImageGenModel;
+          case AiCapability.textGeneration:
+            return AppConstants.geminiTextModel;
+          default:
+            return AppConstants.geminiVisionModel;
+        }
       case AiProviderId.claude:
-        return AppConstants.claudeTextModel;
+        switch (capability) {
+          case AiCapability.imageUnderstanding || AiCapability.pdfParsing:
+            return AppConstants.claudeVisionModel;
+          default:
+            return AppConstants.claudeTextModel;
+        }
     }
   }
 }

@@ -85,10 +85,12 @@ dependencies:
   permission_handler: ^12.0.1
   # Crypto for secure storage
   crypto: ^3.0.7
-  # NoScreenshot for disabling screenshots
-  no_screenshot: ^1.1.0
   # compress image to store less byte data
   flutter_image_compress: ^2.4.0
+  # NoScreenshot for disabling screenshots
+  no_screenshot: ^1.2.0
+  # Encrypt the key string for secure confidential storage
+  encrypt: ^5.0.3
 
 dev_dependencies:
   flutter_test:
@@ -121,3 +123,4 @@ flutter:
     - assets/fonts/
     - assets/lottie/
     - assets/gifs/
+

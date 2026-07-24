@@ -105,7 +105,7 @@ class AppLocalizations {
       'add_key': 'Add API Key',
       'update_key': 'Update API Key',
       'remove_key': 'Removing Key',
-      'key_remove_msg': 'Are you sure you want to remove this key',
+      'key_remove_msg': 'Are you sure you want to remove this key.',
       'key_added_success': 'API key added successfully.',
       'key_removed_success': 'API key removed.',
       'key_invalid': 'Invalid API key.',
@@ -121,6 +121,7 @@ class AppLocalizations {
       'key_added': 'Key added',
       'key_fetch_error': 'Loading AI Keys failed, Please restart the app.',
       'keys': 'Keys',
+      'delete_key': 'Delete Key',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'rename_conversation_name': 'Rename this conversation',
@@ -538,6 +539,7 @@ class AppLocalizations {
       'key_fetch_error':
           'एआई कुंजी लोड करने में विफलता, कृपया ऐप को पुनः आरंभ करें।',
       'keys': 'कुंजी',
+      'delete_key': 'डिलीट की',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'rename_conversation_name': 'बातचीत का नाम बदलें',
