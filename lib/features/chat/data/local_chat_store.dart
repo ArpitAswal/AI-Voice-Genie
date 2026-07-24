@@ -77,7 +77,7 @@ class LocalChatStore {
     yield getConversation(uid, conversationId);
 
     final key = '${uid}_$conversationId';
-    await for (final event in _conversationsBox.watch(key: key)) {
+    await for (final _ in _conversationsBox.watch(key: key)) {
       yield getConversation(uid, conversationId);
     }
   }

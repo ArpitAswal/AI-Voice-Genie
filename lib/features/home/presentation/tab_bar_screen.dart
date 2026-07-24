@@ -22,7 +22,8 @@ class _TabBarScreenState extends State<TabBarScreen> {
 
   void _showExitSnackbar() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? AppColors.scaffoldDark : AppColors.scaffoldLight;
+    final backgroundColor =
+        isDark ? AppColors.scaffoldDark : AppColors.scaffoldLight;
     final textColor = isDark ? Colors.white : Colors.black;
 
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
@@ -68,7 +69,7 @@ class _TabBarScreenState extends State<TabBarScreen> {
           children: [
             // The selected tab body
             SafeArea(child: _buildBody()),
-  
+
             // Floating Top Navbar
             Positioned(
               top: 0,
@@ -89,7 +90,7 @@ class _TabBarScreenState extends State<TabBarScreen> {
         IntroScreen(),
         ConversationHistoryScreen(),
         ProfileScreen(),
-        ],
+      ],
     );
   }
 
@@ -124,8 +125,8 @@ class _TabBarScreenState extends State<TabBarScreen> {
               _buildNavItem(0, Icons.home_outlined, context.l10n.home, context),
               _buildNavItem(1, Icons.chat_bubble_outline,
                   context.l10n.conversationHistory, context),
-              _buildNavItem(
-                  2, Icons.account_circle_outlined, context.l10n.profile, context),
+              _buildNavItem(2, Icons.account_circle_outlined,
+                  context.l10n.profile, context),
             ],
           ),
         ),

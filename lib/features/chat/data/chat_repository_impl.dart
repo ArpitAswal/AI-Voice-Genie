@@ -259,7 +259,7 @@ class ChatRepositoryImpl implements ChatRepository {
       // 3. Return the latest from Hive (which applies local filters)
       final localRecords = LocalChatStore.instance.getConversations(uid);
       return localRecords.map(_toConversationModel).toList();
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (_) {
       // On failure, fallback to returning what we have in the Hive cache.
       // Even if empty, it's a valid local state (e.g. they just deleted all).
       final localRecords = LocalChatStore.instance.getConversations(uid);
@@ -533,8 +533,8 @@ class ChatRepositoryImpl implements ChatRepository {
         messageIds: [userMessage.id, aiMessage.id],
         payload: {
           'conversation': updatedConv.toFirestore(),
-          'userMessage': userMessage.toCacheMap(),
-          'aiMessage': aiMessage.toCacheMap(),
+          'userMessage': userMessage.toSyncPayload(),
+          'aiMessage': aiMessage.toSyncPayload(),
           'userMessageId': userMessage.id,
           'aiMessageId': aiMessage.id,
           'isFirstMessage': isFirstMessage,

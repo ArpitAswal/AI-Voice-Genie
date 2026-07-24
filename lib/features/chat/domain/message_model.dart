@@ -170,18 +170,19 @@ class MessageModel {
       status: MessageStatus.fromValue(
         data[FirebaseCollections.fieldMessageStatus] as String? ?? 'delivered',
       ),
-      imageUrls:
-          _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]),
-      pdfInfo: _parsePdfInfo(data),
+      imageUrls: _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]) ??
+          _parseImageUrls(data['imageUrls']),
+      pdfInfo: _parsePdfInfo(data) ??
+          _parsePdfInfo({'pdfInfo': data['pdfInfo']}),
       imageSize: data[FirebaseCollections.fieldImageSize] is String
           ? AiImageSize.fromValue(
               data[FirebaseCollections.fieldImageSize] as String)
-          : null,
-      imageCount: data[FirebaseCollections.fieldImageCount] as int?,
+          : (data['imageSize'] is String ? AiImageSize.fromValue(data['imageSize'] as String) : null),
+      imageCount: data[FirebaseCollections.fieldImageCount] as int? ?? data['imageCount'] as int?,
       imageQuality: data[FirebaseCollections.fieldImageQuality] is String
           ? ImageQuality.fromValue(
               data[FirebaseCollections.fieldImageQuality] as String)
-          : null,
+          : (data['imageQuality'] is String ? ImageQuality.fromValue(data['imageQuality'] as String) : null),
     );
   }
 
@@ -194,6 +195,33 @@ class MessageModel {
       FirebaseCollections.fieldMessageContent: content,
       FirebaseCollections.fieldMessageContentType: contentType.id,
       FirebaseCollections.fieldMessageTimestamp: FieldValue.serverTimestamp(),
+      FirebaseCollections.fieldMessageTokenCount: tokenCount,
+      FirebaseCollections.fieldMessageStatus: status.value,
+      if (modelRequest != null)
+        FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
+      if (imageUrls != null && imageUrls!.isNotEmpty)
+        FirebaseCollections.fieldMessageImageUrl: imageUrls,
+      if (pdfInfo != null && pdfInfo!.isNotEmpty)
+        FirebaseCollections.fieldPdfInfo:
+            pdfInfo!.map((e) => e.toMap()).toList(),
+      if (imageSize != null)
+        FirebaseCollections.fieldImageSize: imageSize!.name,
+      if (imageCount != null) FirebaseCollections.fieldImageCount: imageCount,
+      if (imageQuality != null)
+        FirebaseCollections.fieldImageQuality: imageQuality!.name,
+    };
+  }
+
+  /// Serializes the message model for outbox payload (Firestore sync).
+  /// Uses Firestore keys, but uses ISO string for timestamp since
+  /// FieldValue cannot be serialized in the background Hive outbox.
+  Map<String, dynamic> toSyncPayload() {
+    return {
+      FirebaseCollections.fieldMessageID: id,
+      FirebaseCollections.fieldMessageRole: role.value,
+      FirebaseCollections.fieldMessageContent: content,
+      FirebaseCollections.fieldMessageContentType: contentType.id,
+      FirebaseCollections.fieldMessageTimestamp: timestamp.toIso8601String(),
       FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
       if (modelRequest != null)
@@ -362,20 +390,22 @@ class MessageModel {
       status: MessageStatus.fromValue(
         data[FirebaseCollections.fieldStatus] as String? ?? 'delivered',
       ),
-      imageUrls: _parseImageUrls(data[FirebaseCollections.fieldImageUrl]),
-      pdfInfo: _parsePdfInfo(data),
+      imageUrls: _parseImageUrls(data[FirebaseCollections.fieldImageUrl]) ??
+          _parseImageUrls(data['imageUrls']),
+      pdfInfo: _parsePdfInfo(data) ??
+          _parsePdfInfo({'pdfInfo': data['pdfInfo']}),
       imageSize: data[FirebaseCollections.fieldImageSize] is String
           ? AiImageSize.fromValue(
               data[FirebaseCollections.fieldImageSize] as String)
-          : null,
-      imageCount: data[FirebaseCollections.fieldImageCount] as int?,
+          : (data['imageSize'] is String ? AiImageSize.fromValue(data['imageSize'] as String) : null),
+      imageCount: data[FirebaseCollections.fieldImageCount] as int? ?? data['imageCount'] as int?,
       imageBytes: data[FirebaseCollections.fieldImageUrl] is String
           ? base64Decode(data[FirebaseCollections.fieldImageUrl] as String)
-          : null,
+          : (data['imageBytes'] is String ? base64Decode(data['imageBytes'] as String) : null),
       imageQuality: data[FirebaseCollections.fieldImageQuality] is String
           ? ImageQuality.fromValue(
               data[FirebaseCollections.fieldImageQuality] as String)
-          : null,
+          : (data['imageQuality'] is String ? ImageQuality.fromValue(data['imageQuality'] as String) : null),
     );
 
     return [userMsg, aiMsg];

@@ -755,4 +755,31 @@ class ChatProvider extends ChangeNotifier {
     }
     return result;
   }
+  // ── Conversation History Delegates ─────────────────────────────────────────
+  // These methods expose repository calls through ChatProvider so that
+  // presentation widgets never touch the repository or data stores directly.
+
+  /// Returns a real-time stream of all non-deleted conversations for [uid],
+  /// sourced from the Hive local store. Delegates to [_repository].
+  Stream<List<ConversationModel>> watchConversations(String uid) =>
+      _repository.watchConversations(uid);
+
+  /// Fetches conversations from Firestore, merges into Hive, and returns
+  /// the local list. Delegates to [_repository].
+  Future<List<ConversationModel>> getConversations(String uid) =>
+      _repository.getConversations(uid);
+
+  /// Soft-deletes all conversations locally (instant UI clear), then queues
+  /// Firestore deletes in the background. Delegates to [_repository].
+  Future<void> deleteAllConversations(String uid) =>
+      _repository.deleteAllConversationsLocalFirst(uid);
+
+  /// Returns true if the given conversation has been soft-deleted or no longer
+  /// exists in the local Hive store. Used by [ChatDetailScreen] to detect
+  /// remote deletions without accessing [LocalChatStore] directly from UI code.
+  bool isActiveConversationDeleted(String? uid, String conversationId) {
+    if (uid == null) return false;
+    final conv = LocalChatStore.instance.getConversation(uid, conversationId);
+    return conv == null || conv.isDeleted;
+  }
 }

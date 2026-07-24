@@ -4,6 +4,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/extensions/string_extension.dart';
+import '../../../../core/localization/app_localizations.dart';
 import '../../domain/conversation_model.dart';
 
 /// Single item in the conversation history list.
@@ -135,9 +136,10 @@ class ConversationTile extends StatelessWidget {
         child: ListTile(
           leading:
               const Icon(Icons.delete_outline_rounded, color: AppColors.lightError),
-          title: const Text(
-            'Delete conversation',
-            style: TextStyle(color: AppColors.lightError),
+          title: Text(
+            // Localized delete conversation label (agent rule: no hardcoded strings)
+            context.l10n.deleteConversation,
+            style: const TextStyle(color: AppColors.lightError),
           ),
           onTap: () {
             Navigator.pop(ctx);

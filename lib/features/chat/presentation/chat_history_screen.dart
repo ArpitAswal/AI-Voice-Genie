@@ -19,8 +19,7 @@ import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
-import '../data/chat_repository_impl.dart';
-import '../domain/chat_repository.dart';
+import '../presentation/chat_provider.dart';
 import '../domain/conversation_model.dart';
 import '../../../shared/widgets/dynamic_shimmer.dart';
 import '../../../core/enums/app_enums.dart';
@@ -34,7 +33,6 @@ class ConversationHistoryScreen extends StatefulWidget {
 }
 
 class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
-  final ChatRepository _repository = ChatRepositoryImpl();
   final TextEditingController _searchController = TextEditingController();
   StreamSubscription<List<ConversationModel>>? _subscription;
 
@@ -48,7 +46,8 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     super.initState();
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid != null) {
-      _subscription = _repository.watchConversations(uid).listen(
+      // Use ChatProvider delegate so presentation never touches the repository directly
+      _subscription = context.read<ChatProvider>().watchConversations(uid).listen(
         (conversations) {
           if (mounted) {
             setState(() {
@@ -77,15 +76,13 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     }
 
     try {
-      // getConversations now fetches from Firestore, merges into Hive,
-      // and returns the local list. The stream subscription above will
-      // automatically receive the updated list and call setState.
+      // Use ChatProvider delegate — keeps Firestore logic out of the widget
       if (wait) {
-        await Future.delayed(const Duration(seconds: 2), () async {
-          _repository.getConversations(uid);
-        });
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+        await context.read<ChatProvider>().getConversations(uid);
       } else {
-        await _repository.getConversations(uid);
+        await context.read<ChatProvider>().getConversations(uid);
       }
       return;
     } catch (e) {
@@ -177,11 +174,13 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     // Local-first delete: conversations disappear immediately from the UI.
     // No loading overlay is needed — Firestore deletion runs in the background.
     try {
-      LoadingOverlay.show(context,
-          message: context.l10n.deleteAllConversations);
-      await Future.delayed(const Duration(seconds: 1), () async {
-        _repository.deleteAllConversationsLocalFirst(uid);
-      });
+      LoadingOverlay.show(context, message: context.l10n.deleteAllConversations);
+      // Await the delayed period, then properly await the delete operation.
+      // Previously the delete was fire-and-forget which allowed the UI to
+      // refresh before the Hive soft-delete and outbox enqueue had finished.
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+      await context.read<ChatProvider>().deleteAllConversations(uid);
       // Reload from Hive — list will be empty since all are soft-deleted
       await _loadConversations();
 
@@ -554,7 +553,7 @@ class CustomConversationCard extends StatelessWidget {
                 // syncFailed — non-retryable write failure; user needs to know
                 if (conversation.syncStatus == SyncStatus.syncFailed)
                   Tooltip(
-                    message: 'Sync failed — will retry when online',
+                    message: context.l10n.syncFailedTooltip,
                     child: Padding(
                       padding: const EdgeInsets.only(right: 4),
                       child: Icon(
@@ -569,9 +568,9 @@ class CustomConversationCard extends StatelessWidget {
                 // pendingCreate/pendingUpdate — queued, not yet confirmed
                 else if (conversation.syncStatus == SyncStatus.pendingCreate ||
                     conversation.syncStatus == SyncStatus.pendingUpdate)
-                  const Tooltip(
-                    message: 'Waiting to sync',
-                    child: Padding(
+                  Tooltip(
+                    message: context.l10n.waitingToSyncTooltip,
+                    child: const Padding(
                       padding: EdgeInsets.only(right: 4),
                       child: Icon(
                         Icons.cloud_off_rounded,

@@ -19,7 +19,6 @@ import '../../../shared/widgets/image_view.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/chat_attachment.dart';
-import '../data/local_chat_store.dart';
 import 'chat_provider.dart';
 import 'widgets/change_title_dialog.dart';
 
@@ -85,10 +84,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     // Safely check if the conversation was completely deleted remotely
     final uid = context.read<AuthProvider>().currentUser?.uid;
+    // Delegate to ChatProvider to check deletion state — the widget must not
+    // read from LocalChatStore directly (MVVM: data access via provider only).
+    // Guard: only check if uid is known and we are not in a manual delete flow.
     if (uid != null && !_isManualDeleting) {
-      final conv =
-          LocalChatStore.instance.getConversation(uid, widget.conversationId);
-      final isDeleted = conv == null || conv.isDeleted;
+      final isDeleted = _chatProvider!
+          .isActiveConversationDeleted(uid, widget.conversationId);
       if (isDeleted && !currentLoading && !currentGenerating) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) AppRoutes.pop(context);
@@ -468,8 +469,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             constraints: BoxConstraints(
               maxHeight: context.screenHeight * 0.4,
             ),
-            child: Consumer3<ApiKeyProvider, ChatProvider,
-                AiPreferencesProvider>(
+            child:
+                Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
               builder: (
                 _,
                 apiKeyProvider,
