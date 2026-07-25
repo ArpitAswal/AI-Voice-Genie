@@ -31,7 +31,9 @@ class ProfilePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
+      padding: EdgeInsets.symmetric(
+          horizontal: context.horizontalPadding,
+          vertical: context.verticalSpacing),
       decoration: BoxDecoration(
         color: ProfileUiHelpers.panelColor(context),
         borderRadius: BorderRadius.circular(28),
@@ -68,7 +70,7 @@ class ProfileIconTile extends StatelessWidget {
       width: resolvedSize,
       height: resolvedSize,
       decoration: BoxDecoration(
-        color:  (color ?? context.primaryColor)
+        color: (color ?? context.primaryColor)
             .withValues(alpha: context.isDark ? 0.18 : 0.12),
         borderRadius: BorderRadius.circular(14),
       ),
@@ -84,19 +86,17 @@ class ProfileIconTile extends StatelessWidget {
 
 class ProfileProviderLogo extends StatelessWidget {
   final AiProviderId provider;
-  final double size;
 
   const ProfileProviderLogo({
     super.key,
     required this.provider,
-    required this.size,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: size,
-      height: size,
+      width: context.screenWidth * 0.1,
+      height: context.screenWidth * 0.1,
       decoration: BoxDecoration(
         gradient: ProfileUiHelpers.providerGradient(provider),
         shape: BoxShape.circle,
@@ -105,7 +105,6 @@ class ProfileProviderLogo extends StatelessWidget {
         child: FaIcon(
           ProfileUiHelpers.providerIcon(provider),
           color: AppColors.white,
-          size: size * 0.55,
         ),
       ),
     );
@@ -113,17 +112,6 @@ class ProfileProviderLogo extends StatelessWidget {
 }
 
 abstract final class ProfileUiHelpers {
-  static Color providerColor(AiProviderId provider) {
-    switch (provider) {
-      case AiProviderId.openAi:
-        return AppColors.openAiBrand;
-      case AiProviderId.gemini:
-        return AppColors.geminiBrand;
-      case AiProviderId.claude:
-        return AppColors.claudeBrand;
-    }
-  }
-
   static Gradient providerGradient(AiProviderId provider) {
     switch (provider) {
       case AiProviderId.openAi:
@@ -160,10 +148,6 @@ abstract final class ProfileUiHelpers {
   static Color panelColor(BuildContext context) =>
       context.isDark ? AppColors.cardDark : AppColors.cardLight;
 
-  static Color mutedTextColor(BuildContext context) => context.isDark
-      ? AppColors.darkTextPrimary.withValues(alpha: 0.66)
-      : AppColors.lightTextPrimary.withValues(alpha: 0.58);
-
   static List<BoxShadow> softShadow(BuildContext context) => [
         BoxShadow(
           color:
@@ -172,4 +156,83 @@ abstract final class ProfileUiHelpers {
           offset: const Offset(0, 14),
         ),
       ];
+}
+
+class ProfileListTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Color? titleColor;
+  final Color? iconColor;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+  final bool showChevron;
+
+  const ProfileListTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.titleColor,
+    this.iconColor,
+    this.onTap,
+    this.trailing,
+    this.showChevron = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content = Row(
+      children: [
+        ProfileIconTile(icon: icon, color: iconColor),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: context.textTheme.titleMedium?.copyWith(
+                  color: titleColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  subtitle!,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: AppColors.lightWarning,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (trailing != null)
+          trailing!
+        else if (showChevron)
+          Icon(Icons.chevron_right_rounded,
+              color: context.textTheme.bodySmall?.color),
+      ],
+    );
+
+    if (onTap != null) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: content,
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: content,
+    );
+  }
 }

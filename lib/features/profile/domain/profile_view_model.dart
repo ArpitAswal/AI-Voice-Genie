@@ -18,21 +18,20 @@ class ProfileViewModel extends ChangeNotifier {
   bool get isSavingProfile => _isSavingProfile;
   String get versionLabel => _versionLabel;
 
-  // Future<void> loadApiKeys({
-  //   required AuthProvider authProvider,
-  //   required ApiKeyProvider apiKeyProvider,
-  // }) async {
-  //   final uid = authProvider.currentUser?.uid;
-  //   if (uid == null) return;
-  //
-  //   await apiKeyProvider.loadExistingKeys(uid);
-  // }
-
   Future<bool> signOut(AuthProvider authProvider) async {
     _setSigningOut(true);
     try {
       await authProvider.signOut();
       return true;
+    } finally {
+      _setSigningOut(false);
+    }
+  }
+
+  Future<bool> deleteAccount(AuthProvider authProvider) async {
+    _setSigningOut(true);
+    try {
+      return await authProvider.deleteAccount();
     } finally {
       _setSigningOut(false);
     }

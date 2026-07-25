@@ -1,8 +1,8 @@
+import 'package:ai_voice_genie/core/extensions/string_extension.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/router/app_routes.dart';
 import '../../../auth/domain/user_model.dart';
 import 'profile_avatar.dart';
 
@@ -16,26 +16,41 @@ class ProfileHeader extends StatelessWidget {
     final displayName = (user?.displayName.trim().isNotEmpty ?? false)
         ? user!.displayName.trim()
         : context.l10n.user;
+    final email =
+        (user?.email.trim().isNotEmpty ?? false) ? user!.email.trim() : '';
+    final dob = user?.dateOfBirth;
+    final create =
+        (user?.createdAt != null && user!.createdAt!.toDateString.isNotEmpty) ? user!.createdAt?.toDateString : '';
 
-    return Column(
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(displayName,
+                  textAlign: TextAlign.left,
+                  style: context.textTheme.bodyLarge),
+              if (email.isNotEmpty)
+                Text(email, style: context.textTheme.bodyLarge),
+              if (dob != null)
+                Text(dob.toString(), style: context.textTheme.bodyLarge),
+              if (create != null)
+                Text("${context.l10n.translate('active_user')}, $create",
+                    style: context.textTheme.bodyLarge),
+            ],
+          ),
+        ),
         ProfileAvatar(
             displayName: displayName,
             photoUrl: user?.photoUrl ?? '',
-            size: context.isTablet ? 150 : 118,
+            size: context.screenWidth * (context.isTablet ? 0.35 : 0.2),
             canUpdate: false),
-        const SizedBox(height: 18),
-        Text(displayName,
-            textAlign: TextAlign.center,
-            style: context.textTheme.headlineLarge),
-        TextButton.icon(
-          onPressed: () => AppRoutes.navigateTo(context, AppRoutes.profileEdit),
-          style: TextButton.styleFrom(
-              foregroundColor: context.textTheme.bodyLarge?.color),
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          label: Text(context.l10n.editProfile,
-              style: context.textTheme.bodyLarge),
-        ),
       ],
     );
   }

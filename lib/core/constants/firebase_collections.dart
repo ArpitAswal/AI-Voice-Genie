@@ -150,6 +150,7 @@ class FirebaseCollections {
   static const String eventUserSignedIn = 'user_signed_in';
   static const String eventUserRegistered = 'user_registered';
   static const String eventUserSignedOut = 'user_signed_out';
+  static const String eventAccountDeleted = 'account_deleted';
   static const String eventAiRequestInitiated = 'ai_request_initiated';
   static const String eventAiRequestSuccess = 'ai_request_success';
   static const String eventAiRequestFailed = 'ai_request_failed';

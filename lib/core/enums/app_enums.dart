@@ -204,7 +204,7 @@ enum ThemeType {
   static ThemeType fromValue(String value) {
     return ThemeType.values.firstWhere(
       (e) => e.value == value,
-      orElse: () => ThemeType.system,
+      orElse: () => ThemeType.light,
     );
   }
 }

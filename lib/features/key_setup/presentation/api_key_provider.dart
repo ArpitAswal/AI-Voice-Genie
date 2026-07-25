@@ -147,6 +147,8 @@ class ApiKeyProvider extends ChangeNotifier {
             entry.value.isValid ? ApiKeyStatus.valid : ApiKeyStatus.invalid;
       }
       notifyListeners();
+    }, onError: (e) {
+      debugPrint('⚠️ ApiKeyProvider watchKeys stream error (ignored during logout/deletion): $e');
     });
   }
 

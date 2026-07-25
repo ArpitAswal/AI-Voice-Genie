@@ -17,13 +17,13 @@ class ProfileSettingsPanel extends StatelessWidget {
     return ProfilePanel(
       child: Column(
         children: [
-          _SettingsRow(
+          ProfileListTile(
             icon: Icons.palette_outlined,
             title: context.l10n.theme,
             trailing: const _ThemeSwitcher(),
           ),
-          const SizedBox(height: 18),
-          _SettingsRow(
+          const SizedBox(height: 10),
+          ProfileListTile(
             icon: Icons.language_rounded,
             title: context.l10n.language,
             trailing: const _LanguagePopupButton(),
@@ -40,9 +40,7 @@ class _ThemeSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
-    final effectiveType = themeProvider.currentThemeType == ThemeType.system
-        ? (context.isDark ? ThemeType.dark : ThemeType.light)
-        : themeProvider.currentThemeType;
+    final effectiveType = themeProvider.currentThemeType;
 
     return Container(
       padding: const EdgeInsets.all(4),
@@ -87,35 +85,36 @@ class _LanguagePopupButton extends StatelessWidget {
       elevation: 8,
       offset: const Offset(0, 40),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      itemBuilder: (context) => LocaleProvider.supportedLocales
-          .map(
-            (locale) {
-              final isActive = locale.languageCode == localeProvider.locale.languageCode;
-              return PopupMenuItem<Locale>(
-                value: locale,
-                padding: const EdgeInsets.only(left: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      locale.languageCode == 'en'
-                          ? context.l10n.translate('language_en')
-                          : context.l10n.translate('language_hi'),
-                      style: context.textTheme.headlineSmall?.copyWith(
-                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                        color: isActive ? context.primaryColor : ProfileUiHelpers.mutedTextColor(context),
-                      ),
-                    ),
-                    if (isActive) ...[
-                      const SizedBox(width: 8),
-                      Icon(Icons.check_rounded, color: context.primaryColor),
-                    ],
-                  ],
+      itemBuilder: (context) => LocaleProvider.supportedLocales.map(
+        (locale) {
+          final isActive =
+              locale.languageCode == localeProvider.locale.languageCode;
+          return PopupMenuItem<Locale>(
+            value: locale,
+            padding: const EdgeInsets.only(left: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  locale.languageCode == 'en'
+                      ? context.l10n.translate('language_en')
+                      : context.l10n.translate('language_hi'),
+                  style: context.textTheme.headlineSmall?.copyWith(
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: isActive
+                        ? context.primaryColor
+                        : context.textTheme.bodySmall?.color,
+                  ),
                 ),
-              );
-            },
-          )
-          .toList(),
+                if (isActive) ...[
+                  const SizedBox(width: 8),
+                  Icon(Icons.check_rounded, color: context.primaryColor),
+                ],
+              ],
+            ),
+          );
+        },
+      ).toList(),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Row(
@@ -124,14 +123,13 @@ class _LanguagePopupButton extends StatelessWidget {
             Text(
               currentLabel,
               style: context.textTheme.bodyMedium?.copyWith(
-                color: ProfileUiHelpers.mutedTextColor(context),
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(width: 8),
             Icon(
               Icons.expand_more_rounded,
-              color: ProfileUiHelpers.mutedTextColor(context),
+              color: context.textTheme.bodySmall?.color,
             ),
           ],
         ),
@@ -175,37 +173,6 @@ class _ThemeOption extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _SettingsRow extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Widget trailing;
-
-  const _SettingsRow({
-    required this.icon,
-    required this.title,
-    required this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        ProfileIconTile(icon: icon),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            title,
-            style: context.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        trailing,
-      ],
     );
   }
 }

@@ -8,6 +8,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../domain/profile_view_model.dart';
 import '../widgets/about_widgets.dart';
+import '../widgets/profile_common_widgets.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -106,21 +107,35 @@ class _AboutScreenState extends State<AboutScreen> {
                   AboutSectionCard(
                     title: context.l10n.translate('legal'),
                     children: [
-                      AboutLinkRow(
+                      ProfileListTile(
                         icon: Icons.privacy_tip_outlined,
+                        iconColor: AppColors.grey,
                         title: context.l10n.privacyPolicy,
                         subtitle: context.l10n.translate('configured'),
-                        isEnabled: hasPrivacy,
+                        trailing: Icon(
+                          hasPrivacy
+                              ? Icons.open_in_new_rounded
+                              : Icons.lock_clock_outlined,
+                          color: AppColors.lightWarning,
+                          size: 20,
+                        ),
                         onTap: () => _handleLinkResult(
                           viewModel.openUrl(AppConstants.privacyPolicyUrl),
                         ),
                       ),
                       const AboutDivider(),
-                      AboutLinkRow(
+                      ProfileListTile(
                         icon: Icons.description_outlined,
+                        iconColor: AppColors.grey,
                         title: context.l10n.termsOfService,
                         subtitle: context.l10n.translate('configured'),
-                        isEnabled: hasTerms,
+                        trailing: Icon(
+                          hasTerms
+                              ? Icons.open_in_new_rounded
+                              : Icons.lock_clock_outlined,
+                          color: AppColors.lightWarning,
+                          size: 20,
+                        ),
                         onTap: () => _handleLinkResult(
                           viewModel.openUrl(AppConstants.termsOfServiceUrl),
                         ),
@@ -131,11 +146,18 @@ class _AboutScreenState extends State<AboutScreen> {
                   AboutSectionCard(
                     title: context.l10n.support,
                     children: [
-                      AboutLinkRow(
+                      ProfileListTile(
                         icon: Icons.support_agent_rounded,
+                        iconColor: AppColors.grey,
                         title: context.l10n.translate('contact_support'),
                         subtitle: context.l10n.translate('configured'),
-                        isEnabled: hasSupport,
+                        trailing: Icon(
+                          hasSupport
+                              ? Icons.open_in_new_rounded
+                              : Icons.lock_clock_outlined,
+                          color: AppColors.lightWarning,
+                          size: 20,
+                        ),
                         onTap: () => _handleLinkResult(
                           viewModel.openSupport(context.l10n.appName),
                         ),
@@ -146,11 +168,16 @@ class _AboutScreenState extends State<AboutScreen> {
                   AboutSectionCard(
                     title: context.l10n.translate('credits_attribution'),
                     children: [
-                      AboutLinkRow(
+                      ProfileListTile(
                         icon: Icons.inventory_2_outlined,
+                        iconColor: AppColors.grey,
                         title: context.l10n.translate('open_source_licenses'),
                         subtitle: context.l10n.translate('view_licenses'),
-                        isEnabled: true,
+                        trailing: const Icon(
+                          Icons.open_in_new_rounded,
+                          color: AppColors.lightWarning,
+                          size: 20,
+                        ),
                         onTap: () => _openLicenses(viewModel.versionLabel),
                       ),
                     ],

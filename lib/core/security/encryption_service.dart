@@ -13,10 +13,25 @@ import '../constants/app_constants.dart';
 class EncryptionService {
   EncryptionService._();
 
-  /// Builds the Encrypter on first use, using the key from AppConstants.
-  /// AES-256 requires exactly 32 bytes (256 bits).
-  static Encrypter get _encrypter =>
-      Encrypter(AES(Key.fromUtf8(AppConstants.encryptionKey), mode: AESMode.cbc));
+  /// Guarantees a valid 32-byte (256-bit) key for AES-256 from [AppConstants.encryptionKey].
+  /// If no key was injected via --dart-define (e.g., during unit tests or unconfigured
+  /// dev runs), we use a zeroed-out 32-byte key so encryption never throws an error.
+  /// Any injected key from secrets.json is automatically padded or truncated to 32 characters.
+  static Key get _key {
+    var keyString = AppConstants.encryptionKey;
+    if (keyString.isEmpty) {
+      return Key.fromUtf8('00000000000000000000000000000000');
+    }
+    if (keyString.length < 32) {
+      keyString = keyString.padRight(32, '0');
+    } else if (keyString.length > 32) {
+      keyString = keyString.substring(0, 32);
+    }
+    return Key.fromUtf8(keyString);
+  }
+
+  /// Builds the Encrypter on first use, using the normalized 256-bit key.
+  static Encrypter get _encrypter => Encrypter(AES(_key, mode: AESMode.cbc));
 
   /// Encrypts plain text into a base64 encoded string containing the IV and ciphertext.
   /// Format: Base64(IV) + ':' + Base64(Ciphertext)

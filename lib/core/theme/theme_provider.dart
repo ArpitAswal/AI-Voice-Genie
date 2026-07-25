@@ -15,18 +15,17 @@ import '../services/storage_service.dart';
 /// context.watch<ThemeProvider>().themeMode
 /// ```
 class ThemeProvider extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode = ThemeMode.light;
 
   ThemeMode get themeMode => _themeMode;
 
   ThemeType get currentThemeType {
     switch (_themeMode) {
       case ThemeMode.light:
+      case ThemeMode.system:
         return ThemeType.light;
       case ThemeMode.dark:
         return ThemeType.dark;
-      case ThemeMode.system:
-        return (ThemeMode.system == ThemeMode.light) ? ThemeType.light : ThemeType.dark;
     }
   }
 
@@ -49,11 +48,10 @@ class ThemeProvider extends ChangeNotifier {
   ThemeMode _toThemeMode(ThemeType type) {
     switch (type) {
       case ThemeType.light:
+      case ThemeType.system:
         return ThemeMode.light;
       case ThemeType.dark:
         return ThemeMode.dark;
-      case ThemeType.system:
-        return ThemeMode.system;
     }
   }
 }

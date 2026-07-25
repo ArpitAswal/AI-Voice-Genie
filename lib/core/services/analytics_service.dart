@@ -215,6 +215,13 @@ class AnalyticsService {
     });
   }
 
+  /// Log when the user deletes their account
+  Future<void> logAccountDeleted(String uid) async {
+    await _safeLog(FirebaseCollections.eventAccountDeleted, {
+      FirebaseCollections.paramUserId: uid,
+    });
+  }
+
   /// Set the user ID for all subsequent analytics events
   Future<void> setUserId(String userId) async {
     try {

@@ -308,6 +308,7 @@ class AppLocalizations {
       'configure': 'Configure',
       'help_center': 'Help Center',
       'coming_soon': 'Coming soon.',
+      'active_user': 'Active user since',
 
       // ── Usage Tracking ─────────────────────────────────────────────────────
       'usage_this_month': 'Estimated usage this month',
@@ -375,6 +376,9 @@ class AppLocalizations {
       'delete_account_confirm':
           'This will permanently delete your account and all conversations. This cannot be undone.',
       'account_deleted': 'Account deleted.',
+      'deleting_account': 'Deleting your account...',
+      'session_expired': 'Your session has expired. Please sign in again.',
+      'requires_recent_login': 'For security reasons, please sign out and sign in again before deleting your account.',
       'unauthenticate_profile': 'UnAuthenticate Profile',
       'date_of_birth': 'Date of Birth',
       'age': 'Age',
@@ -707,6 +711,7 @@ class AppLocalizations {
       'app_settings': 'ऐप सेटिंग',
       'ai_preferences': 'AI प्राथमिकताएं',
       'ai_intelligence': 'AI इंटेलिजेंस',
+      'active_user': 'तब से सक्रिय उपयोगकर्ता,',
 
       // ── Usage Tracking ─────────────────────────────────────────────────────────
       'usage_this_month': 'इस महीने का अनुमानित उपयोग',
@@ -793,6 +798,9 @@ class AppLocalizations {
       'delete_account_confirm':
           'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा।',
       'account_deleted': 'खाता हटा दिया गया।',
+      'deleting_account': 'आपका खाता हटाया जा रहा है...',
+      'session_expired': 'आपका सत्र समाप्त हो गया है। कृपया पुनः साइन इन करें।',
+      'requires_recent_login': 'सुरक्षा कारणों से, कृपया अपना खाता हटाने से पहले साइन आउट करें और फिर से साइन इन करें।',
       'unauthenticate_profile': 'अप्रमाणित प्रोफ़ाइल',
       'date_of_birth': 'जन्म तिथि',
       'age': 'आयु',
@@ -1053,6 +1061,13 @@ class AppLocalizations {
   String get activateModelsMessage => translate('activate_models_message');
   String get helpCenter => translate('help_center');
   String get about => translate('about');
+  String get account => translate('account');
+  String get deleteAccount => translate('delete_account');
+  String get deleteAccountConfirm => translate('delete_account_confirm');
+  String get accountDeleted => translate('account_deleted');
+  String get deletingAccount => translate('deleting_account');
+  String get sessionExpired => translate('session_expired');
+  String get requiresRecentLogin => translate('requires_recent_login');
   String get signOutConfirm => translate('sign_out_confirm');
   String get signOutSuccess => translate('sign_out_success');
   String get signingOut => translate('signing_out');

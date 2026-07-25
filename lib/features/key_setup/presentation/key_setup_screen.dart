@@ -2,7 +2,6 @@ import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:ai_voice_genie/features/key_setup/presentation/api_key_provider.dart';
 import 'package:ai_voice_genie/core/preferences/ai_preferences_provider.dart';
 import 'package:ai_voice_genie/core/extensions/ai_provider_extensions.dart';
-import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -10,7 +9,6 @@ import 'package:no_screenshot/no_screenshot.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/widgets/app_alert_dialog.dart';
-import '../../../core/constants/app_assets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/extensions/build_context_extensions.dart';
@@ -19,7 +17,6 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/utils/app_validators.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
-import '../../../shared/widgets/image_view.dart';
 import '../../auth/presentation/auth_provider.dart';
 
 /// API key setup screen shown once after first sign-in.
@@ -32,8 +29,11 @@ import '../../auth/presentation/auth_provider.dart';
 class KeySetupScreen extends StatefulWidget {
   /// Whether this is the initial setup (true) or accessed from Settings (false)
   final bool isInitialSetup;
+  
+  /// The provider to automatically focus when the screen opens (e.g. from deep link or button)
+  final AiProviderId? initialFocusProvider;
 
-  const KeySetupScreen({super.key, this.isInitialSetup = true});
+  const KeySetupScreen({super.key, this.isInitialSetup = true, this.initialFocusProvider});
 
   @override
   State<KeySetupScreen> createState() => _KeySetupScreenState();
@@ -122,6 +122,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
                       child: _ProviderKeyCard(
                         provider: provider,
                         isTablet: isTablet,
+                        autoFocus: widget.initialFocusProvider == provider,
                       ),
                     ),
                   ),
@@ -185,10 +186,12 @@ class _SetupHeader extends StatelessWidget {
 class _ProviderKeyCard extends StatefulWidget {
   final AiProviderId provider;
   final bool isTablet;
+  final bool autoFocus;
 
   const _ProviderKeyCard({
     required this.provider,
     required this.isTablet,
+    this.autoFocus = false,
   });
 
   @override
@@ -198,11 +201,23 @@ class _ProviderKeyCard extends StatefulWidget {
 class _ProviderKeyCardState extends State<_ProviderKeyCard> {
   final _keyController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _focusNode = FocusNode();
   bool _obscureKey = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+    }
+  }
 
   @override
   void dispose() {
     _keyController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -357,6 +372,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                     key: _formKey,
                     child: context.themedTextField(
                       controller: _keyController,
+                      focus: _focusNode,
                       obscureText: _obscureKey,
                       enabled: !isValidating,
                       hint: context.l10n.keyHint,

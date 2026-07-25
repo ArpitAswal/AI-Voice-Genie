@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/error/effect_listener.dart';
+
 import 'core/localization/app_localizations.dart';
 import 'core/localization/locale_provider.dart';
 import 'core/preferences/ai_preferences_provider.dart';
@@ -89,6 +90,7 @@ class AiVoiceGenieApp extends StatelessWidget {
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, _) {
           return MaterialApp(
+            navigatorKey: AppRoutes.navigatorKey,
             // ── App Config ────────────────────────────────────────────────────
             debugShowCheckedModeBanner: false,
 

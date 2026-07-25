@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/widgets/app_alert_dialog.dart';
 import '../../../auth/presentation/auth_provider.dart';
 
 class ProfileAvatar extends StatefulWidget {
@@ -59,7 +60,7 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     final isCamera = source == ImageSource.camera;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppAlertDialog(
         title: Text(context.l10n.permissionDenied),
         content: Text(isCamera
             ? context.l10n.cameraDeniedMessage
@@ -195,6 +196,7 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       ),
     );
   }
+
   Widget _buildAvatarImage(String photoUrl, String displayName, double size) {
     if (photoUrl.isEmpty) {
       return _InitialsAvatar(displayName: displayName);

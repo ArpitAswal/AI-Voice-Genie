@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../features/chat/presentation/chat_detail_screen.dart';
 import '../../features/home/presentation/tab_bar_screen.dart';
 import '../../features/key_setup/presentation/key_setup_screen.dart';
+import '../enums/app_enums.dart';
 
 /// Centralized route management for AI Voice Genie.
 ///
@@ -50,6 +51,10 @@ enum TransitionType {
 // =============================================================================
 
 class AppRoutes {
+  /// Global navigator key for out-of-context navigation and snackbar alerts (e.g. session expired).
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   // ── Route Name Constants ───────────────────────────────────────────────────
 
   /// Splash screen — initial route
@@ -238,8 +243,12 @@ class AppRoutes {
 
       // ── API Key Management ─────────────────────────────────────────────────
       case apiKeyManagement:
+        final initialProvider = arguments is AiProviderId ? arguments : null;
         return _buildRoute(
-          const KeySetupScreen(isInitialSetup: false),
+          KeySetupScreen(
+            isInitialSetup: false,
+            initialFocusProvider: initialProvider,
+          ),
           settings,
           TransitionType.slide,
         );
