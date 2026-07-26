@@ -470,6 +470,7 @@ class ChatSyncService {
   Future<void> _mergeRemoteMessages(
       String uid, String conversationId, QuerySnapshot snapshot) async {
     final now = DateTime.now();
+    final recordsToSave = <LocalMessageRecord>[];
 
     for (final change in snapshot.docChanges) {
       final doc = change.doc;
@@ -506,7 +507,7 @@ class ChatSyncService {
         }
       }
 
-      // Remote wins: save or update local message record
+      // Remote wins: collect to save in batch
       final record = LocalMessageRecord.fromMessageModel(
         message,
         uid: uid,
@@ -514,7 +515,11 @@ class ChatSyncService {
         syncStatus: SyncStatus.synced,
       ).copyWith(remoteUpdatedAt: now);
 
-      await _localStore.saveMessage(record);
+      recordsToSave.add(record);
+    }
+
+    if (recordsToSave.isNotEmpty) {
+      await _localStore.saveMessagesBatch(recordsToSave);
     }
   }
 

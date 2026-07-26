@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/widgets/app_alert_dialog.dart';
 
 class ChangeTitleDialog extends StatefulWidget {
   final String initialTitle;
@@ -36,13 +37,17 @@ class _ChangeTitleDialogState extends State<ChangeTitleDialog> {
     final l10n = AppLocalizations.of(context)!;
     final theme = context.theme;
 
-    return AlertDialog(
+    return AppAlertDialog(
       title: Text(
         l10n.translate('rename_conversation_name'),
         style: theme.textTheme.titleLarge,
       ),
       insetPadding: const EdgeInsets.all(20),
-      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24.0),
+      titlePadding:
+          const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+      actionsPadding:
+          const EdgeInsets.symmetric(horizontal: 24.0, vertical: 18.0),
       content: SizedBox(
         width: double.maxFinite,
         child: context.themedTextField(

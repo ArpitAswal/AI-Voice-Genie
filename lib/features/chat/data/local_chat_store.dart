@@ -277,6 +277,19 @@ class LocalChatStore {
     await _messagesBox.put(record.hiveKey, record.toMap());
   }
 
+  /// Persist multiple message records in a single batch to Hive.
+  ///
+  /// Using putAll emits a single watch event rather than one per message,
+  /// preventing excessive UI rebuilds during Firestore synchronization.
+  Future<void> saveMessagesBatch(List<LocalMessageRecord> records) async {
+    if (records.isEmpty) return;
+    final map = <String, dynamic>{};
+    for (final record in records) {
+      map[record.hiveKey] = record.toMap();
+    }
+    await _messagesBox.putAll(map);
+  }
+
   /// Hard-delete a specific message from Hive.
   Future<void> hardDeleteMessage(
       String uid, String conversationId, String messageId) async {

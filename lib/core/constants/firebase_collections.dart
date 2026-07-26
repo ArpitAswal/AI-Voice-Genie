@@ -120,7 +120,7 @@ class FirebaseCollections {
   // Value: 'delivered' | 'failed'
   static const String fieldStatus = 'status';
   static const String fieldTimestamp = 'timestamp';
-  static const String fieldImageUrl = 'imageUrl';
+  static const String fieldImageUrl = 'imageUrls';
   static const String fieldPdfName = 'pdfName';
   static const String fieldPdfInfo = 'pdfInfo';
   static const String fieldValidProviders = 'validProviders';
@@ -137,7 +137,7 @@ class FirebaseCollections {
   static const String fieldMessageModelUsed = 'modelUsed';
   static const String fieldMessageTokenCount = 'tokenCount';
   static const String fieldMessageStatus = 'status';
-  static const String fieldMessageImageUrl = 'imageUrl';
+  static const String fieldMessageImageUrl = 'imageUrls';
   static const String fieldMessageLocalImageKey = 'localImageKey';
   static const String fieldMessagePdfName = 'pdfName';
   static const String fieldMessagePdfPaths = 'pdfPaths';

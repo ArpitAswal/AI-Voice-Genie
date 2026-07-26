@@ -31,10 +31,24 @@ abstract class AuthRepository {
   /// Reads from FirebaseAuth.currentUser — does NOT make a Firestore call.
   Future<UserModel?> getCurrentUser();
 
+  /// Stream of authentication state changes (emits null when session ends or account is deleted).
+  Stream<UserModel?> get authStateChanges;
+
+  /// Stream that emits true if the user's Firestore profile document exists, false if deleted.
+  /// Used to detect real-time remote account deletion across multiple devices.
+  Stream<bool> watchUserExists(String uid);
+
+  /// Forcefully re-verify the active Firebase session against backend servers.
+  /// Throws [AuthException] if the account was deleted or disabled remotely.
+  Future<void> reloadSession();
+
   /// Sign out the current user from all providers.
   ///
   /// Clears Firebase session, Google Sign-In state, and Hive session flags.
   Future<void> signOut();
+
+  /// Deletes the user's account and associated data from Firestore and Auth provider.
+  Future<bool> deleteAccount();
 
   /// Whether Apple Sign-In is available on this device.
   ///
@@ -106,6 +120,9 @@ class AuthErrorCodes {
 
   /// Firestore user document write failed
   static const String firestoreWriteFailed = 'something_went_wrong';
+
+  /// Sensitive operation requires recent authentication
+  static const String requiresRecentLogin = 'requires_recent_login';
 
   /// Unknown / unexpected error
   static const String unknown = 'something_went_wrong';

@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:ai_voice_genie/core/constants/firebase_collections.dart';
+import 'package:ai_voice_genie/core/constants/storage_keys.dart';
 import 'package:ai_voice_genie/core/error/effect_bus.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../../../core/enums/app_enums.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/services/analytics_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/utils/status_message_utils.dart';
 import '../../../features/chat/data/chat_sync_service.dart';
 import '../domain/auth_repository.dart';
 import '../domain/user_model.dart';
@@ -35,7 +40,7 @@ import '../data/auth_repository_impl.dart';
 /// // In LoginScreen:
 /// context.read<AuthProvider>().signInWithGoogle()
 /// ```
-class AuthProvider extends ChangeNotifier {
+class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   final AuthRepository _repository;
   final AnalyticsService _analytics;
 
@@ -43,7 +48,10 @@ class AuthProvider extends ChangeNotifier {
     AuthRepository? repository,
     AnalyticsService? analytics,
   })  : _repository = repository ?? AuthRepositoryImpl(),
-        _analytics = analytics ?? AnalyticsService.instance;
+        _analytics = analytics ?? AnalyticsService.instance {
+    WidgetsBinding.instance.addObserver(this);
+    _initAuthStateListener();
+  }
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +59,10 @@ class AuthProvider extends ChangeNotifier {
   UserModel? _currentUser;
   String? _authError;
   final EffectBus _effectBus = EffectBus.instance;
+  StreamSubscription<UserModel?>? _authStateSub;
+  StreamSubscription<bool>? _userExistsSub;
+  String? _watchedUid;
+  bool _isLocalSignOutOrDelete = false;
 
   /// Current authentication state — drives SplashScreen navigation.
   AuthState get authState => _authState;
@@ -86,14 +98,51 @@ class AuthProvider extends ChangeNotifier {
         // Start background sync as soon as an existing session is restored.
         // This drains any outbox tasks from the previous session and activates
         // Firestore streams for the conversation list.
-        await ChatSyncService.instance.start(user.uid);
+        try {
+          await ChatSyncService.instance.start(user.uid);
+        } catch (e) {
+          debugPrint('⚠️ ChatSyncService start error (ignored): $e');
+        }
       } else {
+        bool wasLoggedIn = false;
+        try {
+          wasLoggedIn = StorageService().getBool(StorageKeys.isLoggedIn);
+        } catch (_) {}
+        if (wasLoggedIn) {
+          try {
+            await StorageService().clearUserData();
+          } catch (_) {}
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final context = AppRoutes.navigatorKey.currentContext;
+            if (context != null) {
+              MessageUtils.showWarning(context, context.l10n.sessionExpired);
+            }
+          });
+        }
         _setAuthState(AuthState.unauthenticated);
       }
       debugPrint(
           '\u26a0\ufe0f AuthProvider initialize with either authenticate or unauthenticated state');
     } catch (e) {
       debugPrint('\u26a0\ufe0f AuthProvider initialize error: $e');
+      bool wasLoggedIn = false;
+      try {
+        wasLoggedIn = StorageService().getBool(StorageKeys.isLoggedIn);
+      } catch (_) {}
+      if (wasLoggedIn &&
+          (e.toString().contains('user-not-found') ||
+              e.toString().contains('user-disabled') ||
+              e.toString().contains('user-token-expired'))) {
+        try {
+          await StorageService().clearUserData();
+        } catch (_) {}
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final context = AppRoutes.navigatorKey.currentContext;
+          if (context != null) {
+            MessageUtils.showWarning(context, context.l10n.sessionExpired);
+          }
+        });
+      }
       // On any initialization error, treat as unauthenticated
       // Never leave the user stuck on the splash screen
       _setAuthState(AuthState.unauthenticated);
@@ -142,13 +191,18 @@ class AuthProvider extends ChangeNotifier {
   ///
   /// Clears all session data and sets state to unauthenticated.
   Future<void> signOut() async {
+    _isLocalSignOutOrDelete = true;
     try {
       debugPrint("\u26a0\ufe0f AuthProvider Signing Out");
       final signingOutUid = _currentUser?.uid;
 
       // Stop sync BEFORE clearing local data to ensure no in-flight Firestore
       // operations run against stale credentials after the Firebase token expires.
-      await ChatSyncService.instance.stop();
+      try {
+        await ChatSyncService.instance.stop();
+      } catch (e) {
+        debugPrint('⚠️ ChatSyncService stop error (ignored): $e');
+      }
 
       await _repository.signOut();
       await _analytics.clearUserId();
@@ -159,9 +213,13 @@ class AuthProvider extends ChangeNotifier {
       // Clear this user's chat data from Hive so the next user session starts clean.
       // This is critical when two different accounts sign in on the same device.
       if (signingOutUid != null) {
-        await StorageService().clearChatBoxes(signingOutUid);
+        try {
+          await StorageService().clearChatBoxes(signingOutUid);
+        } catch (_) {}
       }
-      await StorageService().clearUserData();
+      try {
+        await StorageService().clearUserData();
+      } catch (_) {}
 
       _currentUser = null;
       _setAuthState(AuthState.unauthenticated);
@@ -170,6 +228,74 @@ class AuthProvider extends ChangeNotifier {
       // Even on error, clear local state so user is not stuck
       _currentUser = null;
       _setAuthState(AuthState.unauthenticated);
+    } finally {
+      _isLocalSignOutOrDelete = false;
+    }
+  }
+
+  // ── Delete Account ─────────────────────────────────────────────────────────
+
+  /// Delete the current user's account and clear all session data.
+  ///
+  /// This orchestrates the termination of background sync, delegates remote
+  /// deletion to the repository, logs analytics, and wipes local Hive caches.
+  /// Returns [true] if deletion succeeded, [false] otherwise.
+  Future<bool> deleteAccount() async {
+    _isLocalSignOutOrDelete = true;
+    _authError = null;
+    try {
+      debugPrint("⚠️ AuthProvider Deleting Account");
+      final deletingUid = _currentUser?.uid;
+
+      // Stop sync BEFORE clearing local data or deleting credentials so that
+      // background workers do not attempt new Firestore reads/writes mid-deletion.
+      try {
+        await ChatSyncService.instance.stop();
+      } catch (e) {
+        debugPrint('⚠️ ChatSyncService stop error (ignored): $e');
+      }
+
+      // Execute remote deletion (conversations, profile doc, API keys, auth account).
+      // If any critical step fails (e.g. requires-recent-login), we abort and return false
+      // so the user remains on the profile screen with an error message instead of navigating away.
+      final success = await _repository.deleteAccount();
+      if (!success) {
+        _authError ??= 'something_went_wrong';
+        notifyListeners();
+        return false;
+      }
+
+      // Log deletion event and clear analytics tracking IDs
+      await _analytics.clearUserId();
+      if (deletingUid != null) {
+        _analytics.logAccountDeleted(deletingUid);
+      }
+
+      // Wipe local Hive databases (chat history and user preferences)
+      if (deletingUid != null) {
+        try {
+          await StorageService().clearChatBoxes(deletingUid);
+        } catch (_) {}
+      }
+      try {
+        await StorageService().clearUserData();
+      } catch (_) {}
+
+      _currentUser = null;
+      _setAuthState(AuthState.unauthenticated);
+      return true;
+    } on AuthException catch (e) {
+      debugPrint('⚠️ AuthProvider deleteAccount AuthException: ${e.code}');
+      _authError = e.code;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      debugPrint('⚠️ AuthProvider deleteAccount error: $e');
+      _authError = 'something_went_wrong';
+      notifyListeners();
+      return false;
+    } finally {
+      _isLocalSignOutOrDelete = false;
     }
   }
 
@@ -270,7 +396,11 @@ class AuthProvider extends ChangeNotifier {
       _setAuthState(AuthState.authenticated);
       // Start background sync immediately after fresh sign-in so that
       // any outbox tasks and Firestore streams are active from the first screen.
-      await ChatSyncService.instance.start(user.uid);
+      try {
+        await ChatSyncService.instance.start(user.uid);
+      } catch (e) {
+        debugPrint('⚠️ ChatSyncService start error (ignored): $e');
+      }
       return true;
     } on AuthException catch (e) {
       // Cancelled is not an error — just return false silently
@@ -297,9 +427,63 @@ class AuthProvider extends ChangeNotifier {
 
   /// Set auth state and notify listeners only if state actually changed.
   void _setAuthState(AuthState newState) {
-    if (_authState == newState) return;
+    if (_authState == newState) {
+      if (newState == AuthState.authenticated &&
+          _currentUser != null &&
+          _watchedUid != _currentUser!.uid) {
+        _startWatchingUserExists(_currentUser!.uid);
+      }
+      return;
+    }
     _authState = newState;
+    if (newState == AuthState.authenticated && _currentUser != null) {
+      _startWatchingUserExists(_currentUser!.uid);
+    } else if (newState == AuthState.unauthenticated) {
+      _userExistsSub?.cancel();
+      _watchedUid = null;
+    }
     notifyListeners();
+  }
+
+  void _startWatchingUserExists(String uid) {
+    if (_watchedUid == uid && _userExistsSub != null) return;
+    _watchedUid = uid;
+    _userExistsSub?.cancel();
+    _userExistsSub = _repository.watchUserExists(uid).listen((exists) async {
+      if (!exists &&
+          _authState == AuthState.authenticated &&
+          !_isLocalSignOutOrDelete) {
+        debugPrint(
+            '⚠️ AuthProvider: Remote account deletion detected via Firestore snapshot! Forcefully logging out.');
+        await _handleRemoteSessionTermination();
+      }
+    }, onError: (e) {
+      debugPrint(
+          '⚠️ AuthProvider watchUserExists stream error (ignored on logout/delete): $e');
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _authState == AuthState.authenticated &&
+        !_isLocalSignOutOrDelete) {
+      _verifySessionValidityOnResume();
+    }
+  }
+
+  Future<void> _verifySessionValidityOnResume() async {
+    try {
+      await _repository.reloadSession();
+    } on AuthException catch (e) {
+      if (e.code == 'user-not-found' ||
+          e.code == 'user-disabled' ||
+          e.code == 'user-token-expired') {
+        debugPrint(
+            '⚠️ AuthProvider: Remote session termination detected on resume (${e.code})');
+        await _handleRemoteSessionTermination();
+      }
+    } catch (_) {}
   }
 
   // Updating: Fields Value
@@ -325,5 +509,63 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('❌ AuthProvider onboarding error: $e');
       _authError = 'something_went_wrong';
     }
+  }
+
+  // ── Remote Session Termination Handler ──────────────────────────────────────
+
+  void _initAuthStateListener() {
+    _authStateSub = _repository.authStateChanges.listen((user) async {
+      // If Firebase explicitly reports user is null while we are authenticated
+      // AND we did NOT trigger a local signOut or deleteAccount,
+      // it means the session was terminated remotely (e.g., account deleted on another device).
+      if (user == null &&
+          _authState == AuthState.authenticated &&
+          !_isLocalSignOutOrDelete) {
+        debugPrint(
+            '⚠️ AuthProvider: Remote session termination detected (e.g. account deleted on another device)');
+        await _handleRemoteSessionTermination();
+      }
+    });
+  }
+
+  Future<void> _handleRemoteSessionTermination() async {
+    _userExistsSub?.cancel();
+    _watchedUid = null;
+    final uid = _currentUser?.uid;
+    try {
+      await ChatSyncService.instance.stop();
+    } catch (_) {}
+
+    try {
+      await _repository.signOut();
+    } catch (_) {}
+
+    if (uid != null) {
+      try {
+        await StorageService().clearChatBoxes(uid);
+      } catch (_) {}
+    }
+    try {
+      await StorageService().clearUserData();
+      await StorageService().setBool(StorageKeys.isLoggedIn, false);
+    } catch (_) {}
+
+    _currentUser = null;
+    _setAuthState(AuthState.unauthenticated);
+
+    // Show Snackbar and redirect to login screen like banking apps do
+    final context = AppRoutes.navigatorKey.currentContext;
+    if (context != null && context.mounted) {
+      MessageUtils.showWarning(context, context.l10n.sessionExpired);
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.login);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _userExistsSub?.cancel();
+    _authStateSub?.cancel();
+    super.dispose();
   }
 }

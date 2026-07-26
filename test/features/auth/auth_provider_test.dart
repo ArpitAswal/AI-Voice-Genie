@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:ai_voice_genie/core/enums/app_enums.dart';
@@ -9,6 +10,7 @@ import 'package:firebase_analytics/observer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('AuthProvider initialization', () {
     test('sets authenticated state when repository returns current user',
         () async {
@@ -230,6 +232,88 @@ void main() {
       expect(analytics.clearUserIdCalls, 0);
       expect(analytics.signedOutUserIds, isEmpty);
     });
+
+    test('deleteAccount deletes account, clears local state and analytics',
+        () async {
+      final user = _user();
+      final repository = _FakeAuthRepository(googleResult: user);
+      final analytics = _FakeAnalyticsService();
+      final provider = AuthProvider(
+        repository: repository,
+        analytics: analytics,
+      );
+
+      await provider.signInWithGoogle();
+      final success = await provider.deleteAccount();
+
+      expect(success, isTrue);
+      expect(repository.deleteAccountCalls, 1);
+      expect(provider.authState, AuthState.unauthenticated);
+      expect(provider.currentUser, isNull);
+      expect(analytics.clearUserIdCalls, 1);
+      expect(analytics.deletedAccountUserIds, [user.uid]);
+    });
+
+    test('deleteAccount sets authError when AuthException is thrown (e.g., requires-recent-login)',
+        () async {
+      final user = _user();
+      final repository = _FakeAuthRepository(
+        googleResult: user,
+        deleteAccountError: const AuthException(AuthErrorCodes.requiresRecentLogin),
+      );
+      final analytics = _FakeAnalyticsService();
+      final provider = AuthProvider(
+        repository: repository,
+        analytics: analytics,
+      );
+
+      await provider.signInWithGoogle();
+      final success = await provider.deleteAccount();
+
+      expect(success, isFalse);
+      expect(repository.deleteAccountCalls, 1);
+      expect(provider.authError, AuthErrorCodes.requiresRecentLogin);
+    });
+
+    test('remote session termination sets unauthenticated state when user emitted is null',
+        () async {
+      final user = _user();
+      final repository = _FakeAuthRepository(currentUser: user);
+      final analytics = _FakeAnalyticsService();
+      final provider = AuthProvider(
+        repository: repository,
+        analytics: analytics,
+      );
+      await provider.initialize();
+      expect(provider.authState, AuthState.authenticated);
+
+      // Simulate Firebase Auth emitting null remotely (e.g. account deleted on another device)
+      repository.authStateController.add(null);
+      await Future.delayed(Duration.zero);
+
+      expect(provider.authState, AuthState.unauthenticated);
+      expect(provider.currentUser, isNull);
+    });
+
+    test('remote profile deletion via watchUserExists sets unauthenticated state and signs out', () async {
+      final user = _user();
+      final repository = _FakeAuthRepository(currentUser: user);
+      final analytics = _FakeAnalyticsService();
+      final provider = AuthProvider(
+        repository: repository,
+        analytics: analytics,
+      );
+      await provider.initialize();
+      expect(provider.authState, AuthState.authenticated);
+
+      // Simulate Firestore profile doc being deleted from another device
+      repository.userExistsController.add(false);
+      await Future.delayed(Duration.zero);
+
+      expect(provider.authState, AuthState.unauthenticated);
+      expect(provider.currentUser, isNull);
+      expect(repository.signOutCalls, 1);
+    });
   });
 }
 
@@ -259,7 +343,20 @@ class _FakeAuthRepository implements AuthRepository {
     this.googleError,
     this.appleError,
     this.signOutError,
+    this.deleteAccountError,
   });
+
+  final authStateController = StreamController<UserModel?>.broadcast();
+  final userExistsController = StreamController<bool>.broadcast();
+
+  @override
+  Stream<UserModel?> get authStateChanges => authStateController.stream;
+
+  @override
+  Stream<bool> watchUserExists(String uid) => userExistsController.stream;
+
+  @override
+  Future<void> reloadSession() async {}
 
   UserModel? currentUser;
   UserModel? googleResult;
@@ -267,10 +364,13 @@ class _FakeAuthRepository implements AuthRepository {
   Object? googleError;
   Object? appleError;
   Object? signOutError;
+  Object? deleteAccountError;
 
   int googleSignInCalls = 0;
   int appleSignInCalls = 0;
   int signOutCalls = 0;
+  int deleteAccountCalls = 0;
+  bool deleteAccountResult = true;
   int updateUserCalls = 0;
   UserModel? lastUpdatedUser;
   String? lastUpdatedField;
@@ -306,6 +406,14 @@ class _FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<bool> deleteAccount() async {
+    deleteAccountCalls += 1;
+    final error = deleteAccountError;
+    if (error != null) throw error;
+    return deleteAccountResult;
+  }
+
+  @override
   Future<bool> updateUser(
     UserModel? currentUser, {
     required String field,
@@ -336,6 +444,7 @@ class _FakeAnalyticsService implements AnalyticsService {
   final registeredUsers = <UserModel>[];
   final signedInUsers = <UserModel>[];
   final signedOutUserIds = <String>[];
+  final deletedAccountUserIds = <String>[];
   final userIds = <String>[];
   int clearUserIdCalls = 0;
 
@@ -362,6 +471,11 @@ class _FakeAnalyticsService implements AnalyticsService {
   @override
   Future<void> logUserSignedOut(String uid) async {
     signedOutUserIds.add(uid);
+  }
+
+  @override
+  Future<void> logAccountDeleted(String uid) async {
+    deletedAccountUserIds.add(uid);
   }
 
   @override

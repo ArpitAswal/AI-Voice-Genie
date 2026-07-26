@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:isolate';
 
 import 'package:ai_voice_genie/core/constants/app_assets.dart';
 import 'package:ai_voice_genie/features/chat/domain/chat_attachment.dart';
@@ -257,25 +259,172 @@ class _ChatImage extends StatelessWidget {
 }
 
 Widget _buildImage(String url) {
-  ImageViewData imageData;
-  if (url.startsWith('data:image')) {
-    final base64Data = url.substring(url.indexOf(',') + 1);
-    imageData = ImageViewData.memory(base64Decode(base64Data));
-  } else if (url.startsWith('http')) {
-    imageData = ImageViewData.network(url);
-  } else {
-    imageData = ImageViewData.file(url);
+  final trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return ImageView(
+      image: ImageViewData.network(trimmed),
+      fit: BoxFit.cover,
+      alignment: Alignment.center,
+      borderRadius: BorderRadius.circular(10),
+      filterQuality: FilterQuality.high,
+      errorBuilder: (_, __, ___) => const _ImageFallback(),
+      loadingBuilder: (_, __, ___) => const ShimmerLoading(borderRadius: 10),
+    );
+  }
+  return _SmartAsyncImageViewer(url: trimmed);
+}
+
+class _SmartAsyncImageViewer extends StatefulWidget {
+  final String url;
+  const _SmartAsyncImageViewer({required this.url});
+
+  @override
+  State<_SmartAsyncImageViewer> createState() => _SmartAsyncImageViewerState();
+}
+
+class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
+  static final Map<String, Uint8List> _base64Cache = {};
+  Uint8List? _decodedBytes;
+  bool _isLoading = false;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveImage();
   }
 
-  return ImageView(
-    image: imageData,
-    fit: BoxFit.cover,
-    alignment: Alignment.center,
-    borderRadius: BorderRadius.circular(10),
-    filterQuality: FilterQuality.high,
-    errorBuilder: (_, __, ___) => const _ImageFallback(),
-    loadingBuilder: (_, __, ___) => const ShimmerLoading(borderRadius: 10),
-  );
+  @override
+  void didUpdateWidget(covariant _SmartAsyncImageViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _resolveImage();
+    }
+  }
+
+  void _resolveImage() {
+    final url = widget.url.trim();
+    if (url.isEmpty) {
+      setState(() {
+        _hasError = true;
+      });
+      return;
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return;
+    }
+
+    bool isBase64 = url.startsWith('data:image');
+    String base64Data = url;
+    if (isBase64) {
+      final commaIdx = url.indexOf(',');
+      if (commaIdx != -1) {
+        base64Data = url.substring(commaIdx + 1);
+      }
+    } else if (!url.startsWith('/') &&
+        !url.startsWith('file:') &&
+        url.length > 200) {
+      isBase64 = true;
+    }
+
+    if (isBase64) {
+      if (_base64Cache.containsKey(base64Data)) {
+        setState(() {
+          _decodedBytes = _base64Cache[base64Data];
+          _isLoading = false;
+          _hasError = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+      });
+
+      _decodeAsync(base64Data);
+    } else {
+      final filePath = url.replaceFirst('file://', '');
+      final file = File(filePath);
+      if (!file.existsSync()) {
+        setState(() {
+          _hasError = true;
+        });
+      }
+    }
+  }
+
+  Future<void> _decodeAsync(String base64Data) async {
+    try {
+      final bytes = await Isolate.run(() => base64Decode(base64Data));
+      if (!mounted) return;
+      if (_base64Cache.length >= 50) {
+        _base64Cache.remove(_base64Cache.keys.first);
+      }
+      _base64Cache[base64Data] = bytes;
+      setState(() {
+        _decodedBytes = bytes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('⚠️ MessageBubble base64 decode error: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return const _ImageFallback();
+    }
+
+    final url = widget.url.trim();
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return ImageView(
+        image: ImageViewData.network(url),
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+        borderRadius: BorderRadius.circular(10),
+        filterQuality: FilterQuality.high,
+        errorBuilder: (_, __, ___) => const _ImageFallback(),
+        loadingBuilder: (_, __, ___) => const ShimmerLoading(borderRadius: 10),
+      );
+    }
+
+    if (_isLoading || _decodedBytes == null) {
+      if (!url.startsWith('data:image') &&
+          (url.startsWith('/') || url.startsWith('file:'))) {
+        final filePath = url.replaceFirst('file://', '');
+        return ImageView(
+          image: ImageViewData.file(filePath),
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          borderRadius: BorderRadius.circular(10),
+          filterQuality: FilterQuality.high,
+          errorBuilder: (_, __, ___) => const _ImageFallback(),
+          loadingBuilder: (_, __, ___) =>
+              const ShimmerLoading(borderRadius: 10),
+        );
+      }
+      return const ShimmerLoading(borderRadius: 10);
+    }
+
+    return ImageView(
+      image: ImageViewData.memory(_decodedBytes!),
+      fit: BoxFit.cover,
+      alignment: Alignment.center,
+      borderRadius: BorderRadius.circular(10),
+      filterQuality: FilterQuality.high,
+      errorBuilder: (_, __, ___) => const _ImageFallback(),
+      loadingBuilder: (_, __, ___) => const ShimmerLoading(borderRadius: 10),
+    );
+  }
 }
 
 class _ImageFallback extends StatelessWidget {
@@ -796,7 +945,8 @@ class _StatusIcon extends StatelessWidget {
         return Icon(
           Icons.schedule_rounded,
           size: 16,
-          color: context.isDark ? AppColors.darkWarning : AppColors.lightWarning,
+          color:
+              context.isDark ? AppColors.darkWarning : AppColors.lightWarning,
         );
     }
   }

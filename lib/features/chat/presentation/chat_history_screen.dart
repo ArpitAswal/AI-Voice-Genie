@@ -15,6 +15,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../../core/widgets/app_alert_dialog.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
@@ -47,7 +48,8 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid != null) {
       // Use ChatProvider delegate so presentation never touches the repository directly
-      _subscription = context.read<ChatProvider>().watchConversations(uid).listen(
+      _subscription =
+          context.read<ChatProvider>().watchConversations(uid).listen(
         (conversations) {
           if (mounted) {
             setState(() {
@@ -117,10 +119,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   Future<void> _confirmDeleteAll() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor:
-            context.isDark ? AppColors.cardDark : AppColors.cardLight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      builder: (context) => AppAlertDialog(
         title: Row(
           children: [
             const Icon(Icons.warning_amber_rounded,
@@ -141,6 +140,8 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
             height: 1.4,
           ),
         ),
+        actionsPadding:
+            const EdgeInsets.symmetric(vertical: 18.0, horizontal: 24.0),
         actions: [
           Row(
             children: [
@@ -174,7 +175,8 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     // Local-first delete: conversations disappear immediately from the UI.
     // No loading overlay is needed — Firestore deletion runs in the background.
     try {
-      LoadingOverlay.show(context, message: context.l10n.deleteAllConversations);
+      LoadingOverlay.show(context,
+          message: context.l10n.deleteAllConversations);
       // Await the delayed period, then properly await the delete operation.
       // Previously the delete was fire-and-forget which allowed the UI to
       // refresh before the Hive soft-delete and outbox enqueue had finished.

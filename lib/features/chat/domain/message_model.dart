@@ -170,19 +170,25 @@ class MessageModel {
       status: MessageStatus.fromValue(
         data[FirebaseCollections.fieldMessageStatus] as String? ?? 'delivered',
       ),
-      imageUrls: _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]) ??
-          _parseImageUrls(data['imageUrls']),
-      pdfInfo: _parsePdfInfo(data) ??
-          _parsePdfInfo({'pdfInfo': data['pdfInfo']}),
+      imageUrls:
+          _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]) ??
+              _parseImageUrls(data['imageUrls']),
+      pdfInfo:
+          _parsePdfInfo(data) ?? _parsePdfInfo({'pdfInfo': data['pdfInfo']}),
       imageSize: data[FirebaseCollections.fieldImageSize] is String
           ? AiImageSize.fromValue(
               data[FirebaseCollections.fieldImageSize] as String)
-          : (data['imageSize'] is String ? AiImageSize.fromValue(data['imageSize'] as String) : null),
-      imageCount: data[FirebaseCollections.fieldImageCount] as int? ?? data['imageCount'] as int?,
+          : (data['imageSize'] is String
+              ? AiImageSize.fromValue(data['imageSize'] as String)
+              : null),
+      imageCount: data[FirebaseCollections.fieldImageCount] as int? ??
+          data['imageCount'] as int?,
       imageQuality: data[FirebaseCollections.fieldImageQuality] is String
           ? ImageQuality.fromValue(
               data[FirebaseCollections.fieldImageQuality] as String)
-          : (data['imageQuality'] is String ? ImageQuality.fromValue(data['imageQuality'] as String) : null),
+          : (data['imageQuality'] is String
+              ? ImageQuality.fromValue(data['imageQuality'] as String)
+              : null),
     );
   }
 
@@ -294,7 +300,7 @@ class MessageModel {
           : null,
       imageCount: data['imageCount'] as int?,
       imageBytes: data['imageBytes'] is String
-          ? base64Decode(data['imageBytes'] as String)
+          ? _tryBase64Decode(data['imageBytes'] as String)
           : null,
       imageQuality: data['imageQuality'] is String
           ? ImageQuality.fromValue(data['imageQuality'] as String)
@@ -392,20 +398,25 @@ class MessageModel {
       ),
       imageUrls: _parseImageUrls(data[FirebaseCollections.fieldImageUrl]) ??
           _parseImageUrls(data['imageUrls']),
-      pdfInfo: _parsePdfInfo(data) ??
-          _parsePdfInfo({'pdfInfo': data['pdfInfo']}),
+      pdfInfo:
+          _parsePdfInfo(data) ?? _parsePdfInfo({'pdfInfo': data['pdfInfo']}),
       imageSize: data[FirebaseCollections.fieldImageSize] is String
           ? AiImageSize.fromValue(
               data[FirebaseCollections.fieldImageSize] as String)
-          : (data['imageSize'] is String ? AiImageSize.fromValue(data['imageSize'] as String) : null),
-      imageCount: data[FirebaseCollections.fieldImageCount] as int? ?? data['imageCount'] as int?,
-      imageBytes: data[FirebaseCollections.fieldImageUrl] is String
-          ? base64Decode(data[FirebaseCollections.fieldImageUrl] as String)
-          : (data['imageBytes'] is String ? base64Decode(data['imageBytes'] as String) : null),
+          : (data['imageSize'] is String
+              ? AiImageSize.fromValue(data['imageSize'] as String)
+              : null),
+      imageCount: data[FirebaseCollections.fieldImageCount] as int? ??
+          data['imageCount'] as int?,
+      imageBytes: data['imageBytes'] is String
+          ? _tryBase64Decode(data['imageBytes'] as String)
+          : null,
       imageQuality: data[FirebaseCollections.fieldImageQuality] is String
           ? ImageQuality.fromValue(
               data[FirebaseCollections.fieldImageQuality] as String)
-          : (data['imageQuality'] is String ? ImageQuality.fromValue(data['imageQuality'] as String) : null),
+          : (data['imageQuality'] is String
+              ? ImageQuality.fromValue(data['imageQuality'] as String)
+              : null),
     );
 
     return [userMsg, aiMsg];
@@ -494,6 +505,15 @@ List<String>? _parseImageUrls(dynamic data) {
   if (data is String) return [data];
   if (data is List) return data.map((e) => e.toString()).toList();
   return null;
+}
+
+Uint8List? _tryBase64Decode(String? str) {
+  if (str == null || str.isEmpty) return null;
+  try {
+    return base64Decode(str);
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Helper method to parse PDF attachments from dynamic cache/Firestore structure.

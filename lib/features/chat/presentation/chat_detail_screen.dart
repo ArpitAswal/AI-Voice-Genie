@@ -9,6 +9,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
+import '../../../../core/widgets/app_alert_dialog.dart';
 import '../../../core/constants/app_assets.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/preferences/ai_preferences_provider.dart';
@@ -227,12 +228,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppAlertDialog(
         title: Text(l10n.translate('delete_conversation')),
         content: Text(l10n.translate('delete_conversation_confirm')),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        titlePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -245,7 +243,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               l10n.translate('delete'),
-              style: const TextStyle(color: AppColors.lightError),
+              style: TextStyle(
+                  color: context.isDark
+                      ? AppColors.darkError
+                      : AppColors.lightError),
             ),
           ),
         ],

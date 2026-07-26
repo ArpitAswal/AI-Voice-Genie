@@ -17,6 +17,7 @@ import '../../../../core/services/storage_service.dart';
 import '../domain/auth_repository.dart';
 import '../domain/user_model.dart';
 import '../../../../core/enums/app_enums.dart';
+import '../../chat/data/remote_chat_store.dart';
 
 /// Concrete implementation of AuthRepository.
 ///
@@ -204,6 +205,22 @@ class AuthRepositoryImpl implements AuthRepository {
       return null;
     }
 
+    // Verify session is still active and was not deleted/disabled on another device
+    try {
+      await firebaseUser.reload();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' ||
+          e.code == 'user-disabled' ||
+          e.code == 'user-token-expired') {
+        debugPrint(
+            '⚠️ AuthRepository: User account terminated on remote device (${e.code}). Signing out.');
+        await signOut();
+        return null;
+      }
+    } catch (_) {
+      // Ignore offline/network errors during reload so offline app launch still works
+    }
+
     try {
       // Fetch Firestore document to get full profile including flags
       final doc = await _firestore
@@ -211,25 +228,52 @@ class AuthRepositoryImpl implements AuthRepository {
           .get();
 
       if (!doc.exists || doc.data() == null) {
-        // Firebase session exists but Firestore doc is missing
-        // This can happen if Firestore write failed on first sign-in
-        // Re-create the document from Firebase user data
+        // If the Firestore document does not exist, the account was deleted
+        // (e.g. on another device). Do NOT recreate the user document! Sign out and return null.
         debugPrint(
-          '⚠️ AuthRepository: Firestore doc missing for existing Firebase user '
-          '${firebaseUser.uid} — re-creating',
+          '⚠️ AuthRepository: Firestore doc missing for Firebase user '
+          '${firebaseUser.uid} (likely deleted on another device). Signing out.',
         );
-        return await _createOrUpdateUser(
-          firebaseUser: firebaseUser,
-          provider: SocialAuthProvider.google, // safest fallback
-        );
+        await signOut();
+        return null;
       }
 
       return UserModel.fromFirestore(doc.data()!);
     } catch (e) {
       // If Firestore fails, return a minimal model from Firebase data
-      // so the user is not signed out unexpectedly
+      // so the user is not signed out unexpectedly due to transient network errors
       debugPrint('⚠️ AuthRepository: getCurrentUser Firestore error — $e');
       return _buildMinimalUserModel(firebaseUser);
+    }
+  }
+
+  @override
+  Stream<UserModel?> get authStateChanges =>
+      _firebaseAuth.userChanges().map((user) {
+        if (user == null) return null;
+        return _buildMinimalUserModel(user);
+      });
+
+  @override
+  Stream<bool> watchUserExists(String uid) {
+    return _firestore
+        .doc(FirebaseCollections.userDoc(uid))
+        .snapshots()
+        .map((doc) => doc.exists);
+  }
+
+  @override
+  Future<void> reloadSession() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return;
+    try {
+      await user.reload();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' ||
+          e.code == 'user-disabled' ||
+          e.code == 'user-token-expired') {
+        throw AuthException('session_expired', technicalMessage: e.code);
+      }
     }
   }
 
@@ -251,6 +295,166 @@ class AuthRepositoryImpl implements AuthRepository {
     } catch (e) {
       // Google sign-out failure is not critical — continue with Firebase signout
       debugPrint('⚠️ AuthRepository: Google/Firebase signOut error — $e');
+    }
+  }
+
+  // ── Delete Account ────────────────────────────────────────────────────────
+
+  @override
+  Future<bool> deleteAccount() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) return false;
+      final uid = user.uid;
+
+      // ── Step 0: Ensure Recent Authentication ──────────────────────────────
+      // Proactively re-authenticate the user before wiping ANY Firestore data.
+      // In Firebase Auth, sensitive operations like user.delete() require recent
+      // authentication. Doing this first ensures we never wipe a user's chats or
+      // profile document only to fail at account deletion.
+      bool reauthSuccess = false;
+      try {
+        for (final info in user.providerData) {
+          if (info.providerId == 'google.com') {
+            debugPrint(
+                '🔄 Attempting Google re-authentication before account deletion...');
+            final googleUser = await _googleSignIn.signInSilently() ??
+                await _googleSignIn.signIn();
+            if (googleUser != null) {
+              final googleAuth = await googleUser.authentication;
+              if (googleAuth.accessToken != null &&
+                  googleAuth.idToken != null) {
+                final credential = GoogleAuthProvider.credential(
+                  accessToken: googleAuth.accessToken,
+                  idToken: googleAuth.idToken,
+                );
+                await user.reauthenticateWithCredential(credential);
+                reauthSuccess = true;
+                debugPrint(
+                    '✅ Successfully re-authenticated Google user before account deletion');
+              }
+            }
+          } else if (info.providerId == 'apple.com') {
+            debugPrint(
+                '🔄 Attempting Apple re-authentication before account deletion...');
+            final rawNonce = _generateNonce();
+            final hashedNonce = _sha256ofString(rawNonce);
+            final appleCredential = await SignInWithApple.getAppleIDCredential(
+              scopes: [
+                AppleIDAuthorizationScopes.email,
+                AppleIDAuthorizationScopes.fullName,
+              ],
+              nonce: hashedNonce,
+            );
+            final oauthCredential = OAuthProvider('apple.com').credential(
+              idToken: appleCredential.identityToken,
+              rawNonce: rawNonce,
+            );
+            await user.reauthenticateWithCredential(oauthCredential);
+            reauthSuccess = true;
+            debugPrint(
+                '✅ Successfully re-authenticated Apple user before account deletion');
+          }
+        }
+      } catch (e) {
+        debugPrint(
+            '⚠️ Pre-deletion re-authentication failed or was cancelled: $e');
+        if (e is FirebaseAuthException && e.code == 'requires-recent-login') {
+          throw AuthException(
+            AuthErrorCodes.requiresRecentLogin,
+            technicalMessage: 'Re-authentication required: ${e.message}',
+          );
+        }
+      }
+
+      // Check token freshness before proceeding to wipe Firestore data.
+      // In Firebase Auth, delete() requires authentication within ~5 minutes.
+      // If the session is older and re-auth did not succeed, aborting NOW prevents
+      // partial deletion where Firestore chats/profile are wiped but user.delete() fails!
+      final lastSignIn = user.metadata.lastSignInTime;
+      if (!reauthSuccess &&
+          lastSignIn != null &&
+          DateTime.now().difference(lastSignIn).inMinutes >= 4) {
+        debugPrint(
+            '❌ Aborting account deletion: session is older than 4 minutes and re-auth did not complete.');
+        throw const AuthException(
+          AuthErrorCodes.requiresRecentLogin,
+          technicalMessage:
+              'Session token is too old for sensitive deletion operation.',
+        );
+      }
+
+      // ── CRITICAL SEQUENCING NOTE ON FIRE-AND-FORGET VS AWAIT ─────────────
+      // We MUST NOT use fire-and-forget (unawaited) for Firestore deletions!
+      // Once step 4 (`user.delete()`) executes, the Firebase Auth token is
+      // destroyed immediately. If Firestore deletion queries were running in the
+      // background, they would instantly lose authentication and fail with
+      // `permission-denied` (since security rules check `request.auth.uid == uid`).
+      // Therefore, all remote database deletions MUST be awaited sequentially
+      // BEFORE deleting the Firebase Auth user account.
+      //
+      // Furthermore, each step is wrapped in an isolated try-catch block so that
+      // a failure in one (e.g., timeout or missing doc) does not abort the entire
+      // account deletion chain.
+
+      // 1. Delete remote conversations and message subcollections from Firestore
+      try {
+        await RemoteChatStore.instance.deleteAllConversationsRemote(uid: uid);
+        debugPrint('🗑️ Deleted Firestore conversations for uid=$uid');
+      } catch (e) {
+        debugPrint('⚠️ Error deleting Firestore conversations: $e');
+      }
+
+      // 2. Delete user profile doc from Firestore
+      try {
+        await _firestore.doc(FirebaseCollections.userDoc(uid)).delete();
+        debugPrint('🗑️ Deleted Firestore user doc for uid=$uid');
+      } catch (e) {
+        debugPrint('⚠️ Error deleting Firestore user doc: $e');
+      }
+
+      // 3. Delete stored API keys from Firestore
+      for (final provider in AiProviderId.values) {
+        try {
+          await _firestore
+              .doc(FirebaseCollections.apiKeyDoc(uid, provider.id))
+              .delete();
+        } catch (_) {}
+      }
+
+      // 4. Delete user from Firebase Auth
+      await user.delete();
+      debugPrint('🗑️ Deleted Firebase Auth user');
+
+      // 5. Disconnect Google Sign In if signed in with Google
+      try {
+        await _googleSignIn.disconnect();
+      } catch (_) {
+        try {
+          await _googleSignIn.signOut();
+        } catch (_) {}
+      }
+
+      // 6. Clear local preferences and onboarding status
+      _storage.clearUserData();
+      _storage.setBool(StorageKeys.isLoggedIn, false);
+      return true;
+    } on FirebaseAuthException catch (e) {
+      debugPrint(
+          '⚠️ AuthRepositoryImpl deleteAccount FirebaseAuth error: ${e.code}');
+      if (e.code == 'requires-recent-login') {
+        throw AuthException(
+          AuthErrorCodes.requiresRecentLogin,
+          technicalMessage:
+              'FirebaseAuthException: requires-recent-login — ${e.message}',
+        );
+      }
+      return false;
+    } on AuthException {
+      rethrow;
+    } catch (e) {
+      debugPrint('⚠️ AuthRepositoryImpl deleteAccount error: $e');
+      return false;
     }
   }
 
