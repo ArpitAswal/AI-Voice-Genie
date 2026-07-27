@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/speech_grammar_formatter.dart';
 import '../domain/voice_speech_repository.dart';
 
 /// Device-native implementation of VoiceRepository.
@@ -165,8 +166,10 @@ class VoiceRepositoryImpl implements VoiceRepository {
           if (currentWords.isNotEmpty) {
             _markSpeechActivity();
             _restartAttemptCount = 0;
-            _latestCombinedTranscript = combinedText;
-            _activeOnPartialResult?.call(combinedText);
+            final formattedPartial =
+                SpeechGrammarFormatter.format(combinedText, isFinal: false);
+            _latestCombinedTranscript = formattedPartial;
+            _activeOnPartialResult?.call(formattedPartial);
           }
 
           // Native recognizers often emit finalResult before our desired silence
@@ -174,8 +177,10 @@ class VoiceRepositoryImpl implements VoiceRepository {
           if (result.finalResult) {
             debugPrint('🎤 STT intermediate sentence: "$currentWords"');
             if (currentWords.isNotEmpty) {
-              _accumulatedTranscript = combinedText;
-              _latestCombinedTranscript = combinedText;
+              final formattedSegment =
+                  SpeechGrammarFormatter.format(combinedText, isFinal: false);
+              _accumulatedTranscript = formattedSegment;
+              _latestCombinedTranscript = formattedSegment;
             }
           }
         },
@@ -246,10 +251,11 @@ class VoiceRepositoryImpl implements VoiceRepository {
     _stt.stop();
     // Use the latest visible partial text when the native engine has not emitted
     // finalResult yet; otherwise stopping after silence can erase the last phrase.
-    final finalText = (_latestCombinedTranscript.isNotEmpty
+    final rawText = (_latestCombinedTranscript.isNotEmpty
             ? _latestCombinedTranscript
             : _accumulatedTranscript)
         .trim();
+    final finalText = SpeechGrammarFormatter.format(rawText, isFinal: true);
     _accumulatedTranscript = '';
     _latestCombinedTranscript = '';
     if (_activeOnFinalResult != null) {

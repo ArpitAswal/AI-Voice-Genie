@@ -282,7 +282,7 @@ First-time chat prompt with the selected AI model.
 | Create Image predefined action | Tap Create Image, review/edit inserted template, tap send. | Prompt is detected as `imageGeneration` if it matches the image-generation heuristic. | Selected provider must support image generation. |
 | Summarize PDF predefined action | Tap Summarize PDF, select PDF, tap send. | PDF bytes and prompt are sent as `pdfParsing`. | Attachments cannot mix PDF and image types. |
 | Analyze Image predefined action | Tap Analyze Image, select image, tap send. | Image bytes and prompt are sent as `imageUnderstanding`. | Image count and size are validated before send. |
-| Voice input from chat composer | Tap mic, wait for the listening state, speak continuously with auto-scroll and app-level silence debounce, then send. | Continuous partial transcripts update the composer text field in real time; native recognizer restarts use a single guarded cooldown, while final stop is based on time since the last real recognized words. | The actual send path is the same as manual text. |
+| Voice input from chat composer | Tap mic, wait for the listening state, speak continuously with auto-scroll and app-level silence debounce, then send. | Continuous partial transcripts are formatted in real time via `SpeechGrammarFormatter` (auto-capitalizing proper nouns/AI terms, inserting vocative commas, and segmenting question clauses); native recognizer restarts use a single guarded cooldown, while final stop adds closing punctuation based on time since the last real recognized words. | The actual send path is the same as manual text. |
 
 ## Data Saved By Stage
 
