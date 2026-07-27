@@ -54,21 +54,29 @@ class ClaudeAdapter extends AiProviderAdapter {
         {'role': 'user', 'content': request.prompt},
       ];
 
+      final requestBody = {
+        'model': AppConstants.claudeTextModel,
+        'max_tokens': request.responseLength.maxTokens,
+        'system': AppConstants.aiTextSystemInstruction,
+        'messages': messages,
+      };
+
+      debugPrint(
+          '📤 Claude Request (Text Generation): ${jsonEncode(requestBody)}');
+
       final response = await _post(
         apiKey: apiKey,
-        body: {
-          'model': AppConstants.claudeTextModel,
-          'max_tokens': 2048,
-          'system': 'You are a helpful, accurate, and concise AI assistant. '
-              'Format responses clearly using markdown where appropriate.',
-          'messages': messages,
-        },
+        body: requestBody,
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = await _parseResponse(response, request.requestId);
+      debugPrint('📥 Claude Response (Text Generation): ${jsonEncode(data)}');
+
       final text = data['content']?[0]?['text'] as String? ?? '';
       final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
       final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
+      final tokenCount = inputTokens + outputTokens;
+      final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -79,6 +87,8 @@ class ClaudeAdapter extends AiProviderAdapter {
         text: text,
         inputTokens: inputTokens,
         outputTokens: outputTokens,
+        tokenCount: tokenCount,
+        finishReason: finishReason,
       );
     } on AiException {
       rethrow;
@@ -145,24 +155,39 @@ class ClaudeAdapter extends AiProviderAdapter {
       // Add the user's text prompt
       contentParts.add({'type': 'text', 'text': request.prompt});
 
+      final requestBody = {
+        'model': AppConstants.claudeVisionModel,
+        'max_tokens': request.responseLength.maxTokens,
+        'system': AppConstants.aiVisionSystemInstruction,
+        'messages': [
+          {
+            'role': 'user',
+            'content': contentParts,
+          },
+        ],
+      };
+
+      debugPrint('📤 Claude Request (Image Analysis): ${jsonEncode({
+            'model': AppConstants.claudeVisionModel,
+            'system': AppConstants.aiVisionSystemInstruction,
+            'prompt': request.prompt,
+            'image_count': request.imageBytes?.length ?? 0,
+            'max_tokens': request.responseLength.maxTokens,
+          })}');
+
       final response = await _post(
         apiKey: apiKey,
-        body: {
-          'model': AppConstants.claudeVisionModel,
-          'max_tokens': 1024,
-          'messages': [
-            {
-              'role': 'user',
-              'content': contentParts,
-            },
-          ],
-        },
+        body: requestBody,
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = await _parseResponse(response, request.requestId);
+      debugPrint('📥 Claude Response (Image Analysis): ${jsonEncode(data)}');
+
       final text = data['content']?[0]?['text'] as String? ?? '';
       final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
       final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
+      final tokenCount = inputTokens + outputTokens;
+      final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -173,6 +198,8 @@ class ClaudeAdapter extends AiProviderAdapter {
         text: text,
         inputTokens: inputTokens,
         outputTokens: outputTokens,
+        tokenCount: tokenCount,
+        finishReason: finishReason,
       );
     } on AiException {
       rethrow;
@@ -209,13 +236,21 @@ class ClaudeAdapter extends AiProviderAdapter {
       contentParts.add({'type': 'text', 'text': request.prompt});
 
       final body = <String, dynamic>{
-        'model': AppConstants
-            .claudeVisionModel, // 3.5 Sonnet supports vision and PDFs
-        'max_tokens': 2048,
+        'model': AppConstants.claudeVisionModel,
+        'max_tokens': request.responseLength.maxTokens,
+        'system': AppConstants.aiPdfSystemInstruction,
         'messages': [
           {'role': 'user', 'content': contentParts},
         ],
       };
+
+      debugPrint('📤 Claude Request (PDF Parsing): ${jsonEncode({
+            'model': AppConstants.claudeVisionModel,
+            'system': AppConstants.aiPdfSystemInstruction,
+            'prompt': request.prompt,
+            'pdf_count': request.pdfBytes?.length ?? 0,
+            'max_tokens': request.responseLength.maxTokens,
+          })}');
 
       final response = await _post(
         apiKey: apiKey,
@@ -223,9 +258,13 @@ class ClaudeAdapter extends AiProviderAdapter {
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = await _parseResponse(response, request.requestId);
+      debugPrint('📥 Claude Response (PDF Parsing): ${jsonEncode(data)}');
+
       final text = data['content']?[0]?['text'] as String? ?? '';
       final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
       final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
+      final tokenCount = inputTokens + outputTokens;
+      final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
       return AiResponse.text(
@@ -236,6 +275,8 @@ class ClaudeAdapter extends AiProviderAdapter {
         text: text,
         inputTokens: inputTokens,
         outputTokens: outputTokens,
+        tokenCount: tokenCount,
+        finishReason: finishReason,
       );
     } on AiException {
       rethrow;
@@ -298,8 +339,8 @@ class ClaudeAdapter extends AiProviderAdapter {
         provider: AiProviderId.claude,
       );
     }
-    return AiTransientException(
-      message: 'Unexpected Claude error: $error',
+    return const AiTransientException(
+      message: 'error_unexpected_ai',
       provider: AiProviderId.claude,
     );
   }

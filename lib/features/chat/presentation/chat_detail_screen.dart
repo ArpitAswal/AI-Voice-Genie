@@ -466,73 +466,60 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             ),
           ),
           // ── Input Bar ──────────────────────────────────────────────────────
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: context.screenHeight * 0.4,
-            ),
-            child:
-                Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
-              builder: (
-                _,
-                apiKeyProvider,
-                chatProvider,
-                preferences,
-                __,
-              ) {
-                final validProviders = apiKeyProvider.validProviders;
-                final selectedProvider =
-                    ChatModelSelection.resolveSelectedProvider(
-                          availableProviders: validProviders,
-                          selectedProvider: preferences.preferredProvider,
-                          preferredProvider: preferences.preferredProvider,
-                        ) ??
-                        preferences.preferredProvider;
+          Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
+            builder: (
+              _,
+              apiKeyProvider,
+              chatProvider,
+              preferences,
+              __,
+            ) {
+              final validProviders = apiKeyProvider.validProviders;
+              final selectedProvider =
+                  ChatModelSelection.resolveSelectedProvider(
+                        availableProviders: validProviders,
+                        selectedProvider: preferences.preferredProvider,
+                        preferredProvider: preferences.preferredProvider,
+                      ) ??
+                      preferences.preferredProvider;
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: context.theme.cardTheme.color,
-                    borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context.isTablet ? 30 : 20)),
-                    border: Border.all(
-                        color: context.theme.dividerTheme.color!, width: 1),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: context.verticalSpacing,
+              return Container(
+                decoration: BoxDecoration(
+                  color: context.theme.cardTheme.color,
+                  borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(context.isTablet ? 30 : 20)),
+                  border: Border.all(
+                      color: context.theme.dividerTheme.color!, width: 1),
+                ),
+                padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding / 2,
+                    vertical: context.verticalSpacing / 2),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ChatModelSelectorDropdown(
+                      providers: validProviders,
+                      selectedProvider: selectedProvider,
+                      isEnabled: !chatProvider.isGenerating,
+                      onChanged: (provider) {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                        preferences.setPreferredProvider(provider);
+                      },
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: context.horizontalPadding,
-                          ),
-                          child: ChatModelSelectorDropdown(
-                            providers: validProviders,
-                            selectedProvider: selectedProvider,
-                            isEnabled: !chatProvider.isGenerating,
-                            onChanged: (provider) {
-                              FocusManager.instance.primaryFocus?.unfocus();
-                              preferences.setPreferredProvider(provider);
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 4.0),
-                        Flexible(
-                          child: ChatInputBar(
-                            isGenerating: chatProvider.isGenerating,
-                            isTablet: isTablet,
-                            onSend: _handleSend,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 4.0),
+                    Flexible(
+                      child: ChatInputBar(
+                        isGenerating: chatProvider.isGenerating,
+                        isTablet: isTablet,
+                        onSend: _handleSend,
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

@@ -106,7 +106,10 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
       } else {
         _filteredConversations = _allConversations.where((c) {
           return c.title.toLowerCase().contains(query.toLowerCase()) ||
-              c.lastMessage.toLowerCase().contains(query.toLowerCase());
+              context.l10n
+                  .translate(c.lastMessage)
+                  .toLowerCase()
+                  .contains(query.toLowerCase());
         }).toList();
       }
     });
@@ -594,7 +597,7 @@ class CustomConversationCard extends StatelessWidget {
             Text(
               conversation.lastMessage.isEmpty
                   ? context.l10n.startedShort
-                  : conversation.lastMessage,
+                  : context.l10n.translate(conversation.lastMessage),
               style: context.textTheme.bodyMedium?.copyWith(
                 height: 1.4,
               ),

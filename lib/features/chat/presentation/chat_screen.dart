@@ -196,66 +196,59 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
 
           // ── Input Bar with Background Container ────────────────────────
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: context.screenHeight * 0.4,
-            ),
-            child:
-                Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
-              builder: (
-                _,
-                apiKeyProvider,
-                chatProvider,
-                preferences,
-                __,
-              ) {
-                final selectedProvider = preferences.preferredProvider;
+          Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
+            builder: (
+              _,
+              apiKeyProvider,
+              chatProvider,
+              preferences,
+              __,
+            ) {
+              final selectedProvider = preferences.preferredProvider;
 
-                return Container(
-                    decoration: BoxDecoration(
-                      color: context.theme.cardTheme.color,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(context.isTablet ? 30 : 20),
-                      ),
-                      border: Border.all(
-                        color: context.theme.dividerTheme.color!,
-                        width: 1,
-                      ),
+              return Container(
+                  decoration: BoxDecoration(
+                    color: context.theme.cardTheme.color,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(context.isTablet ? 30 : 20),
                     ),
-                    padding: EdgeInsets.symmetric(
+                    border: Border.all(
+                      color: context.theme.dividerTheme.color!,
+                      width: 1,
+                    ),
+                  ),
+                  padding: EdgeInsets.symmetric(
                       horizontal: context.horizontalPadding / 2,
-                      vertical: context.verticalSpacing,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ChatModelSelectorDropdown(
-                          providers: AiProviderId.values,
-                          selectedProvider: selectedProvider,
-                          isEnabled: !chatProvider.isGenerating,
-                          onChanged: (provider) {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            preferences.setPreferredProvider(provider);
-                          },
+                      vertical: context.verticalSpacing / 2),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ChatModelSelectorDropdown(
+                        providers: AiProviderId.values,
+                        selectedProvider: selectedProvider,
+                        isEnabled: !chatProvider.isGenerating,
+                        onChanged: (provider) {
+                          FocusManager.instance.primaryFocus?.unfocus();
+                          preferences.setPreferredProvider(provider);
+                        },
+                      ),
+                      const SizedBox(height: 4.0),
+                      // The Input Component itself
+                      Flexible(
+                        child: ChatInputBar(
+                          isGenerating: chatProvider.isGenerating,
+                          isTablet: isTablet,
+                          controller: _chatInputController,
+                          onUserInteracted: _hideSuggestions,
+                          onSend: _handleSend,
+                          onEmptyInput: _showSuggestionsState,
                         ),
-                        const SizedBox(height: 8.0),
-                        // The Input Component itself
-                        Flexible(
-                          child: ChatInputBar(
-                            isGenerating: chatProvider.isGenerating,
-                            isTablet: isTablet,
-                            controller: _chatInputController,
-                            onUserInteracted: _hideSuggestions,
-                            onSend: _handleSend,
-                            onEmptyInput: _showSuggestionsState,
-                          ),
-                        ),
-                      ],
-                    ));
-              },
-            ),
+                      ),
+                    ],
+                  ));
+            },
           ),
         ],
       ),

@@ -98,7 +98,7 @@ class ConversationTile extends StatelessWidget {
                       ],
                       Expanded(
                         child: Text(
-                          conversation.lastMessage,
+                          context.l10n.translate(conversation.lastMessage),
                           style: context.textTheme.bodySmall?.copyWith(
                             color: context.isDark
                                 ? AppColors.darkTextSecondary
@@ -134,8 +134,8 @@ class ConversationTile extends StatelessWidget {
       context: context,
       builder: (ctx) => SafeArea(
         child: ListTile(
-          leading:
-              const Icon(Icons.delete_outline_rounded, color: AppColors.lightError),
+          leading: const Icon(Icons.delete_outline_rounded,
+              color: AppColors.lightError),
           title: Text(
             // Localized delete conversation label (agent rule: no hardcoded strings)
             context.l10n.deleteConversation,

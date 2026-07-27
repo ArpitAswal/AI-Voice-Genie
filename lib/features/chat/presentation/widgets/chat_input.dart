@@ -98,6 +98,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   final List<ChatAttachment> _attachments = [];
   bool _canSend = false;
+  bool _hasText = false;
   bool _isApplyingTemplate = false;
 
   @override
@@ -144,12 +145,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
     }
   }
 
-  /// Enables the send button if there's text OR an attachment present.
+  /// Enables sending if there's text OR an attachment, and tracks text presence for switcher.
   void _syncCanSend() {
     final canSend =
         _controller.text.trim().isNotEmpty || _attachments.isNotEmpty;
-    if (canSend != _canSend) {
-      setState(() => _canSend = canSend);
+    final hasText = _controller.text.trim().isNotEmpty;
+    if (canSend != _canSend || hasText != _hasText) {
+      setState(() {
+        _canSend = canSend;
+        _hasText = hasText;
+      });
     }
   }
 
@@ -165,10 +170,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
     _focusNode.unfocus();
     final prompt = _controller.text.trim();
     // Validate text prompt limits unless an attachment is providing the context
-    final error = Validators.validatePrompt(prompt, context: context);
-    if (error != null) {
-      context.showError(error);
-      return;
+    if (_attachments.isEmpty || prompt.isNotEmpty) {
+      final error = Validators.validatePrompt(prompt, context: context);
+      if (error != null) {
+        context.showError(error);
+        return;
+      }
     }
 
     final attachments = List<ChatAttachment>.from(_attachments);
@@ -176,6 +183,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
     setState(() {
       _attachments.clear();
       _canSend = false;
+      _hasText = false;
     });
 
     await widget.onSend(prompt, attachments);
@@ -498,7 +506,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
             Expanded(
               child: ConstrainedBox(
                 constraints:
-                    BoxConstraints(maxHeight: context.screenHeight * 0.3),
+                    BoxConstraints(maxHeight: context.screenHeight * 0.25),
                 child: context.themedTextField(
                   controller: _controller,
                   focus: _focusNode,
@@ -517,7 +525,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
             const SizedBox(width: 4),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: (_canSend && !isListening)
+              child: (_hasText && !isListening)
                   ? ChatActionButton(
                       key: const ValueKey('send'),
                       icon: Icons.send_rounded,

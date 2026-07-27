@@ -45,8 +45,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         // System prompt — sets the assistant's behavior
         {
           'role': 'system',
-          'content': 'You are a helpful, accurate, and concise AI assistant. '
-              'Format responses clearly using markdown where appropriate.',
+          'content': AppConstants.aiTextSystemInstruction,
         },
         // Include previous conversation messages for context
         ...request.conversationHistory,
@@ -75,7 +74,7 @@ class OpenAiAdapter extends AiProviderAdapter {
       final choices = data['choices'] as List?;
       if (choices == null || choices.isEmpty) {
         throw const AiTransientException(
-          message: 'OpenAI returned empty choices',
+          message: 'error_unexpected_ai',
           provider: AiProviderId.openAi,
         );
       }
@@ -229,6 +228,10 @@ class OpenAiAdapter extends AiProviderAdapter {
         'model': AppConstants.openAiVisionModel,
         'messages': [
           {
+            'role': 'system',
+            'content': AppConstants.aiVisionSystemInstruction,
+          },
+          {
             'role': 'user',
             'content': contentParts,
           },
@@ -253,7 +256,7 @@ class OpenAiAdapter extends AiProviderAdapter {
       final choices = data['choices'] as List?;
       if (choices == null || choices.isEmpty) {
         throw const AiTransientException(
-          message: 'OpenAI returned empty choices for image analysis',
+          message: 'error_unexpected_ai',
           provider: AiProviderId.openAi,
         );
       }
@@ -320,7 +323,12 @@ class OpenAiAdapter extends AiProviderAdapter {
       final requestBody = {
         // gpt-4o supports native PDF reading in the Responses API
         'model': AppConstants.openAiVisionModel,
+        'instructions': AppConstants.aiPdfSystemInstruction,
         'input': [
+          {
+            'role': 'system',
+            'content': AppConstants.aiPdfSystemInstruction,
+          },
           {
             'role': 'user',
             'content': contentParts,

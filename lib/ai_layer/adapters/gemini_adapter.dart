@@ -64,8 +64,7 @@ class GeminiAdapter extends AiProviderAdapter {
         'systemInstruction': {
           'parts': [
             {
-              'text': 'You are a helpful, accurate, and concise AI assistant. '
-                  'Format responses clearly using markdown where appropriate.',
+              'text': AppConstants.aiTextSystemInstruction,
             }
           ]
         },
@@ -240,6 +239,13 @@ class GeminiAdapter extends AiProviderAdapter {
       parts.add({'text': request.prompt});
 
       final requestBody = {
+        'systemInstruction': {
+          'parts': [
+            {
+              'text': AppConstants.aiVisionSystemInstruction,
+            }
+          ]
+        },
         'contents': [
           {
             'role': 'user',
@@ -254,6 +260,7 @@ class GeminiAdapter extends AiProviderAdapter {
 
       debugPrint('📤 Gemini Request (Image Analysis): ${jsonEncode({
             'model': AppConstants.geminiVisionModel,
+            'systemInstruction': AppConstants.aiVisionSystemInstruction,
             'prompt': request.prompt,
             'image_count': request.imageBytes?.length ?? 0,
             'mimeType': request.imageMimeType,
@@ -325,6 +332,13 @@ class GeminiAdapter extends AiProviderAdapter {
       parts.add({'text': request.prompt});
 
       final requestBody = {
+        'systemInstruction': {
+          'parts': [
+            {
+              'text': AppConstants.aiPdfSystemInstruction,
+            }
+          ]
+        },
         'contents': [
           {
             'role': 'user',
@@ -339,6 +353,7 @@ class GeminiAdapter extends AiProviderAdapter {
 
       debugPrint('📤 Gemini Request (PDF Parsing): ${jsonEncode({
             'model': AppConstants.geminiVisionModel,
+            'systemInstruction': AppConstants.aiPdfSystemInstruction,
             'prompt': request.prompt,
             'pdf_count': request.pdfBytes?.length ?? 0,
             'pdf_names': request.pdfNames,
@@ -436,7 +451,7 @@ class GeminiAdapter extends AiProviderAdapter {
       if (message.toLowerCase().contains('api key') ||
           message.toLowerCase().contains('invalid')) {
         throw const AiHardErrorException(
-          message: 'error_invalid_api_key',
+          message: 'error_invalid_key',
           provider: AiProviderId.gemini,
           statusCode: 400,
         );

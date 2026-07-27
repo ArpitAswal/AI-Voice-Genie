@@ -135,6 +135,13 @@ class AiOrchestrator {
         );
         _effectBus.emit(exhaustedError, StackTrace.current);
         throw exhaustedError;
+      } else if (e is AiRateLimitException) {
+        final exhaustedError = AiExhaustedException(
+          message: 'error_quota_exceeded',
+          triedProviders: [selectedProvider],
+        );
+        _effectBus.emit(exhaustedError, StackTrace.current);
+        throw exhaustedError;
       }
       rethrow;
     }

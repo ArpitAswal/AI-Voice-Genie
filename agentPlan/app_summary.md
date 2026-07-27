@@ -26,7 +26,7 @@
 - Provider for state management.
 - Firebase Auth, Firestore, Analytics, and Crashlytics.
 - Hive for local persistence.
-- HTTP-based AI provider validation and request adapters.
+- HTTP-based AI provider validation and request adapters with standardized capability system instructions, dynamic token bounds, and comprehensive debug logging.
 
 ## Architecture Approach
 - Feature-first MVVM with repository abstraction.
