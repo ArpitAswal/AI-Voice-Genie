@@ -126,6 +126,11 @@ class VoiceProvider extends ChangeNotifier {
       return;
     }
 
+    _partialTranscript = '';
+    // Move into startup immediately after tap so users wait for the active
+    // listening state instead of speaking into a microphone session still opening.
+    _setState(VoiceRecordingState.processing);
+
     // Request microphone permission before listening
     final success = await _repository.requestMicrophonePermission();
     if (!success) {
@@ -143,20 +148,17 @@ class VoiceProvider extends ChangeNotifier {
       return;
     }
 
-    _partialTranscript = '';
-    _setState(VoiceRecordingState.listening);
-
     await _repository.startListening(
       onPartialResult: (partial) {
         // Update the live transcript shown in the provider state
         _partialTranscript = partial;
         // Also forward to the caller (e.g. ChatInputBar text field)
         onPartialTranscript?.call(partial);
+        notifyListeners();
       },
       onFinalResult: (final_) {
         // Clear the intermediate partial text — the final result replaces it
         _partialTranscript = '';
-        debugPrint("onFinalResult");
         _setState(VoiceRecordingState.idle);
         onTranscriptReady(final_);
         _analytics.logFeatureUsed(AppFeature.voiceInput);
@@ -169,18 +171,20 @@ class VoiceProvider extends ChangeNotifier {
         // Reset to idle after brief error display so the mic button is re-tappable
         Future.delayed(const Duration(seconds: 2)).then((_) {
           if (_state == VoiceRecordingState.error) {
-            debugPrint("onError");
             _setState(VoiceRecordingState.idle);
           }
         });
       },
     );
+
+    if (_state == VoiceRecordingState.processing) {
+      _setState(VoiceRecordingState.listening);
+    }
   }
 
   /// Stop listening early (user taps mic button again to cancel).
   Future<void> stopListening() async {
     await _repository.stopListening();
-    debugPrint("called stop listening");
     _partialTranscript = '';
     _setState(VoiceRecordingState.idle);
   }
@@ -213,7 +217,6 @@ class VoiceProvider extends ChangeNotifier {
       speed: _ttsSpeed,
       onComplete: () {
         _activeTtsMessageId = null;
-        debugPrint("onComplete");
         _setState(VoiceRecordingState.idle);
         _analytics.logFeatureUsed(AppFeature.voiceOutput);
       },
@@ -224,7 +227,6 @@ class VoiceProvider extends ChangeNotifier {
   Future<void> stopSpeaking() async {
     await _repository.stopSpeaking();
     _activeTtsMessageId = null;
-    debugPrint("stopSpeaking");
     _setState(VoiceRecordingState.idle);
   }
 
@@ -253,7 +255,6 @@ class VoiceProvider extends ChangeNotifier {
   void _setState(VoiceRecordingState newState) {
     if (_state == newState) return;
     _state = newState;
-    debugPrint("VoiceProvider: state changed to: $_state");
     notifyListeners();
   }
 }

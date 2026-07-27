@@ -41,7 +41,12 @@ class VoiceRepositoryImpl implements VoiceRepository {
   Timer? _silenceTimer;
   Timer? _restartTimer;
   String _accumulatedTranscript = '';
+  String _latestCombinedTranscript = '';
   bool _isContinuousListening = false;
+  bool _isStartingListenSession = false;
+  bool _isRestartingListenSession = false;
+  DateTime? _lastSpeechActivityAt;
+  int _restartAttemptCount = 0;
 
   /// Cached system locale matching the user's regional accent
   stt.LocaleName? _systemLocale;
@@ -120,8 +125,10 @@ class VoiceRepositoryImpl implements VoiceRepository {
     _activeOnFinalResult = onFinalResult;
     _activeOnError = onError;
     _accumulatedTranscript = '';
+    _latestCombinedTranscript = '';
     _isContinuousListening = true;
-    _silenceTimer?.cancel();
+    _lastSpeechActivityAt = DateTime.now();
+    _scheduleSilenceTimeoutFromLastSpeech();
 
     try {
       // Ensure STT is initialized before listening
@@ -141,57 +148,79 @@ class VoiceRepositoryImpl implements VoiceRepository {
   }
 
   Future<void> _startSttListenSession() async {
-    if (!_isContinuousListening) return;
+    if (!_isContinuousListening || _isStartingListenSession) return;
 
-    // Start or reset the silence debounce timer to wait for the full silenceTimeout
-    _resetSilenceTimer();
+    _isStartingListenSession = true;
+    try {
+      await _stt.listen(
+        // Called continuously with partial transcription
+        onResult: (result) {
+          if (!_isContinuousListening) return;
 
-    await _stt.listen(
-      // Called continuously with partial transcription
-      onResult: (result) {
-        if (!_isContinuousListening) return;
+          final currentWords = result.recognizedWords.trim();
+          final combinedText = _accumulatedTranscript.isEmpty
+              ? currentWords
+              : '$_accumulatedTranscript $currentWords'.trim();
 
-        // Any recognized speech activity resets our 5-second silence timer
-        _resetSilenceTimer();
-
-        final currentWords = result.recognizedWords.trim();
-        final combinedText = _accumulatedTranscript.isEmpty
-            ? currentWords
-            : '$_accumulatedTranscript $currentWords'.trim();
-
-        if (currentWords.isNotEmpty) {
-          _activeOnPartialResult?.call(combinedText);
-        }
-
-        // When the native OS recognizer stops early (e.g. 1.5s pause on Android/iOS),
-        // it sends finalResult = true. Instead of closing right away, we store the text
-        // and allow onStatus to automatically restart listening!
-        if (result.finalResult) {
-          debugPrint('🎤 STT intermediate sentence: "$currentWords"');
           if (currentWords.isNotEmpty) {
-            _accumulatedTranscript = combinedText;
+            _markSpeechActivity();
+            _restartAttemptCount = 0;
+            _latestCombinedTranscript = combinedText;
+            _activeOnPartialResult?.call(combinedText);
           }
-        }
-      },
-      // Auto-stop after configured silence duration
-      pauseFor: AppConstants.silenceTimeout,
-      // Listen for long enough to capture complete sentences
-      listenFor: AppConstants.maxRecordingSeconds,
-      // SpeechListenOptions for deprecated properties
-      listenOptions: stt.SpeechListenOptions(
-        partialResults: true,
-        listenMode: stt.ListenMode.dictation,
-        onDevice: false,
-      ),
-      // Use dynamically detected device locale instead of hardcoded American English
-      localeId: _systemLocale?.localeId,
-    );
-    debugPrint('🎤 STT: listen session active');
+
+          // Native recognizers often emit finalResult before our desired silence
+          // timeout. Commit that segment immediately so a fast restart cannot lose it.
+          if (result.finalResult) {
+            debugPrint('🎤 STT intermediate sentence: "$currentWords"');
+            if (currentWords.isNotEmpty) {
+              _accumulatedTranscript = combinedText;
+              _latestCombinedTranscript = combinedText;
+            }
+          }
+        },
+        // Native engines may still stop earlier than this, so app code restarts
+        // immediately and our own silence timer decides when the dictation ends.
+        pauseFor: AppConstants.silenceTimeout,
+        listenFor: AppConstants.maxRecordingSeconds,
+        listenOptions: stt.SpeechListenOptions(
+          partialResults: true,
+          listenMode: stt.ListenMode.dictation,
+          onDevice: false,
+        ),
+        // Use dynamically detected device locale instead of hardcoded American English.
+        localeId: _systemLocale?.localeId,
+      );
+
+      debugPrint('🎤 STT: listen session active');
+    } finally {
+      _isStartingListenSession = false;
+    }
   }
 
-  void _resetSilenceTimer() {
+  void _markSpeechActivity() {
+    _lastSpeechActivityAt = DateTime.now();
+    _scheduleSilenceTimeoutFromLastSpeech();
+  }
+
+  bool _hasSilenceTimedOut() {
+    final lastSpeech = _lastSpeechActivityAt;
+    if (lastSpeech == null) return true;
+    return DateTime.now().difference(lastSpeech) >= AppConstants.silenceTimeout;
+  }
+
+  void _scheduleSilenceTimeoutFromLastSpeech() {
     _silenceTimer?.cancel();
-    _silenceTimer = Timer(AppConstants.silenceTimeout, () {
+    final lastSpeech = _lastSpeechActivityAt ?? DateTime.now();
+    final elapsed = DateTime.now().difference(lastSpeech);
+    final remaining = AppConstants.silenceTimeout - elapsed;
+
+    if (remaining <= Duration.zero) {
+      _finishListening();
+      return;
+    }
+
+    _silenceTimer = Timer(remaining, () {
       debugPrint(
           '⏰ Full silence timeout (${AppConstants.silenceTimeout.inSeconds}s) elapsed. Finalizing speech.');
       _finishListening();
@@ -204,6 +233,10 @@ class VoiceRepositoryImpl implements VoiceRepository {
     _silenceTimer = null;
     _restartTimer?.cancel();
     _restartTimer = null;
+    _isStartingListenSession = false;
+    _isRestartingListenSession = false;
+    _lastSpeechActivityAt = null;
+    _restartAttemptCount = 0;
   }
 
   void _finishListening() {
@@ -211,27 +244,62 @@ class VoiceRepositoryImpl implements VoiceRepository {
     _isContinuousListening = false;
     _cancelTimers();
     _stt.stop();
-    final finalText = _accumulatedTranscript.trim();
+    // Use the latest visible partial text when the native engine has not emitted
+    // finalResult yet; otherwise stopping after silence can erase the last phrase.
+    final finalText = (_latestCombinedTranscript.isNotEmpty
+            ? _latestCombinedTranscript
+            : _accumulatedTranscript)
+        .trim();
     _accumulatedTranscript = '';
+    _latestCombinedTranscript = '';
     if (_activeOnFinalResult != null) {
       _activeOnFinalResult!(finalText);
     }
   }
 
-  void _scheduleEngineRestart() {
+  void _scheduleEngineRestart({
+    Duration delay = const Duration(milliseconds: 280),
+    bool resetNativeSession = false,
+  }) {
     if (!_isContinuousListening) return;
-    // Cancel any pending restart so we never trigger overlapping listen sessions
-    _restartTimer?.cancel();
-    _restartTimer = Timer(const Duration(milliseconds: 350), () async {
-      if (_isContinuousListening && !_stt.isListening) {
+    if (_hasSilenceTimedOut()) {
+      _finishListening();
+      return;
+    }
+    if (_isStartingListenSession || _isRestartingListenSession) return;
+    if (_restartTimer?.isActive ?? false) return;
+
+    _restartTimer = Timer(delay, () async {
+      if (!_isContinuousListening ||
+          _stt.isListening ||
+          _isStartingListenSession ||
+          _isRestartingListenSession) {
+        return;
+      }
+
+      if (_hasSilenceTimedOut()) {
+        _finishListening();
+        return;
+      }
+
+      _isRestartingListenSession = true;
+      try {
         debugPrint('🔄 Native engine paused. Continuing listening session...');
-        // Cleanly stop any leftover native engine state before restarting
-        try {
-          await _stt.stop();
-        } catch (_) {}
-        if (_isContinuousListening) {
-          _startSttListenSession();
+        if (resetNativeSession) {
+          // Android can report notListening/done while the recognizer is still
+          // internally busy. Cancel gives it a clean session before relistening.
+          await _stt.cancel();
+          await Future<void>.delayed(const Duration(milliseconds: 180));
         }
+        if (_hasSilenceTimedOut()) {
+          _finishListening();
+          return;
+        }
+        if (_isContinuousListening && !_stt.isListening) {
+          await _startSttListenSession();
+        }
+      } finally {
+        _isRestartingListenSession = false;
       }
     });
   }
@@ -324,18 +392,38 @@ class VoiceRepositoryImpl implements VoiceRepository {
               _activeOnError?.call(error.errorMsg);
               return;
             }
-            // For all other native engine errors (error_client, error_no_match,
-            // error_speech_timeout, error_busy), do NOT abort our session!
-            // We are customly managing silence with our 5s timer.
+            // For transient native errors, keep the app-level dictation alive.
+            // error_busy needs a longer cooldown because Android may still be
+            // releasing the previous recognizer even after notListening/done.
+            if (_hasSilenceTimedOut()) {
+              _finishListening();
+              return;
+            }
+            _restartAttemptCount++;
+            final isBusy = msg.contains('busy');
+            final isClient = msg.contains('client');
+            final delay = isBusy
+                ? Duration(
+                    milliseconds:
+                        (650 + (_restartAttemptCount * 250)).clamp(650, 1600),
+                  )
+                : const Duration(milliseconds: 420);
             debugPrint(
-                '🔄 Non-fatal native STT error during active pause ($msg). Auto-restarting...');
-            _scheduleEngineRestart();
+                '🔄 Transient native STT error ($msg). Retrying in ${delay.inMilliseconds}ms...');
+            _scheduleEngineRestart(
+              delay: delay,
+              resetNativeSession: isBusy || isClient,
+            );
           }
         },
         onStatus: (status) {
           debugPrint('🎤 STT Engine Status: $status');
           if (status == 'done' || status == 'notListening') {
             if (_isContinuousListening) {
+              if (_hasSilenceTimedOut()) {
+                _finishListening();
+                return;
+              }
               // Native engine stopped early (~1.5s pause) before our 5s silence timer!
               // Automatically restart to provide continuous dictation until 5s of true silence.
               _scheduleEngineRestart();
