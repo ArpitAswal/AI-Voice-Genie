@@ -177,7 +177,7 @@ class _MessageTimestampRow extends StatelessWidget {
           ],
           // For eligible AI messages, show the TTS speaker button
           if (ttsButton != null) ...[
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
             ttsButton!,
           ],
         ],

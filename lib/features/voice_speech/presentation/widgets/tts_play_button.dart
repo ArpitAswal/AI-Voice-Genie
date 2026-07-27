@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../voice_speech_provider.dart';
@@ -75,13 +74,8 @@ class _TtsPlaybackButtonState extends State<TtsPlaybackButton>
         final state = data.$1;
         final activeMsgId = data.$2;
 
-        final isThisMessagePlaying =
-            state == VoiceRecordingState.playing &&
-                activeMsgId == widget.messageId;
-
-        final isAnotherMessagePlaying =
-            state == VoiceRecordingState.playing &&
-                activeMsgId != widget.messageId;
+        final isThisMessagePlaying = state == VoiceRecordingState.playing &&
+            activeMsgId == widget.messageId;
 
         // Drive pulse animation from playing state
         if (isThisMessagePlaying && !_pulseController.isAnimating) {
@@ -95,7 +89,7 @@ class _TtsPlaybackButtonState extends State<TtsPlaybackButton>
           animation: _pulseController,
           builder: (context, child) {
             final scale = isThisMessagePlaying
-                ? 1.0 + (_pulseController.value * 0.15)
+                ? 1.0 + (_pulseController.value * 0.1)
                 : 1.0;
 
             return Transform.scale(
@@ -103,7 +97,6 @@ class _TtsPlaybackButtonState extends State<TtsPlaybackButton>
               child: _buildButton(
                 context,
                 isThisMessagePlaying: isThisMessagePlaying,
-                isAnotherMessagePlaying: isAnotherMessagePlaying,
               ),
             );
           },
@@ -113,39 +106,28 @@ class _TtsPlaybackButtonState extends State<TtsPlaybackButton>
   }
 
   Widget _buildButton(
-      BuildContext context, {
-        required bool isThisMessagePlaying,
-        required bool isAnotherMessagePlaying,
-      }) {
-    final size = widget.isTablet ? 28.0 : 24.0;
-    final iconSize = widget.isTablet ? 15.0 : 13.0;
+    BuildContext context, {
+    required bool isThisMessagePlaying,
+  }) {
+    final size = widget.isTablet ? 32.0 : 24.0;
+    final iconSize = widget.isTablet ? 20.0 : 16.0;
 
     // Color logic
     Color bgColor;
     Color iconColor;
     if (isThisMessagePlaying) {
-      bgColor = AppColors.primaryLight.withValues(alpha: 0.15);
-      iconColor = AppColors.primaryLight;
-    } else if (isAnotherMessagePlaying) {
-      bgColor = Colors.transparent;
-      iconColor = (context.isDark
-          ? AppColors.darkTextSecondary
-          : AppColors.lightTextSecondary)
-          .withValues(alpha: 0.4);
+      bgColor = context.primaryColor.withValues(alpha: 0.15);
+      iconColor = context.primaryColor;
     } else {
       bgColor = Colors.transparent;
-      iconColor = context.isDark
-          ? AppColors.darkTextSecondary
-          : AppColors.lightTextSecondary;
+      iconColor = context.textTheme.bodySmall?.color ?? context.primaryColor;
     }
 
     return GestureDetector(
-      onTap: isAnotherMessagePlaying
-          ? null // Disabled while another message plays
-          : () => context.read<VoiceProvider>().speak(
-        widget.messageContent,
-        messageId: widget.messageId,
-      ),
+      onTap: () => context.read<VoiceProvider>().speak(
+            widget.messageContent,
+            messageId: widget.messageId,
+          ),
       child: Container(
         width: size,
         height: size,
@@ -154,9 +136,7 @@ class _TtsPlaybackButtonState extends State<TtsPlaybackButton>
           color: bgColor,
         ),
         child: Icon(
-          isThisMessagePlaying
-              ? Icons.stop_rounded
-              : Icons.volume_up_rounded,
+          isThisMessagePlaying ? Icons.stop_rounded : Icons.volume_up_rounded,
           size: iconSize,
           color: iconColor,
         ),
