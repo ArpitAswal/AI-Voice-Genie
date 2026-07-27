@@ -132,9 +132,9 @@ class AppConstants {
 
   // ── Voice ─────────────────────────────────────────────────────────────────
   // Maximum recording duration in seconds
-  static const int maxRecordingSeconds = 60;
+  static const Duration maxRecordingSeconds = Duration(minutes: 2);
   // Silence detection timeout (auto-stop recording after silence)
-  static const Duration silenceTimeout = Duration(seconds: 6);
+  static const Duration silenceTimeout = Duration(seconds: 5);
 
   // ── Free Tier Quota (for users using their own key) ───────────────────────
   // Default daily request quota when user first adds their key

@@ -258,6 +258,12 @@ class AppLocalizations {
       'open_settings': 'Open Settings',
       'speech_text_unavailable': 'Speech Text not available.',
       'voice_assistant': 'Voice Assistant',
+      // Tooltip shown on the Home mic button — guides users to tap for voice chat
+      'tap_to_start_voice_chat': 'Tap to start voice chat',
+      // TTS action button tooltips below AI text response bubbles
+      'play_response': 'Play response',
+      'stop_response': 'Stop response',
+      'error_speech_timeout': 'Error: Speech timeout exceeded.',
 
       // ── Settings ───────────────────────────────────────────────────────────
       'home': 'Home',
@@ -680,6 +686,12 @@ class AppLocalizations {
       'open_settings': 'सेटिंग खोलें',
       'speech_text_unavailable': 'भाषण का पाठ उपलब्ध नहीं है।',
       'voice_assistant': 'वॉयस असिस्टेंट',
+      // Tooltip shown on the Home mic button — guides users to tap for voice chat
+      'tap_to_start_voice_chat': 'वॉयस चैट शुरू करने के लिए टैप करें',
+      // TTS action button tooltips below AI text response bubbles
+      'play_response': 'जवाब सुनें',
+      'stop_response': 'जवाब रोकें',
+      'error_speech_timeout': 'त्रुटि: स्पीच टाइमआउट की सीमा पार हो गई।',
 
       // ── Settings ───────────────────────────────────────────────────────────
       'home': 'होम',

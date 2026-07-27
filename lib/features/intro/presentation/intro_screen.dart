@@ -4,10 +4,13 @@ import 'package:ai_voice_genie/core/localization/app_localizations.dart';
 import 'package:ai_voice_genie/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/extensions/ai_provider_extensions.dart';
+import '../../../core/utils/status_message_utils.dart';
+import '../../voice_speech/presentation/voice_speech_provider.dart';
 
 class IntroScreen extends StatelessWidget {
   const IntroScreen({super.key});
@@ -127,51 +130,89 @@ class IntroScreen extends StatelessWidget {
   }
 
   Widget _buildTapToSpeak(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    // Semantic tooltip informs screen readers what this button does
+    final voiceTooltip = l10n.translate('tap_to_start_voice_chat');
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 110,
-                height: 110,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: context.isDark
-                      ? AppColors.purpleAccent.withValues(alpha: 0.1)
-                      : AppColors.tealAccent.withValues(alpha: 0.3),
-                ),
-              ),
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: (context.isDark)
-                      ? AppColors.darkVoiceGradient
-                      : AppColors.lightVoiceGradient,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (context.isDark)
-                          ? AppColors.primaryDark.withValues(alpha: 0.4)
-                          : AppColors.primaryLight.withValues(alpha: 0.4),
-                      blurRadius: 20,
-                      spreadRadius: 2,
+          // Wrap the mic button in Semantics for accessibility and InkWell for
+          // the ripple tap response, navigating to ChatScreen in voice mode.
+          Semantics(
+            label: voiceTooltip,
+            button: true,
+            child: Tooltip(
+              message: voiceTooltip,
+              child: InkWell(
+                onTap: () {
+                  final voiceProvider = context.read<VoiceProvider>();
+                  // Guard: If STT is known to be unavailable on this device, do NOT
+                  // navigate to ChatScreen in voice mode. Show an error instead.
+                  if (!voiceProvider.isSttAvailable ||
+                      voiceProvider.isUnavailable) {
+                    context.showError(
+                      l10n.translate('speech_text_unavailable'),
+                    );
+                    return;
+                  }
+                  // Navigate to ChatScreen with ChatStartMode.voice so STT
+                  // starts automatically once the screen is mounted.
+                  AppRoutes.navigateTo(
+                    context,
+                    AppRoutes.chat,
+                    arguments:
+                        const ChatArguments(startMode: ChatStartMode.voice),
+                  );
+                },
+                borderRadius: BorderRadius.circular(80),
+                splashColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: context.isDark
+                            ? AppColors.purpleAccent.withValues(alpha: 0.1)
+                            : AppColors.tealAccent.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: (context.isDark)
+                            ? AppColors.darkVoiceGradient
+                            : AppColors.lightVoiceGradient,
+                        boxShadow: [
+                          BoxShadow(
+                            color: (context.isDark)
+                                ? AppColors.primaryDark.withValues(alpha: 0.4)
+                                : AppColors.primaryLight.withValues(alpha: 0.4),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(Icons.mic_rounded,
+                            color: Colors.white,
+                            size: context.isTablet ? 44 : 36),
+                      ),
                     ),
                   ],
                 ),
-                child: Center(
-                  child: Icon(Icons.mic_rounded,
-                      color: Colors.white, size: context.isTablet ? 44 : 36),
-                ),
               ),
-            ],
+            ),
           ),
           SizedBox(height: context.isTablet ? 16 : 8),
-          Text(context.l10n.translate('voice_assistant').toUpperCase(),
+          Text(l10n.translate('voice_assistant').toUpperCase(),
               style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,

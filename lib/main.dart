@@ -174,7 +174,11 @@ class AiVoiceGenieApp extends StatelessWidget {
       ),
       ChangeNotifierProvider<ApiKeyProvider>(create: (_) => ApiKeyProvider()),
       ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
-      ChangeNotifierProvider<VoiceProvider>(create: (_) => VoiceProvider()),
+      // VoiceProvider — lazy: false so voice availability resolves during startup
+      ChangeNotifierProvider<VoiceProvider>(
+        create: (_) => VoiceProvider(),
+        lazy: false,
+      ),
       ChangeNotifierProvider<UsageProvider>(create: (_) => UsageProvider())
     ];
   }

@@ -283,6 +283,18 @@ enum VoiceRecordingState {
   playing
 }
 
+/// Determines how [ChatScreen] is opened — used by the router
+/// to distinguish a normal text-first entry from a voice-first entry
+/// triggered by the Home screen microphone button.
+enum ChatStartMode {
+  /// Standard flow — user opens chat and types a prompt manually.
+  normal,
+
+  /// Voice flow — chat opens with STT already listening so the user
+  /// can speak directly without tapping the in-app mic button.
+  voice,
+}
+
 /// Social authentication provider used to sign in.
 ///
 /// Stored in Firestore user document and used in analytics.

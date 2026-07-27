@@ -16,6 +16,7 @@ import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../shared/model/image_model.dart';
 import '../../../../shared/widgets/image_view.dart';
+import '../../../voice_speech/presentation/widgets/tts_play_button.dart';
 import '../../domain/message_model.dart';
 import 'model_indicator_chip.dart';
 
@@ -28,6 +29,7 @@ import 'model_indicator_chip.dart';
 ///   - Long-press to copy text
 ///   - Sending status indicator (user messages)
 ///   - Model indicator chip (AI messages)
+///   - TTS playback button (AI text-only responses)
 ///   - Responsive sizing for phone and tablet
 class MessageBubble extends StatelessWidget {
   final MessageModel message;
@@ -40,6 +42,24 @@ class MessageBubble extends StatelessWidget {
   });
 
   bool get _isUser => message.role == MessageRole.user;
+
+  /// Whether this bubble is eligible for TTS playback.
+  ///
+  /// Conditions (all must be true):
+  ///   1. Must be an AI (assistant) message
+  ///   2. Message must not be in a failed/error state
+  ///   3. Text content must not be empty (no point speaking an empty bubble)
+  ///   4. Must not be an image-generation response (no imageUrls)
+  ///   5. Must not be a PDF-attachment message (no pdfInfo)
+  ///
+  /// These rules prevent the speaker icon appearing on image cards, PDF
+  /// previews, or broken/cancelled responses where there is nothing to read.
+  bool get _canSpeakMessage =>
+      !_isUser &&
+      message.status != MessageStatus.failed &&
+      message.content.trim().isNotEmpty &&
+      (message.imageUrls == null || message.imageUrls!.isEmpty) &&
+      (message.pdfInfo == null || message.pdfInfo!.isEmpty);
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +116,18 @@ class MessageBubble extends StatelessWidget {
         ),
 
         // Timestamp + status row displayed underneath the bubble
-        _MessageTimestampRow(message: message),
+        _MessageTimestampRow(
+          message: message,
+          // Pass TTS button alongside the timestamp for eligible AI messages.
+          // Placing it here keeps the action row compact and accessible.
+          ttsButton: _canSpeakMessage
+              ? TtsPlaybackButton(
+                  messageId: message.id,
+                  messageContent: message.content,
+                  isTablet: isTablet,
+                )
+              : null,
+        ),
         const SizedBox(height: 4)
       ],
     );
@@ -112,10 +143,18 @@ class MessageBubble extends StatelessWidget {
 }
 
 /// A private widget that renders the timestamp and status icon beneath a message.
+///
+/// Optionally accepts a [ttsButton] widget that is displayed alongside the
+/// timestamp, providing a compact speaker-icon action row for eligible AI
+/// text responses without adding extra vertical spacing.
 class _MessageTimestampRow extends StatelessWidget {
   final MessageModel message;
 
-  const _MessageTimestampRow({required this.message});
+  /// Optional TTS action widget rendered next to the timestamp.
+  /// Null for user messages and non-speakable AI responses.
+  final Widget? ttsButton;
+
+  const _MessageTimestampRow({required this.message, this.ttsButton});
 
   bool get _isUser => message.role == MessageRole.user;
 
@@ -135,6 +174,11 @@ class _MessageTimestampRow extends StatelessWidget {
           if (_isUser) ...[
             const SizedBox(width: 4),
             _StatusIcon(status: message.status),
+          ],
+          // For eligible AI messages, show the TTS speaker button
+          if (ttsButton != null) ...[
+            const SizedBox(width: 6),
+            ttsButton!,
           ],
         ],
       ),

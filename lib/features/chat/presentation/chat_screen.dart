@@ -28,8 +28,16 @@ import 'chat_provider.dart';
 ///
 /// This screen is intentionally minimal — it shows only branding
 /// and the input bar. The real conversation UI is in ChatDetailScreen.
+///
+/// [startMode] controls whether the mic automatically starts listening
+/// after the first frame. When [ChatStartMode.voice] is passed (from the
+/// Home screen mic button), voice input begins immediately without the
+/// user having to tap the in-app mic button.
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  /// How the chat was opened. Defaults to [ChatStartMode.normal].
+  final ChatStartMode startMode;
+
+  const ChatScreen({super.key, this.startMode = ChatStartMode.normal});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -39,12 +47,24 @@ class _ChatScreenState extends State<ChatScreen> {
   final ChatInputController _chatInputController = ChatInputController();
   bool _showSuggestions = true;
 
+  /// Guards against calling startVoiceInput more than once per screen lifecycle.
+  bool _didAutoStartVoice = false;
+
   @override
   void initState() {
     super.initState();
     // Clear any previous conversation state when starting fresh
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<ChatProvider>().clearConversation();
+
+      // Auto-start voice input when opened from the Home voice button.
+      // We guard with _didAutoStartVoice to ensure this fires at most once
+      // even if the widget rebuilds or the post-frame callback fires twice.
+      if (widget.startMode == ChatStartMode.voice && !_didAutoStartVoice) {
+        _didAutoStartVoice = true;
+        _chatInputController.startVoiceInput();
+      }
     });
   }
 
@@ -192,19 +212,18 @@ class _ChatScreenState extends State<ChatScreen> {
                 final selectedProvider = preferences.preferredProvider;
 
                 return Container(
-                  decoration: BoxDecoration(
-                    color: context.theme.cardTheme.color,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(context.isTablet ? 30 : 20),
+                    decoration: BoxDecoration(
+                      color: context.theme.cardTheme.color,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(context.isTablet ? 30 : 20),
+                      ),
+                      border: Border.all(
+                        color: context.theme.dividerTheme.color!,
+                        width: 1,
+                      ),
                     ),
-                    border: Border.all(
-                      color: context.theme.dividerTheme.color!,
-                      width: 1,
-                    ),
-                  ),
-                  child: Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding,
+                      horizontal: context.horizontalPadding / 2,
                       vertical: context.verticalSpacing,
                     ),
                     child: Column(
@@ -221,7 +240,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             preferences.setPreferredProvider(provider);
                           },
                         ),
-                        const SizedBox(height: 4.0),
+                        const SizedBox(height: 8.0),
                         // The Input Component itself
                         Flexible(
                           child: ChatInputBar(
@@ -234,9 +253,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                );
+                    ));
               },
             ),
           ),

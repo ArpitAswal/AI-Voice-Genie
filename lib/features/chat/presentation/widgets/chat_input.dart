@@ -7,17 +7,21 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/enums/app_enums.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/app_validators.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/preferences/ai_preferences_provider.dart';
+import '../../../../shared/widgets/chat_action_button.dart';
+import '../../../voice_speech/presentation/voice_speech_provider.dart';
 import '../../../voice_speech/presentation/widgets/voice_input_button.dart';
 import '../../domain/chat_attachment.dart';
 
 /// Imperative bridge used by parent screens to prepare the chat composer.
 ///
-/// Keeps attachment picking, prompt insertion, and focus behavior inside
-/// [ChatInputBar] while letting onboarding actions trigger those flows.
+/// Keeps attachment picking, prompt insertion, focus behavior, and voice
+/// auto-start inside [ChatInputBar] while letting parent screens trigger
+/// those flows from outside the widget tree.
 class ChatInputController {
   _ChatInputBarState? _state;
 
@@ -47,6 +51,15 @@ class ChatInputController {
     final state = _state;
     if (state == null) return false;
     return state._pickImage(source, promptTemplate: prompt);
+  }
+
+  /// Programmatically trigger voice input as if the user tapped the mic button.
+  ///
+  /// Called by [ChatScreen] when the screen was opened via the Home voice button
+  /// and [ChatStartMode.voice] was requested. The call is deferred to the first
+  /// frame so the [VoiceInputButton] state is fully mounted before interaction.
+  void startVoiceInput() {
+    _state?._startVoiceInputProgrammatically();
   }
 }
 
@@ -79,6 +92,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
   final FocusNode _focusNode = FocusNode();
+  // Key used to imperatively call triggerTap on VoiceInputButton
+  final GlobalKey<VoiceInputButtonState> _voiceMicKey =
+      GlobalKey<VoiceInputButtonState>();
 
   final List<ChatAttachment> _attachments = [];
   bool _canSend = false;
@@ -106,6 +122,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   void dispose() {
     widget.controller?._detach(this);
+    // Also stop voice listening so audio resources are released on screen exit
     _controller
       ..removeListener(_handleTextChanged)
       ..dispose();
@@ -137,6 +154,14 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   Future<void> _handleSend() async {
+    // Stop any active voice listening before sending so mic is released
+    final voiceProvider = context.read<VoiceProvider>();
+    if (voiceProvider.isListening) {
+      await voiceProvider.stopListening();
+    }
+
+    if (!mounted) return;
+
     _focusNode.unfocus();
     final prompt = _controller.text.trim();
     // Validate text prompt limits unless an attachment is providing the context
@@ -368,13 +393,48 @@ class _ChatInputBarState extends State<ChatInputBar> {
   void _onTranscriptReady(String transcript) {
     if (transcript.isEmpty) return;
 
-    // Voice input behaves like manual composition once a transcript is ready.
+    // Replace whatever partial text was showing with the confirmed final result.
+    // Voice input behaves like manual composition once the transcript is final.
     _controller.text = transcript;
     _controller.selection = TextSelection.fromPosition(
       TextPosition(offset: transcript.length),
     );
     _focusNode.requestFocus();
     widget.onUserInteracted?.call();
+  }
+
+  /// Called on every partial STT result while the user is still speaking.
+  ///
+  /// Updates the text field in real time so the user can see what has been
+  /// recognized so far. The cursor is placed at the end of the partial text.
+  /// When the final transcript arrives, [_onTranscriptReady] replaces it.
+  void _onPartialTranscript(String partial) {
+    if (!mounted) return;
+    _controller.text = partial;
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: partial.length),
+    );
+    // Ensure the send button state is in sync with live text
+    _syncCanSend();
+
+    // Automatically scroll to the bottom as text increases beyond height limit
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  /// Programmatically start voice input — called via [ChatInputController.startVoiceInput()].
+  ///
+  /// Simulates the user tapping the mic button. Guards ensure we only start
+  /// if the mic key is mounted and voice is not already active.
+  void _startVoiceInputProgrammatically() {
+    _voiceMicKey.currentState?.triggerTap();
   }
 
   void _applyPromptTemplate(String prompt, {bool focus = true}) {
@@ -390,6 +450,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isListening = context.watch<VoiceProvider>().isListening;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -421,63 +482,63 @@ class _ChatInputBarState extends State<ChatInputBar> {
             ),
           ),
         ],
-        Flexible(
-          flex: 3,
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: context.horizontalPadding / 2,
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            ChatActionButton(
+              icon: Icons.attach_file_rounded,
+              onTap: widget.isGenerating ? null : _showAttachmentSheet,
+              isTablet: widget.isTablet,
+              color: AppColors.primaryLight,
+              tooltip: l10n.translate('attach_file'),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _ActionButton(
-                  icon: Icons.attach_file_rounded,
-                  onTap: widget.isGenerating ? null : _showAttachmentSheet,
-                  tooltip: l10n.translate('attach_file'),
-                  isTablet: widget.isTablet,
-                  color: AppColors.primaryLight,
+            const SizedBox(width: 4),
+            Expanded(
+              child: ConstrainedBox(
+                constraints:
+                    BoxConstraints(maxHeight: context.screenHeight * 0.3),
+                child: context.themedTextField(
+                  controller: _controller,
+                  focus: _focusNode,
+                  scrollController: _scrollController,
+                  maxLines: null,
+                  textCapitalization: TextCapitalization.sentences,
+                  enabled: !widget.isGenerating,
+                  hint: l10n.askGenie,
+                  border: InputBorder.none,
+                  contentPad: const EdgeInsets.all(8),
                 ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Scrollbar(
-                    controller: _scrollController,
-                    thumbVisibility: false,
-                    child: context.themedTextField(
-                      controller: _controller,
-                      focus: _focusNode,
-                      scrollController: _scrollController,
-                      enabled: !widget.isGenerating,
-                      maxLines: null,
-                      keyboardType: TextInputType.multiline,
-                      textCapitalization: TextCapitalization.sentences,
-                      hint: l10n.askGenie,
-                      border: InputBorder.none,
-                      contentPad: const EdgeInsets.all(8),
+              ),
+            ),
+            // Shows VoiceInputButton when empty or while actively listening,
+            // and SendButton once text/attachments are ready and listening has stopped.
+            const SizedBox(width: 4),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: (_canSend && !isListening)
+                  ? ChatActionButton(
+                      key: const ValueKey('send'),
+                      icon: Icons.send_rounded,
+                      onTap: widget.isGenerating ? null : _handleSend,
+                      isLoading: widget.isGenerating,
+                      isTablet: widget.isTablet,
+                      color: context.isDark
+                          ? AppColors.primaryDark
+                          : AppColors.primaryLight,
+                    )
+                  : VoiceInputButton(
+                      key: _voiceMicKey,
+                      isTablet: widget.isTablet,
+                      tooltip: l10n.translate('tap_to_speak'),
+                      // Called with confirmed final text when speech ends
+                      onTranscriptReady: _onTranscriptReady,
+                      // Called live on every partial result while speaking
+                      onPartialTranscript: _onPartialTranscript,
                     ),
-                  ),
-                ),
-                // Shows VoiceInputButton when empty and SendButton once text or
-                // attachments are ready to submit.
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: _canSend
-                      ? _SendButton(
-                          key: const ValueKey('send'),
-                          onTap: widget.isGenerating ? null : _handleSend,
-                          isGenerating: widget.isGenerating,
-                          isTablet: widget.isTablet,
-                        )
-                      : VoiceInputButton(
-                          key: const ValueKey('voice'),
-                          onTranscriptReady: _onTranscriptReady,
-                          tooltip: l10n.translate('tap_to_speak'),
-                          isTablet: widget.isTablet,
-                        ),
-                ),
-              ],
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -567,97 +628,6 @@ class _AttachmentPreview extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// SEND BUTTON
-// =============================================================================
-
-class _SendButton extends StatelessWidget {
-  final VoidCallback? onTap;
-  final bool isGenerating;
-  final bool isTablet;
-
-  const _SendButton({
-    super.key,
-    required this.onTap,
-    required this.isGenerating,
-    required this.isTablet,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final size = isTablet ? 48.0 : 42.0;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: context.primaryColor.withValues(alpha: 0.18)),
-        child: isGenerating
-            ? const Padding(
-                padding: EdgeInsets.all(12),
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.white,
-                ),
-              )
-            : Icon(
-                Icons.send_rounded,
-                color: context.isDark
-                    ? AppColors.primaryDark
-                    : AppColors.primaryLight,
-                size: isTablet ? 22 : 18,
-              ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// ACTION BUTTON — for attach and voice
-// =============================================================================
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  final String tooltip;
-  final bool isTablet;
-  final Color? color;
-
-  const _ActionButton({
-    required this.icon,
-    required this.onTap,
-    required this.tooltip,
-    required this.isTablet,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final size = isTablet ? 48.0 : 42.0;
-
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: context.primaryColor.withValues(alpha: 0.18)),
-          child: Icon(
-            icon,
-            color: color ?? AppColors.white,
           ),
         ),
       ),

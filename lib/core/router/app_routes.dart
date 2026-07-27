@@ -221,8 +221,10 @@ class AppRoutes {
 
       // ── Chat ───────────────────────────────────────────────────────────────
       case chat:
+        // Extract optional ChatArguments to honour voice auto-start from Home.
+        final chatArgs = arguments is ChatArguments ? arguments : null;
         return _buildRoute(
-          const ChatScreen(),
+          ChatScreen(startMode: chatArgs?.startMode ?? ChatStartMode.normal),
           settings,
           TransitionType.slide,
         );
@@ -422,4 +424,19 @@ class ApiKeyManagementArguments extends RouteArguments {
   final String? focusProviderId;
 
   const ApiKeyManagementArguments({this.focusProviderId});
+}
+
+/// Arguments for [ChatScreen] — controls whether the screen opens in
+/// voice-dictation mode (mic starts automatically) or in the default
+/// text-compose mode.
+class ChatArguments extends RouteArguments {
+  /// Determines how the chat screen initializes after navigation.
+  ///
+  /// [ChatStartMode.voice] — mic listening begins immediately after the
+  /// first frame, allowing hands-free dictation from the Home voice button.
+  ///
+  /// [ChatStartMode.normal] — default; user types manually.
+  final ChatStartMode startMode;
+
+  const ChatArguments({this.startMode = ChatStartMode.normal});
 }

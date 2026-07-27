@@ -17,6 +17,7 @@
 - AI provider key setup and validation.
 - Authenticated app shell with chat, history, and profile sections.
 - New-chat flow with selected model, prompt templates, image/PDF attachments, optimistic user messages, and AI responses.
+- Continuous voice dictation with automatic text auto-scroll, debounced native speech engine restart handling, and TTS playback for text-only assistant responses.
 - Offline-first chat persistence with Hive conversation/message records, durable outbox tasks, and background Firestore synchronization.
 - Logout that clears Firebase Auth, Google Sign-In state, analytics user ID, and user-box session data.
 

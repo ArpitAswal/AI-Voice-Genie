@@ -92,8 +92,6 @@ class VoiceProvider extends ChangeNotifier {
     if (!_isSttAvailable) {
       _state = VoiceRecordingState.unavailable;
     }
-
-    notifyListeners();
   }
 
   // ── STT — Voice Input ──────────────────────────────────────────────────────
@@ -107,11 +105,17 @@ class VoiceProvider extends ChangeNotifier {
   ///     onTranscriptReady: (text) => _controller.text = text,
   ///   );
   ///   ```
+  ///
+  /// [onPartialTranscript] — optional callback called on every partial result
+  ///   during active speech. Used by [ChatInputBar] to show continuous live
+  ///   text in the composer as the user speaks, before the final transcript
+  ///   is confirmed. If null, partial text is only stored in [partialTranscript].
   Future<void> startListening({
     required void Function(String transcript) onTranscriptReady,
     required void Function(String errorKey) onError,
+    void Function(String partial)? onPartialTranscript,
   }) async {
-    // If TTS is currently playing, stop it first
+    // If TTS is currently playing, stop it first so voice input is clear
     if (isPlaying) {
       await stopSpeaking();
     }
@@ -126,7 +130,7 @@ class VoiceProvider extends ChangeNotifier {
     final success = await _repository.requestMicrophonePermission();
     if (!success) {
       _setState(VoiceRecordingState.unavailable);
-      
+
       // Differentiate between permission denial and engine failure
       final status = await Permission.microphone.status;
       if (status.isGranted) {
@@ -144,23 +148,28 @@ class VoiceProvider extends ChangeNotifier {
 
     await _repository.startListening(
       onPartialResult: (partial) {
-        // Update live transcript display during speech
+        // Update the live transcript shown in the provider state
         _partialTranscript = partial;
-        notifyListeners();
+        // Also forward to the caller (e.g. ChatInputBar text field)
+        onPartialTranscript?.call(partial);
       },
       onFinalResult: (final_) {
-        // Transcript ready — pre-fill the input field
+        // Clear the intermediate partial text — the final result replaces it
         _partialTranscript = '';
+        debugPrint("onFinalResult");
         _setState(VoiceRecordingState.idle);
         onTranscriptReady(final_);
         _analytics.logFeatureUsed(AppFeature.voiceInput);
+        notifyListeners();
       },
       onError: (errorKey) {
         _partialTranscript = '';
         _setState(VoiceRecordingState.error);
-        // Reset to idle after brief error display
+        onError(errorKey);
+        // Reset to idle after brief error display so the mic button is re-tappable
         Future.delayed(const Duration(seconds: 2)).then((_) {
           if (_state == VoiceRecordingState.error) {
+            debugPrint("onError");
             _setState(VoiceRecordingState.idle);
           }
         });
@@ -171,6 +180,7 @@ class VoiceProvider extends ChangeNotifier {
   /// Stop listening early (user taps mic button again to cancel).
   Future<void> stopListening() async {
     await _repository.stopListening();
+    debugPrint("called stop listening");
     _partialTranscript = '';
     _setState(VoiceRecordingState.idle);
   }
@@ -203,6 +213,7 @@ class VoiceProvider extends ChangeNotifier {
       speed: _ttsSpeed,
       onComplete: () {
         _activeTtsMessageId = null;
+        debugPrint("onComplete");
         _setState(VoiceRecordingState.idle);
         _analytics.logFeatureUsed(AppFeature.voiceOutput);
       },
@@ -213,6 +224,7 @@ class VoiceProvider extends ChangeNotifier {
   Future<void> stopSpeaking() async {
     await _repository.stopSpeaking();
     _activeTtsMessageId = null;
+    debugPrint("stopSpeaking");
     _setState(VoiceRecordingState.idle);
   }
 
@@ -241,6 +253,7 @@ class VoiceProvider extends ChangeNotifier {
   void _setState(VoiceRecordingState newState) {
     if (_state == newState) return;
     _state = newState;
+    debugPrint("VoiceProvider: state changed to: $_state");
     notifyListeners();
   }
 }
