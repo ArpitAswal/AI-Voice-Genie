@@ -49,6 +49,15 @@ class UserModel {
   /// Read from Firestore — defaults to false for new users.
   final bool keySetupDone;
 
+  /// Whether the user accepted the Terms of Service and Privacy Policy.
+  final bool termsAccepted;
+
+  /// The timestamp when the user accepted the terms.
+  final DateTime? termsAcceptedAt;
+
+  /// The version string of the legal terms accepted by this user (e.g., '2026-07-v1').
+  final String? termsVersionAccepted;
+
   /// Date of birth (optional).
   final DateTime? dateOfBirth;
 
@@ -73,6 +82,9 @@ class UserModel {
       this.isNewUser = false,
       this.onboardingDone = false,
       this.keySetupDone = false,
+      this.termsAccepted = false,
+      this.termsAcceptedAt,
+      this.termsVersionAccepted,
       this.dateOfBirth,
       this.age,
       this.createdAt,
@@ -96,6 +108,14 @@ class UserModel {
       isNewUser: false,
       onboardingDone: data['onboardingDone'] as bool? ?? false,
       keySetupDone: data['keySetupDone'] as bool? ?? false,
+      termsAccepted:
+          data[FirebaseCollections.fieldTermsAccepted] as bool? ?? false,
+      termsAcceptedAt: data[FirebaseCollections.fieldTermsAcceptedAt] != null
+          ? (data[FirebaseCollections.fieldTermsAcceptedAt] as Timestamp)
+              .toDate()
+          : null,
+      termsVersionAccepted:
+          data[FirebaseCollections.fieldTermsVersionAccepted] as String?,
       dateOfBirth: data['dateOfBirth'] != null
           ? (data['dateOfBirth'] as Timestamp).toDate()
           : null,
@@ -127,6 +147,9 @@ class UserModel {
       'authProvider': authProvider.id,
       'onboardingDone': false,
       'keySetupDone': false,
+      FirebaseCollections.fieldTermsAccepted: termsAccepted,
+      FirebaseCollections.fieldTermsAcceptedAt: FieldValue.serverTimestamp(),
+      FirebaseCollections.fieldTermsVersionAccepted: termsVersionAccepted,
       'dateOfBirth': null,
       'age': null,
       FirebaseCollections.fieldCreatedAt: FieldValue.serverTimestamp(),
@@ -147,12 +170,14 @@ class UserModel {
     bool? isNewUser,
     bool? onboardingDone,
     bool? keySetupDone,
+    bool? termsAccepted,
+    DateTime? termsAcceptedAt,
+    String? termsVersionAccepted,
     DateTime? dateOfBirth,
     int? age,
     DateTime? createdAt,
     DateTime? lastLoginAt,
     DateTime? lastUpdatedAt,
-    String? preferredAiModel,
   }) {
     return UserModel(
         uid: uid ?? this.uid,
@@ -163,6 +188,9 @@ class UserModel {
         isNewUser: isNewUser ?? this.isNewUser,
         onboardingDone: onboardingDone ?? this.onboardingDone,
         keySetupDone: keySetupDone ?? this.keySetupDone,
+        termsAccepted: termsAccepted ?? this.termsAccepted,
+        termsAcceptedAt: termsAcceptedAt ?? this.termsAcceptedAt,
+        termsVersionAccepted: termsVersionAccepted ?? this.termsVersionAccepted,
         dateOfBirth: dateOfBirth ?? this.dateOfBirth,
         age: age ?? this.age,
         createdAt: createdAt ?? this.createdAt,
@@ -184,5 +212,5 @@ class UserModel {
 
   @override
   String toString() => 'UserModel(uid: $uid, email: $email, '
-      'displayName: $displayName, provider: ${authProvider.id})';
+      'displayName: $displayName, provider: ${authProvider.id}, termsAccepted: $termsAccepted)';
 }

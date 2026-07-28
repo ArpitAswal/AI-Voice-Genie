@@ -232,4 +232,35 @@ class UsageRepositoryImpl implements UsageRepository {
       rethrow;
     }
   }
+
+  @override
+  Future<void> deleteAllUsageData({required String uid}) async {
+    final collections = [
+      FirebaseCollections.usageEventsCollection(uid),
+      FirebaseCollections.usageSummariesCollection(uid),
+      FirebaseCollections.usageBudgetsCollection(uid),
+    ];
+
+    for (final colPath in collections) {
+      try {
+        while (true) {
+          final snapshot = await _db.collection(colPath).limit(400).get();
+          if (snapshot.docs.isEmpty) break;
+
+          final batch = _db.batch();
+          for (final doc in snapshot.docs) {
+            batch.delete(doc.reference);
+          }
+          await batch.commit();
+          debugPrint(
+              '🗑️ Deleted chunk of ${snapshot.docs.length} docs from $colPath');
+
+          if (snapshot.docs.length < 400) break;
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error deleting usage subcollection $colPath: $e');
+      }
+    }
+  }
 }
+

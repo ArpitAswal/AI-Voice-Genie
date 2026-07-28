@@ -51,4 +51,12 @@ abstract interface class UsageRepository {
     required String uid,
     required AiProviderId provider,
   });
+
+  /// Deletes all usage events, summaries, and budgets for a user from Firestore.
+  ///
+  /// Called during account deletion to prevent orphaned documents.
+  Future<void> deleteAllUsageData({
+    required String uid,
+  });
 }
+

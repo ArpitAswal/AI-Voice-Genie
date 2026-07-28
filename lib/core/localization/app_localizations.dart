@@ -68,6 +68,9 @@ class AppLocalizations {
       'request_timed_out': 'Request timed out. Please try again.',
       'privacy_note':
           'By continuing, you agree to our Terms of Service\nand Privacy Policy.',
+      'privacy_note_prefix': 'By continuing, you agree to our ',
+      'privacy_note_and': ' and ',
+      'privacy_note_suffix': '.',
       'ask_user_todo': 'WHAT WOULD YOU LIKE TO DO?',
       'ask_question': 'Ask a question',
       'intelligent_models': 'INTELLIGENT AI MODELS',
@@ -312,7 +315,7 @@ class AppLocalizations {
       'enabled': 'Enabled',
       'not_active': 'Not Active',
       'configure': 'Configure',
-      'help_center': 'Help Center',
+      'help_center': 'Help & Support',
       'coming_soon': 'Coming soon.',
       'active_user': 'Active user since',
 
@@ -501,6 +504,9 @@ class AppLocalizations {
       'request_timed_out': 'अनुरोध का समय समाप्त हो गया। पुनः प्रयास करें।',
       'privacy_note':
           'आगे बढ़ने पर, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत होते हैं।',
+      'privacy_note_prefix': 'आगे बढ़ने पर, आप हमारी ',
+      'privacy_note_and': ' और ',
+      'privacy_note_suffix': ' से सहमत होते हैं।',
       'ask_user_todo': 'आप क्या करना चाहेंगे?',
       'ask_question': 'प्रश्न पूछें',
       'intelligent_models': 'INTELLIGENT AI MODELS',
@@ -793,7 +799,7 @@ class AppLocalizations {
       'enabled': 'सक्षम',
       'not_active': 'सक्रिय नहीं',
       'configure': 'कॉन्फ़िगर करें',
-      'help_center': 'हेल्प सेंटर',
+      'help_center': 'सहायता और समर्थन',
       'coming_soon': 'जल्द आ रहा है।',
       'about_app': 'ऐएआई वॉइस जीनियस के बारे में',
       'development_build': 'डेवलपमेंट बिल्ड',

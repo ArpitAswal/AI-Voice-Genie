@@ -14,6 +14,10 @@ class StorageKeys {
   static const String onboardingCompleted = 'onboardingCompleted';
   // Whether user has completed the AI key setup screen after first login
   static const String keySetupCompleted = 'keySetupCompleted';
+  // Whether user has accepted the Terms of Service and Privacy Policy
+  static const String termsAccepted = 'termsAccepted';
+  // Which version of the Terms of Service the user accepted
+  static const String termsVersionAccepted = 'termsVersionAccepted';
 
   // ── App Settings ──────────────────────────────────────────────────────────
   static const String themeMode = 'themeMode';

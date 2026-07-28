@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/firebase_collections.dart';
 import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/services/storage_service.dart';
@@ -18,6 +19,7 @@ import '../domain/auth_repository.dart';
 import '../domain/user_model.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../chat/data/remote_chat_store.dart';
+import '../../usage/data/usage_repository_impl.dart';
 
 /// Concrete implementation of AuthRepository.
 ///
@@ -405,7 +407,15 @@ class AuthRepositoryImpl implements AuthRepository {
         debugPrint('⚠️ Error deleting Firestore conversations: $e');
       }
 
-      // 2. Delete user profile doc from Firestore
+      // 2. Delete user usage subcollections (events, summaries, budgets) from Firestore
+      try {
+        await UsageRepositoryImpl().deleteAllUsageData(uid: uid);
+        debugPrint('🗑️ Deleted Firestore usage data for uid=$uid');
+      } catch (e) {
+        debugPrint('⚠️ Error deleting Firestore usage data: $e');
+      }
+
+      // 3. Delete user profile doc from Firestore
       try {
         await _firestore.doc(FirebaseCollections.userDoc(uid)).delete();
         debugPrint('🗑️ Deleted Firestore user doc for uid=$uid');
@@ -489,6 +499,9 @@ class AuthRepositoryImpl implements AuthRepository {
       DateTime? dateOfBirth;
       bool onboardingDone = false;
       bool keySetupDone = false;
+      bool termsAccepted = false;
+      DateTime? termsAcceptedAt;
+      String? termsVersionAccepted;
 
       if (isNewUser) {
         // ── NEW USER ─────────────────────────────────────────────────────────
@@ -518,6 +531,9 @@ class AuthRepositoryImpl implements AuthRepository {
           isNewUser: true,
           onboardingDone: false,
           keySetupDone: false,
+          termsAccepted: true,
+          termsAcceptedAt: DateTime.now().toUtc(),
+          termsVersionAccepted: AppConstants.currentTermsVersion,
         );
 
         // Write new user document with server timestamps
@@ -546,6 +562,16 @@ class AuthRepositoryImpl implements AuthRepository {
         keySetupDone =
             existingData[FirebaseCollections.fieldKeySetupDone] as bool? ??
                 false;
+        termsAccepted =
+            existingData[FirebaseCollections.fieldTermsAccepted] as bool? ??
+                false;
+        termsAcceptedAt =
+            (existingData[FirebaseCollections.fieldTermsAcceptedAt]
+                    as Timestamp?)
+                ?.toDate();
+        termsVersionAccepted =
+            existingData[FirebaseCollections.fieldTermsVersionAccepted]
+                as String?;
         age = existingData[FirebaseCollections.fieldAge] as int?;
         dateOfBirth =
             (existingData[FirebaseCollections.fieldDateOfBirth] as Timestamp?)
@@ -575,6 +601,9 @@ class AuthRepositoryImpl implements AuthRepository {
           isNewUser: false,
           onboardingDone: onboardingDone,
           keySetupDone: keySetupDone,
+          termsAccepted: termsAccepted,
+          termsAcceptedAt: termsAcceptedAt,
+          termsVersionAccepted: termsVersionAccepted,
           dateOfBirth: dateOfBirth,
           createdAt: createdAt,
           lastLoginAt: lastLoginAt,
@@ -617,6 +646,13 @@ class AuthRepositoryImpl implements AuthRepository {
       user.onboardingDone,
     );
     await _storage.setBool(StorageKeys.keySetupCompleted, user.keySetupDone);
+    await _storage.setBool(StorageKeys.termsAccepted, user.termsAccepted);
+    if (user.termsVersionAccepted != null) {
+      await _storage.setUserData(
+        StorageKeys.termsVersionAccepted,
+        user.termsVersionAccepted!,
+      );
+    }
   }
 
   // ── Private: Field Resolution Helpers ─────────────────────────────────────
@@ -670,6 +706,9 @@ class AuthRepositoryImpl implements AuthRepository {
       isNewUser: false,
       onboardingDone: false,
       keySetupDone: false,
+      termsAccepted: _storage.getBool(StorageKeys.termsAccepted),
+      termsVersionAccepted:
+          _storage.getUserData(StorageKeys.termsVersionAccepted) as String?,
     );
   }
 

@@ -78,7 +78,8 @@ class UsageProvider extends ChangeNotifier {
         }
         notifyListeners();
       }, onError: (e) {
-        debugPrint('⚠️ UsageProvider stream error: $e');
+        debugPrint(
+            '⚠️ UsageProvider stream error (ignored during logout/deletion): $e');
       });
     } catch (e) {
       // Store the localization key, not the translated string, so the UI can

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:ai_voice_genie/core/enums/app_enums.dart';
 import 'package:ai_voice_genie/features/auth/presentation/auth_buttons.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -115,7 +116,7 @@ class _AuthScreenState extends State<AuthScreen> {
       // Stay on LoginScreen and show a generic error
       context.showError('something_went_wrong');
       return;
-    } else{
+    } else {
       context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
     }
 
@@ -204,11 +205,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       SizedBox(height: isTablet ? 16 : 12),
 
                       // ── Privacy note ─────────────────────────────────────────
-                      Text(
-                        l10n.privacyNote,
-                        style: context.textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
+                      _buildPrivacyNote(context),
 
                       SizedBox(
                           height: (context.screenHeight *
@@ -222,6 +219,54 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ── Privacy Note with Clickable Legal Links ────────────────────────────────
+  Widget _buildPrivacyNote(BuildContext context) {
+    final l10n = context.l10n;
+    final linkStyle = context.textTheme.bodySmall?.copyWith(
+      color: context.primaryColor,
+      fontWeight: FontWeight.w600,
+    );
+    final normalStyle = context.textTheme.bodySmall;
+
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        style: normalStyle,
+        children: [
+          TextSpan(text: l10n.translate('privacy_note_prefix')),
+          TextSpan(
+            text: l10n.termsOfService,
+            style: linkStyle,
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => AppRoutes.navigateTo(
+                    context,
+                    AppRoutes.terms,
+                    arguments: {
+                      'title': l10n.termsOfService,
+                      'mdFileName': 'legal/terms_of_service.md',
+                    },
+                  ),
+          ),
+          TextSpan(text: l10n.translate('privacy_note_and')),
+          TextSpan(
+            text: l10n.privacyPolicy,
+            style: linkStyle,
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => AppRoutes.navigateTo(
+                    context,
+                    AppRoutes.privacy,
+                    arguments: {
+                      'title': l10n.privacyPolicy,
+                      'mdFileName': 'legal/privacy_policy.md',
+                    },
+                  ),
+          ),
+          TextSpan(text: l10n.translate('privacy_note_suffix')),
+        ],
       ),
     );
   }

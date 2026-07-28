@@ -84,6 +84,9 @@ class FirebaseCollections {
   static const String fieldDailyQuotaUsed = 'dailyQuotaUsed';
   static const String fieldDailyQuotaLimit = 'dailyQuotaLimit';
   static const String fieldNewUser = 'isNewUser';
+  static const String fieldTermsAccepted = 'termsAccepted';
+  static const String fieldTermsAcceptedAt = 'termsAcceptedAt';
+  static const String fieldTermsVersionAccepted = 'termsVersionAccepted';
 
   // ── API Key Document Field Names ──────────────────────────────────────────
   static const String fieldApiKey = 'apiKey';

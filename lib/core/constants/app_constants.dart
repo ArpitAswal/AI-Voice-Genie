@@ -26,6 +26,11 @@ class AppConstants {
   static const String supportEmail = 'arpitaswal995@gmail.com';
   static const String helpCenterUrl = '';
 
+  // ── Legal Versioning ──────────────────────────────────────────────────────
+  // Current active version of the Terms of Service and Privacy Policy.
+  // Bump this when publishing updated terms to prompt re-acceptance if required.
+  static const String currentTermsVersion = '2026-07-v1';
+
   // ── Regex Patterns ────────────────────────────────────────────────────────
   static const String emailPattern = r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$';
 
