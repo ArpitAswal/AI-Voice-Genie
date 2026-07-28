@@ -36,7 +36,7 @@ class ProfilePanel extends StatelessWidget {
           vertical: context.verticalSpacing),
       decoration: BoxDecoration(
         color: ProfileUiHelpers.panelColor(context),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(context.screenWidth * 0.05),
         border: Border.all(
           color:
               context.isDark ? AppColors.darkDivider : AppColors.lightDivider,
@@ -70,7 +70,7 @@ class ProfileIconTile extends StatelessWidget {
       width: resolvedSize,
       height: resolvedSize,
       decoration: BoxDecoration(
-        color: (color ?? context.primaryColor)
+        color: (color ?? context.theme.colorScheme.primary)
             .withValues(alpha: context.isDark ? 0.18 : 0.12),
         borderRadius: BorderRadius.circular(14),
       ),
@@ -203,7 +203,7 @@ class ProfileListTile extends StatelessWidget {
                 Text(
                   subtitle!,
                   style: context.textTheme.bodySmall?.copyWith(
-                    color: AppColors.lightWarning,
+                    color: context.isDark ? AppColors.darkWarning : AppColors.lightWarning,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'package:ai_voice_genie/features/auth/presentation/auth_screen.dart';
 import 'package:ai_voice_genie/features/chat/presentation/chat_screen.dart';
+import 'package:ai_voice_genie/features/legal_section/presentation/legal_screen.dart';
 import 'package:ai_voice_genie/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:ai_voice_genie/features/profile/presentation/profile_view.dart';
 import 'package:ai_voice_genie/features/splash/presentation/splash_screen.dart';
@@ -87,6 +88,12 @@ class AppRoutes {
 
   /// Exception / 404
   static const String exception = '/exception';
+
+  /// Privacy Policy
+  static const String privacy = '/about/privacy-policy';
+
+  /// Terms of Service
+  static const String terms = '/about/terms-of-service';
 
   // ── Navigation Helpers ─────────────────────────────────────────────────────
 
@@ -271,6 +278,13 @@ class AppRoutes {
           TransitionType.slide,
         );
 
+      case privacy || terms:
+        Map<String, dynamic>? value = arguments is Map<String,dynamic> ? arguments : null;
+        return _buildRoute(
+          LegalScreen(title: value?['title'], mdFileName: value?['mdFileName']),
+          settings,
+          TransitionType.slideUp,
+        );
       // ── Exception / 404 ────────────────────────────────────────────────────
       default:
         return _buildErrorRoute(settings);

@@ -7,33 +7,10 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
-import 'profile_common_widgets.dart';
+import '../../../profile/presentation/widgets/profile_common_widgets.dart';
 
 class AboutHero extends StatelessWidget {
   const AboutHero({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        // gradient: LinearGradient(
-        //   colors: [
-        //     ProfileUiHelpers.panelColor(context),
-        //     context.primaryColor.withValues(alpha: context.isDark ? 0.18 : 0.1),
-        //   ],
-        //   begin: Alignment.topLeft,
-        //   end: Alignment.bottomRight,
-        // ),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: ProfileUiHelpers.softShadow(context),
-      ),
-      child: const AboutLogo(),
-    );
-  }
-}
-
-class AboutLogo extends StatelessWidget {
-  const AboutLogo({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +20,7 @@ class AboutLogo extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
               shape: BoxShape.circle, gradient: AppColors.primaryGradientDark),
+          alignment: Alignment.center,
           child: ImageView(
             image: const ImageViewData.asset(AppAssets.appLogo),
             width: context.screenWidth / 4,
@@ -75,24 +53,25 @@ class AboutStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedColor = color ?? context.primaryColor;
+    final resolvedColor = color ?? context.theme.colorScheme.primary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: resolvedColor.withValues(alpha: context.isDark ? 0.12 : 0.5),
+        color: resolvedColor.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon,
-              color: context.isDark ? resolvedColor : Colors.white, size: 16),
+              color: Colors.white,
+              size: context.textTheme.labelMedium?.fontSize),
           const SizedBox(width: 8),
           Text(
             label,
             style: context.textTheme.labelMedium?.copyWith(
-              color: context.isDark ? resolvedColor : Colors.white,
+              color: Colors.white,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -106,40 +85,31 @@ class AboutInfoPanel extends StatelessWidget {
   final String title;
   final String body;
   final IconData icon;
-  final Color? accentColor;
 
   const AboutInfoPanel({
     super.key,
     required this.title,
     required this.body,
     required this.icon,
-    this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? context.primaryColor;
-
     return ProfilePanel(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ProfileIconTile(icon: icon, color: color),
+          ProfileIconTile(icon: icon),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: context.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                Text(title, style: context.textTheme.titleLarge),
                 const SizedBox(height: 6),
                 Text(
                   body,
-                  style: context.textTheme.bodyMedium?.copyWith(
+                  style: context.textTheme.bodySmall?.copyWith(
                     height: 1.45,
                   ),
                 ),
@@ -181,7 +151,6 @@ class AboutSectionCard extends StatelessWidget {
     );
   }
 }
-
 
 class AboutDivider extends StatelessWidget {
   const AboutDivider({super.key});

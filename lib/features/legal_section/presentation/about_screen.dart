@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/extensions/build_context_extensions.dart';
-import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/utils/status_message_utils.dart';
-import '../../domain/profile_view_model.dart';
-import '../widgets/about_widgets.dart';
-import '../widgets/profile_common_widgets.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/extensions/build_context_extensions.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/router/app_routes.dart';
+import '../../../core/utils/status_message_utils.dart';
+import '../../profile/domain/profile_view_model.dart';
+import 'widgets/about_widgets.dart';
+import '../../profile/presentation/widgets/profile_common_widgets.dart';
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -23,7 +24,7 @@ class _AboutScreenState extends State<AboutScreen> {
   @override
   void initState() {
     super.initState();
-    _viewModel = ProfileViewModel()..loadPackageInfo();
+    _viewModel = ProfileViewModel();
   }
 
   @override
@@ -40,19 +41,19 @@ class _AboutScreenState extends State<AboutScreen> {
       case ProfileLinkResult.opened:
         return;
       case ProfileLinkResult.missing:
-        context.showWarning(context.l10n.linkUnavailable);
+        context.showWarning(context.l10n.translate('link_unavailable'));
       case ProfileLinkResult.failed:
-        context.showError(context.l10n.couldNotOpenLink);
+        context.showError(context.l10n.translate('could_not_open_link'));
     }
   }
 
   void _openLicenses(String versionLabel) {
-    // showLicensePage(
-    //   context: context,
-    //   applicationName: context.l10n.appName,
-    //   applicationVersion: versionLabel,
-    //   applicationIcon: const AboutLogo(),
-    // );
+    showLicensePage(
+      context: context,
+      // applicationName: context.l10n.appName,
+      applicationVersion: versionLabel,
+      applicationIcon: const AboutHero(),
+    );
   }
 
   @override
@@ -61,14 +62,8 @@ class _AboutScreenState extends State<AboutScreen> {
       value: _viewModel,
       child: Consumer<ProfileViewModel>(
         builder: (context, viewModel, _) {
-          final hasPrivacy = AppConstants.privacyPolicyUrl.trim().isNotEmpty;
-          final hasTerms = AppConstants.termsOfServiceUrl.trim().isNotEmpty;
-          final hasSupport = AppConstants.supportEmail.trim().isNotEmpty ||
-              AppConstants.helpCenterUrl.trim().isNotEmpty;
-
           return Scaffold(
-            appBar:
-                AppBar(title: Text(context.l10n.aboutApp), centerTitle: false),
+            appBar: AppBar(title: Text(context.l10n.aboutApp)),
             body: SafeArea(
               child: ListView(
                 padding: EdgeInsets.symmetric(
@@ -82,7 +77,7 @@ class _AboutScreenState extends State<AboutScreen> {
                     alignment: WrapAlignment.spaceEvenly,
                     runAlignment: WrapAlignment.center,
                     crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 10,
+                    spacing: 8,
                     runSpacing: 10,
                     children: [
                       AboutStatusChip(
@@ -93,7 +88,9 @@ class _AboutScreenState extends State<AboutScreen> {
                       AboutStatusChip(
                         label: context.l10n.developmentBuild,
                         icon: Icons.construction_rounded,
-                        color: AppColors.lightWarning,
+                        color: context.isDark
+                            ? AppColors.darkWarning
+                            : AppColors.lightWarning,
                       ),
                     ],
                   ),
@@ -111,16 +108,14 @@ class _AboutScreenState extends State<AboutScreen> {
                         icon: Icons.privacy_tip_outlined,
                         iconColor: AppColors.grey,
                         title: context.l10n.privacyPolicy,
-                        subtitle: context.l10n.translate('configured'),
-                        trailing: Icon(
-                          hasPrivacy
-                              ? Icons.open_in_new_rounded
-                              : Icons.lock_clock_outlined,
-                          color: AppColors.lightWarning,
-                          size: 20,
-                        ),
-                        onTap: () => _handleLinkResult(
-                          viewModel.openUrl(AppConstants.privacyPolicyUrl),
+                        subtitle: context.l10n.translate('read_in_app'),
+                        showChevron: true,
+                        onTap: () => AppRoutes.navigateTo(
+                          context, AppRoutes.privacy,
+                          arguments: {
+                            'title': context.l10n.privacyPolicy,
+                            'mdFileName': 'legal/privacy_policy.md'
+                          }
                         ),
                       ),
                       const AboutDivider(),
@@ -128,17 +123,14 @@ class _AboutScreenState extends State<AboutScreen> {
                         icon: Icons.description_outlined,
                         iconColor: AppColors.grey,
                         title: context.l10n.termsOfService,
-                        subtitle: context.l10n.translate('configured'),
-                        trailing: Icon(
-                          hasTerms
-                              ? Icons.open_in_new_rounded
-                              : Icons.lock_clock_outlined,
-                          color: AppColors.lightWarning,
-                          size: 20,
-                        ),
-                        onTap: () => _handleLinkResult(
-                          viewModel.openUrl(AppConstants.termsOfServiceUrl),
-                        ),
+                        subtitle: context.l10n.translate('read_in_app'),
+                        showChevron: true,
+                        onTap: () => AppRoutes.navigateTo(context,
+                            AppRoutes.terms,
+                        arguments: {
+                          'title': context.l10n.termsOfService,
+                          'mdFileName': 'legal/terms_of_service.md',
+                        })
                       ),
                     ],
                   ),
@@ -150,13 +142,14 @@ class _AboutScreenState extends State<AboutScreen> {
                         icon: Icons.support_agent_rounded,
                         iconColor: AppColors.grey,
                         title: context.l10n.translate('contact_support'),
-                        subtitle: context.l10n.translate('configured'),
+                        subtitle: AppConstants.supportEmail.isNotEmpty
+                            ? AppConstants.supportEmail
+                            : context.l10n.translate('not_configured'),
                         trailing: Icon(
-                          hasSupport
-                              ? Icons.open_in_new_rounded
-                              : Icons.lock_clock_outlined,
-                          color: AppColors.lightWarning,
-                          size: 20,
+                          Icons.open_in_new_rounded,
+                          color: context.textTheme.bodySmall?.color
+                              ?.withValues(alpha: 0.6),
+                          size: context.textTheme.titleLarge?.fontSize,
                         ),
                         onTap: () => _handleLinkResult(
                           viewModel.openSupport(context.l10n.appName),
@@ -173,10 +166,11 @@ class _AboutScreenState extends State<AboutScreen> {
                         iconColor: AppColors.grey,
                         title: context.l10n.translate('open_source_licenses'),
                         subtitle: context.l10n.translate('view_licenses'),
-                        trailing: const Icon(
+                        trailing: Icon(
                           Icons.open_in_new_rounded,
-                          color: AppColors.lightWarning,
-                          size: 20,
+                          color: context.textTheme.bodySmall?.color
+                              ?.withValues(alpha: 0.6),
+                          size: context.textTheme.titleLarge?.fontSize,
                         ),
                         onTap: () => _openLicenses(viewModel.versionLabel),
                       ),

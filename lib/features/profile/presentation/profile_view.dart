@@ -20,8 +20,8 @@ import 'widgets/settings_panel.dart';
 import 'widgets/support_panel.dart';
 import 'widgets/account_panel.dart';
 
-export 'screens/about_screen.dart';
-export 'screens/edit_profile_screen.dart';
+export '../../legal_section/presentation/about_screen.dart';
+export 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

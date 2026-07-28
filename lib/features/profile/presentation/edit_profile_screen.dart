@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/extensions/build_context_extensions.dart';
-import '../../../../core/localization/app_localizations.dart';
-import '../../../../core/router/app_routes.dart';
-import '../../../../core/utils/status_message_utils.dart';
-import '../../../../core/utils/widget_utils.dart';
-import '../../../auth/presentation/auth_provider.dart';
-import '../../domain/profile_view_model.dart';
-import '../widgets/profile_avatar.dart';
+import '../../../core/extensions/build_context_extensions.dart';
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/router/app_routes.dart';
+import '../../../core/utils/status_message_utils.dart';
+import '../../../core/utils/widget_utils.dart';
+import '../../auth/presentation/auth_provider.dart';
+import '../domain/profile_view_model.dart';
+import 'widgets/profile_avatar.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});

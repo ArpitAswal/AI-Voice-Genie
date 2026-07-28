@@ -30,6 +30,7 @@ firebase.json
 !/README.md
 !/agentPlan/app_flow.md
 !agentPlan/app_summary.md
+!assets/legal/*.md
 
 # ===============================
 # 🧱 Flutter / Dart

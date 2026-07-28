@@ -19,9 +19,11 @@ class AppConstants {
   static const String copyrightOwner = 'AI Voice Genie';
 
   // Fill these before publishing the app on Google Play.
-  static const String privacyPolicyUrl = '';
-  static const String termsOfServiceUrl = '';
-  static const String supportEmail = '';
+  static const String privacyPolicyUrl =
+      'https://github.com/ArpitAswal/AI-Voice-Genie/blob/main/assets/legal/privacy_policy.md';
+  static const String termsOfServiceUrl =
+      'https://github.com/ArpitAswal/AI-Voice-Genie/blob/main/assets/legal/terms_of_service.md';
+  static const String supportEmail = 'arpitaswal995@gmail.com';
   static const String helpCenterUrl = '';
 
   // ── Regex Patterns ────────────────────────────────────────────────────────

@@ -89,12 +89,6 @@ class AppColors {
   // Microphone button active state (pulsing red — recording)
   static const Color voiceActive = Color(0xFFEF4444);
 
-  // ── Capability Indicator Colors ───────────────────────────────────────────
-  // Shown on feature capability chips (supported / not supported)
-  static const Color capabilitySupported = Color(0xFF10B981);
-  static const Color capabilityUnsupported = Color(0xFFEF4444);
-  static const Color capabilityUnknown = Color(0xFF9CA3AF);
-
   // ── Gradient Definitions ──────────────────────────────────────────────────
   // Used for hero sections and loading shimmer effects
   static final LinearGradient primaryGradientLight = LinearGradient(
