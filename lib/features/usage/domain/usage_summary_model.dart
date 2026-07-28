@@ -104,7 +104,9 @@ class UsageSummaryModel {
 
   /// True if there's any recorded activity in the entire profile
   bool get hasAnyActivity =>
-      alreadyUsedUsd != null || monthlyData.values.any((m) => m.hasActivity);
+      (alreadyUsedUsd ?? 0.0) > 0 ||
+      monthlyData.values.any((m) => m.hasActivity) ||
+      (_rootTotalTokens ?? 0) > 0;
 
   // ── Serialization ─────────────────────────────────────────────────────────
 

@@ -140,7 +140,6 @@ class _ModelIntelligenceCard extends StatelessWidget {
                 _UsageStatsRow(
                     summary: summary,
                     currentMonthKey: usageProvider.currentMonthKey),
-                const SizedBox(height: 14),
               ],
 
               // ── Budget section ────────────────────────────────────────────
@@ -164,7 +163,7 @@ class _ModelIntelligenceCard extends StatelessWidget {
 
               // ── Capabilities ──────────────────────────────────────────────
               Text(
-                provider.features,
+                provider.pricingAndEfficiency(context.l10n),
                 style: context.textTheme.bodySmall?.copyWith(
                   height: 1.5,
                 ),
@@ -236,9 +235,12 @@ class _UsageStatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (summary == null || !summary!.hasAnyActivity) {
-      return Text(
-        context.l10n.usageNoActivity,
-        style: context.textTheme.bodySmall,
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8.0),
+        child: Text(
+          context.l10n.usageNoActivity,
+          style: context.textTheme.bodySmall,
+        ),
       );
     }
 
@@ -246,35 +248,46 @@ class _UsageStatsRow extends StatelessWidget {
     final monthData = s.getMonth(currentMonthKey);
     final lifetimeTokens = s.lifetimeTokens();
 
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      children: [
-        if (lifetimeTokens > 0)
-          _StatChip(
-            icon: Icons.generating_tokens_outlined,
-            label: '${_formatTokens(lifetimeTokens)} Lifetime Tokens',
-          ),
-        if (monthData.totalTokens > 0)
-          _StatChip(
-            icon: Icons.token_outlined,
-            label: '${_formatTokens(monthData.totalTokens)} Current Month',
-          ),
-        if (monthData.requestCount > 0)
-          _StatChip(
-            icon: Icons.question_answer_outlined,
-            label: '${monthData.requestCount} ${context.l10n.usageRequests}',
-          ),
-        if (monthData.imageCount > 0)
-          _StatChip(
-            icon: Icons.image_outlined,
-            label: '${monthData.imageCount} ${context.l10n.usageImages}',
-          ),
-        if (monthData.pdfCount > 0)
-          _StatChip(
-              icon: Icons.picture_as_pdf_outlined,
-              label: '${monthData.pdfCount} ${context.l10n.usagePdfs}')
-      ],
+    final padValue = (lifetimeTokens > 0 ||
+            monthData.totalTokens > 0 ||
+            monthData.requestCount > 0 ||
+            monthData.imageCount > 0 ||
+            monthData.pdfCount > 0)
+        ? 8.0
+        : 0.0;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: padValue),
+      child: Wrap(
+        spacing: 16,
+        runSpacing: 8,
+        children: [
+          if (lifetimeTokens > 0)
+            _StatChip(
+              icon: Icons.generating_tokens_outlined,
+              label: '${_formatTokens(lifetimeTokens)} Lifetime Tokens',
+            ),
+          if (monthData.totalTokens > 0)
+            _StatChip(
+              icon: Icons.token_outlined,
+              label: '${_formatTokens(monthData.totalTokens)} Current Month',
+            ),
+          if (monthData.requestCount > 0)
+            _StatChip(
+              icon: Icons.question_answer_outlined,
+              label: '${monthData.requestCount} ${context.l10n.usageRequests}',
+            ),
+          if (monthData.imageCount > 0)
+            _StatChip(
+              icon: Icons.image_outlined,
+              label: '${monthData.imageCount} ${context.l10n.usageImages}',
+            ),
+          if (monthData.pdfCount > 0)
+            _StatChip(
+                icon: Icons.picture_as_pdf_outlined,
+                label: '${monthData.pdfCount} ${context.l10n.usagePdfs}')
+        ],
+      ),
     );
   }
 

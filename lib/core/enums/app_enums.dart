@@ -5,14 +5,18 @@ enum AiProviderId {
   openAi(
     'openai',
     'ChatGPT',
-    '• GPT-Image-1 Image Generation \n• GPT-4o Text Generation Image & PDF Analysis',
+    '• Image Generation (GPT-Image-1)\n• Text, Vision & PDF Analysis (GPT-4o)',
   ),
   gemini(
     'gemini',
     'Gemini',
-    '• Gemini Image Gen \n• Gemini 2.5 Flash Text/Vision/PDF',
+    '• Image Generation (Gemini 2.5 Flash Image)\n• Fast Multimodal Reasoning (Gemini 2.5 Flash)',
   ),
-  claude('claude', 'Claude', '• Claude Sonnet Text/Vision/PDF');
+  claude(
+    'claude',
+    'Claude',
+    '• Advanced Reasoning & Coding (Claude 3.5 Sonnet)\n• Deep PDF & Vision Analysis (Claude 3.5 Sonnet)',
+  );
 
   /// Internal ID used in Firestore, analytics, and API routing
   final String id;

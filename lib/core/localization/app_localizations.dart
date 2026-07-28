@@ -182,6 +182,24 @@ class AppLocalizations {
           'Multimodal powerhouse for advanced image and data synthesis.',
       'claude_model_message':
           'Expert analytical reasoning and long-form PDF understanding.',
+      'openai_capabilities_info':
+          '• Image Generation (GPT-Image-1)\n• Text, Vision & PDF Analysis (GPT-4o)',
+      'gemini_capabilities_info':
+          '• Image Generation (Gemini 2.5 Flash Image)\n• Fast Multimodal Reasoning (Gemini 2.5 Flash)',
+      'claude_capabilities_info':
+          '• Advanced Reasoning & Coding (Claude 3.5 Sonnet)\n• Deep PDF & Vision Analysis (Claude 3.5 Sonnet)',
+      'openai_tech_specs':
+          '• Active Models: gpt-4o, gpt-image-1\n• Unlocks 128k context window with GPT-Image-1 image generation.',
+      'gemini_tech_specs':
+          '• Active Models: gemini-2.5-flash, gemini-2.5-flash-image\n• Unlocks 1M context window with Google\'s native multimodal engine.',
+      'claude_tech_specs':
+          '• Active Model: claude-3-5-sonnet-latest\n• Unlocks 200k context window with Anthropic\'s flagship reasoning engine.',
+      'openai_pricing_info':
+          '• Primary Model: gpt-4o (\$2.50 / 1M input tokens)\n• Image Gen: gpt-image-1 (\$0.011 - \$0.167 / image)',
+      'gemini_pricing_info':
+          '• Primary Model: gemini-2.5-flash (\$0.30 / 1M input tokens)\n• Image Gen: gemini-2.5-flash-image (~\$0.011 / image)',
+      'claude_pricing_info':
+          '• Primary Model: claude-3-5-sonnet (\$3.00 / 1M input tokens)\n• Output Tokens: \$15.00 / 1M (Vision & PDF included)',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'Not supported',
@@ -618,6 +636,24 @@ class AppLocalizations {
           'उन्नत छवि और डेटा संश्लेषण के लिए मल्टीमॉडल पावरहाउस।',
       'claude_model_message':
           'उत्कृष्ट विश्लेषणात्मक तर्क क्षमता और पीडीएफ फॉर्मेट को समझने की क्षमता।',
+      'openai_capabilities_info':
+          '• चित्र निर्माण (GPT-Image-1)\n• पाठ, दृष्टि और पीडीएफ विश्लेषण (GPT-4o)',
+      'gemini_capabilities_info':
+          '• चित्र निर्माण (Gemini 2.5 Flash Image)\n• तीव्र मल्टीमॉडल तर्क (Gemini 2.5 Flash)',
+      'claude_capabilities_info':
+          '• उन्नत तर्क और कोडिंग (Claude 3.5 Sonnet)\n• गहन पीडीएफ और दृष्टि समझ (Claude 3.5 Sonnet)',
+      'openai_tech_specs':
+          '• सक्रिय मॉडल: gpt-4o, gpt-image-1\n• 128k कॉन्टेक्स्ट विंडो और GPT-Image-1 चित्र निर्माण को अनलॉक करता है।',
+      'gemini_tech_specs':
+          '• सक्रिय मॉडल: gemini-2.5-flash, gemini-2.5-flash-image\n• Google के नेटिव मल्टीमॉडल इंजन के साथ 1M कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
+      'claude_tech_specs':
+          '• सक्रिय मॉडल: claude-3-5-sonnet-latest\n• Anthropic के प्रमुख तर्क इंजन के साथ 200k कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
+      'openai_pricing_info':
+          '• प्राथमिक मॉडल: gpt-4o (\$2.50 / 1M इनपुट टोकन)\n• चित्र निर्माण: gpt-image-1 (\$0.011 - \$0.167 / चित्र)',
+      'gemini_pricing_info':
+          '• प्राथमिक मॉडल: gemini-2.5-flash (\$0.30 / 1M इनपुट टोकन)\n• चित्र निर्माण: gemini-2.5-flash-image (~\$0.011 / चित्र)',
+      'claude_pricing_info':
+          '• प्राथमिक मॉडल: claude-3-5-sonnet (\$3.00 / 1M इनपुट टोकन)\n• आउटपुट टोकन: \$15.00 / 1M (दृष्टि और पीडीएफ शामिल)',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'समर्थित नहीं',
@@ -1011,6 +1047,15 @@ class AppLocalizations {
   String get chatGPTModelMessage => translate('gpt_model_message');
   String get geminiModelMessage => translate('gemini_model_message');
   String get claudeModelMessage => translate('claude_model_message');
+  String get openAiCapabilitiesInfo => translate('openai_capabilities_info');
+  String get geminiCapabilitiesInfo => translate('gemini_capabilities_info');
+  String get claudeCapabilitiesInfo => translate('claude_capabilities_info');
+  String get openAiTechSpecs => translate('openai_tech_specs');
+  String get geminiTechSpecs => translate('gemini_tech_specs');
+  String get claudeTechSpecs => translate('claude_tech_specs');
+  String get openAiPricingInfo => translate('openai_pricing_info');
+  String get geminiPricingInfo => translate('gemini_pricing_info');
+  String get claudePricingInfo => translate('claude_pricing_info');
   String get user => translate('user');
   String get startConversation => translate('start_conversation');
   String get createImage => translate('create_image');

@@ -360,7 +360,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                 SizedBox(height: widget.isTablet ? 14 : 10),
 
                 Text(
-                  widget.provider.features,
+                  widget.provider.technicalSpecs(context.l10n),
                   style: context.textTheme.bodySmall,
                 ),
 

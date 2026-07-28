@@ -79,10 +79,11 @@ class AppConstants {
   // ── AI Model Capabilities (features offered by each adapter) ──────────────
   // PDF reading uses locally extracted PDF text, not native file/URL upload.
   static const String openAICapabilities =
-      '• GPT-Image-1 Image Generation \n• GPT-4o Text Generation Image & PDF Analysis';
+      '• Image Generation (GPT-Image-1)\n• Text, Vision & PDF Analysis (GPT-4o)';
   static const String geminiAICapabilities =
-      '• Gemini Image Gen \n• Gemini 2.5 Flash Text/Vision/PDF';
-  static const String claudeAICapabilities = '• Claude Sonnet Text/Vision/PDF';
+      '• Image Generation (Gemini 2.5 Flash Image)\n• Fast Multimodal Reasoning (Gemini 2.5 Flash)';
+  static const String claudeAICapabilities =
+      '• Advanced Reasoning & Coding (Claude 3.5 Sonnet)\n• Deep PDF & Vision Analysis (Claude 3.5 Sonnet)';
 
   // ── AI Standard System Instructions ───────────────────────────────────────
   static const String aiTextSystemInstruction =

@@ -199,7 +199,7 @@ class AppRoutes {
         return _buildRoute(
           const AuthScreen(),
           settings,
-          TransitionType.fade,
+          TransitionType.scale,
         );
 
       // ── Onboarding ─────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ class AppRoutes {
         return _buildRoute(
           const KeySetupScreen(),
           settings,
-          TransitionType.slideUp,
+          TransitionType.slide,
         );
 
       // ── Tab Bar (Home) ────────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ class AppRoutes {
         return _buildRoute(
           const TabBarScreen(),
           settings,
-          TransitionType.fade,
+          TransitionType.scale,
         );
 
       // ── Chat ───────────────────────────────────────────────────────────────
@@ -233,7 +233,7 @@ class AppRoutes {
         return _buildRoute(
           ChatScreen(startMode: chatArgs?.startMode ?? ChatStartMode.normal),
           settings,
-          TransitionType.slide,
+          TransitionType.fade,
         );
 
       case chatDetail:

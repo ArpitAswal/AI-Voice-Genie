@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../enums/app_enums.dart';
+import '../localization/app_localizations.dart';
 import 'build_context_extensions.dart';
 
 extension AiProviderColorExtension on AiProviderId {
@@ -22,3 +23,42 @@ extension AiProviderColorExtension on AiProviderId {
     }
   }
 }
+
+extension AiProviderModelInfoExtension on AiProviderId {
+  /// Returns tailored capabilities info for Intro/Home screen
+  String capabilitiesInfo(AppLocalizations l10n) {
+    switch (this) {
+      case AiProviderId.openAi:
+        return l10n.openAiCapabilitiesInfo;
+      case AiProviderId.gemini:
+        return l10n.geminiCapabilitiesInfo;
+      case AiProviderId.claude:
+        return l10n.claudeCapabilitiesInfo;
+    }
+  }
+
+  /// Returns active models & technical specs for Manage API Keys screen
+  String technicalSpecs(AppLocalizations l10n) {
+    switch (this) {
+      case AiProviderId.openAi:
+        return l10n.openAiTechSpecs;
+      case AiProviderId.gemini:
+        return l10n.geminiTechSpecs;
+      case AiProviderId.claude:
+        return l10n.claudeTechSpecs;
+    }
+  }
+
+  /// Returns pricing & efficiency info for AI Intelligence / Usage screen
+  String pricingAndEfficiency(AppLocalizations l10n) {
+    switch (this) {
+      case AiProviderId.openAi:
+        return l10n.openAiPricingInfo;
+      case AiProviderId.gemini:
+        return l10n.geminiPricingInfo;
+      case AiProviderId.claude:
+        return l10n.claudePricingInfo;
+    }
+  }
+}
+
