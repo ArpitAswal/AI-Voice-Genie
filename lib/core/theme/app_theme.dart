@@ -97,6 +97,9 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryLight,
             foregroundColor: AppColors.white,
+            disabledBackgroundColor:
+                AppColors.primaryLight.withValues(alpha: 0.35),
+            disabledForegroundColor: AppColors.white.withValues(alpha: 0.7),
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
             elevation: 0,
             shape: RoundedRectangleBorder(
@@ -124,9 +127,25 @@ class AppTheme {
       // Text Button
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.white,
+          foregroundColor: AppColors.primaryLight,
           textStyle: AppTextStyles.lightTextTheme.titleMedium,
           padding: EdgeInsets.zero,
+        ),
+      ),
+
+      // Date Picker Theme
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: AppColors.surfaceLight,
+        headerBackgroundColor: AppColors.primaryLight,
+        headerForegroundColor: AppColors.white,
+        surfaceTintColor: AppColors.transparent,
+        cancelButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStateProperty.all(AppColors.primaryLight),
+          textStyle: WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
+        ),
+        confirmButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStateProperty.all(AppColors.primaryLight),
+          textStyle: WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
         ),
       ),
 
@@ -277,6 +296,9 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryDark,
           foregroundColor: AppColors.white,
+          disabledBackgroundColor:
+              AppColors.primaryDark.withValues(alpha: 0.35),
+          disabledForegroundColor: AppColors.white.withValues(alpha: 0.7),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -300,9 +322,23 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.white,
+          foregroundColor: AppColors.primaryDark,
           textStyle: AppTextStyles.darkTextTheme.titleMedium,
           padding: EdgeInsets.zero,
+        ),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: AppColors.surfaceDark,
+        headerBackgroundColor: AppColors.primaryDark,
+        headerForegroundColor: AppColors.white,
+        surfaceTintColor: AppColors.transparent,
+        cancelButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStateProperty.all(AppColors.primaryDark),
+          textStyle: WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
+        ),
+        confirmButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStateProperty.all(AppColors.primaryDark),
+          textStyle: WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
         ),
       ),
       cardTheme: CardThemeData(

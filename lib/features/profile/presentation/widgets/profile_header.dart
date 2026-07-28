@@ -15,12 +15,16 @@ class ProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayName = (user?.displayName.trim().isNotEmpty ?? false)
         ? user!.displayName.trim()
-        : context.l10n.user;
+        : '';
     final email =
         (user?.email.trim().isNotEmpty ?? false) ? user!.email.trim() : '';
-    final dob = user?.dateOfBirth;
+    final dob = user?.dateOfBirth?.toDateString ?? '';
     final create =
-        (user?.createdAt != null && user!.createdAt!.toDateString.isNotEmpty) ? user!.createdAt?.toDateString : '';
+        (user?.createdAt != null && user!.createdAt!.toDateString.isNotEmpty)
+            ? user!.createdAt!.toDateString
+            : '';
+    final country = user?.country != null ? user!.country! : '';
+    final state = user?.state != null ? user!.state! : '';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -29,27 +33,35 @@ class ProfileHeader extends StatelessWidget {
       children: [
         Expanded(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(displayName,
-                  textAlign: TextAlign.left,
-                  style: context.textTheme.bodyLarge),
-              if (email.isNotEmpty)
-                Text(email, style: context.textTheme.bodyLarge),
-              if (dob != null)
-                Text(dob.toString(), style: context.textTheme.bodyLarge),
-              if (create != null)
-                Text("${context.l10n.translate('active_user')}, $create",
-                    style: context.textTheme.bodyLarge),
-            ],
-          ),
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (displayName.isNotEmpty)
+                  Text(displayName,
+                      textAlign: TextAlign.left,
+                      style: context.textTheme.bodyLarge),
+                if (email.isNotEmpty)
+                  Text(email, style: context.textTheme.bodyMedium),
+                if (create.isNotEmpty)
+                  Text("${context.l10n.translate('active_user')}, $create",
+                      style: context.textTheme.bodyMedium),
+                // if (dob != null)
+                //   Text(dob.toString(), style: context.textTheme.bodyLarge),
+                if (country.isNotEmpty && state.isNotEmpty) ...[
+                  Text("$country, $state", style: context.textTheme.bodyMedium)
+                ] else if (country.isNotEmpty) ...[
+                  Text(country, style: context.textTheme.bodyMedium)
+                ] else if (state.isNotEmpty) ...[
+                  Text(state, style: context.textTheme.bodyMedium)
+                ],
+              ]),
         ),
+        const SizedBox(width: 4),
         ProfileAvatar(
             displayName: displayName,
             photoUrl: user?.photoUrl ?? '',
-            size: context.screenWidth * (context.isTablet ? 0.35 : 0.2),
+            size: context.screenWidth * (context.isTablet ? 0.35 : 0.25),
             canUpdate: false),
       ],
     );

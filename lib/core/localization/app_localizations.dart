@@ -46,6 +46,7 @@ class AppLocalizations {
       'cancel': 'Cancel',
       'user': 'User',
       'save': 'Save',
+      'update': 'Update',
       'delete': 'Delete',
       'edit': 'Edit',
       'close': 'Close',
@@ -336,6 +337,9 @@ class AppLocalizations {
       'help_center': 'Help & Support',
       'coming_soon': 'Coming soon.',
       'active_user': 'Active user since',
+      'email_address': 'Email address',
+      'fake_name': 'John Doe',
+      'fake_address': 'john@gmail.com',
 
       // ── Usage Tracking ─────────────────────────────────────────────────────
       'usage_this_month': 'Estimated usage this month',
@@ -415,6 +419,13 @@ class AppLocalizations {
       'unauthenticate_profile': 'UnAuthenticate Profile',
       'date_of_birth': 'Date of Birth',
       'age': 'Age',
+      'gender': 'Gender',
+      'country': 'Country',
+      'state_province': 'State',
+      'gender_male': 'Male',
+      'gender_female': 'Female',
+      'gender_other': 'Other',
+      'gender_prefer_not_to_say': 'Prefer not to say',
       'prefer_model': 'Prefer Model',
       'auto_prefer_model': 'Auto Prefer Model',
       'preferred_model': 'Preferred Model',
@@ -501,6 +512,7 @@ class AppLocalizations {
       'cancel': 'रद्द करें',
       'user': 'User',
       'save': 'सहेजें',
+      'update': 'अपडेट करें',
       'delete': 'हटाएं',
       'edit': 'संपादित करें',
       'close': 'बंद करें',
@@ -772,6 +784,9 @@ class AppLocalizations {
       'ai_preferences': 'AI प्राथमिकताएं',
       'ai_intelligence': 'AI इंटेलिजेंस',
       'active_user': 'तब से सक्रिय उपयोगकर्ता,',
+      'email_address': 'मेल पता',
+      'fake_name': 'जॉन डो',
+      'fake_address': 'जॉन@gmail.com',
 
       // ── Usage Tracking ─────────────────────────────────────────────────────────
       'usage_this_month': 'इस महीने का अनुमानित उपयोग',
@@ -870,6 +885,13 @@ class AppLocalizations {
       'unauthenticate_profile': 'अप्रमाणित प्रोफ़ाइल',
       'date_of_birth': 'जन्म तिथि',
       'age': 'आयु',
+      'gender': 'लिंग',
+      'country': 'देश',
+      'state_province': 'राज्य',
+      'gender_male': 'पुरुष',
+      'gender_female': 'महिला',
+      'gender_other': 'अन्य',
+      'gender_prefer_not_to_say': 'कहना नहीं चाहते',
       'prefer_model': 'पसंदीदा मॉडल',
       'auto_prefer_model': 'ऑटो पसंदीदा मॉडल',
       'preferred_model': 'पसंदीदा मॉडल',
@@ -964,6 +986,7 @@ class AppLocalizations {
   String get ok => translate('ok');
   String get cancel => translate('cancel');
   String get save => translate('save');
+  String get update => translate('update');
   String get loading => translate('loading');
   String get delete => translate('delete');
   String get pleaseWait => translate('please_wait');
@@ -1160,6 +1183,13 @@ class AppLocalizations {
   String get keys => translate('keys');
   String get dateOfBirthLabel => translate('date_of_birth');
   String get ageLabel => translate('age');
+  String get genderLabel => translate('gender');
+  String get countryLabel => translate('country');
+  String get stateLabel => translate('state_province');
+  String get genderMale => translate('gender_male');
+  String get genderFemale => translate('gender_female');
+  String get genderOther => translate('gender_other');
+  String get genderPreferNotToSay => translate('gender_prefer_not_to_say');
   String get preferModelLabel => translate('prefer_model');
   String get autoPreferModel => translate('auto_prefer_model');
   String get selectPhotoSource => translate('select_photo_source');

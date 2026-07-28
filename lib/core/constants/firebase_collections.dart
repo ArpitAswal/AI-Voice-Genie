@@ -79,6 +79,9 @@ class FirebaseCollections {
   static const String fieldKeySetupDone = 'keySetupDone';
   static const String fieldDateOfBirth = 'dateOfBirth';
   static const String fieldAge = 'age';
+  static const String fieldGender = 'gender';
+  static const String fieldCountry = 'country';
+  static const String fieldState = 'state';
   static const String fieldPreferredAiModel = 'preferredAiModel';
   static const String fieldPreferredProvider = 'preferredProvider';
   static const String fieldDailyQuotaUsed = 'dailyQuotaUsed';

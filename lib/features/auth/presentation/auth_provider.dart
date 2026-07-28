@@ -307,6 +307,9 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
     required String photoUrl,
     DateTime? dateOfBirth,
     int? age,
+    String? gender,
+    String? country,
+    String? state,
     File? photoFile,
   }) async {
     final user = _currentUser;
@@ -324,6 +327,9 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
         photoUrl: resolvedPhotoUrl,
         dateOfBirth: dateOfBirth,
         age: age,
+        gender: gender,
+        country: country,
+        state: state,
         photoFile: photoFile,
       );
 

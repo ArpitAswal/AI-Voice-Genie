@@ -19,9 +19,11 @@ class AppColors {
   // ── Background Colors ─────────────────────────────────────────────────────
   static const Color scaffoldLight = Color(0xFFE5E5E5);
   static const Color cardLight = Color(0xFFF7F8FA);
+  static const Color surfaceLight = Color(0xFFFFFFFF);
 
   static const Color scaffoldDark = Color(0xFF0B1220);
   static const Color cardDark = Color(0xFF091328);
+  static const Color surfaceDark = Color(0xFF0F172A);
 
   // ── AppBar Colors ─────────────────────────────────────────────────────
   static const Color appBarLight = Color(0xFFE5E5E5);
@@ -56,6 +58,7 @@ class AppColors {
   // ── Status / Feedback Colors ──────────────────────────────────────────────
   static const Color lightSuccess = Color(0xFF10B981);
   static const Color darkSuccess = Color(0xFF059669);
+  static const Color error = Color(0xFFEF4444);
   static const Color lightError = Color(0xFFEF4444);
   static const Color darkError = Color(0xFFAE2C2C);
   static const Color lightWarning = Color(0xFFF59E0B);

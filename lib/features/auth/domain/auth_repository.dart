@@ -69,6 +69,9 @@ abstract class AuthRepository {
     required String photoUrl,
     DateTime? dateOfBirth,
     int? age,
+    String? gender,
+    String? country,
+    String? state,
     File? photoFile,
   });
 }

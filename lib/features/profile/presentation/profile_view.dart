@@ -178,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 8),
                   ProfileHeader(user: authProvider.currentUser),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 8),
                   ProfileSectionTitle(label: context.l10n.appSettings),
                   const SizedBox(height: 14),
                   const ProfileSettingsPanel(),

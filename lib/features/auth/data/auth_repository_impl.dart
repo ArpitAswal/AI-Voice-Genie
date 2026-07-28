@@ -497,6 +497,9 @@ class AuthRepositoryImpl implements AuthRepository {
       DateTime? lastUpdatedAt;
       int? age;
       DateTime? dateOfBirth;
+      String? gender;
+      String? country;
+      String? state;
       bool onboardingDone = false;
       bool keySetupDone = false;
       bool termsAccepted = false;
@@ -556,6 +559,12 @@ class AuthRepositoryImpl implements AuthRepository {
             existingData[FirebaseCollections.fieldEmail] as String? ?? '';
         resolvedPhotoUrl =
             existingData[FirebaseCollections.fieldPhotoUrl] as String? ?? '';
+        if (resolvedPhotoUrl.isEmpty && provider == SocialAuthProvider.google) {
+          resolvedPhotoUrl = firebaseUser.photoURL ?? '';
+          if (resolvedPhotoUrl.isNotEmpty) {
+            docRef.update({FirebaseCollections.fieldPhotoUrl: resolvedPhotoUrl});
+          }
+        }
         onboardingDone =
             existingData[FirebaseCollections.fieldOnboardingDone] as bool? ??
                 false;
@@ -573,6 +582,9 @@ class AuthRepositoryImpl implements AuthRepository {
             existingData[FirebaseCollections.fieldTermsVersionAccepted]
                 as String?;
         age = existingData[FirebaseCollections.fieldAge] as int?;
+        gender = existingData[FirebaseCollections.fieldGender] as String?;
+        country = existingData[FirebaseCollections.fieldCountry] as String?;
+        state = existingData[FirebaseCollections.fieldState] as String?;
         dateOfBirth =
             (existingData[FirebaseCollections.fieldDateOfBirth] as Timestamp?)
                 ?.toDate();
@@ -608,6 +620,9 @@ class AuthRepositoryImpl implements AuthRepository {
           createdAt: createdAt,
           lastLoginAt: lastLoginAt,
           age: age,
+          gender: gender,
+          country: country,
+          state: state,
           lastUpdatedAt: lastUpdatedAt,
         );
 
@@ -802,6 +817,9 @@ class AuthRepositoryImpl implements AuthRepository {
     required String photoUrl,
     DateTime? dateOfBirth,
     int? age,
+    String? gender,
+    String? country,
+    String? state,
     File? photoFile,
   }) async {
     final resolvedDisplayName = displayName.trim();
@@ -829,6 +847,10 @@ class AuthRepositoryImpl implements AuthRepository {
         final base64String = base64Encode(bytes);
         resolvedPhotoUrl = 'data:image/jpeg;base64,$base64String';
         debugPrint('📸 Base64 string length: ${resolvedPhotoUrl.length}');
+      } else if (resolvedPhotoUrl.isEmpty) {
+        resolvedPhotoUrl = currentUser.photoUrl.isNotEmpty
+            ? currentUser.photoUrl
+            : (authUser?.photoURL ?? '');
       }
 
       await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
@@ -837,6 +859,9 @@ class AuthRepositoryImpl implements AuthRepository {
         FirebaseCollections.fieldDateOfBirth:
             dateOfBirth != null ? Timestamp.fromDate(dateOfBirth) : null,
         FirebaseCollections.fieldAge: age,
+        FirebaseCollections.fieldGender: gender,
+        FirebaseCollections.fieldCountry: country,
+        FirebaseCollections.fieldState: state,
         FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
       });
 
@@ -858,6 +883,9 @@ class AuthRepositoryImpl implements AuthRepository {
         photoUrl: resolvedPhotoUrl,
         dateOfBirth: dateOfBirth,
         age: age,
+        gender: gender,
+        country: country,
+        state: state,
       );
 
       _persistSession(updatedUser);

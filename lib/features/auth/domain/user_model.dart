@@ -64,6 +64,15 @@ class UserModel {
   /// Age (optional numeric input).
   final int? age;
 
+  /// Gender (optional).
+  final String? gender;
+
+  /// Country (optional).
+  final String? country;
+
+  /// State/Province (optional).
+  final String? state;
+
   /// The time this user was first created.
   final DateTime? createdAt;
 
@@ -87,6 +96,9 @@ class UserModel {
       this.termsVersionAccepted,
       this.dateOfBirth,
       this.age,
+      this.gender,
+      this.country,
+      this.state,
       this.createdAt,
       this.lastLoginAt,
       this.lastUpdatedAt});
@@ -120,6 +132,9 @@ class UserModel {
           ? (data['dateOfBirth'] as Timestamp).toDate()
           : null,
       age: data['age'] as int?,
+      gender: data[FirebaseCollections.fieldGender] as String?,
+      country: data[FirebaseCollections.fieldCountry] as String?,
+      state: data[FirebaseCollections.fieldState] as String?,
       createdAt: data[FirebaseCollections.fieldCreatedAt] != null
           ? (data[FirebaseCollections.fieldCreatedAt] as Timestamp).toDate()
           : null,
@@ -152,6 +167,9 @@ class UserModel {
       FirebaseCollections.fieldTermsVersionAccepted: termsVersionAccepted,
       'dateOfBirth': null,
       'age': null,
+      FirebaseCollections.fieldGender: null,
+      FirebaseCollections.fieldCountry: null,
+      FirebaseCollections.fieldState: null,
       FirebaseCollections.fieldCreatedAt: FieldValue.serverTimestamp(),
       FirebaseCollections.fieldLastLoginAt: FieldValue.serverTimestamp(),
       FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
@@ -175,6 +193,9 @@ class UserModel {
     String? termsVersionAccepted,
     DateTime? dateOfBirth,
     int? age,
+    String? gender,
+    String? country,
+    String? state,
     DateTime? createdAt,
     DateTime? lastLoginAt,
     DateTime? lastUpdatedAt,
@@ -193,6 +214,9 @@ class UserModel {
         termsVersionAccepted: termsVersionAccepted ?? this.termsVersionAccepted,
         dateOfBirth: dateOfBirth ?? this.dateOfBirth,
         age: age ?? this.age,
+        gender: gender ?? this.gender,
+        country: country ?? this.country,
+        state: state ?? this.state,
         createdAt: createdAt ?? this.createdAt,
         lastLoginAt: lastLoginAt ?? this.lastLoginAt,
         lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt);
