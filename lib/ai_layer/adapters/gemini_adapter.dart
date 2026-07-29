@@ -134,6 +134,9 @@ class GeminiAdapter extends AiProviderAdapter {
       // Gemini 2.5 Flash Image (gemini-2.5-flash-image) is the dedicated image
       // generation model. It uses responseModalities to request both TEXT and IMAGE
       // parts in the response.
+      //
+      // Note: The Gemini REST API does not currently support `response_format`
+      // or `aspect_ratio`/`image_size` directly in the payload for this endpoint.
       final requestBody = {
         'contents': [
           {

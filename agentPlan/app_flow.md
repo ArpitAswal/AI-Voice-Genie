@@ -151,19 +151,22 @@ ChatInputBar / ChatDetailScreen -> Submit Prompt with optional Attachments
 
 ---
 
-## 5. AI Preferences Configuration Flow
+## 5. AI Preferences Configuration Flow & Capability Matrix
 
 ```
-ProfileView -> AiPreferencesPanel / VisionDetailSelector / QualitySelector
+ProfileView -> AiPreferencesPanel
   -> User changes setting (e.g. Selected Provider, Image Size, Vision Quality, Response Length)
   -> AiPreferencesProvider.setPreference(key, value)
   -> AiPreferencesService (Hive): Persists setting in `app_settings_box`
-  -> Active preferences applied automatically to all subsequent AiOrchestrator requests:
-       - Image Size: 256x256 / 512x512 / 1024x1024
-       - Image Quality: Standard / HD
-       - Image Count: 1 to 4 images
-       - Vision Detail: Low / High / Auto
-       - Response Length Max Tokens: Compact (500) / Balanced (1000) / Detailed (2048) / Maximum (4096)
+  -> ProfileAiPreferencesPanel UI immediately updates:
+       - Checks ProviderRegistry.instance.profileFor(selectedProvider)
+       - Hides controls that the selected provider does not support (e.g. Claude hides image generation controls).
+       - Shows provider-specific controls (e.g. Gemini Aspect Ratio & Resolution Tier).
+  -> ChatProvider.sendMessage() triggered:
+       - Reads raw preferences from AiPreferencesProvider
+       - Calls ProviderRegistry.instance.sanitizePreferences()
+       - Generates an EffectiveAiRequestPreferences object stripped of unsupported fields
+       - Builds final AiRequest passed to AiOrchestrator
 ```
 
 ---

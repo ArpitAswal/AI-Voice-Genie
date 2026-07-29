@@ -10,6 +10,7 @@ import 'package:ai_voice_genie/core/extensions/string_extension.dart';
 import '../../../ai_layer/models/ai_request.dart';
 import '../../../ai_layer/models/ai_response.dart';
 import '../../../ai_layer/orchestrator/ai_orchestrator.dart';
+import '../../../ai_layer/registry/provider_registry.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/error/ai_exception.dart';
@@ -82,6 +83,8 @@ class ChatProvider extends ChangeNotifier {
   AiImageSize get preferredImageSize => _preferences.preferredImageSize;
   ImageQuality get preferredImageQuality => _preferences.preferredImageQuality;
   int get preferredImageCount => _preferences.preferredImageCount;
+  ImageGenerateBackground get preferredImageBackground =>
+      _preferences.preferredImageBackground;
   ResponseLength get preferredResponseLength =>
       _preferences.preferredResponseLength;
   VisionDetailLevel get preferredVisionDetailLevel =>
@@ -297,23 +300,32 @@ class ChatProvider extends ChangeNotifier {
         notifyListeners();
       }
 
+      final effectivePrefs = ProviderRegistry.instance.sanitizePreferences(
+        providerId: selectedProvider,
+        capability: requestCapability,
+        rawResponseLength: preferredResponseLength,
+        rawImageSize: preferredImageSize,
+        rawImageQuality: preferredImageQuality,
+        rawImageBackground: preferredImageBackground,
+        rawImageCount: preferredImageCount,
+        rawVisionDetailLevel: preferredVisionDetailLevel,
+      );
+
       final aiResponse = await _orchestrator.execute(
         request: AiRequest(
           capability: requestCapability,
           uid: uid,
           prompt: trimmedPrompt,
           conversationHistory: history,
-          visionDetailLevel: preferredVisionDetailLevel,
-          responseLength: preferredResponseLength,
-          imageSize: (requestCapability == AiCapability.imageGeneration)
-              ? preferredImageSize
-              : null,
-          imageQuality: (requestCapability == AiCapability.imageGeneration)
-              ? preferredImageQuality
-              : null,
-          imageCount: (requestCapability == AiCapability.imageGeneration)
-              ? preferredImageCount
-              : null,
+          visionDetailLevel:
+              effectivePrefs.visionDetailLevel ?? VisionDetailLevel.auto,
+          responseLength:
+              effectivePrefs.responseLength ?? ResponseLength.balanced,
+          imageSize: effectivePrefs.imageSize ?? AiImageSize.square,
+          imageQuality: effectivePrefs.imageQuality ?? ImageQuality.low,
+          imageCount: effectivePrefs.imageCount ?? 1,
+          imageBackground:
+              effectivePrefs.imageBackground ?? ImageGenerateBackground.auto,
           imageBytes:
               attachments.isNotEmpty && attachments.first.isImage == true
                   ? attachments.map((e) => e.bytes).toList()

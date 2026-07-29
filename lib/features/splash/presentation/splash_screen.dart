@@ -37,7 +37,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   // Minimum time the splash screen stays visible (brand impression)
-  static const Duration _minDisplayDuration = Duration(seconds: 5);
+  static const Duration _minDisplayDuration = Duration(seconds: 3);
 
   bool _minDurationElapsed = false;
   bool _hasNavigated = false;

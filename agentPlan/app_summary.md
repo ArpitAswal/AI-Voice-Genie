@@ -44,7 +44,7 @@
 - **Budget Controls**: Enables users to set monthly spending limits and receive visual budget alerts.
 
 ### F. Personalization & Localization
-- **AI Preferences**: Custom settings for default provider, vision detail level (Low/High/Auto), image size/quality/count, and max token response bounds.
+- **AI Preferences**: Custom settings for default provider, vision detail level, image size/quality, and token limits. Powered by an `AiModelCapabilityProfile` matrix that dynamically hides unsupported controls (e.g. hiding image settings when Claude is selected) and reveals provider-specific features (e.g. Gemini aspect ratios).
 - **Multilingual Support**: Real-time language switching between English and Hindi powered by `LocaleProvider` and `AppLocalizations`.
 - **Theming**: Theme switching between Light, Dark, and System modes via `ThemeProvider`.
 - **Legal & Info**: Dedicated Privacy Policy, Terms of Service, and About App screens (`LegalScreen`, `AboutScreen`).

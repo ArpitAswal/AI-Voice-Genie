@@ -50,7 +50,7 @@ class ChatModelSelectorDropdown extends StatelessWidget {
       enabled: canSelect,
       initialValue: selectedProvider,
       onSelected: onChanged,
-      color: context.isDark ? AppColors.cardDark : AppColors.cardLight,
+      color: context.theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
@@ -61,7 +61,7 @@ class ChatModelSelectorDropdown extends StatelessWidget {
           .map(
             (provider) => PopupMenuItem<AiProviderId>(
               value: provider,
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               child: _ProviderMenuItem(
                 provider: provider,
                 isSelected: provider == selectedProvider,
@@ -142,49 +142,34 @@ class _ProviderMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color? textColor =
-        isSelected ? Colors.white : context.textTheme.bodySmall?.color;
-    Color bgColor = provider.brandColor(context);
-    return Container(
-      width: double.infinity,
-      decoration: isSelected
-          ? BoxDecoration(
-              border: Border.all(color: bgColor),
-              color: bgColor,
-              // Don't add border radius here since it should stretch to the edges of the popup menu which has its own border radius, but wait, the popup menu has rounded corners (16).
-              // If the item reaches the top/bottom it might clip. But let's add a slight margin/borderRadius to make it look like a pill inside, or just fill.
-              // Actually, the image shows it filling the space but with rounded corners at the top? No, the image shows it filling the whole top area.
-            )
-          : null,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: textColor,
-              shape: BoxShape.circle,
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: context.isDark ? AppColors.white : AppColors.primaryLight,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            provider.displayName,
+            style: context.textTheme.bodyMedium?.copyWith(
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: context.isDark ? AppColors.white : AppColors.primaryLight,
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              provider.displayName,
-              style: context.textTheme.bodyMedium?.copyWith(
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: textColor,
-              ),
-            ),
+        ),
+        const SizedBox(width: 8),
+        if (isSelected)
+          Icon(
+            Icons.check_rounded,
+            color: context.isDark ? AppColors.white : AppColors.primaryLight,
+            size: context.textTheme.bodyMedium?.fontSize,
           ),
-          if (isSelected)
-            Icon(
-              Icons.check_rounded,
-              size: context.textTheme.bodyMedium?.fontSize,
-              color: textColor,
-            ),
-        ],
-      ),
+      ],
     );
   }
 }

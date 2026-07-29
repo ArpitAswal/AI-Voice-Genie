@@ -367,14 +367,14 @@ enum ImageQuality {
 /// Desired image size for generation requests.
 enum AiImageSize {
   /// 1024×1024 — default square format
-  square(width: 1024, height: 1024, apiValue: '1024x1024', name: 'Square'),
+  square(width: 1024, height: 1024, apiValue: '1024x1024', name: 'Square (1024x1024)'),
 
   /// 1024×1536 — portrait
-  portrait(width: 1024, height: 1536, apiValue: '1024x1536', name: 'Portrait'),
+  portrait(width: 1024, height: 1536, apiValue: '1024x1536', name: 'Portrait (1024x1536)'),
 
   /// 1536×1024 — landscape / widescreen
   landscape(
-      width: 1536, height: 1024, apiValue: '1536x1024', name: 'Landscape');
+      width: 1536, height: 1024, apiValue: '1536x1024', name: 'Landscape (1536x1024)');
 
   const AiImageSize(
       {required this.width,
@@ -471,6 +471,132 @@ enum ResponseLength {
     return ResponseLength.values.firstWhere(
       (e) => e.name == name,
       orElse: () => ResponseLength.balanced,
+    );
+  }
+}
+
+// =============================================================================
+// AI PREFERENCE CAPABILITY ENUMS
+// =============================================================================
+
+/// Identifies a single configurable preference control in the AI preferences UI.
+///
+/// The [AiModelCapabilityProfile] for each provider holds a [Set] of these values
+/// that are visible/supported. The [ProfileAiPreferencesPanel] renders controls
+/// conditionally based on this set, so unsupported options are never shown to the
+/// user for a given provider.
+///
+/// [ProviderRegistry.sanitizePreferences] also uses this to strip controls that
+/// are not supported from the effective request preferences before [AiRequest] is built.
+enum AiPreferenceControl {
+  /// Preferred AI provider selection.
+  preferredProvider,
+
+  /// Max output token bound (short / balanced / detailed / maximum).
+  responseLength,
+
+  /// Generated image pixel dimensions — currently OpenAI-only (e.g. 1024x1024).
+  imageSize,
+
+  /// Generated image quality tier — currently OpenAI-only (low / medium / high).
+  imageQuality,
+
+  /// Generated image background style — currently OpenAI-only (auto / opaque / transparent).
+  imageBackground,
+
+  /// Number of images to generate per request — currently OpenAI-only.
+  imageCount,
+
+  /// Max number of vision images the user can attach per message.
+  visionImageCount,
+
+  /// Max number of PDF documents the user can attach per message.
+  visionPdfCount,
+
+  /// Resolution level hint for vision image analysis — currently OpenAI-only.
+  visionDetailLevel,
+
+  /// Gemini-specific: controls aspect_ratio in response_format (e.g. 1:1, 16:9).
+  /// Only exposed for Gemini image generation — OpenAI uses pixel-based [imageSize] instead.
+  geminiAspectRatio,
+
+  /// Gemini-specific: controls image_size tier in response_format (1K / 2K / 4K).
+  /// Only exposed for Gemini image generation.
+  geminiImageSize,
+}
+
+// =============================================================================
+// GEMINI IMAGE GENERATION ENUMS
+// =============================================================================
+
+/// Image resolution tier for Gemini image generation requests.
+///
+/// Sent as the `image_size` field inside `response_format` in the Gemini
+/// Interactions API. Gemini uses named tiers (1K / 2K / 4K) rather than
+/// exact pixel dimensions.
+///
+/// Available tiers per model:
+///   gemini-3.1-flash-image: 512px (0.5K), 1K, 2K, 4K
+///   gemini-3.1-pro-image:   1K, 2K, 4K
+///
+/// The app exposes 1K, 2K, and 4K as user-selectable options. 0.5K (512px)
+/// is omitted because it is not a practical default for AI-generated content.
+enum GeminiImageSize {
+  /// 1K resolution — e.g. 1024×1024 for 1:1, scales with ratio.
+  oneK('1K', '1K', 'Standard quality, best for general use (e.g. 1024x1024)'),
+
+  /// 2K resolution — e.g. 2048×2048 for 1:1, higher quality.
+  twoK('2K', '2K', 'High quality, ideal for detailed images (e.g. 2048x2048)'),
+
+  /// 4K resolution — e.g. 4096×4096 for 1:1, highest quality, costs more tokens.
+  fourK('4K', '4K', 'Ultra high quality, uses more tokens (e.g. 4096x4096)');
+
+  /// Value sent to the Gemini API in the `image_size` field.
+  final String apiValue;
+
+  /// Human-readable label for the UI.
+  final String displayName;
+
+  /// Description of the size tier for the UI.
+  final String description;
+
+  const GeminiImageSize(this.apiValue, this.displayName, this.description);
+
+  static GeminiImageSize fromValue(String value) {
+    return GeminiImageSize.values.firstWhere(
+      (e) => e.apiValue == value,
+      orElse: () => GeminiImageSize.oneK,
+    );
+  }
+}
+
+/// Aspect ratio for Gemini image generation requests.
+///
+/// Sent as the `aspect_ratio` field inside `response_format` in the Gemini
+/// Interactions API. The app exposes the most common ratios that cover
+/// standard mobile/social/web use cases.
+enum GeminiAspectRatio {
+  /// 9:16 portrait — best for mobile and vertical content.
+  portrait('9:16', 'Portrait (9:16)'),
+
+  /// 1:1 square — universal default, suitable for all social platforms.
+  square('1:1', 'Square (1:1)'),
+
+  /// 16:9 landscape — best for wide banners and widescreen content.
+  landscape('16:9', 'Landscape (16:9)');
+
+  /// Value sent to the Gemini API in the `aspect_ratio` field.
+  final String apiValue;
+
+  /// Human-readable label for the UI.
+  final String displayName;
+
+  const GeminiAspectRatio(this.apiValue, this.displayName);
+
+  static GeminiAspectRatio fromValue(String value) {
+    return GeminiAspectRatio.values.firstWhere(
+      (e) => e.apiValue == value,
+      orElse: () => GeminiAspectRatio.square,
     );
   }
 }

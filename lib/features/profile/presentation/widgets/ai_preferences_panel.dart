@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../ai_layer/registry/provider_registry.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -17,9 +18,13 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
     return ProfilePanel(
       child: Consumer<AiPreferencesProvider>(
         builder: (_, preferences, __) {
+          final profile = ProviderRegistry.instance
+              .profileFor(preferences.preferredProvider);
+
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Always Visible: Preferred Provider ─────────────────────────
               _PreferenceRow(
                 title: context.l10n.preferredModel,
                 description: context.l10n.preferredModelHint,
@@ -33,92 +38,116 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              _PreferenceRow(
-                title: context.l10n.translate('response_length'),
-                description: context.l10n.translate('response_length_hint'),
-                child: ResponseLengthSelector(
-                  selectedLength: preferences.preferredResponseLength,
-                  onChanged: (length) {
-                    preferences.setPreferredResponseLength(length);
-                  },
+
+              // ── Response Length ────────────────────────────────────────────
+              if (profile.supports(AiPreferenceControl.responseLength)) ...[
+                _PreferenceRow(
+                  title: context.l10n.translate('response_length'),
+                  description: context.l10n.translate('response_length_hint'),
+                  child: ResponseLengthSelector(
+                    selectedLength: preferences.preferredResponseLength,
+                    onChanged: (length) {
+                      preferences.setPreferredResponseLength(length);
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _PreferenceRow(
-                title: context.l10n.imageQuality,
-                description: context.l10n.imageQualityHint,
-                child: ModelImageQualitySelector(
-                  selectedQuality: preferences.preferredImageQuality,
-                  onChanged: (quality) {
-                    preferences.setPreferredImageQuality(quality);
-                  },
+                const SizedBox(height: 12),
+              ],
+
+              // ── OpenAI Image Controls ──────────────────────────────────────
+              if (profile.supports(AiPreferenceControl.imageQuality)) ...[
+                _PreferenceRow(
+                  title: context.l10n.imageQuality,
+                  description: context.l10n.imageQualityHint,
+                  child: ModelImageQualitySelector(
+                    selectedQuality: preferences.preferredImageQuality,
+                    onChanged: (quality) {
+                      preferences.setPreferredImageQuality(quality);
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _PreferenceRow(
-                title: context.l10n.imageBackground,
-                description: context.l10n.imageBackgroundHint,
-                child: ImageBackgroundSelector(
-                    selectedBackground: preferences.preferredImageBackground,
-                    onChanged: (background) {
-                      preferences.setPreferredImageBackground(background);
-                    }),
-              ),
-              const SizedBox(height: 12),
-              _PreferenceRow(
-                title: context.l10n.imageSize,
-                description: context.l10n.imageSizeHint,
-                child: AiImageSizeSelector(
-                  selectedSize: preferences.preferredImageSize,
-                  onChanged: (size) {
-                    preferences.setPreferredImageSize(size);
-                  },
+                const SizedBox(height: 12),
+              ],
+              if (profile.supports(AiPreferenceControl.imageBackground)) ...[
+                _PreferenceRow(
+                  title: context.l10n.imageBackground,
+                  description: context.l10n.imageBackgroundHint,
+                  child: ImageBackgroundSelector(
+                      selectedBackground: preferences.preferredImageBackground,
+                      onChanged: (background) {
+                        preferences.setPreferredImageBackground(background);
+                      }),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _PreferenceRow(
-                title: context.l10n.imageCount,
-                description: context.l10n.imageCountHint,
-                child: ImageGenerateCountSelector(
-                  selectedCount: preferences.preferredImageCount,
-                  onChanged: (count) {
-                    preferences.setPreferredImageCount(count);
-                  },
+                const SizedBox(height: 12),
+              ],
+              if (profile.supports(AiPreferenceControl.imageSize)) ...[
+                _PreferenceRow(
+                  title: context.l10n.imageSize,
+                  description: context.l10n.imageSizeHint,
+                  child: AiImageSizeSelector(
+                    selectedSize: preferences.preferredImageSize,
+                    onChanged: (size) {
+                      preferences.setPreferredImageSize(size);
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _PreferenceRow(
-                title: context.l10n.translate('vision_image_count'),
-                description: context.l10n.translate('vision_image_count_hint'),
-                child: ImageGenerateCountSelector(
-                  selectedCount: preferences.preferredVisionImageCount,
-                  onChanged: (count) {
-                    preferences.setPreferredVisionImageCount(count);
-                  },
+                const SizedBox(height: 12),
+              ],
+              if (profile.supports(AiPreferenceControl.imageCount)) ...[
+                _PreferenceRow(
+                  title: context.l10n.imageCount,
+                  description: context.l10n.imageCountHint,
+                  child: ImageGenerateCountSelector(
+                    selectedCount: preferences.preferredImageCount,
+                    onChanged: (count) {
+                      preferences.setPreferredImageCount(count);
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _PreferenceRow(
-                title: context.l10n.translate('vision_pdf_count'),
-                description: context.l10n.translate('vision_pdf_count_hint'),
-                child: ImageGenerateCountSelector(
-                  selectedCount: preferences.preferredVisionPdfCount,
-                  onChanged: (count) {
-                    preferences.setPreferredVisionPdfCount(count);
-                  },
+                const SizedBox(height: 12),
+              ],
+              // ── Vision Controls ────────────────────────────────────────────
+              if (profile.supports(AiPreferenceControl.visionImageCount)) ...[
+                _PreferenceRow(
+                  title: context.l10n.translate('vision_image_count'),
+                  description:
+                      context.l10n.translate('vision_image_count_hint'),
+                  child: ImageGenerateCountSelector(
+                    selectedCount: preferences.preferredVisionImageCount,
+                    onChanged: (count) {
+                      preferences.setPreferredVisionImageCount(count);
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _PreferenceRow(
-                title: context.l10n.translate('vision_detail_level'),
-                description: context.l10n.translate('vision_detail_level_hint'),
-                child: VisionDetailLevelSelector(
-                  selectedLevel: preferences.preferredVisionDetailLevel,
-                  onChanged: (level) {
-                    preferences.setPreferredVisionDetailLevel(level);
-                  },
+                const SizedBox(height: 12),
+              ],
+              if (profile.supports(AiPreferenceControl.visionPdfCount)) ...[
+                _PreferenceRow(
+                  title: context.l10n.translate('vision_pdf_count'),
+                  description: context.l10n.translate('vision_pdf_count_hint'),
+                  child: ImageGenerateCountSelector(
+                    selectedCount: preferences.preferredVisionPdfCount,
+                    onChanged: (count) {
+                      preferences.setPreferredVisionPdfCount(count);
+                    },
+                  ),
                 ),
-              ),
+                const SizedBox(height: 12),
+              ],
+              if (profile.supports(AiPreferenceControl.visionDetailLevel)) ...[
+                _PreferenceRow(
+                  title: context.l10n.translate('vision_detail_level'),
+                  description:
+                      context.l10n.translate('vision_detail_level_hint'),
+                  child: VisionDetailLevelSelector(
+                    selectedLevel: preferences.preferredVisionDetailLevel,
+                    onChanged: (level) {
+                      preferences.setPreferredVisionDetailLevel(level);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
             ],
           );
         },
