@@ -4,7 +4,13 @@
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
+    <!-- Required only on Android 9 (API 28) and below to write images to shared storage.
+         Android 10+ uses MediaStore scoped storage, which needs no write permission. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
 
     <application
         android:label="AI Voice Genie"

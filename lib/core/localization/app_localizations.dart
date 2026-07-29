@@ -36,9 +36,9 @@ class AppLocalizations {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI Voice Genie',
       'app_tagline': 'Your intelligent AI assistant',
-      'ai_assist': 'Your AI assistant is ready to assist you.',
+      'ai_assist': 'Your AI assistant is ready to help you.',
       'ask_genie_anything': 'Ask Genie Anything',
-      'welcome_message': "Welcome To",
+      'welcome_message': 'Welcome to',
       'morning': 'Good Morning',
       'evening': 'Good Evening',
       'afternoon': 'Good Afternoon',
@@ -109,7 +109,7 @@ class AppLocalizations {
       'add_key': 'Add API Key',
       'update_key': 'Update API Key',
       'remove_key': 'Removing Key',
-      'key_remove_msg': 'Are you sure you want to remove this key.',
+      'key_remove_msg': 'Are you sure you want to remove this key?',
       'key_added_success': 'API key added successfully.',
       'key_removed_success': 'API key removed.',
       'key_invalid': 'Invalid API key.',
@@ -123,7 +123,7 @@ class AppLocalizations {
       'get_claude_key': 'Get your Claude key at console.anthropic.com',
       'no_key_added': 'No key added',
       'key_added': 'Key added',
-      'key_fetch_error': 'Loading AI Keys failed, Please restart the app.',
+      'key_fetch_error': 'Loading AI keys failed. Please restart the app.',
       'keys': 'Keys',
       'delete_key': 'Delete Key',
 
@@ -141,10 +141,10 @@ class AppLocalizations {
       'delete_conversation_confirm':
           'Are you sure you want to delete this conversation? This cannot be undone.',
       'conversation_deleted': 'Conversation deleted.',
-      'delete_all_conversations': 'Deleting All Conversations...',
+      'delete_all_conversations': 'Delete All Conversations',
       'delete_all_confirm_message':
           'Are you sure you want to delete all conversations? This cannot be undone.',
-      'deleting_all_conversations': 'Deleting All Conversations..',
+      'deleting_all_conversations': 'Deleting all conversations...',
       'start_conversation': 'Start a conversation with your AI assistant.',
       'conversation_history': 'History',
       'history_subtitle': 'Review your recent thoughts.',
@@ -176,7 +176,7 @@ class AppLocalizations {
       'no_key_for_model': 'You haven\'t added an API key for this model.',
       'add_key_for_model': 'Add Key',
       'api_keys_secure_note':
-          'Your API key is secure. Only the company has the authority to save and manage your personal keys.',
+          'Your API keys are stored securely. Only you have the authority to access and manage your personal keys.',
       'gpt_model_message':
           'Master of conversational flow and complex text generation.',
       'gemini_model_message':
@@ -221,10 +221,19 @@ class AppLocalizations {
       'image_generated': 'Image generated successfully.',
       'image_generation_failed': 'Failed to generate image. Please try again.',
       'save_image': 'Save Image',
-      'image_saved': 'Image saved to gallery.',
-      'image_prompt_required': 'Please describe the image you want to generate',
-      'image_prompt_too_short': 'Please provide a more detailed description',
-      'image_prompt_too_long': 'Description is too long (max 4,000 characters)',
+      'image_saved': 'Image saved to {0}',
+      'download_image': 'Download Image',
+      'image_save_failed': 'Could not save image. Please try again.',
+      'image_save_permission_denied':
+          'Storage permission denied. Please allow access in Settings.',
+      'image_save_no_space': 'Not enough storage space to save the image.',
+      'image_download_failed':
+          'Could not download image. Please check your connection.',
+      'image_prompt_required':
+          'Please describe the image you want to generate.',
+      'image_prompt_too_short': 'Please provide a more detailed description.',
+      'image_prompt_too_long':
+          'Description is too long (max 4,000 characters).',
 
       // ── Image Reading ──────────────────────────────────────────────────────
       'attach_image': 'Attach Image',
@@ -278,7 +287,7 @@ class AppLocalizations {
       'microphone_permission_denied':
           'Microphone permission is required for voice input.',
       'open_settings': 'Open Settings',
-      'speech_text_unavailable': 'Speech Text not available.',
+      'speech_text_unavailable': 'Speech-to-text is not available.',
       'voice_assistant': 'Voice Assistant',
       // Tooltip shown on the Home mic button — guides users to tap for voice chat
       'tap_to_start_voice_chat': 'Tap to start voice chat',
@@ -323,7 +332,7 @@ class AppLocalizations {
       'photo_url': 'Photo URL',
       'photo_url_optional': 'Photo URL (optional)',
       'profile_updated': 'Profile updated successfully.',
-      'profile_updating': 'Profile Updating...',
+      'profile_updating': 'Updating profile...',
       'profile_update_failed': 'Could not update profile. Please try again.',
       'activate_models': 'Activate AI Models',
       'activate_models_message':
@@ -415,8 +424,9 @@ class AppLocalizations {
       'account_deleted': 'Account deleted.',
       'deleting_account': 'Deleting your account...',
       'session_expired': 'Your session has expired. Please sign in again.',
-      'requires_recent_login': 'For security reasons, please sign out and sign in again before deleting your account.',
-      'unauthenticate_profile': 'UnAuthenticate Profile',
+      'requires_recent_login':
+          'For security reasons, please sign out and sign in again before deleting your account.',
+      'unauthenticate_profile': 'Unauthenticate Profile',
       'date_of_birth': 'Date of Birth',
       'age': 'Age',
       'gender': 'Gender',
@@ -491,7 +501,7 @@ class AppLocalizations {
       'error_no_models_with_key':
           'Please add at least one API key in Settings to use AI features.',
       'error_microphone': 'Microphone is not available on this device.',
-      'model_rate_limit': 'rate limit exceeded. Please try again in a moment.',
+      'model_rate_limit': 'Rate limit exceeded. Please try again in a moment.',
       'press_back_again_to_exit': 'Press back again to exit',
       'server_busy':
           'Due to high traffic, our server is busy. Please try again later!',
@@ -607,10 +617,10 @@ class AppLocalizations {
       'delete_conversation': 'बातचीत हटाएं',
       'delete_conversation_confirm': 'क्या आप इस बातचीत को हटाना चाहते हैं?',
       'conversation_deleted': 'बातचीत हटाई गई।',
-      'delete_all_conversations': 'सभी बातचीत मिटाई जा रही हैं...',
+      'delete_all_conversations': 'सभी बातचीत हटाएं',
       'delete_all_confirm_message':
           'क्या आप सभी बातचीत हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
-      'deleting_all_conversations': 'सभी बातचीत हटाई जा रही हैं..',
+      'deleting_all_conversations': 'सभी बातचीत हटाई जा रही हैं...',
       'start_conversation': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
       'conversation_history': 'इतिहास',
       'history_subtitle': 'अपने हालिया विचारों की समीक्षा करें।',
@@ -686,7 +696,14 @@ class AppLocalizations {
       'image_generated': 'चित्र सफलतापूर्वक बन गया।',
       'image_generation_failed': 'चित्र नहीं बन सका। पुनः प्रयास करें।',
       'save_image': 'चित्र सहेजें',
-      'image_saved': 'चित्र गैलरी में सहेजा गया।',
+      'image_saved': 'चित्र {0} में सहेजा गया।',
+      'download_image': 'चित्र डाउनलोड करें',
+      'image_save_failed': 'चित्र सहेजा नहीं जा सका। पुनः प्रयास करें।',
+      'image_save_permission_denied':
+          'स्तोरेज अनुमति अस्वीकृत। सेटिंग्स में एक्सेस दें।',
+      'image_save_no_space': 'चित्र सहेजने के लिए पर्याप्त स्तोरेज नहीं है।',
+      'image_download_failed':
+          'चित्र डाउनलोड नहीं हो सका। अपना कनेक्शन जांचें।',
       'image_prompt_required': 'कृपया चित्र का वर्णन करें',
       'image_prompt_too_short': 'कृपया अधिक विस्तृत वर्णन दें',
       'image_prompt_too_long': 'वर्णन बहुत लंबा है (अधिकतम 4,000 अक्षर)',
@@ -881,7 +898,8 @@ class AppLocalizations {
       'account_deleted': 'खाता हटा दिया गया।',
       'deleting_account': 'आपका खाता हटाया जा रहा है...',
       'session_expired': 'आपका सत्र समाप्त हो गया है। कृपया पुनः साइन इन करें।',
-      'requires_recent_login': 'सुरक्षा कारणों से, कृपया अपना खाता हटाने से पहले साइन आउट करें और फिर से साइन इन करें।',
+      'requires_recent_login':
+          'सुरक्षा कारणों से, कृपया अपना खाता हटाने से पहले साइन आउट करें और फिर से साइन इन करें।',
       'unauthenticate_profile': 'अप्रमाणित प्रोफ़ाइल',
       'date_of_birth': 'जन्म तिथि',
       'age': 'आयु',
@@ -1130,8 +1148,10 @@ class AppLocalizations {
   String get setTotalBudget => translate('set_total_budget');
   String get editTotalBudget => translate('edit_total_budget');
   String get totalSpendingLimit => translate('total_spending_limit');
-  String get budgetRemoveConfirmTitle => translate('budget_remove_confirm_title');
-  String get budgetRemoveConfirmMessage => translate('budget_remove_confirm_message');
+  String get budgetRemoveConfirmTitle =>
+      translate('budget_remove_confirm_title');
+  String get budgetRemoveConfirmMessage =>
+      translate('budget_remove_confirm_message');
   String get syncFailedTooltip => translate('sync_failed_tooltip');
   String get waitingToSyncTooltip => translate('waiting_to_sync_tooltip');
   String get usageLoadFailed => translate('usage_load_failed');
@@ -1202,6 +1222,15 @@ class AppLocalizations {
   String get uploadingPhoto => translate('uploading_photo');
   String get modelLimit => translate('model_rate_limit');
   String get pressBackAgainToExit => translate('press_back_again_to_exit');
+  // ── Image Download ─────────────────────────────────────────────────────────
+  String get downloadImage => translate('download_image');
+  String imageSaved(String path) =>
+      translate('image_saved').replaceAll('{0}', path);
+  String get imageSaveFailed => translate('image_save_failed');
+  String get imageSavePermissionDenied =>
+      translate('image_save_permission_denied');
+  String get imageSaveNoSpace => translate('image_save_no_space');
+  String get imageDownloadFailed => translate('image_download_failed');
 }
 
 // ==========================================================================

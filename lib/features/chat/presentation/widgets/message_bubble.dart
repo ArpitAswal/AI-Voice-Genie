@@ -15,6 +15,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../shared/model/image_model.dart';
+import '../../../../shared/widgets/generated_image_download_button.dart';
 import '../../../../shared/widgets/image_view.dart';
 import '../../../voice_speech/presentation/widgets/tts_play_button.dart';
 import '../../domain/message_model.dart';
@@ -213,10 +214,15 @@ class _MessageBubbleContent extends StatelessWidget {
     // Compile the children based on what attachments the message has.
     final children = <Widget>[
       // 1. If images are present, render the image grid.
+      // Only AI (non-user) image-generation responses get the download button.
       if (message.imageUrls != null && message.imageUrls!.isNotEmpty)
         _ChatImage(
-            images: message.imageUrls!,
-            size: message.imageSize ?? AiImageSize.square),
+          images: message.imageUrls!,
+          size: message.imageSize ?? AiImageSize.square,
+          // Pass metadata only for AI messages — user-attached images do not get the button.
+          messageId: isUser ? null : message.id,
+          provider: isUser ? null : (message.modelRequest?.id ?? 'unknown'),
+        ),
 
       // 2. If PDFs are present, render the PDF cards.
       if (message.pdfInfo != null && message.pdfInfo!.isNotEmpty)
@@ -263,38 +269,63 @@ class _ChatImage extends StatelessWidget {
   final List<String> images;
   final AiImageSize size;
 
-  const _ChatImage({required this.images, required this.size});
+  /// Null for user-attached images — download button is not shown.
+  final String? messageId;
+  final String? provider;
+
+  const _ChatImage({
+    required this.images,
+    required this.size,
+    this.messageId,
+    this.provider,
+  });
 
   @override
   Widget build(BuildContext context) {
     switch (images.length) {
       case 1:
         return _OneAttachmentView(
-            type: ChatAttachmentType.image,
-            image: images.first,
-            size: size,
-            pdf: null);
+          type: ChatAttachmentType.image,
+          image: images.first,
+          size: size,
+          pdf: null,
+          msgId: messageId,
+          provider: provider,
+          totalImages: images.length,
+        );
 
       case 2:
         return _TwoAttachmentView(
-            type: ChatAttachmentType.image,
-            images: images,
-            size: size,
-            pdfs: null);
+          type: ChatAttachmentType.image,
+          images: images,
+          size: size,
+          pdfs: null,
+          provider: provider,
+          msgId: messageId,
+          totalImages: images.length,
+        );
 
       case 3:
         return _ThreeAttachmentView(
-            type: ChatAttachmentType.image,
-            images: images,
-            size: size,
-            pdfs: null);
+          type: ChatAttachmentType.image,
+          images: images,
+          size: size,
+          pdfs: null,
+          msgId: messageId,
+          provider: provider,
+          totalImages: images.length,
+        );
 
       case 4:
         return _FourAttachmentView(
-            type: ChatAttachmentType.image,
-            images: images,
-            size: size,
-            pdfs: null);
+          type: ChatAttachmentType.image,
+          images: images,
+          size: size,
+          pdfs: null,
+          msgId: messageId,
+          provider: provider,
+          totalImages: images.length,
+        );
 
       default:
         return const SizedBox.shrink();
@@ -302,6 +333,7 @@ class _ChatImage extends StatelessWidget {
   }
 }
 
+/// Builds an image widget without a download button (for user-attached images).
 Widget _buildImage(String url) {
   final trimmed = url.trim();
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
@@ -316,6 +348,29 @@ Widget _buildImage(String url) {
     );
   }
   return _SmartAsyncImageViewer(url: trimmed);
+}
+
+/// Builds an image wrapped in a [Stack] with a download button overlay.
+///
+/// Used only for AI-generated images (non-user messages).
+/// The [imageKey] uniquely identifies this image for per-image loading state.
+Widget _buildImageWithDownload({
+  required String url,
+  required String imageKey,
+  required String provider,
+  required int totalImages,
+}) {
+  return Stack(
+    children: [
+      _buildImage(url),
+      GeneratedImageDownloadButton(
+        imageSource: url,
+        imageKey: imageKey,
+        provider: provider,
+        imageCountInMessage: totalImages,
+      ),
+    ],
+  );
 }
 
 class _SmartAsyncImageViewer extends StatefulWidget {
@@ -629,23 +684,37 @@ class _OneAttachmentView extends StatelessWidget {
     this.image,
     this.size,
     this.pdf,
+    this.provider,
+    this.msgId,
+    this.totalImages = 1,
   });
 
   final String? image;
   final AiImageSize? size;
   final PdfAttachmentInfo? pdf;
   final ChatAttachmentType type;
+  final String? provider;
+  final String? msgId;
+  final int totalImages;
 
   @override
   Widget build(BuildContext context) {
     if (type == ChatAttachmentType.image) {
       final img = image;
       final sz = size;
+      final prov = provider;
       if (img != null && sz != null) {
         return AspectRatio(
-          aspectRatio: sz.aspectRatio,
-          child: _buildImage(img),
-        );
+            aspectRatio: sz.aspectRatio,
+            // Show download button only on AI-generated images (messageId is non-null)
+            child: msgId != null && prov != null
+                ? _buildImageWithDownload(
+                    url: img,
+                    imageKey: '${msgId}_0',
+                    provider: prov,
+                    totalImages: totalImages,
+                  )
+                : _buildImage(img));
       }
     } else {
       final p = pdf;
@@ -663,34 +732,45 @@ class _TwoAttachmentView extends StatelessWidget {
     this.images,
     this.size,
     required this.type,
+    this.provider,
+    this.msgId,
+    this.totalImages = 2,
   });
 
   final List<String>? images;
   final AiImageSize? size;
   final ChatAttachmentType type;
   final List<PdfAttachmentInfo>? pdfs;
+  final String? provider;
+  final String? msgId;
+  final int totalImages;
 
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
     final sz = size;
     final landscape = sz == AiImageSize.landscape;
+    final prov = provider;
 
     if (type == ChatAttachmentType.image) {
       final imgs = images;
       if (imgs != null && imgs.length >= 2 && sz != null) {
+        // Helper to build image at index with optional download overlay
+        Widget img(int i) => msgId != null && prov != null
+            ? _buildImageWithDownload(
+                url: imgs[i],
+                imageKey: '${msgId}_$i',
+                provider: prov,
+                totalImages: totalImages,
+              )
+            : _buildImage(imgs[i]);
+
         if (landscape) {
           return Column(
             children: [
-              AspectRatio(
-                aspectRatio: sz.aspectRatio,
-                child: _buildImage(imgs[0]),
-              ),
+              AspectRatio(aspectRatio: sz.aspectRatio, child: img(0)),
               const SizedBox(height: spacing),
-              AspectRatio(
-                aspectRatio: sz.aspectRatio,
-                child: _buildImage(imgs[1]),
-              ),
+              AspectRatio(aspectRatio: sz.aspectRatio, child: img(1)),
             ],
           );
         }
@@ -698,18 +778,10 @@ class _TwoAttachmentView extends StatelessWidget {
         return Row(
           children: [
             Expanded(
-              child: AspectRatio(
-                aspectRatio: sz.aspectRatio,
-                child: _buildImage(imgs[0]),
-              ),
-            ),
+                child: AspectRatio(aspectRatio: sz.aspectRatio, child: img(0))),
             const SizedBox(width: spacing),
             Expanded(
-              child: AspectRatio(
-                aspectRatio: sz.aspectRatio,
-                child: _buildImage(imgs[1]),
-              ),
-            ),
+                child: AspectRatio(aspectRatio: sz.aspectRatio, child: img(1))),
           ],
         );
       }
@@ -736,43 +808,50 @@ class _ThreeAttachmentView extends StatelessWidget {
     this.images,
     this.size,
     required this.type,
+    this.msgId,
+    this.provider,
+    this.totalImages = 3,
   });
 
   final List<String>? images;
   final AiImageSize? size;
   final ChatAttachmentType type;
   final List<PdfAttachmentInfo>? pdfs;
+  final String? provider;
+  final String? msgId;
+  final int totalImages;
 
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
     final sz = size;
+    final prov = provider;
 
     if (type == ChatAttachmentType.image) {
       final imgs = images;
       if (imgs != null && imgs.length >= 3 && sz != null) {
+        Widget img(int i) => msgId != null && prov != null
+            ? _buildImageWithDownload(
+                url: imgs[i],
+                imageKey: '${msgId}_$i',
+                provider: prov,
+                totalImages: totalImages,
+              )
+            : _buildImage(imgs[i]);
+
         return Column(
           children: [
-            AspectRatio(
-              aspectRatio: sz.aspectRatio,
-              child: _buildImage(imgs[0]),
-            ),
+            AspectRatio(aspectRatio: sz.aspectRatio, child: img(0)),
             const SizedBox(height: spacing),
             Row(
               children: [
                 Expanded(
-                  child: AspectRatio(
-                    aspectRatio: sz.aspectRatio,
-                    child: _buildImage(imgs[1]),
-                  ),
-                ),
+                    child: AspectRatio(
+                        aspectRatio: sz.aspectRatio, child: img(1))),
                 const SizedBox(width: spacing),
                 Expanded(
-                  child: AspectRatio(
-                    aspectRatio: sz.aspectRatio,
-                    child: _buildImage(imgs[2]),
-                  ),
-                ),
+                    child: AspectRatio(
+                        aspectRatio: sz.aspectRatio, child: img(2))),
               ],
             ),
           ],
@@ -789,15 +868,11 @@ class _ThreeAttachmentView extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: _pdfView(context, p[1], squareView: true),
-                ),
+                Expanded(child: _pdfView(context, p[1], squareView: true)),
                 const SizedBox(width: spacing),
-                Expanded(
-                  child: _pdfView(context, p[2], squareView: true),
-                ),
+                Expanded(child: _pdfView(context, p[2], squareView: true)),
               ],
-            )
+            ),
           ],
         );
       }
@@ -812,56 +887,60 @@ class _FourAttachmentView extends StatelessWidget {
     this.images,
     this.size,
     required this.type,
+    this.msgId,
+    this.provider,
+    this.totalImages = 4,
   });
 
   final List<String>? images;
   final AiImageSize? size;
   final ChatAttachmentType type;
   final List<PdfAttachmentInfo>? pdfs;
+  final String? provider;
+  final String? msgId;
+  final int totalImages;
 
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
     final sz = size;
+    final prov = provider;
 
     if (type == ChatAttachmentType.image) {
       final imgs = images;
       if (imgs != null && imgs.length >= 4 && sz != null) {
+        Widget img(int i) => msgId != null && prov != null
+            ? _buildImageWithDownload(
+                url: imgs[i],
+                imageKey: '${msgId}_$i',
+                provider: prov,
+                totalImages: totalImages,
+              )
+            : _buildImage(imgs[i]);
+
         return Column(
           children: [
             Row(
               children: [
                 Expanded(
-                  child: AspectRatio(
-                    aspectRatio: sz.aspectRatio,
-                    child: _buildImage(imgs[0]),
-                  ),
-                ),
+                    child: AspectRatio(
+                        aspectRatio: sz.aspectRatio, child: img(0))),
                 const SizedBox(width: spacing),
                 Expanded(
-                  child: AspectRatio(
-                    aspectRatio: sz.aspectRatio,
-                    child: _buildImage(imgs[1]),
-                  ),
-                ),
+                    child: AspectRatio(
+                        aspectRatio: sz.aspectRatio, child: img(1))),
               ],
             ),
             const SizedBox(height: spacing),
             Row(
               children: [
                 Expanded(
-                  child: AspectRatio(
-                    aspectRatio: sz.aspectRatio,
-                    child: _buildImage(imgs[2]),
-                  ),
-                ),
+                    child: AspectRatio(
+                        aspectRatio: sz.aspectRatio, child: img(2))),
                 const SizedBox(width: spacing),
                 Expanded(
-                  child: AspectRatio(
-                    aspectRatio: sz.aspectRatio,
-                    child: _buildImage(imgs[3]),
-                  ),
-                ),
+                    child: AspectRatio(
+                        aspectRatio: sz.aspectRatio, child: img(3))),
               ],
             ),
           ],

@@ -433,6 +433,9 @@ class _FakeAuthRepository implements AuthRepository {
     required String photoUrl,
     DateTime? dateOfBirth,
     int? age,
+    String? gender,
+    String? country,
+    String? state,
     File? photoFile,
   }) async {
     return true;
@@ -552,4 +555,7 @@ class _FakeAnalyticsService implements AnalyticsService {
 
   @override
   Future<void> logVoiceOutputUsed({required bool usedAiTts}) async {}
+
+  @override
+  Future<void> logImageDownload({required String provider, required String result, required String failureReason, required String mimeType, required String sourceType, required int imageCountInMessage}) async {}
 }

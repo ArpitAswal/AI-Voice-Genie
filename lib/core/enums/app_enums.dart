@@ -474,3 +474,43 @@ enum ResponseLength {
     );
   }
 }
+
+// =============================================================================
+// IMAGE DOWNLOAD ENUMS
+// =============================================================================
+
+/// UI state for a single image download operation.
+enum ImageDownloadState {
+  /// No active download for this image key.
+  idle,
+
+  /// A download is in progress — button shows a loading indicator.
+  loading,
+
+  /// Save completed successfully — button briefly shows a check icon.
+  success,
+
+  /// Save failed — button returns to idle and shows an error message.
+  failed,
+}
+
+/// Typed result returned by [DeviceImageSaveService.saveImageBytes].
+enum DeviceImageSaveResult {
+  /// Image was written to the device gallery/Photos successfully.
+  success,
+
+  /// The user denied Photos/storage permission when the save was attempted.
+  permissionDenied,
+
+  /// A network or download step failed (remote URL could not be fetched).
+  networkFailure,
+
+  /// The image bytes are empty or cannot be decoded as a known image type.
+  invalidImage,
+
+  /// The device has no storage space available.
+  noSpace,
+
+  /// Any other platform error (MediaStore failure, Photos library error, etc.).
+  unknown,
+}

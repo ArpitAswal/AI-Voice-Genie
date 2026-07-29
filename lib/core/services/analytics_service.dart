@@ -222,6 +222,35 @@ class AnalyticsService {
     });
   }
 
+  /// Log a generated image download attempt and its outcome.
+  ///
+  /// Safe parameters only — no image URL, prompt text, or user ID.
+  ///
+  /// [provider]          — AI provider that generated the image (e.g. "openai").
+  /// [result]            — "success" or "failure".
+  /// [failureReason]     — One of: permission_denied, network, invalid_image, no_space, unknown.
+  ///                       Empty string when result is "success".
+  /// [mimeType]          — Detected MIME type (e.g. "image/jpeg").
+  /// [sourceType]        — One of: remote_url, data_uri, local_file.
+  /// [imageCountInMessage] — Total generated images in the same message.
+  Future<void> logImageDownload({
+    required String provider,
+    required String result,
+    required String failureReason,
+    required String mimeType,
+    required String sourceType,
+    required int imageCountInMessage,
+  }) async {
+    await _safeLog(FirebaseCollections.eventGeneratedImageDownload, {
+      FirebaseCollections.paramModelUsed: provider,
+      FirebaseCollections.paramDownloadResult: result,
+      FirebaseCollections.paramDownloadFailureReason: failureReason,
+      FirebaseCollections.paramDownloadMimeType: mimeType,
+      FirebaseCollections.paramDownloadSourceType: sourceType,
+      FirebaseCollections.paramImageCountInMessage: imageCountInMessage,
+    });
+  }
+
   /// Set the user ID for all subsequent analytics events
   Future<void> setUserId(String userId) async {
     try {

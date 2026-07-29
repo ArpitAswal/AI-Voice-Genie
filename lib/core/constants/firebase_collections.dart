@@ -169,6 +169,9 @@ class FirebaseCollections {
   static const String eventConversationStarted = 'conversation_started';
   static const String eventVoiceInputUsed = 'voice_input_used';
   static const String eventVoiceOutputUsed = 'voice_output_used';
+  // Fired when the user taps the download button on a generated image.
+  // Parameters: provider, result, failure_reason, mime_type, source_type, image_count_in_message
+  static const String eventGeneratedImageDownload = 'generated_image_download';
 
   // ── Analytics Parameter Names ─────────────────────────────────────────────
   static const String paramAuthProvider = 'auth_provider';
@@ -190,6 +193,12 @@ class FirebaseCollections {
 
   /// Shared request ID linking initiated/success/failure events to the usage event.
   static const String paramRequestId = 'request_id';
+  // Image download event parameters (safe — no URL or prompt text)
+  static const String paramDownloadResult = 'result';
+  static const String paramDownloadFailureReason = 'failure_reason';
+  static const String paramDownloadMimeType = 'mime_type';
+  static const String paramDownloadSourceType = 'source_type';
+  static const String paramImageCountInMessage = 'image_count_in_message';
 
   // ── Usage Tracking Collection Names ───────────────────────────────────────
   static const String usageEvents = 'usageEvents';

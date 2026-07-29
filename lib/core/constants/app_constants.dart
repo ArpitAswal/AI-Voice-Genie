@@ -13,7 +13,6 @@ class AppConstants {
     defaultValue: '',
   );
 
-
   // ── App Info ───────────────────────────────────────────────────────────────
   static const String appVersion = '1.0.0 + 1';
   static const String copyrightOwner = 'AI Voice Genie';
@@ -38,7 +37,6 @@ class AppConstants {
   static const Duration shortDuration = Duration(milliseconds: 200);
   static const Duration mediumDuration = Duration(milliseconds: 400);
   static const Duration longDuration = Duration(milliseconds: 700);
-  static const Duration voicePulseDuration = Duration(milliseconds: 800);
 
   // ── Network ───────────────────────────────────────────────────────────────
   // AI API calls can take longer — generous timeout for image generation
@@ -148,6 +146,10 @@ class AppConstants {
   // ── Image Handling ────────────────────────────────────────────────────────
   // Maximum image size for vision requests (compressed before sending)
   static const int maxImageSizeBytes = 5 * 1024 * 1024;
+
+  // Maximum allowed image size in bytes — guards against OOM on decode.
+  // Set to 25 MB as recommended in the image download plan.
+  static const int maxImageDownloadBytes = 25 * 1024 * 1024;
 
   // ── Voice ─────────────────────────────────────────────────────────────────
   // Maximum recording duration in seconds

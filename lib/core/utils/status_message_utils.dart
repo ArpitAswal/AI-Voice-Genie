@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../localization/app_localizations.dart';
@@ -140,7 +141,7 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final colors = _getColors(widget.type);
+    final colors = _getColors(widget.type, context);
     final topPadding = MediaQuery.of(context).padding.top;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
@@ -530,14 +531,26 @@ class MessageUtils {
 // =============================================================================
 
 /// Get colours for a message type.
-Map<String, Color> _getColors(MessageType type) {
+Map<String, Color> _getColors(MessageType type, BuildContext context) {
   switch (type) {
     case MessageType.success:
-      return {'background': AppColors.lightSuccess, 'icon': Colors.white};
+      return {
+        'background':
+            (context.isDark) ? AppColors.darkSuccess : AppColors.lightSuccess,
+        'icon': Colors.white
+      };
     case MessageType.error:
-      return {'background': AppColors.lightError, 'icon': Colors.white};
+      return {
+        'background':
+            (context.isDark) ? AppColors.darkError : AppColors.lightError,
+        'icon': Colors.white
+      };
     case MessageType.warning:
-      return {'background': AppColors.lightWarning, 'icon': Colors.white};
+      return {
+        'background':
+            (context.isDark) ? AppColors.darkWarning : AppColors.lightWarning,
+        'icon': Colors.white
+      };
   }
 }
 
