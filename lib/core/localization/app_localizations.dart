@@ -360,6 +360,8 @@ class AppLocalizations {
       'usage_no_activity': 'No activity this month',
       'usage_budget_remaining': 'remaining',
       'usage_budget_exceeded': 'Budget exceeded',
+      'chat_provider_limit_reached':
+          '{0} model limit reached. Please update your usage budget limit.',
       'usage_set_budget': 'Set a monthly budget',
       'usage_set_budget_subtitle':
           'Track your estimated spending with a personal monthly limit.',
@@ -815,6 +817,8 @@ class AppLocalizations {
       'usage_no_activity': 'इस महीने कोई गतिविधि नहीं',
       'usage_budget_remaining': 'शेष',
       'usage_budget_exceeded': 'बजट सीमा पार',
+      'chat_provider_limit_reached':
+          '{0} मॉडल की सीमा समाप्त हो गई है। कृपया अपनी उपयोग बजट सीमा अपडेट करें।',
       'usage_set_budget': 'मासिक बजट सेट करें',
       'usage_set_budget_subtitle':
           'अनुमानित खर्च को व्यक्तिगत मासिक सीमा से ट्रैक करें।',
@@ -1125,6 +1129,8 @@ class AppLocalizations {
   String get usageNoActivity => translate('usage_no_activity');
   String get usageBudgetRemaining => translate('usage_budget_remaining');
   String get usageBudgetExceeded => translate('usage_budget_exceeded');
+  String chatProviderLimitReached(String providerName) =>
+      translate('chat_provider_limit_reached').replaceAll('{0}', providerName);
   String get usageSetBudget => translate('usage_set_budget');
   String get usageSetBudgetSubtitle => translate('usage_set_budget_subtitle');
   String get usageDisclaimer => translate('usage_disclaimer');

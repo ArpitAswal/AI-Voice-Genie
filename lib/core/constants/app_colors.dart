@@ -58,7 +58,6 @@ class AppColors {
   // ── Status / Feedback Colors ──────────────────────────────────────────────
   static const Color lightSuccess = Color(0xFF10B981);
   static const Color darkSuccess = Color(0xFF059669);
-  static const Color error = Color(0xFFEF4444);
   static const Color lightError = Color(0xFFEF4444);
   static const Color darkError = Color(0xFFAE2C2C);
   static const Color lightWarning = Color(0xFFF59E0B);

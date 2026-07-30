@@ -213,7 +213,7 @@ class _SpendBadge extends StatelessWidget {
                 ? context.l10n.usageBudgetExceeded
                 : '$percentage% ${context.l10n.usageBudgetRemaining}',
             style: context.textTheme.labelSmall?.copyWith(
-              color: isExceeded ? AppColors.lightError : color,
+              color: isExceeded ? (context.isDark ? AppColors.darkError : AppColors.lightError) : color,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -383,7 +383,7 @@ class _BudgetProgressBar extends StatelessWidget {
               '\$${spent.toStringAsFixed(2)} ${context.l10n.usageOf} $formattedBudget',
               style: context.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: isExceeded ? AppColors.lightError : null,
+                color: isExceeded ? (context.isDark ? AppColors.darkError : AppColors.lightError) : null,
               ),
             ),
           ],
@@ -394,7 +394,7 @@ class _BudgetProgressBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: fraction,
             minHeight: 10,
-            color: isExceeded ? AppColors.lightError : color,
+            color: isExceeded ? (context.isDark ? AppColors.darkError : AppColors.lightError) : color,
             backgroundColor: Colors.grey.shade200,
           ),
         ),

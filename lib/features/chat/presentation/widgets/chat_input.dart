@@ -15,6 +15,7 @@ import '../../../../core/preferences/ai_preferences_provider.dart';
 import '../../../../shared/widgets/chat_action_button.dart';
 import '../../../voice_speech/presentation/voice_speech_provider.dart';
 import '../../../voice_speech/presentation/widgets/voice_input_button.dart';
+import '../../../usage/presentation/usage_provider.dart';
 import '../../domain/chat_attachment.dart';
 
 /// Imperative bridge used by parent screens to prepare the chat composer.
@@ -176,6 +177,17 @@ class _ChatInputBarState extends State<ChatInputBar> {
         context.showError(error);
         return;
       }
+    }
+
+    // Verify usage budget limits
+    final provider = context.read<AiPreferencesProvider>().preferredProvider;
+    final usageProvider = context.read<UsageProvider>();
+    final summary = usageProvider.summaryFor(provider);
+    
+    if (summary != null && summary.isExceeded()) {
+      context.showError(AppLocalizations.of(context)!
+          .chatProviderLimitReached(provider.displayName));
+      return;
     }
 
     final attachments = List<ChatAttachment>.from(_attachments);

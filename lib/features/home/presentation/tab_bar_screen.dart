@@ -21,10 +21,9 @@ class _TabBarScreenState extends State<TabBarScreen> {
   DateTime? _lastPressedAt;
 
   void _showExitSnackbar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor =
-        isDark ? AppColors.scaffoldDark : AppColors.scaffoldLight;
-    final textColor = isDark ? Colors.white : Colors.black;
+        context.isDark ? AppColors.cardDark : AppColors.cardLight;
+    final textColor = context.isDark ? Colors.white : Colors.black;
 
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -41,6 +40,9 @@ class _TabBarScreenState extends State<TabBarScreen> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: context.isDark ? AppColors.darkDivider : AppColors.lightDivider
+          )
         ),
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),

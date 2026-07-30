@@ -148,7 +148,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             Text(
               ' *',
               style: context.textTheme.titleSmall?.copyWith(
-                color: AppColors.error,
+                color: context.isDark ? AppColors.darkError : AppColors.lightError,
                 fontWeight: FontWeight.bold,
               ),
             ),
