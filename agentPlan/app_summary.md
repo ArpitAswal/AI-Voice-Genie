@@ -13,7 +13,7 @@
 
 ### The Solution
 - **Unified Multi-Model Hub**: Users connect their own API keys and seamlessly switch between OpenAI, Gemini, and Claude for text generation, image creation, multi-image vision analysis, and PDF summarization.
-- **Local-First Architecture**: Powered by Hive local databases, chat history is read and rendered instantaneously with zero network delay. Offline mutations are queued in a durable outbox and synced to Cloud Firestore in the background when connected.
+- **Local-First Architecture**: Powered by Hive local databases, chat history is read and rendered instantaneously with zero network delay. Cursor-based pagination is used to efficiently load older conversations and scroll back through thousands of messages without UI lag. Offline mutations are queued in a durable outbox and synced to Cloud Firestore in the background when connected.
 - **Native OS Scoped Media Storage**: Custom Kotlin and Swift MethodChannels manage image downloads directly into native galleries (`Pictures/AI Voice Genie` on Android MediaStore API 29+, `Photos` on iOS) without requesting unnecessary permission broad scopes.
 
 ---
@@ -26,7 +26,11 @@
 - **Avatar Preservation**: External OAuth profile pictures are protected when text fields are edited without picking a new image.
 - **Sign Out vs. Account Deletion**: Sign Out clears local session state without altering remote user data. Account Deletion requires recent authentication, deletes remote API keys and Firestore profile records, wipes all local Hive database boxes, deletes the Firebase Auth account, and resets provider credentials.
 
-### B. Multi-Model AI Orchestration Engine
+### B. Chat & Pagination System
+- **Cursor-Based Pagination**: Seamless infinite scrolling in both Chat History (loading older conversations) and Chat Detail (loading older messages). Hive acts as the local source of truth for instant pagination, while background tasks hydrate missing history from Firestore.
+- **Instant Local Search**: Text search applies instantly across the entire local Hive database, enabling users to find historical conversations even if they haven't been paginated into the visible UI yet.
+
+### C. Multi-Model AI Orchestration Engine
 - **Centralized Orchestrator**: `AiOrchestrator` normalizes user prompts and routes execution to provider-specific adapters (`OpenAIAdapter`, `GeminiAdapter`, `ClaudeAdapter`).
 - **Capability Matrix**: Maps model capabilities (text, vision, image generation, document parsing) and dynamically sets system prompts, token bounds, and temperature preferences.
 - **Attachment Pipeline**: Handles image uploads via Cloudinary and performs text extraction on PDF documents (`PdfReaderService`) before building AI payloads.

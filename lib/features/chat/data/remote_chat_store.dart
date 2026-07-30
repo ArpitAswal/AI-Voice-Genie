@@ -182,10 +182,63 @@ class RemoteChatStore {
   ///
   /// Used by ChatSyncService when a conversation is opened, so that
   /// messages updated on another device appear on this device instantly.
-  Stream<QuerySnapshot> watchMessages(String uid, String conversationId) {
+  Stream<QuerySnapshot> watchMessages(String uid, String conversationId,
+      {int? limit}) {
+    Query query = _firestore
+        .collection(FirebaseCollections.messagesCollection(uid, conversationId))
+        .orderBy(FirebaseCollections.fieldMessageTimestamp, descending: true);
+
+    if (limit != null) {
+      query = query.limit(limit);
+    }
+
+    return query.snapshots();
+  }
+  // ── Pagination Operations ──────────────────────────────────────────────────
+
+  Future<QuerySnapshot> fetchConversationPage({
+    required String uid,
+    required int limit,
+    DocumentSnapshot? startAfterDocument,
+  }) async {
+    Query query = _firestore
+        .collection(FirebaseCollections.conversationsCollection(uid))
+        .orderBy(FirebaseCollections.fieldConversationLastMessageAt,
+            descending: true)
+        .limit(limit);
+
+    if (startAfterDocument != null) {
+      query = query.startAfterDocument(startAfterDocument);
+    }
+    return query.get();
+  }
+
+  Future<QuerySnapshot> fetchLatestMessagePage({
+    required String uid,
+    required String conversationId,
+    required int limit,
+  }) async {
     return _firestore
         .collection(FirebaseCollections.messagesCollection(uid, conversationId))
-        .orderBy(FirebaseCollections.fieldMessageTimestamp)
-        .snapshots();
+        .orderBy(FirebaseCollections.fieldMessageTimestamp, descending: true)
+        .limit(limit)
+        .get();
+  }
+
+  Future<QuerySnapshot> fetchOlderMessagePage({
+    required String uid,
+    required String conversationId,
+    required int limit,
+    DocumentSnapshot? startAfterDocument,
+  }) async {
+    Query query = _firestore
+        .collection(FirebaseCollections.messagesCollection(uid, conversationId))
+        .orderBy(FirebaseCollections.fieldMessageTimestamp, descending: true)
+        .limit(limit);
+
+    if (startAfterDocument != null) {
+      query = query.startAfterDocument(startAfterDocument);
+    }
+    return query.get();
   }
 }

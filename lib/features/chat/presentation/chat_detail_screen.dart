@@ -55,10 +55,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   int _lastMessageCount = 0;
   bool _wasGenerating = false;
   bool _isManualDeleting = false;
+  bool _isFetchingOldMessages = false;
+  double _previousMaxScrollExtent = 0;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
 
     _chatProvider = context.read<ChatProvider>();
     _lastMessageCount = _chatProvider!.messages.length;
@@ -73,6 +76,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     if (widget.initialTitle != null) {
       _loadConversation();
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients || _chatProvider == null) return;
+
+    if (_scrollController.position.pixels <= 100) {
+      final uid = context.read<AuthProvider>().currentUser?.uid;
+      if (uid != null) {
+        _chatProvider!.loadOlderMessages(uid);
+      }
     }
   }
 
@@ -99,9 +113,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       }
     }
 
+    final currentLoadingMore = _chatProvider!.isLoadingMoreMessages;
+    bool justFinishedFetchingOldMessages = false;
+
+    if (currentLoadingMore && !_isFetchingOldMessages) {
+      _isFetchingOldMessages = true;
+      if (_scrollController.hasClients) {
+        _previousMaxScrollExtent = _scrollController.position.maxScrollExtent;
+      }
+    } else if (!currentLoadingMore && _isFetchingOldMessages) {
+      _isFetchingOldMessages = false;
+      justFinishedFetchingOldMessages = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        final extentIncrease = _scrollController.position.maxScrollExtent -
+            _previousMaxScrollExtent;
+        if (extentIncrease > 0) {
+          _scrollController.jumpTo(_scrollController.offset + extentIncrease);
+        }
+      });
+    }
+
     bool shouldScroll = false;
 
-    if (currentMessageCount > _lastMessageCount) {
+    // Only scroll to bottom for new messages, not when loading older ones
+    if (currentMessageCount > _lastMessageCount &&
+        !_isFetchingOldMessages &&
+        !currentLoadingMore &&
+        !justFinishedFetchingOldMessages) {
       shouldScroll = true;
     }
     if (currentGenerating && !_wasGenerating) {
@@ -427,10 +466,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   ),
                   itemCount: messages.length +
                       (chatProvider.isGenerating ? 1 : 0) +
-                      (chatProvider.isLoadingMessages ? 1 : 0),
+                      (chatProvider.isLoadingMoreMessages ? 1 : 0),
                   itemBuilder: (context, index) {
                     // Load more indicator at top
-                    if (index == 0 && chatProvider.isLoadingMessages) {
+                    if (index == 0 && chatProvider.isLoadingMoreMessages) {
                       return const Padding(
                         padding: EdgeInsets.all(16),
                         child: Center(
@@ -444,7 +483,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     }
 
                     final adjustedIndex =
-                        chatProvider.isLoadingMessages ? index - 1 : index;
+                        chatProvider.isLoadingMoreMessages ? index - 1 : index;
 
                     // Typing indicator at bottom
                     if (adjustedIndex == messages.length &&

@@ -148,7 +148,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             Text(
               ' *',
               style: context.textTheme.titleSmall?.copyWith(
-                color: context.isDark ? AppColors.darkError : AppColors.lightError,
+                color:
+                    context.isDark ? AppColors.darkError : AppColors.lightError,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -305,7 +306,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildFieldLabel(context.l10n.dateOfBirthLabel),
+                                  _buildFieldLabel(
+                                      context.l10n.dateOfBirthLabel),
                                   GestureDetector(
                                     onTap: () => _selectDate(context),
                                     child: AbsorbPointer(
@@ -346,50 +348,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         const SizedBox(height: 20),
 
                         // Country & State (Optional)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildFieldLabel(context.l10n.countryLabel),
-                                  context.themedTextField(
-                                    controller: _countryController,
-                                    hint: context.l10n.countryLabel,
-                                    prefixIcon: Icons.public_rounded,
-                                    textCapitalization:
-                                        TextCapitalization.words,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildFieldLabel(context.l10n.stateLabel),
-                                  context.themedTextField(
-                                    controller: _stateController,
-                                    hint: context.l10n.stateLabel,
-                                    prefixIcon: Icons.map_rounded,
-                                    textCapitalization:
-                                        TextCapitalization.words,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        _buildFieldLabel(context.l10n.countryLabel),
+                        context.themedTextField(
+                          controller: _countryController,
+                          hint: context.l10n.countryLabel,
+                          prefixIcon: Icons.public_rounded,
+                          textCapitalization: TextCapitalization.words,
+                        ),
+                        const SizedBox(height: 20),
+
+                        _buildFieldLabel(context.l10n.stateLabel),
+                        context.themedTextField(
+                          controller: _stateController,
+                          hint: context.l10n.stateLabel,
+                          prefixIcon: Icons.map_rounded,
+                          textCapitalization: TextCapitalization.words,
                         ),
                         const SizedBox(height: 32),
 
                         Center(
                           child: context.themedElevatedButton(
                             label: context.l10n.update.toUpperCase(),
-                            onPressed: (viewModel.isSavingProfile || !isFormValid)
-                                ? null
-                                : () => _saveProfile(viewModel),
+                            onPressed:
+                                (viewModel.isSavingProfile || !isFormValid)
+                                    ? null
+                                    : () => _saveProfile(viewModel),
                           ),
                         ),
                         const SizedBox(height: 20),

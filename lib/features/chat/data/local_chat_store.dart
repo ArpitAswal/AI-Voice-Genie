@@ -6,6 +6,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/enums/app_enums.dart';
 import '../domain/local_conversation_record.dart';
 import '../domain/local_message_record.dart';
+import '../domain/conversation_page_cursor.dart';
+import '../domain/message_page_cursor.dart';
 
 /// Local Hive-backed store for conversations and messages.
 ///
@@ -139,6 +141,41 @@ class LocalChatStore {
     });
 
     return records;
+  }
+
+  /// Read a paginated list of conversations from Hive.
+  List<LocalConversationRecord> getConversationPage({
+    required String uid,
+    required int limit,
+    ConversationPageCursor? cursor,
+    String? searchQuery,
+  }) {
+    // Re-use the in-memory sort since we don't have secondary indices yet.
+    var records = _readConversations(uid);
+
+    // Apply search filter if present
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final query = searchQuery.trim().toLowerCase();
+      records = records.where((r) {
+        final title = r.title.toLowerCase();
+        final lastMsg = r.lastMessage.toLowerCase();
+        return title.contains(query) || lastMsg.contains(query);
+      }).toList();
+    }
+
+    // Apply cursor offset
+    if (cursor != null) {
+      final startIndex = records.indexWhere((r) {
+        final rTime = r.lastMessageAt ?? r.createdAt ?? DateTime(0);
+        return rTime == cursor.lastMessageAt &&
+            r.conversationId == cursor.conversationId;
+      });
+      if (startIndex != -1) {
+        records = records.skip(startIndex + 1).toList();
+      }
+    }
+
+    return records.take(limit).toList();
   }
 
   /// Mark a conversation as locally deleted without removing it from Hive yet.
@@ -349,6 +386,44 @@ class LocalChatStore {
     return records;
   }
 
+  /// Read the latest page of messages (newest first in terms of query, but returned oldest-first).
+  /// For the latest page, we actually want the newest N messages.
+  List<LocalMessageRecord> getLatestMessagePage({
+    required String uid,
+    required String conversationId,
+    required int limit,
+  }) {
+    final allMessages = _readMessages(uid, conversationId);
+
+    // We want the *last* N items of the chronologically sorted list
+    // (meaning the newest ones).
+    if (allMessages.length <= limit) return allMessages;
+
+    return allMessages.skip(allMessages.length - limit).toList();
+  }
+
+  /// Read an older page of messages before a given cursor.
+  /// Returned oldest-first.
+  List<LocalMessageRecord> getOlderMessagePage({
+    required String uid,
+    required String conversationId,
+    required MessagePageCursor before,
+    required int limit,
+  }) {
+    final allMessages = _readMessages(uid, conversationId);
+
+    final endIndex = allMessages.indexWhere((m) {
+      return m.timestamp == before.timestamp && m.messageId == before.messageId;
+    });
+
+    if (endIndex <= 0) return []; // None older
+
+    // We want the `limit` items immediately *before* endIndex
+    final startIndex = (endIndex - limit < 0) ? 0 : endIndex - limit;
+
+    return allMessages.sublist(startIndex, endIndex);
+  }
+
   /// Soft-delete all messages belonging to a conversation.
   ///
   /// Called internally during [softDeleteConversation].
@@ -389,14 +464,12 @@ class LocalChatStore {
     if (raw == null) return;
     final record = LocalConversationRecord.fromMap(raw as Map);
     await _conversationsBox.put(
-      key,
-      record
-          .copyWith(
-            syncStatus: SyncStatus.synced,
-            lastSyncedAt: DateTime.now(),
-            localUpdatedAt: DateTime.now(),
-          )
-    );
+        key,
+        record.copyWith(
+          syncStatus: SyncStatus.synced,
+          lastSyncedAt: DateTime.now(),
+          localUpdatedAt: DateTime.now(),
+        ));
   }
 
   /// Update the syncStatus of multiple message records to [SyncStatus.synced].

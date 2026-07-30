@@ -35,88 +35,84 @@ class ConversationHistoryScreen extends StatefulWidget {
 
 class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
-  StreamSubscription<List<ConversationModel>>? _subscription;
-
-  List<ConversationModel> _allConversations = [];
-  List<ConversationModel> _filteredConversations = [];
-  bool _isLoading = true;
-  String _searchQuery = '';
+  final ScrollController _scrollController = ScrollController();
+  Timer? _debounce;
+  bool _showScrollToTop = false;
 
   @override
   void initState() {
     super.initState();
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid != null) {
-      // Use ChatProvider delegate so presentation never touches the repository directly
-      _subscription =
-          context.read<ChatProvider>().watchConversations(uid).listen(
-        (conversations) {
-          if (mounted) {
-            setState(() {
-              _allConversations = conversations;
-              _onSearchChanged(_searchQuery); // Update filtered list
-            });
-          }
-        },
-        onError: (e) => debugPrint('\u26a0\ufe0f watchConversations error: $e'),
-      );
-    }
-    _loadConversations();
+    _scrollController.addListener(_onScroll);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialConversations();
+    });
   }
 
-  Future<void> _loadConversations({bool wait = false}) async {
-    if (mounted) {
-      setState(() => _isLoading = true);
+  void _onScroll() {
+    if (!mounted) return;
+
+    // Pagination trigger
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final uid = context.read<AuthProvider>().currentUser?.uid;
+      if (uid != null) {
+        context.read<ChatProvider>().loadMoreConversations(uid);
+      }
     }
+
+    // FAB visibility
+    if (_scrollController.offset > 300 && !_showScrollToTop) {
+      setState(() => _showScrollToTop = true);
+    } else if (_scrollController.offset <= 300 && _showScrollToTop) {
+      setState(() => _showScrollToTop = false);
+    }
+  }
+
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
+
+  Future<void> _loadInitialConversations({bool wait = false}) async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     // No artificial delay — Hive local data renders instantly
     if (uid == null) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
       return;
     }
 
     try {
-      // Use ChatProvider delegate — keeps Firestore logic out of the widget
       if (wait) {
         await Future.delayed(const Duration(seconds: 2));
         if (!mounted) return;
-        await context.read<ChatProvider>().getConversations(uid);
-      } else {
-        await context.read<ChatProvider>().getConversations(uid);
       }
-      return;
+      await context
+          .read<ChatProvider>()
+          .loadInitialConversations(uid, query: _searchController.text);
     } catch (e) {
       if (mounted) {
         context.showError('something_went_wrong');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }
 
   void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-      if (query.isEmpty) {
-        _filteredConversations = _allConversations;
-      } else {
-        _filteredConversations = _allConversations.where((c) {
-          return c.title.toLowerCase().contains(query.toLowerCase()) ||
-              context.l10n
-                  .translate(c.lastMessage)
-                  .toLowerCase()
-                  .contains(query.toLowerCase());
-        }).toList();
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      final uid = context.read<AuthProvider>().currentUser?.uid;
+      if (uid != null && mounted) {
+        context
+            .read<ChatProvider>()
+            .loadInitialConversations(uid, query: query);
       }
     });
   }
 
   Future<void> _refresh() async {
-    await _loadConversations(wait: true);
+    await _loadInitialConversations(wait: true);
   }
 
   Future<void> _confirmDeleteAll() async {
@@ -187,7 +183,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
       if (!mounted) return;
       await context.read<ChatProvider>().deleteAllConversations(uid);
       // Reload from Hive — list will be empty since all are soft-deleted
-      await _loadConversations();
+      await _loadInitialConversations();
 
       bool isOffline = false;
       try {
@@ -218,14 +214,28 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _subscription?.cancel();
+    _scrollController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final isTablet = context.isTablet;
+    final chatProvider = context.watch<ChatProvider>();
+    final conversations = chatProvider.visibleConversations;
+    final isSearching = chatProvider.searchQuery != null &&
+        chatProvider.searchQuery!.isNotEmpty;
+
     return Scaffold(
+      floatingActionButton: _showScrollToTop
+          ? FloatingActionButton(
+              onPressed: _scrollToTop,
+              mini: true,
+              backgroundColor: context.primaryColor,
+              child: const Icon(Icons.arrow_upward, color: Colors.white),
+            )
+          : null,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refresh,
@@ -247,7 +257,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                           child: Text(context.l10n.conversationHistory,
                               style: Theme.of(context).textTheme.displayMedium),
                         ),
-                        if (_allConversations.isNotEmpty) ...[
+                        if (conversations.isNotEmpty || isSearching) ...[
                           SizedBox(
                             height: 28,
                             child: IconButton(
@@ -282,7 +292,9 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                       padding:
                           EdgeInsets.symmetric(vertical: isTablet ? 24 : 16),
                       child: context.themedTextField(
-                        enabled: !_isLoading,
+                        enabled: !chatProvider.isLoadingMoreConversations &&
+                                conversations.isNotEmpty ||
+                            isSearching,
                         onChanged: _onSearchChanged,
                         hint: context.l10n.searchPlaceholder,
                         controller: _searchController,
@@ -295,17 +307,18 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
               // Scrollable Content
               Expanded(
                 child: CustomScrollView(
+                  controller: _scrollController,
                   slivers: [
-                    if (_isLoading)
+                    if (conversations.isEmpty &&
+                        !isSearching &&
+                        chatProvider.isLoadingMoreConversations)
                       _buildShimmerList()
-                    else if (_filteredConversations.isEmpty &&
-                        _searchQuery.isEmpty)
+                    else if (conversations.isEmpty && !isSearching)
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: _EmptyHistory(isTablet: isTablet),
                       )
-                    else if (_filteredConversations.isEmpty &&
-                        _searchQuery.isNotEmpty)
+                    else if (conversations.isEmpty && isSearching)
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: Column(
@@ -327,14 +340,23 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                               ),
                             ),
                             Text(
-                              context.l10n.noConversationFound(_searchQuery),
+                              context.l10n.noConversationFound(
+                                  chatProvider.searchQuery ?? ''),
                               style: context.textTheme.bodyLarge,
                             )
                           ],
                         ),
                       )
                     else
-                      ..._buildGroupedLists(),
+                      ..._buildGroupedLists(conversations),
+                    if (chatProvider.isLoadingMoreConversations &&
+                        conversations.isNotEmpty)
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -345,7 +367,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     );
   }
 
-  List<Widget> _buildGroupedLists() {
+  List<Widget> _buildGroupedLists(List<ConversationModel> conversations) {
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
     final yesterdayStr =
@@ -355,7 +377,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     final yesterday = <ConversationModel>[];
     final older = <ConversationModel>[];
 
-    for (final c in _filteredConversations) {
+    for (final c in conversations) {
       final date = c.lastMessageAt ?? c.createdAt ?? now;
       final dateStr = DateFormat('yyyy-MM-dd').format(date);
 
@@ -429,7 +451,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                   );
                   // Reload list when a conversation was deleted inside the detail screen
                   if (result == true && mounted) {
-                    _loadConversations();
+                    _loadInitialConversations();
                   }
                 },
               ),

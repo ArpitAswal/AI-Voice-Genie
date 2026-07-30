@@ -8,14 +8,18 @@ import '../../../../core/constants/firebase_collections.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/services/storage_service.dart';
 import '../domain/chat_outbox_task.dart';
+import '../domain/chat_page.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
+import '../domain/conversation_page_cursor.dart';
 import '../domain/local_conversation_record.dart';
 import '../domain/local_message_record.dart';
 import '../domain/message_model.dart';
+import '../domain/message_page_cursor.dart';
 import 'chat_outbox_store.dart';
 import 'chat_sync_service.dart';
 import 'local_chat_store.dart';
+import 'remote_chat_store.dart';
 
 /// Concrete implementation of ChatRepository.
 ///
@@ -598,6 +602,274 @@ class ChatRepositoryImpl implements ChatRepository {
 
     debugPrint(
         '🗑️ ChatRepositoryImpl: soft-deleted all conversations for uid=$uid, queued remote delete-all');
+  }
+
+  // ── Pagination Operations ──────────────────────────────────────────────────
+
+  @override
+  Future<ChatPage<ConversationModel>> getConversationPage({
+    required String uid,
+    required int limit,
+    ConversationPageCursor? cursor,
+    String? searchQuery,
+  }) async {
+    final localRecords = LocalChatStore.instance.getConversationPage(
+      uid: uid,
+      limit: limit,
+      cursor: cursor,
+      searchQuery: searchQuery,
+    );
+
+    final conversations = localRecords.map(_toConversationModel).toList();
+    final hasMore = conversations.length == limit;
+    final nextCursor = conversations.isEmpty
+        ? null
+        : ConversationPageCursor(
+            lastMessageAt: conversations.last.lastMessageAt ??
+                conversations.last.createdAt ??
+                DateTime(0),
+            conversationId: conversations.last.id,
+          );
+
+    final page = ChatPage<ConversationModel>(
+      items: conversations,
+      hasMore: hasMore,
+      nextCursor: nextCursor,
+    );
+
+    if (searchQuery == null || searchQuery.trim().isEmpty) {
+      _hydrateConversationPage(uid, limit, cursor);
+    }
+
+    return page;
+  }
+
+  Future<void> _hydrateConversationPage(
+      String uid, int limit, ConversationPageCursor? cursor) async {
+    try {
+      DocumentSnapshot? startAfterDoc;
+      if (cursor != null) {
+        final doc = await _firestore
+            .doc(
+                FirebaseCollections.conversationDoc(uid, cursor.conversationId))
+            .get();
+        if (doc.exists) startAfterDoc = doc;
+      }
+
+      final snapshot = await RemoteChatStore.instance.fetchConversationPage(
+        uid: uid,
+        limit: limit,
+        startAfterDocument: startAfterDoc,
+      );
+
+      for (final doc in snapshot.docs) {
+        final remoteConv = ConversationModel.fromFirestore(
+            doc.id, doc.data() as Map<String, dynamic>);
+        final localKey = '${uid}_${remoteConv.id}';
+        final rawLocal = LocalChatStore.instance.conversationsBox.get(localKey);
+
+        if (rawLocal != null) {
+          try {
+            final localRecord =
+                LocalConversationRecord.fromMap(rawLocal as Map);
+            if (localRecord.syncStatus == SyncStatus.pendingCreate ||
+                localRecord.syncStatus == SyncStatus.pendingUpdate ||
+                localRecord.syncStatus == SyncStatus.pendingDelete ||
+                localRecord.isDeleted) {
+              continue;
+            }
+          } catch (_) {}
+        }
+
+        await LocalChatStore.instance.saveConversation(
+          LocalConversationRecord(
+            uid: uid,
+            conversationId: remoteConv.id,
+            title: remoteConv.title,
+            lastMessage: remoteConv.lastMessage,
+            lastMessageAt: remoteConv.lastMessageAt,
+            createdAt: remoteConv.createdAt,
+            capability: remoteConv.capability,
+            lastProvider: remoteConv.lastProvider,
+            syncStatus: SyncStatus.synced,
+            localUpdatedAt: DateTime.now(),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ _hydrateConversationPage error: $e');
+    }
+  }
+
+  @override
+  Future<ChatPage<MessageModel>> getLatestMessagePage({
+    required String uid,
+    required String conversationId,
+    required int limit,
+  }) async {
+    final localRecords = LocalChatStore.instance.getLatestMessagePage(
+      uid: uid,
+      conversationId: conversationId,
+      limit: limit,
+    );
+
+    final messages = localRecords.map((r) => r.toMessageModel()).toList();
+    final hasMore = messages.length == limit;
+    final nextCursor = messages.isEmpty
+        ? null
+        : MessagePageCursor(
+            timestamp: messages.first.timestamp,
+            messageId: messages.first.id,
+          );
+
+    _hydrateLatestMessagePage(uid, conversationId, limit);
+
+    return ChatPage<MessageModel>(
+      items: messages,
+      hasMore: hasMore,
+      nextCursor: nextCursor,
+    );
+  }
+
+  Future<void> _hydrateLatestMessagePage(
+      String uid, String conversationId, int limit) async {
+    try {
+      final snapshot = await RemoteChatStore.instance.fetchLatestMessagePage(
+        uid: uid,
+        conversationId: conversationId,
+        limit: limit,
+      );
+      _mergeMessagesSnapshot(uid, conversationId, snapshot);
+    } catch (e) {
+      debugPrint('⚠️ _hydrateLatestMessagePage error: $e');
+    }
+  }
+
+  @override
+  Future<ChatPage<MessageModel>> getOlderMessagePage({
+    required String uid,
+    required String conversationId,
+    required MessagePageCursor before,
+    required int limit,
+  }) async {
+    final localRecords = LocalChatStore.instance.getOlderMessagePage(
+      uid: uid,
+      conversationId: conversationId,
+      before: before,
+      limit: limit,
+    );
+
+    final messages = localRecords.map((r) => r.toMessageModel()).toList();
+    final hasMore = messages.length == limit;
+    final nextCursor = messages.isEmpty
+        ? null
+        : MessagePageCursor(
+            timestamp: messages.first.timestamp,
+            messageId: messages.first.id,
+          );
+
+    if (messages.length < limit) {
+      _hydrateOlderMessagePage(uid, conversationId, limit, before);
+    }
+
+    return ChatPage<MessageModel>(
+      items: messages,
+      hasMore: hasMore,
+      nextCursor: nextCursor,
+    );
+  }
+
+  Future<void> _hydrateOlderMessagePage(String uid, String conversationId,
+      int limit, MessagePageCursor before) async {
+    try {
+      DocumentSnapshot? startAfterDoc;
+      try {
+        var userDoc = await _firestore
+            .doc(FirebaseCollections.messageDoc(
+                uid, conversationId, 'UserRef-${before.messageId}'))
+            .get();
+        if (userDoc.exists) {
+          startAfterDoc = userDoc;
+        } else {
+          var aiDoc = await _firestore
+              .doc(FirebaseCollections.messageDoc(
+                  uid, conversationId, 'AIRef-${before.messageId}'))
+              .get();
+          if (aiDoc.exists) startAfterDoc = aiDoc;
+        }
+      } catch (_) {}
+
+      final snapshot = await RemoteChatStore.instance.fetchOlderMessagePage(
+        uid: uid,
+        conversationId: conversationId,
+        limit: limit,
+        startAfterDocument: startAfterDoc,
+      );
+      _mergeMessagesSnapshot(uid, conversationId, snapshot);
+    } catch (e) {
+      debugPrint('⚠️ _hydrateOlderMessagePage error: $e');
+    }
+  }
+
+  Future<void> _mergeMessagesSnapshot(
+      String uid, String conversationId, QuerySnapshot snapshot) async {
+    final now = DateTime.now();
+    final recordsToSave = <LocalMessageRecord>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) continue;
+
+      final docId = doc.id;
+      final messageId =
+          docId.replaceFirst('UserRef-', '').replaceFirst('AIRef-', '');
+
+      final message = MessageModel.fromFirestore(docId, data);
+
+      final localKey = '${uid}_${conversationId}_$messageId';
+      final rawLocal = LocalChatStore.instance.messagesBox.get(localKey);
+      if (rawLocal != null) {
+        try {
+          final localRecord = LocalMessageRecord.fromMap(rawLocal as Map);
+          if (localRecord.syncStatus == SyncStatus.pendingCreate ||
+              localRecord.syncStatus == SyncStatus.pendingUpdate) {
+            continue;
+          }
+        } catch (_) {}
+      }
+
+      recordsToSave.add(
+        LocalMessageRecord.fromMessageModel(
+          message,
+          uid: uid,
+          conversationId: conversationId,
+          syncStatus: SyncStatus.synced,
+        ).copyWith(remoteUpdatedAt: now),
+      );
+    }
+
+    if (recordsToSave.isNotEmpty) {
+      await LocalChatStore.instance.saveMessagesBatch(recordsToSave);
+    }
+  }
+
+  @override
+  Stream<List<MessageModel>> watchVisibleMessages({
+    required String uid,
+    required String conversationId,
+    required int limit,
+  }) {
+    return LocalChatStore.instance
+        .watchMessages(uid, conversationId)
+        .map((records) {
+      if (records.length <= limit) {
+        return records.map((r) => r.toMessageModel()).toList();
+      }
+      return records
+          .skip(records.length - limit)
+          .map((r) => r.toMessageModel())
+          .toList();
+    });
   }
 
   // ── Conversion Helpers ───────────────────────────────────────────────────────

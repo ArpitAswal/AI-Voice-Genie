@@ -18,7 +18,6 @@ class ProfileHeader extends StatelessWidget {
         : '';
     final email =
         (user?.email.trim().isNotEmpty ?? false) ? user!.email.trim() : '';
-    final dob = user?.dateOfBirth?.toDateString ?? '';
     final create =
         (user?.createdAt != null && user!.createdAt!.toDateString.isNotEmpty)
             ? user!.createdAt!.toDateString

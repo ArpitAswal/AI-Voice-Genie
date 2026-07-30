@@ -130,11 +130,12 @@ class ChatSyncService {
   /// Called by ChatProvider when a conversation is opened. Remote message
   /// changes (e.g., from another device) flow into Hive and automatically
   /// update the UI via LocalChatStore.watchMessages().
-  void watchOpenConversation(String uid, String conversationId) {
+  void watchOpenConversation(String uid, String conversationId,
+      {int limit = 60}) {
     // Avoid duplicate subscriptions
     if (_messageStreamSubs.containsKey(conversationId)) return;
 
-    final sub = _remote.watchMessages(uid, conversationId).listen(
+    final sub = _remote.watchMessages(uid, conversationId, limit: limit).listen(
           (snapshot) => _mergeRemoteMessages(uid, conversationId, snapshot),
           onError: (e) => debugPrint(
               '⚠️ ChatSyncService: message stream error for $conversationId: $e'),
@@ -309,10 +310,11 @@ class ChatSyncService {
 
     // Mark local conversation as synced after Firestore confirms
     await _localStore.markConversationSynced(uid, conversationId);
-    
+
     // Mark both messages as synced so their SyncStatus becomes synced
-    await _localStore.markMessagesSynced(uid, conversationId, [userMessageId, aiMessageId]);
-    
+    await _localStore
+        .markMessagesSynced(uid, conversationId, [userMessageId, aiMessageId]);
+
     await _outboxStore.markSucceeded(task.operationId);
 
     debugPrint('✅ ChatSyncService: upserted message pair for $conversationId');

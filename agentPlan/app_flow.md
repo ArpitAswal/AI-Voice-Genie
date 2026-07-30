@@ -269,4 +269,33 @@ User performs Chat Mutation (Create / Delete / Title Edit) while Offline
        - Executes RemoteChatStore Firestore API call
        - On Success: Deletes task from outbox & updates LocalChatStore syncStatus = synced
        - On Failure: Retries on next connection event with exponential backoff
+
+---
+
+## 12. Cursor-Based Pagination & Hydration Flow
+
+### A. Chat History Pagination (Conversations)
+```
+ChatHistoryScreen -> User scrolls to bottom (maxScrollExtent - 200)
+  -> ChatProvider.loadMoreConversations()
+  -> ChatRepositoryImpl.getConversationPage(limit, cursor, searchQuery)
+  -> LocalChatStore.getConversationPage()
+       - Scans local Hive box for conversations matching the search query
+       - Skips items up to the cursor (timestamp + id)
+       - Returns the next page of up to 15 items instantly
+  -> UI adds items to `visibleConversations`
+  Note: Artificial 300ms delay is injected so the loading spinner is visible, preventing runaway fast-scrolls.
+```
+
+### B. Chat Detail Pagination (Messages)
+```
+ChatDetailScreen -> User scrolls up to read older history
+  -> ChatProvider.loadOlderMessages()
+  -> ChatRepositoryImpl.getOlderMessagePage(limit, cursor)
+  -> LocalChatStore.getMessagePage()
+       - Returns next 20 older messages from local Hive memory
+  -> Background Hydration:
+       - ChatRepositoryImpl simultaneously calls RemoteChatStore.getOlderMessages()
+       - If Firestore has older messages not in Hive, they are fetched and merged into LocalChatStore
+       - The UI stream reactively pushes these newly downloaded older messages seamlessly
 ```

@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'chat_page.dart';
 import 'conversation_model.dart';
+import 'conversation_page_cursor.dart';
 import 'message_model.dart';
+import 'message_page_cursor.dart';
 
 /// Abstract repository for chat persistence operations.
 ///
@@ -58,6 +61,36 @@ abstract class ChatRepository {
   /// Permanently delete all conversations and messages from Firestore for a given user,
   /// and wipe all conversation Hive caches.
   Future<void> deleteAllConversations(String uid);
+
+  // ── Pagination Operations ──────────────────────────────────────────────────
+
+  Future<ChatPage<ConversationModel>> getConversationPage({
+    required String uid,
+    required int limit,
+    ConversationPageCursor? cursor,
+    String? searchQuery,
+  });
+
+  Future<ChatPage<MessageModel>> getLatestMessagePage({
+    required String uid,
+    required String conversationId,
+    required int limit,
+  });
+
+  Future<ChatPage<MessageModel>> getOlderMessagePage({
+    required String uid,
+    required String conversationId,
+    required MessagePageCursor before,
+    required int limit,
+  });
+
+  /// Stream of the currently visible messages (used after pagination is initialized).
+  /// This takes the first N messages and listens for changes (to capture real-time incoming).
+  Stream<List<MessageModel>> watchVisibleMessages({
+    required String uid,
+    required String conversationId,
+    required int limit, // typically number of currently visible items
+  });
 
   // ── Offline-First Streams ─────────────────────────────────────────────────
 

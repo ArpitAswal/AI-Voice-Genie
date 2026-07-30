@@ -22,7 +22,9 @@ import '../data/local_chat_store.dart';
 import '../domain/chat_attachment.dart';
 import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
+import '../domain/conversation_page_cursor.dart';
 import '../domain/message_model.dart';
+import '../domain/message_page_cursor.dart';
 
 /// State manager for the chat feature.
 ///
@@ -64,8 +66,17 @@ class ChatProvider extends ChangeNotifier {
   final List<MessageModel> _messages = [];
   bool _isGenerating = false;
   bool _isLoadingMessages = false;
+  bool _isLoadingMoreMessages = false;
+  bool _hasMoreMessages = true;
+  MessagePageCursor? _messageCursor;
   String? _errorMessage;
   int _conversationHistoryVersion = 0;
+
+  List<ConversationModel> _visibleConversations = [];
+  bool _isLoadingMoreConversations = false;
+  bool _hasMoreConversations = true;
+  ConversationPageCursor? _conversationCursor;
+  String? _searchQuery;
 
   /// Active subscription to the Hive messages stream for the current conversation.
   /// Cancelled whenever a new conversation is loaded or the provider is disposed.
@@ -76,18 +87,22 @@ class ChatProvider extends ChangeNotifier {
   List<MessageModel> get messages => List.unmodifiable(_messages);
   bool get isGenerating => _isGenerating;
   bool get isLoadingMessages => _isLoadingMessages;
+  bool get isLoadingMoreMessages => _isLoadingMoreMessages;
+  bool get hasMoreMessages => _hasMoreMessages;
   String? get errorMessage => _errorMessage;
   bool get hasActiveConversation => _activeConversation != null;
   int get conversationHistoryVersion => _conversationHistoryVersion;
+
+  List<ConversationModel> get visibleConversations =>
+      List.unmodifiable(_visibleConversations);
+  bool get isLoadingMoreConversations => _isLoadingMoreConversations;
+  bool get hasMoreConversations => _hasMoreConversations;
+  String? get searchQuery => _searchQuery;
 
   // ── Load Conversation ──────────────────────────────────────────────────────
 
   /// Load an existing conversation by ID.
   ///
-  /// Strategy:
-  ///   1. Load from Hive cache instantly (fast path)
-  ///   2. Fetch ALL messages from Firestore in background (fresh data)
-  ///   3. Firestore result replaces cache — no pagination needed.
   Future<void> loadConversation({
     required String uid,
     required String conversationId,
@@ -97,6 +112,8 @@ class ChatProvider extends ChangeNotifier {
     _errorMessage = null;
     _activeConversation = null;
     _messages.clear(); // Synchronously clear old messages immediately
+    _hasMoreMessages = true;
+    _messageCursor = null;
     notifyListeners();
 
     // Cancel any existing message stream before subscribing to a new conversation
@@ -113,11 +130,17 @@ class ChatProvider extends ChangeNotifier {
         _activeConversation = localConv.toConversationModel();
       }
 
-      // 2. We don't manually load messages here.
-      // _subscribeToMessages will immediately yield the current Hive state.
+      // 2. Fetch latest page of messages
+      final page = await _repository.getLatestMessagePage(
+        uid: uid,
+        conversationId: conversationId,
+        limit: AppConstants.initialMessageLoadCount,
+      );
+      _messages.addAll(page.items);
+      _hasMoreMessages = page.hasMore;
+      _messageCursor = page.nextCursor as MessagePageCursor?;
 
-      debugPrint(
-          "🔄 ChatProvider.loadConversation loaded completely from local DB");
+      debugPrint("🔄 ChatProvider.loadConversation loaded initial page");
     } catch (e) {
       debugPrint('⚠️ ChatProvider.loadConversation error: $e');
       _errorMessage = 'something_went_wrong';
@@ -152,15 +175,16 @@ class ChatProvider extends ChangeNotifier {
   void _subscribeToMessages(String uid, String conversationId) {
     _messagesSubscription?.cancel();
 
-    // Subscribe to the Hive messages stream so future local writes and
-    // remote sync merges automatically update the UI without a reload.
-    // The very first emission is the current synchronous state of the Hive cache.
-    var stream =
-        _repository.watchMessages(uid: uid, conversationId: conversationId);
+    var stream = _repository.watchVisibleMessages(
+      uid: uid,
+      conversationId: conversationId,
+      limit: _messages.length < AppConstants.initialMessageLoadCount
+          ? AppConstants.initialMessageLoadCount
+          : _messages.length,
+    );
 
     _messagesSubscription = stream.listen(
       (messages) {
-        // Only update if messages actually changed to avoid redundant redraws
         if (!_isGenerating) {
           _messages
             ..clear()
@@ -168,13 +192,53 @@ class ChatProvider extends ChangeNotifier {
           notifyListeners();
         }
       },
-      onError: (e) =>
-          debugPrint('\u26a0\ufe0f ChatProvider.watchMessages error: $e'),
+      onError: (e) => debugPrint('⚠️ ChatProvider.watchMessages error: $e'),
     );
 
-    // Tell ChatSyncService to activate the Firestore message stream for this
-    // conversation so that changes from other devices arrive in real time
-    ChatSyncService.instance.watchOpenConversation(uid, conversationId);
+    ChatSyncService.instance.watchOpenConversation(
+      uid,
+      conversationId,
+      limit: _messages.length < (AppConstants.initialMessageLoadCount * 2)
+          ? (AppConstants.initialMessageLoadCount * 2)
+          : _messages.length + AppConstants.initialMessageLoadCount, // buffer
+    );
+  }
+
+  Future<void> loadOlderMessages(String uid) async {
+    if (_activeConversation == null ||
+        _isLoadingMoreMessages ||
+        !_hasMoreMessages ||
+        _messageCursor == null) {
+      return;
+    }
+
+    _isLoadingMoreMessages = true;
+    notifyListeners();
+
+    try {
+      // Artificial delay so UI can show the loading spinner for local reads
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final page = await _repository.getOlderMessagePage(
+        uid: uid,
+        conversationId: _activeConversation!.id,
+        before: _messageCursor!,
+        limit: AppConstants.messagePageSize,
+      );
+
+      // Prepend older messages
+      _messages.insertAll(0, page.items);
+      _hasMoreMessages = page.hasMore;
+      _messageCursor = page.nextCursor as MessagePageCursor?;
+
+      // Recreate subscription with new limit so real-time updates don't truncate older messages
+      _subscribeToMessages(uid, _activeConversation!.id);
+    } catch (e) {
+      debugPrint('⚠️ loadOlderMessages error: $e');
+    } finally {
+      _isLoadingMoreMessages = false;
+      notifyListeners();
+    }
   }
 
   /// Closes the currently active conversation and stops listening to real-time message updates.
@@ -763,19 +827,85 @@ class ChatProvider extends ChangeNotifier {
     }
     return result;
   }
+  // ── Conversation History Pagination ──────────────────────────────────────
+
+  StreamSubscription<dynamic>? _historySubscription;
+
+  Future<void> loadInitialConversations(String uid, {String? query}) async {
+    _searchQuery = query;
+    _isLoadingMoreConversations = true;
+    _conversationCursor = null;
+    notifyListeners();
+
+    try {
+      final page = await _repository.getConversationPage(
+        uid: uid,
+        limit: AppConstants.conversationPageSize,
+        searchQuery: query,
+      );
+      _visibleConversations = page.items;
+      _hasMoreConversations = page.hasMore;
+      _conversationCursor = page.nextCursor as ConversationPageCursor?;
+    } catch (e) {
+      debugPrint('⚠️ loadInitialConversations error: $e');
+    } finally {
+      _isLoadingMoreConversations = false;
+      notifyListeners();
+    }
+
+    _subscribeToHistory(uid);
+  }
+
+  Future<void> loadMoreConversations(String uid) async {
+    if (_isLoadingMoreConversations || !_hasMoreConversations) return;
+
+    _isLoadingMoreConversations = true;
+    notifyListeners();
+
+    try {
+      // Artificial delay to prevent instant runaway loads on fast scrolls
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final page = await _repository.getConversationPage(
+        uid: uid,
+        limit: AppConstants.conversationPageSize,
+        cursor: _conversationCursor,
+        searchQuery: _searchQuery,
+      );
+      _visibleConversations.addAll(page.items);
+      _hasMoreConversations = page.hasMore;
+      _conversationCursor = page.nextCursor as ConversationPageCursor?;
+    } catch (e) {
+      debugPrint('⚠️ loadMoreConversations error: $e');
+    } finally {
+      _isLoadingMoreConversations = false;
+      notifyListeners();
+    }
+
+    _subscribeToHistory(uid);
+  }
+
+  void _subscribeToHistory(String uid) {
+    _historySubscription?.cancel();
+    _historySubscription =
+        LocalChatStore.instance.conversationsBox.watch().listen((_) async {
+      // Refresh visible window from Hive when something changes locally
+      final currentLimit = _visibleConversations.isEmpty
+          ? AppConstants.conversationPageSize
+          : _visibleConversations.length;
+      final page = await _repository.getConversationPage(
+        uid: uid,
+        limit: currentLimit,
+        searchQuery: _searchQuery,
+      );
+      _visibleConversations = page.items;
+      notifyListeners();
+    });
+  }
+
   // ── Conversation History Delegates ─────────────────────────────────────────
   // These methods expose repository calls through ChatProvider so that
   // presentation widgets never touch the repository or data stores directly.
-
-  /// Returns a real-time stream of all non-deleted conversations for [uid],
-  /// sourced from the Hive local store. Delegates to [_repository].
-  Stream<List<ConversationModel>> watchConversations(String uid) =>
-      _repository.watchConversations(uid);
-
-  /// Fetches conversations from Firestore, merges into Hive, and returns
-  /// the local list. Delegates to [_repository].
-  Future<List<ConversationModel>> getConversations(String uid) =>
-      _repository.getConversations(uid);
 
   /// Soft-deletes all conversations locally (instant UI clear), then queues
   /// Firestore deletes in the background. Delegates to [_repository].
