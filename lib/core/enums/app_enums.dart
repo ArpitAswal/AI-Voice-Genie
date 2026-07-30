@@ -446,19 +446,20 @@ enum VisionDetailLevel {
 
 /// Represents the user's preferred AI response length (max output tokens).
 enum ResponseLength {
-  short(250, 'Short', 'Good for quick and simple answers.'),
-  balanced(1000, 'Balanced',
+  short(250, 1000, 'Short', 'Good for quick and simple answers.'),
+  balanced(1000, 4000, 'Balanced',
       'Best for standard conversations and general-purpose chat.'),
-  detailed(2048, 'Detailed',
+  detailed(2048, 8000, 'Detailed',
       'Best for long-form content, analyzing documents or generating code.'),
-  maximum(4096, 'Maximum',
+  maximum(4096, 16000, 'Maximum',
       'Ideal for extensive research articles or generating large code files.');
 
   final int maxTokens;
+  final int geminiMaxTokens;
   final String displayName;
   final String description;
 
-  const ResponseLength(this.maxTokens, this.displayName, this.description);
+  const ResponseLength(this.maxTokens, this.geminiMaxTokens, this.displayName, this.description);
 
   static ResponseLength fromValue(int value) {
     return ResponseLength.values.firstWhere(

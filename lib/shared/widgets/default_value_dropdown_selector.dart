@@ -258,7 +258,7 @@ class ResponseLengthSelector extends StatelessWidget {
       options: ResponseLength.values,
       onChanged: onChanged,
       getTitle: (length) => length.displayName,
-      getTitleSuffix: (length) => "(${length.maxTokens})",
+      getTitleSuffix: (length) => "(${length.maxTokens} / Gemini: ${length.geminiMaxTokens})",
       getSubtitle: (length) => length.description,
     );
   }

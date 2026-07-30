@@ -594,17 +594,15 @@ class CustomConversationCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              conversation.lastMessage.isEmpty
-                  ? context.l10n.startedShort
-                  : context.l10n.translate(conversation.lastMessage),
-              style: context.textTheme.bodyMedium?.copyWith(
-                height: 1.4,
+            if (conversation.lastMessage.isNotEmpty) ...[
+              Text(
+                conversation.lastMessage,
+                style: context.textTheme.bodyMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
+              const SizedBox(height: 8)
+            ],
             Row(
               children: [
                 modelBadge,

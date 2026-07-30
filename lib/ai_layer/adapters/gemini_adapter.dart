@@ -70,13 +70,18 @@ class GeminiAdapter extends AiProviderAdapter {
         },
         'contents': contents,
         'generationConfig': {
-          'maxOutputTokens': request.responseLength.maxTokens,
+          'maxOutputTokens': request.responseLength.geminiMaxTokens,
           'temperature': 0.7,
         },
       };
 
-      debugPrint(
-          '📤 Gemini Request (Text Generation): ${jsonEncode(requestBody)}');
+      debugPrint('📤 Gemini Request (Text Generation): ${jsonEncode({
+            'model': AppConstants.geminiTextModel,
+            'message_count': contents.length,
+            'maxOutputTokens': request.responseLength.geminiMaxTokens,
+            'prompt': request.prompt,
+            // We omit systemInstruction and full history to prevent terminal truncation
+          })}');
 
       final response = await _post(
         model: AppConstants.geminiTextModel,
@@ -97,8 +102,11 @@ class GeminiAdapter extends AiProviderAdapter {
 
       final inputTokens =
           data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
-      final outputTokens =
+      final candidatesTokens =
           data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
+      final thoughtsTokens =
+          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
+      final outputTokens = candidatesTokens + thoughtsTokens;
       final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 
@@ -196,6 +204,15 @@ class GeminiAdapter extends AiProviderAdapter {
       debugPrint('📥 Gemini: Image received, mimeType=$mimeType, '
           'base64Length=${base64Image.length}');
 
+      final inputTokens =
+          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
+      final candidatesTokens =
+          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
+      final thoughtsTokens =
+          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
+      final outputTokens = candidatesTokens + thoughtsTokens;
+      final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
+
       stopwatch.stop();
       // Wrap the single base64 image in an AiImageData list for API consistency with OpenAI
       return AiResponse.imageBase64(
@@ -204,6 +221,9 @@ class GeminiAdapter extends AiProviderAdapter {
         responseTimeMs: stopwatch.elapsedMilliseconds,
         imageBase64: base64Image,
         generatedImages: [AiImageData(b64Json: base64Image)],
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
+        tokenCount: tokenCount,
       );
     } on AiException {
       rethrow;
@@ -256,17 +276,17 @@ class GeminiAdapter extends AiProviderAdapter {
           }
         ],
         'generationConfig': {
-          'maxOutputTokens': request.responseLength.maxTokens,
+          'maxOutputTokens': request.responseLength.geminiMaxTokens,
           'temperature': 0.4,
         },
       };
 
       debugPrint('📤 Gemini Request (Image Analysis): ${jsonEncode({
             'model': AppConstants.geminiVisionModel,
-            'systemInstruction': AppConstants.aiVisionSystemInstruction,
-            'prompt': request.prompt,
             'image_count': request.imageBytes?.length ?? 0,
             'mimeType': request.imageMimeType,
+            'maxOutputTokens': request.responseLength.geminiMaxTokens,
+            'prompt': request.prompt,
           })}');
 
       final response = await _post(
@@ -281,8 +301,11 @@ class GeminiAdapter extends AiProviderAdapter {
       final text = _extractTextFromResponse(data);
       final inputTokens =
           data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
-      final outputTokens =
+      final candidatesTokens =
           data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
+      final thoughtsTokens =
+          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
+      final outputTokens = candidatesTokens + thoughtsTokens;
       final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 
@@ -349,17 +372,17 @@ class GeminiAdapter extends AiProviderAdapter {
           }
         ],
         'generationConfig': {
-          'maxOutputTokens': request.responseLength.maxTokens,
+          'maxOutputTokens': request.responseLength.geminiMaxTokens,
           'temperature': 0.3,
         },
       };
 
       debugPrint('📤 Gemini Request (PDF Parsing): ${jsonEncode({
             'model': AppConstants.geminiVisionModel,
-            'systemInstruction': AppConstants.aiPdfSystemInstruction,
-            'prompt': request.prompt,
             'pdf_count': request.pdfBytes?.length ?? 0,
             'pdf_names': request.pdfNames,
+            'maxOutputTokens': request.responseLength.geminiMaxTokens,
+            'prompt': request.prompt,
           })}');
 
       // Use vision model for PDF (it has the multimodal context window)
@@ -375,8 +398,11 @@ class GeminiAdapter extends AiProviderAdapter {
       final text = _extractTextFromResponse(data);
       final inputTokens =
           data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
-      final outputTokens =
+      final candidatesTokens =
           data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
+      final thoughtsTokens =
+          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
+      final outputTokens = candidatesTokens + thoughtsTokens;
       final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 

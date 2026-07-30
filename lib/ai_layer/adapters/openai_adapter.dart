@@ -55,9 +55,9 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       final requestBody = {
         'model': AppConstants.openAiTextModel,
-        'messages': messages,
         'max_tokens': request.responseLength.maxTokens,
         'temperature': 0.7,
+        'messages': messages,
       };
 
       debugPrint(
@@ -118,11 +118,12 @@ class OpenAiAdapter extends AiProviderAdapter {
     try {
       final requestBody = {
         'model': AppConstants.openAiImageGenModel,
-        'prompt': request.prompt,
         'n': request.imageCount ?? 1,
         'size': request.imageSize?.apiValue ?? AiImageSize.square.apiValue,
         'quality': request.imageQuality?.name ?? ImageQuality.low.name,
-        'background': request.imageBackground?.name ?? ImageGenerateBackground.auto
+        'background':
+            request.imageBackground?.name ?? ImageGenerateBackground.auto,
+        'prompt': request.prompt,
       };
       debugPrint(
           '📤 OpenAI Request (Image Generation): ${jsonEncode(requestBody)}');
@@ -171,7 +172,8 @@ class OpenAiAdapter extends AiProviderAdapter {
       final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
       final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
 
-      debugPrint('📥 OpenAI Response (Image Generation): ${jsonEncode(logData)}');
+      debugPrint(
+          '📥 OpenAI Response (Image Generation): ${jsonEncode(logData)}');
       // Store all the valid response attributes that will be returned by image generations
       return AiResponse.imageBase64(
         modelUsed: AiProviderId.openAi,
@@ -226,6 +228,8 @@ class OpenAiAdapter extends AiProviderAdapter {
       final requestBody = {
         // gpt-4o natively supports multi-image vision
         'model': AppConstants.openAiVisionModel,
+        'max_tokens': request.responseLength.maxTokens,
+        'temperature': 0.4,
         'messages': [
           {
             'role': 'system',
@@ -236,8 +240,6 @@ class OpenAiAdapter extends AiProviderAdapter {
             'content': contentParts,
           },
         ],
-        'max_tokens': request.responseLength.maxTokens,
-        'temperature': 0.4,
       };
 
       debugPrint(
@@ -324,18 +326,14 @@ class OpenAiAdapter extends AiProviderAdapter {
         // gpt-4o supports native PDF reading in the Responses API
         'model': AppConstants.openAiVisionModel,
         'instructions': AppConstants.aiPdfSystemInstruction,
+        'max_output_tokens': request.responseLength.maxTokens,
+        'temperature': 0.3,
         'input': [
-          {
-            'role': 'system',
-            'content': AppConstants.aiPdfSystemInstruction,
-          },
           {
             'role': 'user',
             'content': contentParts,
           },
         ],
-        'max_output_tokens': request.responseLength.maxTokens,
-        'temperature': 0.3,
       };
 
       debugPrint('📤 OpenAI Request (PDF Parsing): ${jsonEncode(requestBody)}');
