@@ -80,16 +80,6 @@ class ChatProvider extends ChangeNotifier {
   bool get hasActiveConversation => _activeConversation != null;
   int get conversationHistoryVersion => _conversationHistoryVersion;
 
-  AiImageSize get preferredImageSize => _preferences.preferredImageSize;
-  ImageQuality get preferredImageQuality => _preferences.preferredImageQuality;
-  int get preferredImageCount => _preferences.preferredImageCount;
-  ImageGenerateBackground get preferredImageBackground =>
-      _preferences.preferredImageBackground;
-  ResponseLength get preferredResponseLength =>
-      _preferences.preferredResponseLength;
-  VisionDetailLevel get preferredVisionDetailLevel =>
-      _preferences.preferredVisionDetailLevel;
-
   // ── Load Conversation ──────────────────────────────────────────────────────
 
   /// Load an existing conversation by ID.
@@ -245,13 +235,13 @@ class ChatProvider extends ChangeNotifier {
               .toList()
           : null,
       imageSize: (requestCapability == AiCapability.imageGeneration)
-          ? preferredImageSize
+          ? _preferences.preferredImageSize(selectedProvider)
           : null,
       imageQuality: (requestCapability == AiCapability.imageGeneration)
-          ? preferredImageQuality
+          ? _preferences.preferredImageQuality(selectedProvider)
           : null,
       imageCount: (requestCapability == AiCapability.imageGeneration)
-          ? preferredImageCount
+          ? _preferences.preferredImageCount(selectedProvider)
           : null,
     );
 
@@ -303,12 +293,15 @@ class ChatProvider extends ChangeNotifier {
       final effectivePrefs = ProviderRegistry.instance.sanitizePreferences(
         providerId: selectedProvider,
         capability: requestCapability,
-        rawResponseLength: preferredResponseLength,
-        rawImageSize: preferredImageSize,
-        rawImageQuality: preferredImageQuality,
-        rawImageBackground: preferredImageBackground,
-        rawImageCount: preferredImageCount,
-        rawVisionDetailLevel: preferredVisionDetailLevel,
+        rawResponseLength:
+            _preferences.preferredResponseLength(selectedProvider),
+        rawImageSize: _preferences.preferredImageSize(selectedProvider),
+        rawImageQuality: _preferences.preferredImageQuality(selectedProvider),
+        rawImageBackground:
+            _preferences.preferredImageBackground(selectedProvider),
+        rawImageCount: _preferences.preferredImageCount(selectedProvider),
+        rawVisionDetailLevel:
+            _preferences.preferredVisionDetailLevel(selectedProvider),
       );
 
       final aiResponse = await _orchestrator.execute(
@@ -358,7 +351,9 @@ class ChatProvider extends ChangeNotifier {
 
       // ── Step 5: Build AI response message ──────────────────────────────────
       aiMessage = _buildAiMessage(aiResponse,
-          attachments: attachments, uploadedUrls: uploadedUrls);
+          selectedProvider: selectedProvider,
+          attachments: attachments,
+          uploadedUrls: uploadedUrls);
 
       // Step 6 to 8 follow in finally, because whether the response is success or fail it has to store.
     } on AiExhaustedException catch (e) {
@@ -626,6 +621,7 @@ class ChatProvider extends ChangeNotifier {
 
   MessageModel _buildAiMessage(
     AiResponse response, {
+    required AiProviderId selectedProvider,
     List<ChatAttachment> attachments = const [],
     List<String> uploadedUrls = const [],
   }) {
@@ -636,9 +632,9 @@ class ChatProvider extends ChangeNotifier {
         contentType: AiCapability.imageGeneration,
         imageUrls: uploadedUrls.isNotEmpty ? uploadedUrls : null,
         tokenCount: response.tokenCount,
-        imageSize: preferredImageSize,
-        imageQuality: preferredImageQuality,
-        imageCount: preferredImageCount,
+        imageSize: _preferences.preferredImageSize(selectedProvider),
+        imageQuality: _preferences.preferredImageQuality(selectedProvider),
+        imageCount: _preferences.preferredImageCount(selectedProvider),
       );
     } else if (response.contentType == AiResponseContentType.analysis) {
       // Determine the specific analysis type from the attachment context

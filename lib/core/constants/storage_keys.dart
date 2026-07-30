@@ -46,6 +46,11 @@ class StorageKeys {
   // The user's preferred response length/max tokens
   static const String preferredResponseLength = 'preferredResponseLength';
 
+  /// Helper to generate a provider-specific storage key.
+  static String providerPrefKey(String baseKey, String providerId) {
+    return '${baseKey}_$providerId';
+  }
+
   // ── Active Conversation Cache ──────────────────────────────────────────────
   // ID of the last open conversation (to restore on app resume)
   static const String lastOpenConversationId = 'lastOpenConversationId';

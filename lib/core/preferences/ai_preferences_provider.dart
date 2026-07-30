@@ -11,42 +11,24 @@ class AiPreferencesProvider extends ChangeNotifier {
   AiPreferencesProvider({AiPreferencesService? service})
       : _service = service ?? AiPreferencesService.instance {
     _preferredProvider = _service.preferredProvider;
-    _preferredImageQuality = _service.preferredImageQuality;
-    _preferredImageSize = _service.preferredImageSize;
-    _preferredVisionImageCount = _service.preferredVisionImageCount;
-    _preferredVisionPdfCount = _service.preferredVisionPdfCount;
-    _preferredVisionDetailLevel = _service.preferredVisionDetailLevel;
-    _preferredResponseLength = _service.preferredResponseLength;
-    _preferredImageCount = _service.preferredImageCount;
-    _preferredImageBackground = _service.preferredImageBackground;
   }
 
   final AiPreferencesService _service;
 
-  AiProviderId _preferredProvider = AiProviderId.gemini;
-  ImageQuality _preferredImageQuality = ImageQuality.low;
-  AiImageSize _preferredImageSize = AiImageSize.square;
-  int _preferredImageCount = 1;
-  ImageGenerateBackground _preferredImageBackground =
-      ImageGenerateBackground.auto;
+  late AiProviderId _preferredProvider;
 
   AiProviderId get preferredProvider => _preferredProvider;
-  ImageQuality get preferredImageQuality => _preferredImageQuality;
-  AiImageSize get preferredImageSize => _preferredImageSize;
-  int get preferredImageCount => _preferredImageCount;
+  ImageQuality get preferredImageQuality => _service.preferredImageQuality(_preferredProvider);
+  AiImageSize get preferredImageSize => _service.preferredImageSize(_preferredProvider);
+  int get preferredImageCount => _service.preferredImageCount(_preferredProvider);
   ImageGenerateBackground get preferredImageBackground =>
-      _preferredImageBackground;
+      _service.preferredImageBackground(_preferredProvider);
 
-  int _preferredVisionImageCount = 1;
-  int _preferredVisionPdfCount = 1;
-  VisionDetailLevel _preferredVisionDetailLevel = VisionDetailLevel.auto;
-  ResponseLength _preferredResponseLength = ResponseLength.balanced;
-
-  int get preferredVisionImageCount => _preferredVisionImageCount;
-  int get preferredVisionPdfCount => _preferredVisionPdfCount;
+  int get preferredVisionImageCount => _service.preferredVisionImageCount(_preferredProvider);
+  int get preferredVisionPdfCount => _service.preferredVisionPdfCount(_preferredProvider);
   VisionDetailLevel get preferredVisionDetailLevel =>
-      _preferredVisionDetailLevel;
-  ResponseLength get preferredResponseLength => _preferredResponseLength;
+      _service.preferredVisionDetailLevel(_preferredProvider);
+  ResponseLength get preferredResponseLength => _service.preferredResponseLength(_preferredProvider);
 
   Future<void> setPreferredProvider(AiProviderId provider) async {
     if (_preferredProvider == provider) return;
@@ -56,62 +38,54 @@ class AiPreferencesProvider extends ChangeNotifier {
   }
 
   Future<void> setPreferredImageQuality(ImageQuality quality) async {
-    if (_preferredImageQuality == quality) return;
-    _preferredImageQuality = quality;
-    await _service.setPreferredImageQuality(quality);
+    if (preferredImageQuality == quality) return;
+    await _service.setPreferredImageQuality(_preferredProvider, quality);
     notifyListeners();
   }
 
   Future<void> setPreferredImageSize(AiImageSize imageSize) async {
-    if (_preferredImageSize == imageSize) return;
-    _preferredImageSize = imageSize;
-    await _service.setPreferredImageSize(imageSize);
+    if (preferredImageSize == imageSize) return;
+    await _service.setPreferredImageSize(_preferredProvider, imageSize);
     notifyListeners();
   }
 
   Future<void> setPreferredImageBackground(
       ImageGenerateBackground background) async {
-    if (_preferredImageBackground == background) return;
-    _preferredImageBackground = background;
-    await _service.setPreferredImageBackground(background);
+    if (preferredImageBackground == background) return;
+    await _service.setPreferredImageBackground(_preferredProvider, background);
     notifyListeners();
   }
 
   Future<void> setPreferredVisionImageCount(int count) async {
     final clamped = count.clamp(1, 4).toInt();
-    if (_preferredVisionImageCount == clamped) return;
-    _preferredVisionImageCount = clamped;
-    await _service.setPreferredVisionImageCount(clamped);
+    if (preferredVisionImageCount == clamped) return;
+    await _service.setPreferredVisionImageCount(_preferredProvider, clamped);
     notifyListeners();
   }
 
   Future<void> setPreferredVisionPdfCount(int count) async {
     final clamped = count.clamp(1, 4).toInt();
-    if (_preferredVisionPdfCount == clamped) return;
-    _preferredVisionPdfCount = clamped;
-    await _service.setPreferredVisionPdfCount(clamped);
+    if (preferredVisionPdfCount == clamped) return;
+    await _service.setPreferredVisionPdfCount(_preferredProvider, clamped);
     notifyListeners();
   }
 
   Future<void> setPreferredVisionDetailLevel(VisionDetailLevel level) async {
-    if (_preferredVisionDetailLevel == level) return;
-    _preferredVisionDetailLevel = level;
-    await _service.setPreferredVisionDetailLevel(level);
+    if (preferredVisionDetailLevel == level) return;
+    await _service.setPreferredVisionDetailLevel(_preferredProvider, level);
     notifyListeners();
   }
 
   Future<void> setPreferredResponseLength(ResponseLength length) async {
-    if (_preferredResponseLength == length) return;
-    _preferredResponseLength = length;
-    await _service.setPreferredResponseLength(length);
+    if (preferredResponseLength == length) return;
+    await _service.setPreferredResponseLength(_preferredProvider, length);
     notifyListeners();
   }
 
   Future<void> setPreferredImageCount(int count) async {
     final clamped = count.clamp(1, 10).toInt();
-    if (_preferredImageCount == clamped) return;
-    _preferredImageCount = clamped;
-    await _service.setPreferredImageCount(clamped);
+    if (preferredImageCount == clamped) return;
+    await _service.setPreferredImageCount(_preferredProvider, clamped);
     notifyListeners();
   }
 }
