@@ -94,7 +94,7 @@ class LocalChatStore {
     // Re-emit every time the box changes, filtering to this user's keys only
     await for (final event in _conversationsBox.watch()) {
       final changedKey = event.key?.toString() ?? '';
-      if (changedKey.startsWith('${uid}_')) {
+      if (changedKey.isEmpty || changedKey.startsWith('${uid}_')) {
         yield _readConversations(uid);
       }
     }
@@ -309,7 +309,7 @@ class LocalChatStore {
     final prefix = '${uid}_${conversationId}_';
     await for (final event in _messagesBox.watch()) {
       final changedKey = event.key?.toString() ?? '';
-      if (changedKey.startsWith(prefix)) {
+      if (changedKey.isEmpty || changedKey.startsWith(prefix)) {
         yield _readMessages(uid, conversationId);
       }
     }
@@ -396,8 +396,36 @@ class LocalChatStore {
             lastSyncedAt: DateTime.now(),
             localUpdatedAt: DateTime.now(),
           )
-          .toMap(),
     );
+  }
+
+  /// Update the syncStatus of multiple message records to [SyncStatus.synced].
+  ///
+  /// Called by ChatSyncService after a successful Firestore write confirms
+  /// that the local records have been durably persisted remotely.
+  Future<void> markMessagesSynced(
+      String uid, String conversationId, List<String> messageIds) async {
+    final now = DateTime.now();
+    final map = <String, dynamic>{};
+
+    for (final msgId in messageIds) {
+      if (msgId.isEmpty) continue;
+      final key = '${uid}_${conversationId}_$msgId';
+      final raw = _messagesBox.get(key);
+      if (raw != null) {
+        final record = LocalMessageRecord.fromMap(raw as Map);
+        map[key] = record
+            .copyWith(
+              syncStatus: SyncStatus.synced,
+              remoteUpdatedAt: now,
+            )
+            .toMap();
+      }
+    }
+
+    if (map.isNotEmpty) {
+      await _messagesBox.putAll(map);
+    }
   }
 
   /// Mark a conversation's sync as failed after retries are exhausted

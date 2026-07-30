@@ -247,7 +247,6 @@ class ChatRepositoryImpl implements ChatRepository {
             lastMessage: remoteConv.lastMessage,
             lastMessageAt: remoteConv.lastMessageAt,
             createdAt: remoteConv.createdAt,
-            messageCount: remoteConv.messageCount,
             capability: remoteConv.capability,
             lastProvider: remoteConv.lastProvider,
             syncStatus: SyncStatus.synced,
@@ -481,9 +480,7 @@ class ChatRepositoryImpl implements ChatRepository {
       title: conversation.title,
       lastMessage: effectiveLastMessage,
       lastMessageAt: effectiveLastMessageAt,
-      createdAt: isNewConversation ? now : (existingRecord.createdAt ?? now),
-      // Increment local message count by 2 (user + AI)
-      messageCount: (existingRecord?.messageCount ?? 0) + 2,
+      createdAt: existingRecord?.createdAt ?? DateTime.now(),
       capability: conversation.capability,
       lastProvider: aiMessage.modelRequest,
       localUpdatedAt: now,
@@ -613,7 +610,6 @@ class ChatRepositoryImpl implements ChatRepository {
       lastMessage: r.lastMessage,
       lastMessageAt: r.lastMessageAt,
       createdAt: r.createdAt,
-      messageCount: r.messageCount,
       capability: r.capability,
       lastProvider: r.lastProvider,
       // Expose sync status so the UI can show a warning badge on syncFailed

@@ -16,7 +16,6 @@ class ConversationModel {
   final String lastMessage;
   final DateTime? lastMessageAt;
   final DateTime? createdAt;
-  final int messageCount;
 
   /// Which AI capability this conversation used
   final AiCapability capability;
@@ -34,7 +33,6 @@ class ConversationModel {
     required this.lastMessage,
     this.lastMessageAt,
     this.createdAt,
-    this.messageCount = 0,
     this.capability = AiCapability.textGeneration,
     this.lastProvider,
     this.syncStatus = SyncStatus.synced,
@@ -59,8 +57,6 @@ class ConversationModel {
       createdAt:
           (data[FirebaseCollections.fieldConversationCreatedAt] as Timestamp?)
               ?.toDate(),
-      messageCount:
-          data[FirebaseCollections.fieldConversationMessageCount] as int? ?? 0,
       capability: AiCapability.fromId(
         data[FirebaseCollections.fieldConversationCapability] as String? ??
             'text_generation',
@@ -81,7 +77,6 @@ class ConversationModel {
       FirebaseCollections.fieldConversationID: id,
       FirebaseCollections.fieldConversationTitle: title,
       FirebaseCollections.fieldConversationLastMessage: lastMessage,
-      FirebaseCollections.fieldConversationMessageCount: messageCount,
       FirebaseCollections.fieldConversationCapability: capability.id,
       if (lastProvider != null)
         FirebaseCollections.fieldConversationLastProvider: lastProvider!.id,
@@ -96,7 +91,6 @@ class ConversationModel {
     String? lastMessage,
     DateTime? lastMessageAt,
     DateTime? createdAt,
-    int? messageCount,
     AiCapability? capability,
     AiProviderId? lastProvider,
     SyncStatus? syncStatus,
@@ -107,7 +101,6 @@ class ConversationModel {
       lastMessage: lastMessage ?? this.lastMessage,
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       createdAt: createdAt ?? this.createdAt,
-      messageCount: messageCount ?? this.messageCount,
       capability: capability ?? this.capability,
       lastProvider: lastProvider ?? this.lastProvider,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -125,6 +118,5 @@ class ConversationModel {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() =>
-      'ConversationModel(id: $id, title: $title, messages: $messageCount)';
+  String toString() => 'ConversationModel(id: $id, title: $title)';
 }

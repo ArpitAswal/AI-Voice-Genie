@@ -309,6 +309,10 @@ class ChatSyncService {
 
     // Mark local conversation as synced after Firestore confirms
     await _localStore.markConversationSynced(uid, conversationId);
+    
+    // Mark both messages as synced so their SyncStatus becomes synced
+    await _localStore.markMessagesSynced(uid, conversationId, [userMessageId, aiMessageId]);
+    
     await _outboxStore.markSucceeded(task.operationId);
 
     debugPrint('✅ ChatSyncService: upserted message pair for $conversationId');
@@ -443,7 +447,6 @@ class ChatSyncService {
         lastMessage: remoteModel.lastMessage,
         lastMessageAt: remoteModel.lastMessageAt,
         createdAt: remoteModel.createdAt,
-        messageCount: remoteModel.messageCount,
         capability: remoteModel.capability,
         lastProvider: remoteModel.lastProvider,
         syncStatus: SyncStatus.synced,

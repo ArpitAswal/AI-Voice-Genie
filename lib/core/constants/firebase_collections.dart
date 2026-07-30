@@ -104,7 +104,6 @@ class FirebaseCollections {
   static const String fieldConversationTitle = 'title';
   static const String fieldConversationCreatedAt = 'createdAt';
   static const String fieldConversationUpdatedAt = 'updatedAt';
-  static const String fieldConversationMessageCount = 'messageCount';
   static const String fieldConversationLastMessage = 'lastMessage';
   static const String fieldConversationLastMessageAt = 'lastMessageAt';
   // Value: 'text' | 'image_gen' | 'image_read' | 'pdf_reader'

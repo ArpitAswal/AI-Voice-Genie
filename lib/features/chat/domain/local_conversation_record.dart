@@ -18,7 +18,6 @@ class LocalConversationRecord {
   /// When the last message was sent — used for list ordering.
   final DateTime? lastMessageAt;
   final DateTime? createdAt;
-  final int messageCount;
   final AiCapability capability;
   final AiProviderId? lastProvider;
 
@@ -52,7 +51,6 @@ class LocalConversationRecord {
     required this.localUpdatedAt,
     this.lastMessageAt,
     this.createdAt,
-    this.messageCount = 0,
     this.capability = AiCapability.textGeneration,
     this.lastProvider,
     this.isDeleted = false,
@@ -76,7 +74,6 @@ class LocalConversationRecord {
       'lastMessage': lastMessage,
       'lastMessageAt': lastMessageAt?.toIso8601String(),
       'createdAt': createdAt?.toIso8601String(),
-      'messageCount': messageCount,
       'capability': capability.id,
       'lastProvider': lastProvider?.id,
       'isDeleted': isDeleted,
@@ -104,7 +101,6 @@ class LocalConversationRecord {
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'] as String)
           : null,
-      messageCount: map['messageCount'] as int? ?? 0,
       capability: AiCapability.fromId(
         map['capability'] as String? ?? 'text_generation',
       ),
@@ -139,7 +135,6 @@ class LocalConversationRecord {
     String? lastMessage,
     DateTime? lastMessageAt,
     DateTime? createdAt,
-    int? messageCount,
     AiCapability? capability,
     AiProviderId? lastProvider,
     bool? isDeleted,
@@ -156,7 +151,6 @@ class LocalConversationRecord {
       lastMessage: lastMessage ?? this.lastMessage,
       lastMessageAt: lastMessageAt ?? this.lastMessageAt,
       createdAt: createdAt ?? this.createdAt,
-      messageCount: messageCount ?? this.messageCount,
       capability: capability ?? this.capability,
       lastProvider: lastProvider ?? this.lastProvider,
       isDeleted: isDeleted ?? this.isDeleted,
@@ -179,7 +173,6 @@ class LocalConversationRecord {
       lastMessage: lastMessage,
       lastMessageAt: lastMessageAt,
       createdAt: createdAt,
-      messageCount: messageCount,
       capability: capability,
       lastProvider: lastProvider,
       syncStatus: syncStatus,
