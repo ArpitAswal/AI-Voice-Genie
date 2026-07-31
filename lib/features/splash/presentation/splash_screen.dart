@@ -222,7 +222,7 @@ class _SplashContent extends StatelessWidget {
             repeat: true,
             fit: BoxFit.contain,
             imageProviderFactory: (lottieImage) {
-              return const AssetImage(AppAssets.appLogo);
+              return const AssetImage(AppAssets.splashLogo);
             },
           ),
         ),
