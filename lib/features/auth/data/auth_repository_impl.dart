@@ -537,6 +537,7 @@ class AuthRepositoryImpl implements AuthRepository {
           termsAccepted: true,
           termsAcceptedAt: DateTime.now().toUtc(),
           termsVersionAccepted: AppConstants.currentTermsVersion,
+          createdAt: DateTime.now().toUtc(), // Fix: populate createdAt immediately for UI
         );
 
         // Write new user document with server timestamps

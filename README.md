@@ -1,25 +1,22 @@
-<p align="center">
-  <img src="assets/images/app_logo.png" alt="AI Voice Genie Logo" width="130" height="130" />
-</p>
+> *Note: Click on the logo to download the latest version of the app apk file.*
 
-<h1 align="center">AI Voice Genie</h1>
-
-<p align="center">
-  <b>Enterprise-Grade, Unified Multi-Model AI Assistant Engine for Mobile</b>
+<p align="left">
+  <!-- The <a> tag makes the image clickable. The align="left" inside the <img> keeps the float intact. -->
+  <a href="https://github.com/ArpitAswal/AI-Voice-Genie/releases/download/v1.0.0/app-release.apk">
+    <img src="assets/images/app_logo.png" alt="AI Voice Genie Logo" width="180" height="180" align="left" />
+  </a>
 </p>
+<!-- Pushes the text block down slightly to vertically center it with the logo -->
+<br>
 
-<p align="center">
-  <a href="#-about-the-project">About</a> •
-  <a href="#-ai-models--capability-matrix">AI Models</a> •
-  <a href="#-ai-preferences--dynamic-adaptation">Preferences</a> •
-  <a href="#-usage-telemetry--spending-limits">Usage & Budget</a> •
-  <a href="#-security-measures--screen-protection">Security</a> •
-  <a href="#-key-features">Features</a> •
-  <a href="#%EF%B8%8F-functionality--architecture">Architecture</a> •
-  <a href="#-tech-stack--used-packages">Tech Stack</a> •
-  <a href="#-support-legal--policies">Support & Legal</a> •
-  <a href="#-getting-started">Getting Started</a>
-</p>
+<!-- The main title -->
+<h3>&nbsp;&nbsp;AI Voice Genie</h3>
+
+<!-- The tagline (Normal size, bolded) -->
+<p>&nbsp;&nbsp;&nbsp;<b>Enterprise-Grade, Unified Multi-Model AI Assistant Engine for Mobile</b></p>
+
+<!-- Clears the float so subsequent README content goes below this header block -->
+<br clear="left"/>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.38.2-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter 3.38.2" />
@@ -28,17 +25,38 @@
   <img src="https://img.shields.io/badge/Architecture-Feature--First%20MVVM-blue?style=for-the-badge" alt="Feature-First MVVM" />
   <img src="https://img.shields.io/badge/Security-FLAG__SECURE%20Protected-green?style=for-the-badge&logo=shield" alt="Screen Protected" />
   <img src="https://img.shields.io/badge/License-Private-red?style=for-the-badge" alt="Private Repository" />
+    <img src="https://img.shields.io/badge/Firebase-Analytics%20%7C%20Crashlytics-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase Integration" />
+  <img src="https://img.shields.io/badge/State_Management-Provider-02569B?style=for-the-badge&logo=flutter" alt="Provider" />
+  <img src="https://img.shields.io/badge/Local_Storage-Hive_NoSQL-orange?style=for-the-badge" alt="Hive Storage" />
+  <img src="https://img.shields.io/badge/AI_Models-OpenAI%20%7C%20Gemini%20%7C%20Claude-black?style=for-the-badge" alt="AI Models" />
 </p>
 
 ---
 
 ## 📝 About the Project
 
+> [!IMPORTANT]
+> **Device & Platform Compatibility**
+> - **Platform Tested**: Currently, this application has only been rigorously tested on **Android physical devices**. While the codebase is cross-platform (iOS compatible), iOS-specific testing and native channel verification are pending.
+> - **UI Optimization**: The user interface is strictly optimized for **mobile phone form factors**. Tablets, iPads, and desktop window sizes are not currently supported and may exhibit layout overflow or improper scaling.
+
+
 **AI Voice Genie** is a high-performance, production-grade Flutter mobile application engineered as a unified hub for leading artificial intelligence providers. Rather than forcing users to manage fragmented subscriptions across separate apps, AI Voice Genie consolidates **OpenAI**, **Google Gemini**, and **Anthropic Claude** into a single, cohesive, local-first mobile interface.
 
 Designed around a **Bring Your Own Key (BYOK)** paradigm, the application grants users complete ownership over their AI provider accounts and model preferences. Users can seamlessly switch between **OpenAI GPT-4o & GPT-Image-1**, **Google Gemini-2.5-Flash && Gemini-2.5-Flash-Image**, and **Anthropic Claude 3.5 Sonnet** for text generation, AI image generation, multimodal vision analysis, and PDF document parsing.
 
 Built upon a **Local-First Architecture** powered by zero-latency **Hive** local databases, chat history is read and rendered instantaneously without network delays. A durable background outbox (`ChatOutboxTask`) automatically queues mutations offline and reconciles them with **Cloud Firestore** when connectivity returns. The application also integrates real-time continuous **Speech-to-Text (STT)** dictation with custom grammar formatting, offline **Text-to-Speech (TTS)** response playback, detailed **model token cost tracking**, custom **monthly budget limits**, **anti-screenshot API key screen protection**, and **native scoped media downloading** (`Pictures/AI Voice Genie` on Android, `Photos` on iOS).
+
+---
+
+## 📱 App Preview
+Experience a meticulously crafted UI supporting fully responsive Light and Dark themes.
+
+| Light Theme | Dark Theme |
+|:---:|:---:|
+| **Home Screen**<br><img src="assets/app_preview/light_home_screen.png" width="250"/> | **Home Screen**<br><img src="assets/app_preview/dark_home_screen.png" width="250"/> |
+| **Chat & Prompt**<br><img src="assets/app_preview/light_prompt_screen.png" width="250"/> | **Chat & Prompt**<br><img src="assets/app_preview/dark_prompt_screen.png" width="250"/> |
+| **Profile & Settings**<br><img src="assets/app_preview/light_profile_screen.png" width="250"/> | **Profile & Settings**<br><img src="assets/app_preview/dark_profile_screen.png" width="250"/> |
 
 ---
 
@@ -184,6 +202,11 @@ Mobile environments are inherently hostile. AI Voice Genie adopts a zero-trust p
 *   **OS-Level Screen Protection**: The `no_screenshot` plugin dynamically applies Android's `FLAG_SECURE` window layout parameter and iOS secure text buffering upon entering the `KeySetupScreen`. This legally prevents the OS, screen recorders, and malicious background apps from scraping the screen buffer.
 *   **Sanitization Pipeline**: Before any HTTP request fires, the `ProviderRegistry` executes a strict capability check, stripping unsupported fields (like image aspect ratios for text-only models) to guarantee zero `400 Bad Request` exceptions.
 
+### 5. Non-Blocking Telemetry & Crash Reporting
+To ensure zero impact on UI frame rates, the app implements a "fire-and-forget" telemetry pattern using **Firebase Analytics** and **Firebase Crashlytics**.
+*   **Crashlytics**: Automatically intercepts unhandled Dart exceptions, native crashes, and out-of-memory (OOM) errors, pushing stack traces to the cloud without locking the main thread.
+*   **Analytics**: Tracks critical user journeys (e.g., `ai_request_success`, `image_downloaded`, `subscription_limit_reached`) asynchronously, allowing engineering teams to monitor model usage and feature adoption in real-time.
+
 ---
 
 ## 🛠 Tech Stack & Used Packages
@@ -265,13 +288,36 @@ AI Voice Genie provides complete transparency and user support through dedicated
    ```
 
 3. **Firebase Setup**:
-   - Add `google-services.json` to `android/app/`.
-   - Add `GoogleService-Info.plist` to `ios/Runner/`.
+    - Add `google-services.json` to `android/app/`.
+    - Add `GoogleService-Info.plist` to `ios/Runner/`.
 
 4. **Launch the App**:
    ```bash
    flutter run
    ```
+
+---
+
+## 🤝 Contributing & Issue Tracking
+
+We welcome bug reports and feature requests from both end-users and internal team members! Please use our GitHub repository's Issue Tracker to submit your feedback.
+
+### 1. Issue Reporting (Bugs & Features)
+- **GitHub Issues:** Please raise all issues directly in the repository's issue tracker.
+- **Bug Reports**: Include your device model, OS version, steps to reproduce, and attach any relevant screenshots or screen recordings. Internal team members should also attach Firebase Crashlytics log IDs if applicable.
+- **Feature Requests**: Outline the proposed feature, the target AI model (OpenAI, Gemini, Claude), and your use case.
+
+### 2. Branching Strategy
+Always branch off the `development` branch using descriptive naming conventions:
+- `feature/your-feature-name` (e.g., `feature/claude-vision-support`)
+- `fix/issue-description` (e.g., `fix/hive-pagination-crash`)
+- `hotfix/critical-bug` (for production emergencies)
+
+### 3. Creating a Pull Request (PR)
+1. Ensure your local branch is up to date with `development`.
+2. Run code formatting: `dart format lib/`
+3. Run static analysis: `flutter analyze` (Must pass with 0 issues).
+4. Submit the PR and request review from at least one senior engineer or technical lead.
 
 ---
 

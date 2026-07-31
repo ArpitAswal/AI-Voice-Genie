@@ -28,6 +28,7 @@ firebase.json
 # Local project operating docs stay off the public repository.
 *.md
 !/README.md
+!/CHANGELOG.md
 !/agentPlan/app_flow.md
 !agentPlan/app_summary.md
 !agentPlan/architecture.md
