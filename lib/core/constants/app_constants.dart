@@ -69,11 +69,6 @@ class AppConstants {
   static const String geminiDisplayName = 'Gemini';
   static const String claudeDisplayName = 'Claude';
 
-  // ── AI Model IDs (used internally and in analytics) ───────────────────────
-  static const String openAiProviderId = 'openai';
-  static const String geminiProviderId = 'gemini';
-  static const String claudeProviderId = 'claude';
-
   // ── AI Model Capabilities (features offered by each adapter) ──────────────
   // PDF reading uses locally extracted PDF text, not native file/URL upload.
   static const String openAICapabilities =

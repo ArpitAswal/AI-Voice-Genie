@@ -511,8 +511,8 @@ lib/
 │       │
 │       ├── gemini_adapter.dart
 │       │     CONTAINS : Gemini implementation.
-│       │                generateText  → POST /v1beta/models/gemini-2.0-flash:generateContent
-│       │                generateImage → POST /v1beta/models/gemini-2.0-flash-exp-image-generation
+│       │                generateText  → POST /v1beta/models/gemini-2.5-flash:generateContent
+│       │                generateImage → POST /v1beta/models/gemini-2.5-flash-image
 │       │                analyzeImage  → multimodal inlineData content blocks
 │       │                parsePdf      → text context in prompt
 │       │

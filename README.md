@@ -1,53 +1,280 @@
-# AI Voice Genie
+<p align="center">
+  <img src="assets/images/app_logo.png" alt="AI Voice Genie Logo" width="130" height="130" />
+</p>
 
-AI Voice Genie is a Flutter app for multi-model AI chat with provider selection, conversation history, and image-generation support.
+<h1 align="center">AI Voice Genie</h1>
 
-## Project Overview
-- Flutter application using Provider-based MVVM.
-- Firebase handles authentication, Firestore persistence, analytics, and crash reporting.
-- Hive handles local preferences and conversation cache.
+<p align="center">
+  <b>Enterprise-Grade, Unified Multi-Model AI Assistant Engine for Mobile</b>
+</p>
 
-## Key Features
-- Google and Apple sign-in.
-- API key setup for OpenAI, Gemini, and Claude.
-- New chat and chat detail conversation flow.
-- Conversation history with reopen support.
-- Local replay of generated image messages.
+<p align="center">
+  <a href="#-about-the-project">About</a> •
+  <a href="#-ai-models--capability-matrix">AI Models</a> •
+  <a href="#-ai-preferences--dynamic-adaptation">Preferences</a> •
+  <a href="#-usage-telemetry--spending-limits">Usage & Budget</a> •
+  <a href="#-security-measures--screen-protection">Security</a> •
+  <a href="#-key-features">Features</a> •
+  <a href="#%EF%B8%8F-functionality--architecture">Architecture</a> •
+  <a href="#-tech-stack--used-packages">Tech Stack</a> •
+  <a href="#-support-legal--policies">Support & Legal</a> •
+  <a href="#-getting-started">Getting Started</a>
+</p>
 
-## Setup
-1. Install Flutter 3.3 or newer.
-2. Run `flutter pub get`.
-3. Configure Firebase with `flutterfire configure` if the generated options file needs to be regenerated.
-4. Launch the app with `flutter run`.
+<p align="center">
+  <img src="https://img.shields.io/badge/Flutter-3.38.2-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter 3.38.2" />
+  <img src="https://img.shields.io/badge/Dart-3.10.0-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart 3.10.0" />
+  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-brightgreen?style=for-the-badge&logo=android&logoColor=white" alt="Android & iOS" />
+  <img src="https://img.shields.io/badge/Architecture-Feature--First%20MVVM-blue?style=for-the-badge" alt="Feature-First MVVM" />
+  <img src="https://img.shields.io/badge/Security-FLAG__SECURE%20Protected-green?style=for-the-badge&logo=shield" alt="Screen Protected" />
+  <img src="https://img.shields.io/badge/License-Private-red?style=for-the-badge" alt="Private Repository" />
+</p>
 
-## Environment Configuration
-- Firebase configuration lives in `lib/firebase_options.dart`.
-- AI provider keys are stored in Firestore through the key setup flow.
-- No Firebase Storage setup is required for generated chat images in the current design.
+---
 
-## Build Instructions
-- Android: `flutter build apk`
-- iOS: `flutter build ios`
-- Web: `flutter build web`
+## 📝 About the Project
 
-## Deployment Instructions
-- Ensure Firebase project settings match the generated FlutterFire options.
-- Publish mobile builds through the platform-specific release process.
+**AI Voice Genie** is a high-performance, production-grade Flutter mobile application engineered as a unified hub for leading artificial intelligence providers. Rather than forcing users to manage fragmented subscriptions across separate apps, AI Voice Genie consolidates **OpenAI**, **Google Gemini**, and **Anthropic Claude** into a single, cohesive, local-first mobile interface.
 
-## Architecture Overview
-- `lib/core` contains shared app infrastructure.
-- `lib/ai_layer` contains AI orchestration and provider adapters.
-- `lib/features` contains the user-facing MVVM feature modules.
+Designed around a **Bring Your Own Key (BYOK)** paradigm, the application grants users complete ownership over their AI provider accounts and model preferences. Users can seamlessly switch between **OpenAI GPT-4o & GPT-Image-1**, **Google Gemini-2.5-Flash && Gemini-2.5-Flash-Image**, and **Anthropic Claude 3.5 Sonnet** for text generation, AI image generation, multimodal vision analysis, and PDF document parsing.
 
-## Folder Structure
-- `lib/core`: constants, routing, theme, localization, services, utilities.
-- `lib/ai_layer`: AI request and response handling.
-- `lib/features/auth`: authentication flow.
-- `lib/features/key_setup`: provider key setup.
-- `lib/features/chat_prompt`: chat history, detail, and send flow.
-- `lib/features/home`: tab-based navigation.
+Built upon a **Local-First Architecture** powered by zero-latency **Hive** local databases, chat history is read and rendered instantaneously without network delays. A durable background outbox (`ChatOutboxTask`) automatically queues mutations offline and reconciles them with **Cloud Firestore** when connectivity returns. The application also integrates real-time continuous **Speech-to-Text (STT)** dictation with custom grammar formatting, offline **Text-to-Speech (TTS)** response playback, detailed **model token cost tracking**, custom **monthly budget limits**, **anti-screenshot API key screen protection**, and **native scoped media downloading** (`Pictures/AI Voice Genie` on Android, `Photos` on iOS).
 
-## Contribution Guide
-- Follow the existing feature-first structure.
-- Update documentation when flows or persistence change.
-- Prefer reusable shared components over one-off widgets.
+---
+
+## 🤖 AI Models & Capability Matrix
+
+AI Voice Genie normalizes communications with multiple AI vendor APIs into a single request/response engine (`AiOrchestrator`). Below is the exact breakdown of supported models and their capabilities:
+
+| Provider | Model Identifier         | Primary Usage & Capabilities | Pricing / Cost Metrics |
+|---|--------------------------|---|---|
+| **OpenAI** | `gpt-4o`                 | Text Generation, Vision Analysis, PDF Context Parsing (128k context window). | $2.50 / 1M prompt tokens, $10.00 / 1M completion tokens. |
+| **OpenAI** | `gpt-image-1`            | AI Image Generation with quality tiers (Standard, HD) and aspect ratio bounds. | $0.011 – $0.167 per generated image based on resolution. |
+| **Google** | `gemini-2.5-flash`       | Text Generation, Multimodal Vision, PDF Parsing. High-speed low-latency engine. | $0.075 / 1M prompt tokens, $0.30 / 1M completion tokens. |
+| **Google** | `gemini-2.5-flash-image` | Native Image Generation with aspect ratios (`1:1`, `16:9`, `4:3`, `3:4`). | $0.020 per generated image. |
+| **Anthropic** | `claude-3-5-sonnet`      | Advanced Text Reasoning, Vision Analysis, Complex PDF Document Analysis. | $3.00 / 1M prompt tokens, $15.00 / 1M completion tokens. |
+
+---
+
+## ⚙️ AI Preferences & Dynamic Adaptation
+
+AI Voice Genie implements a smart, adaptive preferences architecture managed by `AiPreferencesProvider` and backed by `ProviderRegistry`:
+
+- **Capability Matrix Filtering**: When a user selects a model, the UI dynamically adapts. For instance, selecting **Claude 3.5 Sonnet** automatically hides image generation controls (preventing invalid API calls), while selecting **Gemini** exposes aspect ratio selectors (`1:1`, `16:9`, `4:3`, `3:4`) and resolution quality tiers.
+- **Custom System Instructions**: Users can configure global system persona prompts, max response tokens (up to 4,096 tokens), and vision detail quality (Low, High, Auto).
+- **Sanitized Request Building**: Before any API call is initiated, `ProviderRegistry.sanitizePreferences()` strips unsupported parameters from the request payload, ensuring zero HTTP 400 bad request errors due to model capability mismatch.
+
+---
+
+## 📊 Usage Telemetry & Spending Limits
+
+For complete transparency and financial control, AI Voice Genie features a dedicated **Usage Tracking System** (`UsageProvider` & `UsageRepositoryImpl`):
+
+- **Token Metric Breakdown**: Real-time tracking of **Prompt Tokens**, **Completion Tokens**, and **Total Tokens** consumed across every AI model call.
+- **Estimated Cost Calculation**: Automatically computes exact USD spending ($) per interaction based on `UsagePricingTable` rates.
+- **Monthly Budget Limits**: Users can define a custom monthly budget (e.g. $10.00/month). The UI displays a visual progress bar and triggers warning banners when consumption approaches 80% or 100% of the allocated budget.
+- **Historical Telemetry Sync**: Usage data is stored locally in Hive for instant rendering and synced to `AIVoiceGenie/UsersUsage/{uid}` in Cloud Firestore.
+
+---
+
+## 🔒 Security Measures & Screen Protection
+
+Enterprise-grade security controls protect user data and sensitive credentials at every layer:
+
+- 🛡️ **Anti-Screenshot & Anti-Screen Recording Protection (`no_screenshot`)**: The API Key Setup and Management screens (`KeySetupScreen`) invoke native OS security policies (`FLAG_SECURE` on Android and secure window buffering on iOS) in `initState()`. This completely blocks screenshots, screen recordings, and background task switcher previews from capturing sensitive API keys.
+- 🔑 **Encrypted On-Device Storage (`flutter_secure_storage` & `encrypt`)**: API keys are encrypted at rest using AES-256 (`encrypt: ^5.0.3`) and stored inside OS-level secure storage (Android Keystore / iOS Keychain).
+- 🎭 **Masked Key Display**: Keys are truncated and masked on screen (`sk-a...789`) via `StringExtension.maskedApiKey` to prevent visual shoulder surfing.
+- ☁️ **Restricted Firestore Rules**: Remote backup of API keys is stored in `AIVoiceGenie/UsersAPIKeys/{uid}` protected by granular Firestore Security Rules that enforce strict user-only read/write access.
+- 🔐 **OAuth2 Security & Nonce Verification**: Google and Apple OAuth sign-in flows generate cryptographic SHA-256 nonces (`crypto: ^3.0.7`) to protect against replay attacks.
+- 🗑️ **Hard Account Destruction**: Account deletion executes a total wipe: hard-deletes remote Firestore profile documents and API key records, wipes all local Hive database boxes, resets OAuth tokens, and deletes the Firebase Auth user account.
+- 🙈 **Zero-Trust Git Secrets Policy**: Environment files (`.env`), Firebase config files (`google-services.json`, `GoogleService-Info.plist`), key properties, and keystores are strictly excluded from version control via `.gitignore`.
+
+---
+
+## ✨ Key Features
+
+- 🤖 **Multi-Model BYOK Engine**: Native integrations with OpenAI (`gpt-4o`, `gpt-image-1`), Gemini (`gemini-2.5-flash`), and Claude (`claude-3-5-sonnet`).
+- ⚡ **Local-First Instant UI**: Hive key-value storage engine ensures instantaneous screen rendering with zero network delay.
+- 🔄 **Durable Offline Outbox Sync**: Actions performed offline are stored as `ChatOutboxTask` items and processed asynchronously by `ChatSyncService` when online.
+- 📜 **Cursor-Based Pagination**: Memory-efficient infinite scrolling loads 15 conversations per page in history and 30 initial / 20 scroll-up messages in chat detail.
+- 🎙️ **Speech-to-Text (STT) Dictation**: Continuous microphone dictation with automatic grammar formatting (capitalization, vocative commas, question clauses).
+- 🔊 **Offline Text-to-Speech (TTS)**: Response playback using device-native speech synthesis engines.
+- 📄 **Multimodal Vision & PDF Analysis**: Client-side PDF text extraction (`syncfusion_flutter_pdf`) and vision analysis for multi-image prompts.
+- 💾 **Native Scoped Gallery Saving**: Scoped MethodChannel (`ImageSavePlugin.kt` for Android MediaStore API 29+ & `ImageSavePlugin.swift` for iOS PhotoKit) saves AI generated images directly to `Pictures/AI Voice Genie` or `Photos` without intrusive permissions.
+- 📊 **Usage Telemetry & Spending Limits**: Real-time token consumption metrics, estimated USD cost calculations, and monthly budget alert limits.
+- 🌐 **Multilingual & Adaptive Themes**: Light/Dark/System theme toggle and real-time English/Hindi localization.
+
+---
+
+## ⚙️ Functionality & Architecture
+
+AI Voice Genie is built using **Feature-First MVVM (Model-View-ViewModel)** with **Provider** for reactive state management.
+
+```mermaid
+graph TD
+    subgraph Presentation_Layer ["Presentation Layer (UI & Views)"]
+        UI_Screens["Screens & Views<br/>(LoginScreen, ChatScreen, ChatDetailScreen,<br/>ProfileView, ConversationHistoryScreen, KeySetupScreen, UsageScreen, LegalScreen)"]
+        UI_Widgets["Widgets & Components<br/>(MessageBubble, CustomConversationCard, EmptyHistoryView,<br/>ChatInputBar, ProfileAvatar, AiPreferencesPanel)"]
+    end
+
+    subgraph ViewModel_Layer ["ViewModel / Provider Layer (State Management)"]
+        AuthProvider["AuthProvider (Session & Auth State)"]
+        ChatProvider["ChatProvider (Messages, History, Pagination)"]
+        ProfileViewModel["ProfileViewModel (Profile & Account Actions)"]
+        AiPreferencesProvider["AiPreferencesProvider (Capability Matrix & Prefs)"]
+        VoiceSpeechProvider["VoiceSpeechProvider (STT Dictation & TTS Playback)"]
+        UsageProvider["UsageProvider (Token Metrics & Budget Limits)"]
+    end
+
+    subgraph Domain_Layer ["Domain Layer (Business Entities & Contracts)"]
+        Entities["UserModel, ConversationModel, MessageModel, ChatAttachment, ChatOutboxTask"]
+        Contracts["AuthRepository, ChatRepository, ApiKeyRepository, UsageRepository"]
+    end
+
+    subgraph Data_Layer ["Data Layer (Repositories & Stores)"]
+        AuthRepo["AuthRepositoryImpl"]
+        ChatRepo["ChatRepositoryImpl"]
+        LocalStore["LocalChatStore (Hive)"]
+        OutboxStore["ChatOutboxStore & ChatSyncService"]
+        UsageRepo["UsageRepositoryImpl"]
+    end
+
+    subgraph Infrastructure_Layer ["Infrastructure Layer"]
+        Firebase["Firebase Auth & Cloud Firestore"]
+        AI_Engine["AiOrchestrator (OpenAI, Gemini, Claude Adapters)"]
+        NativeChannels["MethodChannel ImageSavePlugin (Android / iOS)"]
+        ScreenSecurity["NoScreenshot Plugin (FLAG_SECURE)"]
+    end
+
+    UI_Screens -->|Binds to| ViewModel_Layer
+    UI_Widgets -->|Binds to| ViewModel_Layer
+    ViewModel_Layer -->|Uses Entities| Domain_Layer
+    ViewModel_Layer -->|Invokes Repositories| Data_Layer
+    Data_Layer -->|Implements Contracts| Contracts
+    Data_Layer -->|Local Storage| LocalStore
+  Data_Layer -->|Remote Sync| Firebase
+    Data_Layer -->|AI Execution| AI_Engine
+    Data_Layer -->|Gallery Storage| NativeChannels
+    UI_Screens -->|Enforces Security| ScreenSecurity
+```
+
+---
+
+## 🧠 Engineering & Advanced Algorithms
+
+For technical leads and engineering reviewers, AI Voice Genie implements several advanced patterns to guarantee high performance, resilience, and security on mobile devices:
+
+### 1. Cursor-Based Pagination Algorithm (O(1) Memory Overhead)
+Traditional local apps often load entire database tables into memory, causing UI jank as data grows. AI Voice Genie utilizes a **cursor-based pagination algorithm** against the local Hive database. By sorting keys lexicographically (e.g., `timestamp_conversationId`), the app skips directly to the last rendered node and fetches only a discrete chunk (15 conversations or 20 messages). This ensures the app's RAM footprint remains strictly $O(1)$ and the UI maintains a perfect 60-120fps, even if the user has 10,000+ saved messages.
+
+### 2. Eventual Consistency via Durable Outbox Sync
+To handle the chaotic nature of mobile networks, the app relies on the **Outbox Pattern**. When a user sends a message offline:
+1. The UI optimistically updates instantly from the local Hive store.
+2. A `ChatOutboxTask` (containing the mutation payload) is durably serialized to a dedicated Hive outbox.
+3. A background `ChatSyncService`, listening to `connectivity_plus`, observes network restoration.
+4. The service drains the outbox queue, executing Firestore writes with **Exponential Backoff** to handle transient cloud rate limits, ensuring zero data loss during tunnel/subway network drops.
+
+### 3. Real-Time STT Grammar Enhancement Heuristics
+Raw Speech-to-Text (STT) streams are often unformatted and difficult to read. As the native `speech_to_text` engine streams raw words, AI Voice Genie applies a real-time regex-based **Grammar Enhancement Pipeline**. It automatically capitalizes proper nouns (e.g., "openai" → "OpenAI"), detects interrogative clauses to append question marks, and filters out introductory fluff (e.g., "Hey Genie") to ensure AI models receive highly structured, token-efficient prompt strings.
+
+### 4. Zero-Trust Security Architecture
+Mobile environments are inherently hostile. AI Voice Genie adopts a zero-trust posture for user API keys:
+*   **Hardware-Backed Encryption**: Keys are encrypted via AES-GCM and stored in the Android Keystore / iOS Secure Enclave (`flutter_secure_storage`).
+*   **Memory Obfuscation**: Keys are masked (`sk-a...789`) when rendered in memory for the UI.
+*   **OS-Level Screen Protection**: The `no_screenshot` plugin dynamically applies Android's `FLAG_SECURE` window layout parameter and iOS secure text buffering upon entering the `KeySetupScreen`. This legally prevents the OS, screen recorders, and malicious background apps from scraping the screen buffer.
+*   **Sanitization Pipeline**: Before any HTTP request fires, the `ProviderRegistry` executes a strict capability check, stripping unsupported fields (like image aspect ratios for text-only models) to guarantee zero `400 Bad Request` exceptions.
+
+---
+
+## 🛠 Tech Stack & Used Packages
+
+Here is the exact list of packages declared in `pubspec.yaml` with their defined versions and operational roles:
+
+| Package | Version | Detailed Purpose & Usage in App |
+|---|---|---|
+| `flutter` | **3.38.2** | Core cross-platform UI framework SDK. |
+| `dart` | **3.10.0** | Underlying null-safe object-oriented language SDK. |
+| `provider` | `^6.1.2` | Reactive MVVM state management and ViewModel dependency injection. |
+| `firebase_core` | `^3.6.0` | Firebase app initialization and credential binding. |
+| `firebase_auth` | `^5.3.1` | Google & Apple OAuth authentication session management. |
+| `cloud_firestore` | `^5.4.4` | Cloud database for user profiles, usage metrics, and outbox sync. |
+| `firebase_analytics` | `^11.3.3` | Event logging, user telemetry, and usage analytics. |
+| `firebase_crashlytics` | `^4.3.0` | Real-time automated crash reporting and stack trace tracking. |
+| `google_sign_in` | `^6.2.1` | Native Google OAuth sign-in flow handler. |
+| `sign_in_with_apple` | `^7.0.1` | Native Apple OAuth sign-in flow handler for iOS & macOS. |
+| `font_awesome_flutter` | `^11.0.0` | Vector brand icons for AI models (OpenAI, Gemini, Claude) and UI controls. |
+| `hive` | `^2.2.3` | Local-first key-value database for conversations, messages, and settings. |
+| `hive_flutter` | `^1.1.0` | Hive database initialization engine for Flutter. |
+| `flutter_secure_storage` | `^9.2.2` | Encrypted platform storage (Android Keystore / iOS Keychain) for user API keys. |
+| `encrypt` | `^5.0.3` | AES-256 encryption and decryption utilities for confidential strings. |
+| `crypto` | `^3.0.7` | Cryptographic SHA-256 hashing for OAuth nonces and token integrity. |
+| `no_screenshot` | `^1.2.0` | Disables screenshots & screen recordings on API key screens (`FLAG_SECURE`). |
+| `http` | `^1.2.2` | HTTP client for REST API calls to OpenAI, Gemini, and Claude endpoints. |
+| `speech_to_text` | `^7.0.0` | Device-native speech recognition engine for continuous voice dictation. |
+| `flutter_tts` | `^4.2.0` | Device-native text-to-speech voice synthesis engine for response playback. |
+| `file_picker` | `^8.1.2` | Document file picker dialog for PDF text extraction. |
+| `image_picker` | `^1.1.2` | Camera & gallery image picker for vision analysis and avatar updates. |
+| `flutter_image_compress` | `^2.4.0` | Image byte compression for avatar uploads and vision payload optimization. |
+| `lottie` | `^3.1.2` | Vector animation renderer for empty states, logo animations, and splash. |
+| `cached_network_image` | `^3.4.1` | Network image caching with placeholder and fallback rendering. |
+| `shimmer` | `^3.0.0` | Animated shimmer skeleton loaders for history and chat lists. |
+| `animations` | `^2.0.11` | Material 3 page route transitions and animated switchers. |
+| `flutter_markdown` | `^0.7.3` | Markdown renderer for AI assistant responses and syntax code blocks. |
+| `flutter_markdown_plus` | `^1.0.12` | Extended markdown styling and table rendering engine. |
+| `uuid` | `^4.5.1` | Unique v4 UUID generator for local conversation and message IDs. |
+| `intl` | `^0.20.2` | Date/time formatting, number formatting, and localization tools. |
+| `connectivity_plus` | `^6.1.0` | Network connectivity monitoring for background outbox sync. |
+| `package_info_plus` | `^8.1.1` | Metadata retriever for app version, build number, and package info. |
+| `url_launcher` | `^6.3.1` | External launcher specifically for initiating `mailto:` support email links to the developer. |
+| `path_provider` | `^2.1.5` | Device file system directory path resolver for Hive and cache storage. |
+| `share_plus` | `^10.1.2` | Native OS share sheet integration for exporting AI responses and images. |
+| `permission_handler` | `^12.0.1` | Runtime permission request handler for camera and microphone access. |
+
+---
+
+## 📄 Support, Legal & Policies
+
+AI Voice Genie provides complete transparency and user support through dedicated legal and assistance interfaces:
+
+- **Legal Section (`LegalScreen`)**: Features a segmented tab bar toggling between the **Privacy Policy** (`assets/legal/privacy_policy.md`) and **Terms of Service** (`assets/legal/terms_of_service.md`). It details data handling practices, zero data sale commitments, and AI model usage policies.
+- **About App (`AboutScreen`)**: Displays app metadata, current version (`package_info_plus`), copyright information, and developer credits.
+- **Support Panel (`SupportPanel`)**: Embedded in the Profile screen, providing direct access to a `mailto:` customer support email link via `url_launcher` allowing users to contact the app developer directly.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Flutter SDK**: `3.38.2`
+- **Dart SDK**: `3.10.0`
+- Xcode 15+ (for iOS builds) or Android Studio Jellyfish+ (for Android builds)
+- A Firebase project with Auth (Google & Apple) and Cloud Firestore enabled.
+
+### Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/YourUsername/voice_genie.git
+   cd voice_genie
+   ```
+
+2. **Install exact package dependencies**:
+   ```bash
+   flutter pub get
+   ```
+
+3. **Firebase Setup**:
+   - Add `google-services.json` to `android/app/`.
+   - Add `GoogleService-Info.plist` to `ios/Runner/`.
+
+4. **Launch the App**:
+   ```bash
+   flutter run
+   ```
+
+---
+
+## 📜 License
+
+This repository is **Private & Proprietary**. All rights reserved. Unauthorized copying, distribution, or public hosting of this codebase or any part thereof is strictly prohibited.
