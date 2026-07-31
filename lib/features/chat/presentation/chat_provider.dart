@@ -217,7 +217,7 @@ class ChatProvider extends ChangeNotifier {
 
     try {
       // Artificial delay so UI can show the loading spinner for local reads
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 600));
 
       final page = await _repository.getOlderMessagePage(
         uid: uid,
@@ -864,7 +864,7 @@ class ChatProvider extends ChangeNotifier {
 
     try {
       // Artificial delay to prevent instant runaway loads on fast scrolls
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 600));
 
       final page = await _repository.getConversationPage(
         uid: uid,

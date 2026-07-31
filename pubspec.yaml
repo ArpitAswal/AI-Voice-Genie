@@ -89,6 +89,7 @@ dependencies:
   no_screenshot: ^1.2.0
   # Encrypt the key string for secure confidential storage
   encrypt: ^5.0.3
+  # Markdown file styling update
   flutter_markdown_plus: ^1.0.12
 
 dev_dependencies:

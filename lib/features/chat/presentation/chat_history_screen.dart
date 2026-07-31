@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:ai_voice_genie/core/constants/app_constants.dart';
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:ai_voice_genie/shared/widgets/image_view.dart';
@@ -23,7 +22,9 @@ import '../../auth/presentation/auth_provider.dart';
 import '../presentation/chat_provider.dart';
 import '../domain/conversation_model.dart';
 import '../../../shared/widgets/dynamic_shimmer.dart';
-import '../../../core/enums/app_enums.dart';
+
+import 'widgets/custom_conversation_card.dart';
+import 'widgets/empty_history_view.dart';
 
 class ConversationHistoryScreen extends StatefulWidget {
   const ConversationHistoryScreen({super.key});
@@ -316,7 +317,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                     else if (conversations.isEmpty && !isSearching)
                       SliverFillRemaining(
                         hasScrollBody: false,
-                        child: _EmptyHistory(isTablet: isTablet),
+                        child: EmptyHistoryView(isTablet: isTablet),
                       )
                     else if (conversations.isEmpty && isSearching)
                       SliverFillRemaining(
@@ -351,10 +352,12 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                       ..._buildGroupedLists(conversations),
                     if (chatProvider.isLoadingMoreConversations &&
                         conversations.isNotEmpty)
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24.0),
-                          child: Center(child: CircularProgressIndicator()),
+                          padding:
+                              EdgeInsets.only(bottom: context.verticalSpacing),
+                          child: const Center(
+                              child: CircularProgressIndicator.adaptive()),
                         ),
                       ),
                   ],
@@ -517,199 +520,6 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
           childCount: 6,
         ),
       ),
-    );
-  }
-}
-
-class CustomConversationCard extends StatelessWidget {
-  final ConversationModel conversation;
-  final VoidCallback onTap;
-
-  const CustomConversationCard({
-    super.key,
-    required this.conversation,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final modelBadge = _modelBadgeIcon(
-      conversation.lastProvider?.displayName ?? '',
-    );
-
-    // Time formatting
-    final date =
-        conversation.lastMessageAt ?? conversation.createdAt ?? DateTime.now();
-
-    final formatDate = DateFormat('yyyy-MM-dd, HH:mm a').format(date);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-            color: context.isDark ? AppColors.cardDark : AppColors.cardLight,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                  color: (context.isDark)
-                      ? AppColors.tealAccent.withValues(alpha: 0.5)
-                      : AppColors.cyanAccent.withValues(alpha: 0.3),
-                  blurRadius: 3.0,
-                  spreadRadius: 1)
-            ]),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    conversation.title.isEmpty
-                        ? context.l10n.newConversation
-                        : conversation.title,
-                    style: context.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                // ── Sync status indicators ─────────────────────────────────
-                // syncFailed — non-retryable write failure; user needs to know
-                if (conversation.syncStatus == SyncStatus.syncFailed)
-                  Tooltip(
-                    message: context.l10n.syncFailedTooltip,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Icon(
-                        Icons.warning_amber_rounded,
-                        size: 16,
-                        color: context.isDark
-                            ? AppColors.darkWarning
-                            : AppColors.lightWarning,
-                      ),
-                    ),
-                  )
-                // pendingCreate/pendingUpdate — queued, not yet confirmed
-                else if (conversation.syncStatus == SyncStatus.pendingCreate ||
-                    conversation.syncStatus == SyncStatus.pendingUpdate)
-                  Tooltip(
-                    message: context.l10n.waitingToSyncTooltip,
-                    child: const Padding(
-                      padding: EdgeInsets.only(right: 4),
-                      child: Icon(
-                        Icons.cloud_off_rounded,
-                        size: 16,
-                        color: AppColors.info,
-                      ),
-                    ),
-                  ),
-                Icon(
-                  Icons.chevron_right,
-                  color: context.isDark
-                      ? AppColors.darkTextTertiary
-                      : AppColors.lightTextTertiary,
-                  size: 20,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (conversation.lastMessage.isNotEmpty) ...[
-              Text(
-                conversation.lastMessage,
-                style: context.textTheme.bodyMedium,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8)
-            ],
-            Row(
-              children: [
-                modelBadge,
-                const SizedBox(width: 12),
-                Text(formatDate, style: context.textTheme.bodyMedium),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _modelBadgeIcon(String model) {
-    Gradient gradColor = AppColors.geminiGradient;
-    FaIconData icon = FontAwesomeIcons.gemini;
-    switch (model) {
-      case AppConstants.openAiDisplayName:
-        gradColor = AppColors.openAIGradient;
-        icon = FontAwesomeIcons.openai;
-        break;
-      case AppConstants.geminiDisplayName:
-        gradColor = AppColors.geminiGradient;
-        icon = FontAwesomeIcons.gemini;
-        break;
-      case AppConstants.claudeDisplayName:
-        gradColor = AppColors.claudeGradient;
-        icon = FontAwesomeIcons.claude;
-        break;
-    }
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        gradient: gradColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Center(
-          child: FaIcon(
-        icon,
-        color: Colors.white,
-        size: 14,
-      )),
-    );
-  }
-}
-
-// =============================================================================
-// EMPTY STATE
-// =============================================================================
-
-class _EmptyHistory extends StatelessWidget {
-  final bool isTablet;
-  const _EmptyHistory({required this.isTablet});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: context.screenWidth,
-          height: context.screenWidth,
-          child: Lottie.asset(
-            AppAssets.emptyConversation,
-            reverse: true,
-            repeat: true,
-            fit: BoxFit.cover,
-            imageProviderFactory: (lottieImage) {
-              return const AssetImage(AppAssets.appLogo);
-            },
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
-          child: context.themedElevatedButton(
-              onPressed: () => AppRoutes.navigateTo(context, AppRoutes.chat),
-              label: l10n.translate('new_conversation'),
-              align: Alignment.center),
-        ),
-      ],
     );
   }
 }

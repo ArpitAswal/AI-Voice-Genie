@@ -166,6 +166,8 @@ class _ModelIntelligenceCard extends StatelessWidget {
                 provider.pricingAndEfficiency(context.l10n),
                 style: context.textTheme.bodySmall?.copyWith(
                   height: 1.5,
+                  color: color,
+                  fontWeight: FontWeight.w500
                 ),
               ),
             ],

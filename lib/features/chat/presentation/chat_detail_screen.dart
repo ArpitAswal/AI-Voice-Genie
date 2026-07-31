@@ -454,7 +454,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                 final messages = chatProvider.messages;
                 if (chatProvider.isLoadingMessages && messages.isEmpty) {
                   return const Center(
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator.adaptive(),
                   );
                 }
 
