@@ -45,6 +45,7 @@ firebase.json
 .pub-cache/
 .pub/
 build/
+assets/app_preview/
 
 # ===============================
 # 🧠 IDE

@@ -150,11 +150,5 @@ class AppConstants {
   // Maximum recording duration in seconds
   static const Duration maxRecordingSeconds = Duration(minutes: 2);
   // Silence detection timeout (auto-stop recording after silence)
-  static const Duration silenceTimeout = Duration(seconds: 5);
-
-  // ── Free Tier Quota (for users using their own key) ───────────────────────
-  // Default daily request quota when user first adds their key
-  static const int defaultDailyQuota = 50;
-  // Quota resets at midnight UTC daily
-  static const String quotaResetTime = 'midnight_utc';
+  static const Duration silenceTimeout = Duration(seconds: 3);
 }

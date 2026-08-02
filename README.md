@@ -24,7 +24,7 @@
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-brightgreen?style=for-the-badge&logo=android&logoColor=white" alt="Android & iOS" />
   <img src="https://img.shields.io/badge/Architecture-Feature--First%20MVVM-blue?style=for-the-badge" alt="Feature-First MVVM" />
   <img src="https://img.shields.io/badge/Security-FLAG__SECURE%20Protected-green?style=for-the-badge&logo=shield" alt="Screen Protected" />
-  <img src="https://img.shields.io/badge/License-Private-red?style=for-the-badge" alt="Private Repository" />
+  <img src="https://img.shields.io/badge/Open Source-red?style=for-the-badge" alt="Open Source" />
     <img src="https://img.shields.io/badge/Firebase-Analytics%20%7C%20Crashlytics-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase Integration" />
   <img src="https://img.shields.io/badge/State_Management-Provider-02569B?style=for-the-badge&logo=flutter" alt="Provider" />
   <img src="https://img.shields.io/badge/Local_Storage-Hive_NoSQL-orange?style=for-the-badge" alt="Hive Storage" />
@@ -57,6 +57,12 @@ Experience a meticulously crafted UI supporting fully responsive Light and Dark 
 | **Home Screen**<br><img src="assets/app_preview/light_home_screen.png" width="250"/> | **Home Screen**<br><img src="assets/app_preview/dark_home_screen.png" width="250"/> |
 | **Chat & Prompt**<br><img src="assets/app_preview/light_prompt_screen.png" width="250"/> | **Chat & Prompt**<br><img src="assets/app_preview/dark_prompt_screen.png" width="250"/> |
 | **Profile & Settings**<br><img src="assets/app_preview/light_profile_screen.png" width="250"/> | **Profile & Settings**<br><img src="assets/app_preview/dark_profile_screen.png" width="250"/> |
+| **AI Provider Keys Management**<br><img width="250" alt="ligh_provider_key_management" src="https://github.com/user-attachments/assets/853b82b6-9179-4f90-a54c-133bb94840c7" /> | **AI Provider Keys Management**<br><img width="250" alt="dark_key_management" src="https://github.com/user-attachments/assets/d97d16c0-3f80-4552-8ee8-c7768149a399" /> |
+| **History Conversation Screen**<br><img width="250" alt="light_conversation_history" src="https://github.com/user-attachments/assets/6fa297bb-19d6-4aef-84a4-dd41c657ae33" /> | **History Conversation Screen**<br><img width="250" alt="dark_history_conversation" src="https://github.com/user-attachments/assets/71d967d7-d773-4ece-b4d9-376f37e802cf" /> |
+
+| **Voice Assistant Functionality** |
+
+https://github.com/user-attachments/assets/7a4f6b07-e389-4baf-9940-1a2515f3ae66
 
 ---
 
@@ -323,4 +329,8 @@ Always branch off the `development` branch using descriptive naming conventions:
 
 ## 📜 License
 
-This repository is **Private & Proprietary**. All rights reserved. Unauthorized copying, distribution, or public hosting of this codebase or any part thereof is strictly prohibited.
+Copyright © 2026 Arpit Aswal.
+
+This repository is provided for portfolio and evaluation purposes only.
+
+Commercial use, redistribution, modification, or reproduction without written permission is prohibited.

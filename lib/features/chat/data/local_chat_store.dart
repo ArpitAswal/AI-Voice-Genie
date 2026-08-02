@@ -68,7 +68,19 @@ class LocalChatStore {
     final key = '${uid}_$conversationId';
     final raw = _conversationsBox.get(key);
     if (raw == null) return null;
-    return LocalConversationRecord.fromMap(raw as Map);
+    
+    // Fallback: If it's already an object in memory from the previous bug, return it directly.
+    if (raw is LocalConversationRecord) return raw;
+    // Fast path: If it's a Map, decode it.
+    if (raw is Map) {
+      try {
+        return LocalConversationRecord.fromMap(raw);
+      } catch (e) {
+        debugPrint('⚠️ LocalChatStore: getConversation corrupt record at $key: $e');
+        return null;
+      }
+    }
+    return null;
   }
 
   /// Stream of a single conversation's record.
@@ -119,14 +131,17 @@ class LocalChatStore {
         .map((key) {
           final raw = _conversationsBox.get(key);
           if (raw == null) return null;
-          try {
-            return LocalConversationRecord.fromMap(raw as Map);
-          } catch (e) {
-            // Corrupt Hive entry — skip it gracefully
-            debugPrint(
-                '⚠️ LocalChatStore: corrupt conversation record at $key: $e');
-            return null;
+          
+          if (raw is LocalConversationRecord) return raw;
+          if (raw is Map) {
+            try {
+              return LocalConversationRecord.fromMap(raw);
+            } catch (e) {
+              debugPrint('⚠️ LocalChatStore: corrupt conversation record at $key: $e');
+              return null;
+            }
           }
+          return null;
         })
         .whereType<LocalConversationRecord>()
         // Hide soft-deleted conversations and those with pending-delete status
@@ -469,7 +484,7 @@ class LocalChatStore {
           syncStatus: SyncStatus.synced,
           lastSyncedAt: DateTime.now(),
           localUpdatedAt: DateTime.now(),
-        ));
+        ).toMap());
   }
 
   /// Update the syncStatus of multiple message records to [SyncStatus.synced].

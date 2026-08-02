@@ -888,17 +888,27 @@ class ChatProvider extends ChangeNotifier {
   void _subscribeToHistory(String uid) {
     _historySubscription?.cancel();
     _historySubscription =
-        LocalChatStore.instance.conversationsBox.watch().listen((_) async {
+        LocalChatStore.instance.conversationsBox.watch().listen((_) {
       // Refresh visible window from Hive when something changes locally
       final currentLimit = _visibleConversations.isEmpty
           ? AppConstants.conversationPageSize
           : _visibleConversations.length;
-      final page = await _repository.getConversationPage(
-        uid: uid,
-        limit: currentLimit,
-        searchQuery: _searchQuery,
-      );
-      _visibleConversations = page.items;
+
+      var localRecords = LocalChatStore.instance.getConversations(uid);
+
+      if (_searchQuery != null && _searchQuery!.trim().isNotEmpty) {
+        final query = _searchQuery!.toLowerCase();
+        localRecords = localRecords
+            .where((c) => c.title.toLowerCase().contains(query))
+            .toList();
+      }
+
+      final items = localRecords
+          .take(currentLimit)
+          .map((r) => r.toConversationModel())
+          .toList();
+
+      _visibleConversations = items;
       notifyListeners();
     });
   }

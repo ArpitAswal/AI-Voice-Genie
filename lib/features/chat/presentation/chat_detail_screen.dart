@@ -181,6 +181,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _doScroll(animated: animated);
   }
 
+  int _scrollLoopCount = 0;
+
   void _doScroll({required bool animated}) {
     if (!mounted || !_scrollController.hasClients) return;
 
@@ -189,12 +191,23 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final distance = target - offset;
 
     // Keep scrolling if we are not at the very bottom
-    if (distance <= 10.0) return;
+    if (distance <= 10.0) {
+      _scrollLoopCount = 0;
+      return;
+    }
 
     // If we have to travel a huge distance (e.g., initial load of a large chat),
     // jump instantly to avoid rendering hundreds of items and freezing the main thread.
     if (!animated || distance > 2000) {
       _scrollController.jumpTo(target);
+      
+      if (_scrollLoopCount > 3) {
+        // Prevent infinite loop if layout never settles
+        _scrollLoopCount = 0;
+        return;
+      }
+      _scrollLoopCount++;
+
       // After jumping, maxScrollExtent might increase because new items were lazily built.
       // Schedule a trailing jump.
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -202,11 +215,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           if (_scrollController.position.maxScrollExtent >
               _scrollController.offset + 10.0) {
             _doScroll(animated: false);
+          } else {
+            _scrollLoopCount = 0;
           }
         }
       });
       return;
     }
+
+    _scrollLoopCount = 0;
 
     _scrollController
         .animateTo(
