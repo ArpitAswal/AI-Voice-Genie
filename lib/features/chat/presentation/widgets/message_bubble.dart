@@ -18,8 +18,12 @@ import '../../../../shared/model/image_model.dart';
 import '../../../../shared/widgets/generated_image_download_button.dart';
 import '../../../../shared/widgets/image_view.dart';
 import '../../../voice_speech/presentation/widgets/tts_play_button.dart';
+import 'package:provider/provider.dart';
+
+import '../chat_provider.dart';
 import '../../domain/message_model.dart';
 import 'model_indicator_chip.dart';
+import 'typewriter_text.dart';
 
 /// Renders a single message bubble in the chat list.
 ///
@@ -36,10 +40,15 @@ class MessageBubble extends StatelessWidget {
   final MessageModel message;
   final bool isTablet;
 
+  /// Called on every character reveal during the typewriter animation.
+  /// Wire this to the scroll controller to keep the latest text in view.
+  final VoidCallback? onTypewriterTick;
+
   const MessageBubble({
     super.key,
     required this.message,
     required this.isTablet,
+    this.onTypewriterTick,
   });
 
   bool get _isUser => message.role == MessageRole.user;
@@ -112,6 +121,7 @@ class MessageBubble extends StatelessWidget {
               message: message,
               isUser: _isUser,
               isTablet: isTablet,
+              onTypewriterTick: onTypewriterTick,
             ),
           ),
         ),
@@ -191,25 +201,45 @@ class _MessageBubbleContent extends StatelessWidget {
   final MessageModel message;
   final bool isUser;
   final bool isTablet;
+  final VoidCallback? onTypewriterTick;
 
   const _MessageBubbleContent({
     required this.message,
     required this.isUser,
     required this.isTablet,
+    this.onTypewriterTick,
   });
 
   @override
   Widget build(BuildContext context) {
     final text = _displayText(context).trim();
-    final textWidget = text.isEmpty
-        ? null
-        : Text(
-            text,
-            style: context.textTheme.bodySmall?.copyWith(
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-                color: context.isDark ? AppColors.white : AppColors.black),
-          );
+
+    // For AI messages, use TypewriterText which animates only the latest
+    // response. For user messages, always use plain Text (no animation).
+    Widget? textWidget;
+    if (text.isNotEmpty) {
+      final baseStyle = context.textTheme.bodySmall?.copyWith(
+        height: 1.5,
+        fontWeight: FontWeight.w500,
+        color: context.isDark ? AppColors.white : AppColors.black,
+      );
+
+      if (!isUser) {
+        textWidget = Selector<ChatProvider, String?>(
+          selector: (_, p) => p.lastGeneratedMessageId,
+          builder: (_, lastId, __) {
+            return TypewriterText(
+              text: text,
+              animate: message.id == lastId,
+              style: baseStyle,
+              onTick: onTypewriterTick,
+            );
+          },
+        );
+      } else {
+        textWidget = Text(text, style: baseStyle);
+      }
+    }
 
     // Compile the children based on what attachments the message has.
     final children = <Widget>[

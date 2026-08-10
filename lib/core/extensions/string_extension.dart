@@ -38,20 +38,28 @@ extension StringExtension on String {
   }
 
   ///automatic conversation title generation,
-  ///similar to what systems like ChatGPT or Anthropic’s Claude do.
+  ///similar to what systems like ChatGPT or Anthropic's Claude do.
+  ///
+  /// Generates the final, permanent title from the user's prompt text.
+  /// Called once when the user sends the first message — never changed again.
   String generateConversationTitle() {
     if (trim().isEmpty) return "Untitled Conversation";
 
     String text = trim();
 
-    // 1. Remove introductory fluff ONLY if it appears at the start of the prompt.
-    // This stops it from breaking phrases like "How to tie a tie".
+    // 1. Remove leading introductory fluff in a loop
+    //    Handles stacked phrases like "Hey Genie, can you please tell me about..."
     final fluffRegex = RegExp(
-      r'^(hey[\w\s,]*|hi[\w\s,]*|hello[\w\s,]*|please|can you|could you|i want to|i need( to)?|help me( with)?|tell me( about)?|what is|how do i)\s+',
+      r'^(hey[\w\s,!?]*|hi[\w\s,!?]*|hello[\w\s,!?]*|please|can you|could you|'
+      r'i want to|i need( to)?|help me( with)?|tell me( about)?|'
+      r'what (is|are|was|were|do|does|did|can|could|would|should|have|has) (you|i|we)?[\s\w]*?(about|on|of|regarding)?|'
+      r'do you know( about| of)?|do you have|'
+      r'how (do|does|can|would|should|to) (i|we|you)?[\s\w]*?|'
+      r'give me|show me|write me|write|create|explain|describe|summarize|'
+      r'list|find|search for|look up|make me|make a|generate)\s+',
       caseSensitive: false,
     );
 
-    // Keep removing fluff if there are stacked phrases (e.g., "Hey Gemini, please can you...")
     String previousText = "";
     while (text != previousText) {
       previousText = text;
@@ -60,22 +68,38 @@ extension StringExtension on String {
 
     if (text.isEmpty) return "Untitled Conversation";
 
-    // 2. Take the first 5-6 meaningful words, KEEPING stop words for grammar.
-    List<String> words = text.split(RegExp(r'\s+'));
-    List<String> selected = words.take(5).toList();
+    // 2. Strip leading articles/connectors ("the stars" → "stars")
+    text = text.replaceFirst(
+        RegExp(r'^(the|a|an|about|regarding|on|some)\s+',
+            caseSensitive: false),
+        '').trim();
 
-    // 3. Rejoin and clean up trailing punctuation (so we don't end on a comma or question mark)
-    String rawTitle = selected.join(" ").replaceAll(RegExp(r'[^\w\s]+$'), '');
+    if (text.isEmpty) return "Untitled Conversation";
 
-    // 4. Convert to proper Title Case
-    String title = rawTitle.split(' ').map((word) {
-      if (word.isEmpty) return "";
-      // Capitalize first letter, lowercase the rest
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(" ");
+    // 3. Take the first sentence fragment (up to first ?,!,. or newline)
+    final sentenceEnd = RegExp(r'[.?!\n]');
+    final match = sentenceEnd.firstMatch(text);
+    if (match != null && match.start > 4) {
+      text = text.substring(0, match.start).trim();
+    }
 
-    return title.isEmpty ? "Untitled Conversation" : title;
+    // 4. Take first 5 words max
+    final words = text.split(RegExp(r'\s+'));
+    final selected = words.take(5).toList();
+
+    // 5. Rejoin and clean up trailing punctuation
+    String rawTitle = selected.join(" ").replaceAll(RegExp(r'[^\w\s]+$'), '').trim();
+
+    if (rawTitle.isEmpty) return "Untitled Conversation";
+
+    // 6. Sentence Case — capitalize just the very first letter of the title
+    if (rawTitle.isNotEmpty) {
+      return rawTitle[0].toUpperCase() + rawTitle.substring(1).toLowerCase();
+    }
+
+    return "Untitled Conversation";
   }
+
 }
 
 /// DateTime formatting extensions for conversation timestamps.

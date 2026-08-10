@@ -66,6 +66,7 @@ class ChatProvider extends ChangeNotifier {
   final List<MessageModel> _messages = [];
   bool _isGenerating = false;
   bool _isLoadingMessages = false;
+  String? _lastGeneratedMessageId;
   bool _isLoadingMoreMessages = false;
   bool _hasMoreMessages = true;
   MessagePageCursor? _messageCursor;
@@ -87,6 +88,9 @@ class ChatProvider extends ChangeNotifier {
   List<MessageModel> get messages => List.unmodifiable(_messages);
   bool get isGenerating => _isGenerating;
   bool get isLoadingMessages => _isLoadingMessages;
+  /// ID of the most recently completed AI message — used by [MessageBubble]
+  /// to trigger the typewriter animation on only the latest response.
+  String? get lastGeneratedMessageId => _lastGeneratedMessageId;
   bool get isLoadingMoreMessages => _isLoadingMoreMessages;
   bool get hasMoreMessages => _hasMoreMessages;
   String? get errorMessage => _errorMessage;
@@ -112,6 +116,7 @@ class ChatProvider extends ChangeNotifier {
     _errorMessage = null;
     _activeConversation = null;
     _messages.clear(); // Synchronously clear old messages immediately
+    _lastGeneratedMessageId = null; // Prevent old messages from animating
     _hasMoreMessages = true;
     _messageCursor = null;
     notifyListeners();
@@ -323,7 +328,10 @@ class ChatProvider extends ChangeNotifier {
       // Build the conversation model in memory — written to Firestore
       // together with the first message pair in one batch (Step 6)
       final conversationId = const Uuid().v4();
-      String actualTitle = trimmedPrompt.generateConversationTitle();
+      
+      // Initially set an empty title so the UI shows a shimmering placeholder 
+      // while we wait for the AI response to generate a combined title.
+      String actualTitle = "";
 
       newConversation = ConversationModel(
         id: conversationId,
@@ -447,7 +455,7 @@ class ChatProvider extends ChangeNotifier {
       );
     } finally {
       final messageToPersist = aiMessage;
-      final conversationToPersist = _activeConversation;
+      var conversationToPersist = _activeConversation;
 
       if (messageToPersist != null && conversationToPersist != null) {
         // ── Step 6: Persist ──────────────────────────
@@ -468,7 +476,18 @@ class ChatProvider extends ChangeNotifier {
           _messages[optimisticIndex] = userMessageToPersist;
         }
 
+        // ── Refine conversation title on first message ─────────────────────
+        // Once the first AI response arrives, we generate the final title 
+        // exclusively from the user's prompt. 
+        if (isNewConversation) {
+          final titleToSave = trimmedPrompt.generateConversationTitle();
+          conversationToPersist =
+              conversationToPersist.copyWith(title: titleToSave);
+          _activeConversation = conversationToPersist;
+        }
+
         _messages.add(messageToPersist);
+        _lastGeneratedMessageId = messageToPersist.id;
 
         // Isolated local-first save — writes to Hive immediately and enqueues
         // a background Firestore sync task via the outbox. This replaces the old

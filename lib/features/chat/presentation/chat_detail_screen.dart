@@ -515,6 +515,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     return MessageBubble(
                       message: messages[adjustedIndex],
                       isTablet: isTablet,
+                      // Provide a scroll callback only for the last message so
+                      // the typewriter animation keeps the new text in view.
+                      onTypewriterTick: adjustedIndex == messages.length - 1
+                          ? () => _doScroll(animated: false)
+                          : null,
                     );
                   },
                 );
