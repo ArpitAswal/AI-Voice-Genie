@@ -2,10 +2,21 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.611459542498-1bfkfcat6dc2drogvjhmfbbep2r45s08</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Voice Genie</string>
+	<string>AI Voice Genie</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +24,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>voice_genie</string>
+	<string>AI Voice Genie</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -28,6 +39,9 @@
 	<string>AI Voice Genie needs camera access so you can ask questions about photos you take.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>AI Voice Genie needs photo library access so you can attach images to chat.</string>
+	<!-- Add-only permission for saving AI-generated images — less invasive than full library access -->
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>AI Voice Genie saves your generated images to Photos when you tap the download button.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
     <string>AI Voice Genie uses speech recognition to convert your voice to text.</string>
     <key>NSMicrophoneUsageDescription</key>
@@ -39,15 +53,11 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
