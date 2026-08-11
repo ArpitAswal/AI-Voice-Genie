@@ -54,11 +54,11 @@ Experience a meticulously crafted UI supporting fully responsive Light and Dark 
 
 | Light Theme | Dark Theme |
 |:---:|:---:|
-| **Home Screen**<br><img src="assets/app_preview/light_home_screen.png" width="250"/> | **Home Screen**<br><img src="assets/app_preview/dark_home_screen.png" width="250"/> |
-| **Chat & Prompt**<br><img src="assets/app_preview/light_prompt_screen.png" width="250"/> | **Chat & Prompt**<br><img src="assets/app_preview/dark_prompt_screen.png" width="250"/> |
-| **Profile & Settings**<br><img src="assets/app_preview/light_profile_screen.png" width="250"/> | **Profile & Settings**<br><img src="assets/app_preview/dark_profile_screen.png" width="250"/> |
-| **AI Provider Keys Management**<br><img width="250" alt="ligh_provider_key_management" src="https://github.com/user-attachments/assets/853b82b6-9179-4f90-a54c-133bb94840c7" /> | **AI Provider Keys Management**<br><img width="250" alt="dark_key_management" src="https://github.com/user-attachments/assets/d97d16c0-3f80-4552-8ee8-c7768149a399" /> |
-| **History Conversation Screen**<br><img width="250" alt="light_conversation_history" src="https://github.com/user-attachments/assets/6fa297bb-19d6-4aef-84a4-dd41c657ae33" /> | **History Conversation Screen**<br><img width="250" alt="dark_history_conversation" src="https://github.com/user-attachments/assets/71d967d7-d773-4ece-b4d9-376f37e802cf" /> |
+| **Home Screen**<br><img width="250" alt="light_home_screen" src="https://github.com/user-attachments/assets/1d8b20d3-5bb6-4c6d-bc4f-0715fa915074" /> | **Home Screen**<br><img width="250" alt="dark_home_screen" src="https://github.com/user-attachments/assets/cf3ed919-bd2b-47e9-b32a-da363f08177b" /> |
+| **Chat & Prompt**<br><img width="250" alt="light_prompt_screen" src="https://github.com/user-attachments/assets/16716420-2aa3-4bcb-86af-cb6b22db5771" /> | **Chat & Prompt**<br><img width="250" alt="dark_prompt_screen" src="https://github.com/user-attachments/assets/ae706c22-e4fd-43a1-99f5-693d0a43aec0" /> |
+| **Profile & Settings**<br><img width="250" alt="light_profile_screen" src="https://github.com/user-attachments/assets/0f640520-79a9-411d-92b8-db8f5161cc56" /> | **Profile & Settings**<br><img width="250" alt="dark_profile_screen" src="https://github.com/user-attachments/assets/e2e88416-3934-4873-af6a-80ad7b41ad11" /> |
+| **AI Provider Keys Management**<br><img width="250" alt="light_provider_key_management" src="https://github.com/user-attachments/assets/a9cce6af-caa7-4cc9-93c3-a86a7aa1dbde" /> | **AI Provider Keys Management**<br><img width="250" alt="dark_key_management" src="https://github.com/user-attachments/assets/32c96b7f-d123-4e69-b488-6e6c6111ed1e" /> |
+| **History Conversation Screen**<br><img width="250" alt="light_conversation_history" src="https://github.com/user-attachments/assets/fbc0b7a5-7e9f-4ff0-8937-d15fb6ca4472" /> | **History Conversation Screen**<br><img width="250" alt="dark_history_conversation" src="https://github.com/user-attachments/assets/c22dbbac-801c-466f-b854-0f0e475a4574" /> |
 
 | **Voice Assistant Functionality** |
 
