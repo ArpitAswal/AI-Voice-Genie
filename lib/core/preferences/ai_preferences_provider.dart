@@ -17,18 +17,32 @@ class AiPreferencesProvider extends ChangeNotifier {
 
   late AiProviderId _preferredProvider;
 
+  bool get autoTextToSpeech => _service.autoTextToSpeech;
+
+  Future<void> setAutoTextToSpeech(bool value) async {
+    if (autoTextToSpeech == value) return;
+    await _service.setAutoTextToSpeech(value);
+    notifyListeners();
+  }
+
   AiProviderId get preferredProvider => _preferredProvider;
-  ImageQuality get preferredImageQuality => _service.preferredImageQuality(_preferredProvider);
-  AiImageSize get preferredImageSize => _service.preferredImageSize(_preferredProvider);
-  int get preferredImageCount => _service.preferredImageCount(_preferredProvider);
+  ImageQuality get preferredImageQuality =>
+      _service.preferredImageQuality(_preferredProvider);
+  AiImageSize get preferredImageSize =>
+      _service.preferredImageSize(_preferredProvider);
+  int get preferredImageCount =>
+      _service.preferredImageCount(_preferredProvider);
   ImageGenerateBackground get preferredImageBackground =>
       _service.preferredImageBackground(_preferredProvider);
 
-  int get preferredVisionImageCount => _service.preferredVisionImageCount(_preferredProvider);
-  int get preferredVisionPdfCount => _service.preferredVisionPdfCount(_preferredProvider);
+  int get preferredVisionImageCount =>
+      _service.preferredVisionImageCount(_preferredProvider);
+  int get preferredVisionPdfCount =>
+      _service.preferredVisionPdfCount(_preferredProvider);
   VisionDetailLevel get preferredVisionDetailLevel =>
       _service.preferredVisionDetailLevel(_preferredProvider);
-  ResponseLength get preferredResponseLength => _service.preferredResponseLength(_preferredProvider);
+  ResponseLength get preferredResponseLength =>
+      _service.preferredResponseLength(_preferredProvider);
 
   Future<void> setPreferredProvider(AiProviderId provider) async {
     if (_preferredProvider == provider) return;

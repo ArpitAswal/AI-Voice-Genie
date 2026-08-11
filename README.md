@@ -2,7 +2,7 @@
 
 <p align="left">
   <!-- The <a> tag makes the image clickable. The align="left" inside the <img> keeps the float intact. -->
-  <a href="https://github.com/ArpitAswal/AI-Voice-Genie/releases/download/v1.0.0/app-release.apk">
+  <a href="https://github.com/ArpitAswal/AI-Voice-Genie/releases/download/v1.1.0/app-arm64-v8a-release.apk">
     <img src="assets/images/app_logo.png" alt="AI Voice Genie Logo" width="180" height="180" align="left" />
   </a>
 </p>
@@ -121,8 +121,9 @@ Enterprise-grade security controls protect user data and sensitive credentials a
 - ⚡ **Local-First Instant UI**: Hive key-value storage engine ensures instantaneous screen rendering with zero network delay.
 - 🔄 **Durable Offline Outbox Sync**: Actions performed offline are stored as `ChatOutboxTask` items and processed asynchronously by `ChatSyncService` when online.
 - 📜 **Cursor-Based Pagination**: Memory-efficient infinite scrolling loads 15 conversations per page in history and 30 initial / 20 scroll-up messages in chat detail.
-- 🎙️ **Speech-to-Text (STT) Dictation**: Continuous microphone dictation with automatic grammar formatting (capitalization, vocative commas, question clauses).
-- 🔊 **Offline Text-to-Speech (TTS)**: Response playback using device-native speech synthesis engines.
+- 🎙️ **Speech-to-Text (STT) & Auto-TTS**: Continuous microphone dictation with automatic grammar formatting, plus intelligent Text-to-Speech (TTS) auto-playback for AI responses based on user preferences.
+- 🧹 **Prompt Sanitization Engine**: Automatically intercepts and strips conversational filler and greetings from prompts to maximize model attention and generate highly relevant conversation titles.
+- 🛡️ **Safety & Moderation Layer**: Deep integration with Gemini and OpenAI moderation endpoints to gracefully catch and localize safety violation blocks.
 - 📄 **Multimodal Vision & PDF Analysis**: Client-side PDF text extraction (`syncfusion_flutter_pdf`) and vision analysis for multi-image prompts.
 - 💾 **Native Scoped Gallery Saving**: Scoped MethodChannel (`ImageSavePlugin.kt` for Android MediaStore API 29+ & `ImageSavePlugin.swift` for iOS PhotoKit) saves AI generated images directly to `Pictures/AI Voice Genie` or `Photos` without intrusive permissions.
 - 📊 **Usage Telemetry & Spending Limits**: Real-time token consumption metrics, estimated USD cost calculations, and monthly budget alert limits.

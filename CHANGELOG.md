@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - Auto-TTS & Smart Prompt Filtering
+**Release Date**: August 11, 2026
+
+### 🚀 Added
+- **Auto Text-To-Speech**: Added a toggle switch in the Profile preferences to automatically read aloud incoming AI responses.
+- **Prompt Sanitization**: Implemented a regex engine to strip conversational greetings ("Hey Genie", "Good morning") from prompts before AI processing and title generation, maximizing model attention.
+- **Enhanced Safety Moderation**: Deep integration with Gemini and OpenAI moderation endpoints to gracefully catch safety/content blocks and display localized user-friendly errors instead of crashing.
+- **Contextual History Cards**: Updated Conversation History Cards to display the User's last prompt (or attachment type) instead of the AI's response for better context recall.
+
+### 🐛 Fixed
+- **TTS Lifecycle Leak**: Audio now immediately stops when navigating away from the Chat Detail screen.
+- **Typewriter Re-triggering**: Fixed state persistence bug where returning to a chat re-triggered typewriter animation and voice playback.
+
 ## [1.0.0] - Initial Production Release
 **Release Date**: July 31, 2026
 

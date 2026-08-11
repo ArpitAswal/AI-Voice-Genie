@@ -39,11 +39,15 @@ class TypewriterText extends StatefulWidget {
     this.charsPerTick = 1,
     this.tickDuration = const Duration(milliseconds: 40),
     this.onTick,
+    this.onAnimationStart,
   });
 
   /// Called on every animation tick (each character reveal).
   /// Use this to trigger auto-scroll so the latest text stays visible.
   final VoidCallback? onTick;
+
+  /// Called once when the typewriter animation begins.
+  final VoidCallback? onAnimationStart;
 
   @override
   State<TypewriterText> createState() => _TypewriterTextState();
@@ -58,6 +62,7 @@ class _TypewriterTextState extends State<TypewriterText> {
   void initState() {
     super.initState();
     if (widget.animate && widget.text.isNotEmpty) {
+      widget.onAnimationStart?.call();
       _startAnimation();
     } else {
       _animationDone = true;

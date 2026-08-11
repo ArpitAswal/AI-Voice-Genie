@@ -90,6 +90,7 @@ migrate_working_dir/
 
 # Symbolication related
 app.*.symbols
+debug_symbols/
 
 # Obfuscation related
 app.*.map.json

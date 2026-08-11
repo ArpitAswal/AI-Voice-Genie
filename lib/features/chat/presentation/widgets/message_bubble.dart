@@ -24,6 +24,8 @@ import '../chat_provider.dart';
 import '../../domain/message_model.dart';
 import 'model_indicator_chip.dart';
 import 'typewriter_text.dart';
+import '../../../../core/preferences/ai_preferences_provider.dart';
+import '../../../voice_speech/presentation/voice_speech_provider.dart';
 
 /// Renders a single message bubble in the chat list.
 ///
@@ -233,6 +235,14 @@ class _MessageBubbleContent extends StatelessWidget {
               animate: message.id == lastId,
               style: baseStyle,
               onTick: onTypewriterTick,
+              onAnimationStart: () {
+                final prefs = context.read<AiPreferencesProvider>();
+                if (prefs.autoTextToSpeech) {
+                  context
+                      .read<VoiceProvider>()
+                      .speak(text, messageId: message.id);
+                }
+              },
             );
           },
         );

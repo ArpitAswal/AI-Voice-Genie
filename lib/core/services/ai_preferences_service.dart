@@ -13,43 +13,59 @@ class AiPreferencesService {
 
   final StorageService _storage = StorageService();
 
+  bool get autoTextToSpeech {
+    return _storage.getBool(StorageKeys.autoTextToSpeech, defaultValue: false);
+  }
+
+  Future<void> setAutoTextToSpeech(bool value) async {
+    await _storage.setBool(StorageKeys.autoTextToSpeech, value);
+  }
+
   AiProviderId get preferredProvider {
     final saved = _storage.getString(StorageKeys.preferredProviderId);
     return _providerFromId(saved) ?? AiProviderId.gemini;
   }
 
   ImageQuality preferredImageQuality(AiProviderId provider) {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredImageQuality, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredImageQuality, provider.id);
     final saved = _storage.getString(key);
     return saved == null ? ImageQuality.low : ImageQuality.fromValue(saved);
   }
 
   AiImageSize preferredImageSize(AiProviderId provider) {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredImageSize, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredImageSize, provider.id);
     final saved = _storage.getString(key);
     return saved == null ? AiImageSize.square : AiImageSize.fromValue(saved);
   }
 
   ImageGenerateBackground preferredImageBackground(AiProviderId provider) {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredImageBackground, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredImageBackground, provider.id);
     final saved = _storage.getString(key);
-    return saved == null ? ImageGenerateBackground.auto : ImageGenerateBackground.fromString(saved);
+    return saved == null
+        ? ImageGenerateBackground.auto
+        : ImageGenerateBackground.fromString(saved);
   }
 
   int preferredVisionImageCount(AiProviderId provider) {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredVisionImageCount, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredVisionImageCount, provider.id);
     final count = _storage.getInt(key, defaultValue: 1);
     return count.clamp(1, 4).toInt();
   }
 
   int preferredVisionPdfCount(AiProviderId provider) {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredVisionPdfCount, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredVisionPdfCount, provider.id);
     final count = _storage.getInt(key, defaultValue: 1);
     return count.clamp(1, 4).toInt();
   }
 
   VisionDetailLevel preferredVisionDetailLevel(AiProviderId provider) {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredVisionDetailLevel, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredVisionDetailLevel, provider.id);
     final saved = _storage.getString(key);
     return saved == null
         ? VisionDetailLevel.auto
@@ -57,7 +73,8 @@ class AiPreferencesService {
   }
 
   ResponseLength preferredResponseLength(AiProviderId provider) {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredResponseLength, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredResponseLength, provider.id);
     final name = _storage.getString(key);
     return name == null
         ? ResponseLength.balanced
@@ -65,7 +82,8 @@ class AiPreferencesService {
   }
 
   int preferredImageCount(AiProviderId provider) {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredImageCount, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredImageCount, provider.id);
     final count = _storage.getInt(key, defaultValue: 1);
     return count.clamp(1, 10).toInt();
   }
@@ -74,53 +92,68 @@ class AiPreferencesService {
     await _storage.setString(StorageKeys.preferredProviderId, provider.id);
   }
 
-  Future<void> setPreferredImageQuality(AiProviderId provider, ImageQuality quality) async {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredImageQuality, provider.id);
+  Future<void> setPreferredImageQuality(
+      AiProviderId provider, ImageQuality quality) async {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredImageQuality, provider.id);
     await _storage.setString(key, quality.value);
   }
 
-  Future<void> setPreferredImageSize(AiProviderId provider, AiImageSize imageSize) async {
+  Future<void> setPreferredImageSize(
+      AiProviderId provider, AiImageSize imageSize) async {
     // Write imageSize.name (e.g. 'square', 'landscape', 'portrait') as a string since Hive expects a String
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredImageSize, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredImageSize, provider.id);
     await _storage.setString(key, imageSize.name);
   }
 
-  Future<void> setPreferredImageBackground(AiProviderId provider, ImageGenerateBackground background) async{
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredImageBackground, provider.id);
+  Future<void> setPreferredImageBackground(
+      AiProviderId provider, ImageGenerateBackground background) async {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredImageBackground, provider.id);
     await _storage.setString(key, background.name);
   }
 
-  Future<void> setPreferredVisionImageCount(AiProviderId provider, int count) async {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredVisionImageCount, provider.id);
+  Future<void> setPreferredVisionImageCount(
+      AiProviderId provider, int count) async {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredVisionImageCount, provider.id);
     await _storage.setInt(
       key,
       count.clamp(1, 4).toInt(),
     );
   }
 
-  Future<void> setPreferredVisionPdfCount(AiProviderId provider, int count) async {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredVisionPdfCount, provider.id);
+  Future<void> setPreferredVisionPdfCount(
+      AiProviderId provider, int count) async {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredVisionPdfCount, provider.id);
     await _storage.setInt(
       key,
       count.clamp(1, 4).toInt(),
     );
   }
 
-  Future<void> setPreferredVisionDetailLevel(AiProviderId provider, VisionDetailLevel level) async {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredVisionDetailLevel, provider.id);
+  Future<void> setPreferredVisionDetailLevel(
+      AiProviderId provider, VisionDetailLevel level) async {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredVisionDetailLevel, provider.id);
     await _storage.setString(
       key,
       level.apiValue,
     );
   }
 
-  Future<void> setPreferredResponseLength(AiProviderId provider, ResponseLength length) async {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredResponseLength, provider.id);
+  Future<void> setPreferredResponseLength(
+      AiProviderId provider, ResponseLength length) async {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredResponseLength, provider.id);
     await _storage.setString(key, length.name);
   }
 
   Future<void> setPreferredImageCount(AiProviderId provider, int count) async {
-    final key = StorageKeys.providerPrefKey(StorageKeys.preferredImageCount, provider.id);
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredImageCount, provider.id);
     await _storage.setInt(
       key,
       count.clamp(1, 10).toInt(),

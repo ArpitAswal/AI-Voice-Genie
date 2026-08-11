@@ -468,11 +468,17 @@ class ChatRepositoryImpl implements ChatRepository {
 
     // ── Step 1: Write conversation metadata to Hive ───────────────────────────
     // This is the local-first write. The UI stream updates immediately.
-    final hasAiContent = aiMessage.content.trim().isNotEmpty;
-    final effectiveLastMessage =
-        hasAiContent ? aiMessage.content : userMessage.content;
-    final effectiveLastMessageAt =
-        hasAiContent ? aiMessage.timestamp : userMessage.timestamp;
+    String effectiveLastMessage = userMessage.content.trim();
+    if (effectiveLastMessage.isEmpty) {
+      if (userMessage.imageUrls?.isNotEmpty == true) {
+        effectiveLastMessage = 'Image(s)';
+      } else if (userMessage.pdfInfo?.isNotEmpty == true) {
+        effectiveLastMessage = 'PDF Document';
+      } else {
+        effectiveLastMessage = 'Attachment';
+      }
+    }
+    final effectiveLastMessageAt = aiMessage.timestamp;
 
     final existingRecord =
         LocalChatStore.instance.getConversation(uid, conversationId);

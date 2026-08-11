@@ -37,6 +37,19 @@ extension StringExtension on String {
     return '${substring(0, 4)}...${substring(length - 4)}';
   }
 
+  /// Strips conversational greetings and AI names from the beginning of a prompt.
+  /// Example: "Hey Genie, how are you?" -> "how are you?"
+  String stripGreetings() {
+    if (trim().isEmpty) return this;
+
+    final regex = RegExp(
+      r'^(good\s+morning|good\s+afternoon|good\s+evening|good\s+night|hello|hey|hi|greetings)[\s]*(genie|chatgpt|claude|ai|bot|assistant)?[\s,!.?]*',
+      caseSensitive: false,
+    );
+
+    return replaceFirst(regex, '').trim();
+  }
+
   ///automatic conversation title generation,
   ///similar to what systems like ChatGPT or Anthropic's Claude do.
   ///
@@ -69,10 +82,12 @@ extension StringExtension on String {
     if (text.isEmpty) return "Untitled Conversation";
 
     // 2. Strip leading articles/connectors ("the stars" → "stars")
-    text = text.replaceFirst(
-        RegExp(r'^(the|a|an|about|regarding|on|some)\s+',
-            caseSensitive: false),
-        '').trim();
+    text = text
+        .replaceFirst(
+            RegExp(r'^(the|a|an|about|regarding|on|some)\s+',
+                caseSensitive: false),
+            '')
+        .trim();
 
     if (text.isEmpty) return "Untitled Conversation";
 
@@ -88,7 +103,8 @@ extension StringExtension on String {
     final selected = words.take(5).toList();
 
     // 5. Rejoin and clean up trailing punctuation
-    String rawTitle = selected.join(" ").replaceAll(RegExp(r'[^\w\s]+$'), '').trim();
+    String rawTitle =
+        selected.join(" ").replaceAll(RegExp(r'[^\w\s]+$'), '').trim();
 
     if (rawTitle.isEmpty) return "Untitled Conversation";
 
@@ -99,7 +115,6 @@ extension StringExtension on String {
 
     return "Untitled Conversation";
   }
-
 }
 
 /// DateTime formatting extensions for conversation timestamps.

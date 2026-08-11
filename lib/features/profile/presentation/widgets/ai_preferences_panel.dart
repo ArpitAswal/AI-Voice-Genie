@@ -39,6 +39,31 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
+              // ── Always Visible: Auto Text-to-Speech ────────────────────────
+              _PreferenceRow(
+                title: context.l10n.autoTts,
+                description: context.l10n.autoTtsHint,
+                child: Transform.scale(
+                  scale: 0.8,
+                  child: Switch(
+                    value: preferences.autoTextToSpeech,
+                    onChanged: (val) {
+                      preferences.setAutoTextToSpeech(val);
+                    },
+                    padding: EdgeInsets.zero,
+                    activeThumbColor: context.theme.colorScheme.onPrimary,
+                    activeTrackColor:
+                        context.primaryColor.withValues(alpha: 0.12),
+                    inactiveThumbColor: context.primaryColor,
+                    inactiveTrackColor:
+                        context.primaryColor.withValues(alpha: 0.12),
+                    trackOutlineColor: WidgetStatePropertyAll(context.isDark
+                        ? context.theme.colorScheme.primary
+                        : context.theme.colorScheme.secondary),
+                  ),
+                ),
+              ),
+
               // ── Response Length ────────────────────────────────────────────
               if (profile.supports(AiPreferenceControl.responseLength)) ...[
                 _PreferenceRow(
@@ -180,7 +205,7 @@ class _PreferenceRow extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(description, style: context.textTheme.bodySmall),
-        const SizedBox(height: 10),
+        SizedBox(height: (title.toLowerCase().contains('speech')) ? 0 : 10),
         Align(alignment: Alignment.centerLeft, child: child),
       ],
     );

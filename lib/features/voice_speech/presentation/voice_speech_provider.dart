@@ -209,8 +209,13 @@ class VoiceProvider extends ChangeNotifier {
       await _repository.stopSpeaking();
     }
 
+    final idChanged = _activeTtsMessageId != messageId;
     _activeTtsMessageId = messageId;
-    _setState(VoiceRecordingState.playing);
+
+    if (_state != VoiceRecordingState.playing || idChanged) {
+      _state = VoiceRecordingState.playing;
+      notifyListeners();
+    }
 
     await _repository.speak(
       text,

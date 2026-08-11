@@ -443,6 +443,8 @@ class AppLocalizations {
       'preferred_model': 'Preferred Model',
       'preferred_model_hint':
           'Quick switch the model used for chats. Falls back if unavailable.',
+      'auto_tts': 'Auto Text-to-Speech',
+      'auto_tts_hint': 'Automatically speak AI responses aloud',
       'image_quality': 'Image Quality',
       'image_quality_hint': 'Set the default quality for image generation.',
       'image_size': 'Image Size',
@@ -496,6 +498,8 @@ class AppLocalizations {
           'Permission denied. Please check your API key permissions.',
       'error_unexpected_ai':
           'The selected AI model returned an unexpected error. Please try again.',
+      'error_safety_violation':
+          'This prompt violates safety guidelines and cannot be processed.',
       'error_selected_model_capability_gap':
           'The selected AI model cannot complete this task. Choose a model that supports this feature.',
       'error_pdf_too_large': 'PDF exceeds the 10MB size limit.',
@@ -919,6 +923,8 @@ class AppLocalizations {
       'preferred_model': 'पसंदीदा मॉडल',
       'preferred_model_hint':
           'चैट के लिए मॉडल जल्दी बदलें। उपलब्ध न होने पर fallback होगा।',
+      'auto_tts': 'ऑटो टेक्स्ट-टू-स्पीच',
+      'auto_tts_hint': 'AI प्रतिक्रियाओं को स्वचालित रूप से बोलकर सुनाएं',
       'image_quality': 'इमेज गुणवत्ता',
       'image_quality_hint': 'इमेज जनरेशन की डिफ़ॉल्ट गुणवत्ता सेट करें।',
       'image_size': 'इमेज आकार',
@@ -969,6 +975,8 @@ class AppLocalizations {
           'अनुमति अस्वीकृत। कृपया अपनी API key अनुमतियाँ जांचें।',
       'error_unexpected_ai':
           'चयनित AI मॉडल ने अनपेक्षित त्रुटि लौटाई। कृपया पुनः प्रयास करें।',
+      'error_safety_violation':
+          'यह प्रॉम्प्ट सुरक्षा दिशानिर्देशों का उल्लंघन करता है और इसे संसाधित नहीं किया जा सकता।',
       'error_selected_model_capability_gap':
           'चयनित AI मॉडल यह कार्य पूरा नहीं कर सकता। ऐसी सुविधा का समर्थन करने वाला मॉडल चुनें।',
       'error_pdf_too_large': 'PDF 10MB की सीमा से अधिक है।',
@@ -1167,6 +1175,8 @@ class AppLocalizations {
   String get language => translate('language');
   String get preferredModel => translate('preferred_model');
   String get preferredModelHint => translate('preferred_model_hint');
+  String get autoTts => translate('auto_tts');
+  String get autoTtsHint => translate('auto_tts_hint');
   String get imageQuality => translate('image_quality');
   String get imageQualityHint => translate('image_quality_hint');
   String get imageSize => translate('image_size');

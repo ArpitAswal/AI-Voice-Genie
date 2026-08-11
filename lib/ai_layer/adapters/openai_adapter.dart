@@ -80,10 +80,24 @@ class OpenAiAdapter extends AiProviderAdapter {
       }
 
       final text = choices[0]['message']?['content'] as String? ?? '';
+      final finishReason = choices[0]['finish_reason'] as String?;
+
+      if (text.isEmpty) {
+        if (finishReason == 'content_filter') {
+          throw const AiHardErrorException(
+            message: 'error_safety_violation',
+            provider: AiProviderId.openAi,
+          );
+        }
+        throw const AiTransientException(
+          message: 'error_unexpected_ai',
+          provider: AiProviderId.openAi,
+        );
+      }
+
       final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
       final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
       final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
-      final finishReason = choices[0]['finish_reason'] as String?;
 
       stopwatch.stop();
       debugPrint('📥 OpenAI Response (Text Generation): ${jsonEncode(data)}');

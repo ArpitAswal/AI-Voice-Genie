@@ -44,18 +44,22 @@
 
 ### D. Voice & Speech Capabilities
 - **Continuous Speech Recognition (STT)**: Real-time microphone listening with automatic grammar formatting (proper noun capitalization, vocative comma insertion, question clause structuring) and auto-scrolling input.
-- **Text-to-Speech (TTS)**: Built-in voice playback for assistant text responses.
+- **Text-to-Speech (TTS) & Auto-Playback**: Built-in voice playback for assistant text responses, with a user-configurable Auto-TTS toggle that automatically reads incoming AI responses.
+- **Prompt Sanitization Engine**: Intercepts user prompts to cleanly strip conversational greetings ("Hey Genie", "Good morning") to maximize AI reasoning context and generate highly relevant conversation titles.
 
-### E. Native AI Image Downloading
+### E. Safety & Moderation
+- **Moderation Layer**: Deep integration with Gemini and OpenAI moderation endpoints to gracefully catch and localize safety violation blocks (e.g. `finishReason: "SAFETY"`), returning a user-friendly UI exception instead of a crash.
+
+### F. Native AI Image Downloading
 - **Overlay Download Button**: Positioned on AI-generated images in the chat stream with per-image loading spinners, checkmark success feedback, and error handling.
 - **Scoped Storage**: Uses native Kotlin MediaStore logic (Android) and Swift Photo Library logic (iOS) to save clean filenames (`aivoicegenie_{timestamp}_{index}.ext`) directly to the gallery with platform-specific success toasts.
 
-### F. AI Usage Tracking & Spending Limits
+### G. AI Usage Tracking & Spending Limits
 - **Usage Metrics & Pricing Table**: Real-time tracking of prompt tokens, completion tokens, total token consumption, and estimated USD costs per AI model based on `UsagePricingTable`.
 - **Budget Controls**: Enables users to set monthly spending limits ($) and receive visual budget alert banners when spending limits are approached.
 
-### G. Personalization, Legal & Support
-- **AI Preferences**: Custom settings for default provider, vision detail level, image size/quality, and token limits. Powered by an `AiModelCapabilityProfile` matrix that dynamically hides unsupported controls (e.g. hiding image settings when Claude is selected) and reveals provider-specific features (e.g. Gemini aspect ratios `1:1`, `16:9`, `4:3`, `3:4`).
+### H. Personalization, Legal & Support
+- **AI Preferences**: Custom settings for default provider, vision detail level, image size/quality, Auto-TTS preference, and token limits. Powered by an `AiModelCapabilityProfile` matrix that dynamically hides unsupported controls (e.g. hiding image settings when Claude is selected) and reveals provider-specific features (e.g. Gemini aspect ratios `1:1`, `16:9`, `4:3`, `3:4`).
 - **Multilingual Support**: Real-time language switching between English and Hindi powered by `LocaleProvider` and `AppLocalizations`.
 - **Theming**: Theme switching between Light, Dark, and System modes via `ThemeProvider`.
 - **Legal & Support**: Dedicated Privacy Policy (`assets/legal/privacy_policy.md`), Terms of Service (`assets/legal/terms_of_service.md`), About App metadata, and Support panel (`LegalScreen`, `AboutScreen`, `SupportPanel`).

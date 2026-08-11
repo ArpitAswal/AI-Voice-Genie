@@ -88,6 +88,7 @@ class ChatProvider extends ChangeNotifier {
   List<MessageModel> get messages => List.unmodifiable(_messages);
   bool get isGenerating => _isGenerating;
   bool get isLoadingMessages => _isLoadingMessages;
+
   /// ID of the most recently completed AI message — used by [MessageBubble]
   /// to trigger the typewriter animation on only the latest response.
   String? get lastGeneratedMessageId => _lastGeneratedMessageId;
@@ -253,6 +254,7 @@ class ChatProvider extends ChangeNotifier {
           .stopWatchingConversation(_activeConversation!.id);
       _activeConversation = null;
     }
+    _lastGeneratedMessageId = null;
     _messagesSubscription?.cancel();
   }
 
@@ -274,6 +276,8 @@ class ChatProvider extends ChangeNotifier {
   }) async {
     final trimmedPrompt = prompt.trim();
     if (trimmedPrompt.isEmpty && attachments.isEmpty) return;
+
+    final cleanPrompt = trimmedPrompt.stripGreetings();
 
     _errorMessage = null;
     final requestCapability = _resolveRequestCapability(
@@ -328,15 +332,15 @@ class ChatProvider extends ChangeNotifier {
       // Build the conversation model in memory — written to Firestore
       // together with the first message pair in one batch (Step 6)
       final conversationId = const Uuid().v4();
-      
-      // Initially set an empty title so the UI shows a shimmering placeholder 
+
+      // Initially set an empty title so the UI shows a shimmering placeholder
       // while we wait for the AI response to generate a combined title.
       String actualTitle = "";
 
       newConversation = ConversationModel(
         id: conversationId,
         title: actualTitle,
-        lastMessage: _conversationPreview(trimmedPrompt, attachments),
+        lastMessage: _conversationPreview(cleanPrompt, attachments),
         capability: requestCapability,
         lastProvider: selectedProvider,
       );
@@ -380,7 +384,7 @@ class ChatProvider extends ChangeNotifier {
         request: AiRequest(
           capability: requestCapability,
           uid: uid,
-          prompt: trimmedPrompt,
+          prompt: cleanPrompt.isNotEmpty ? cleanPrompt : trimmedPrompt,
           conversationHistory: history,
           visionDetailLevel:
               effectivePrefs.visionDetailLevel ?? VisionDetailLevel.auto,
@@ -477,10 +481,10 @@ class ChatProvider extends ChangeNotifier {
         }
 
         // ── Refine conversation title on first message ─────────────────────
-        // Once the first AI response arrives, we generate the final title 
-        // exclusively from the user's prompt. 
+        // Once the first AI response arrives, we generate the final title
+        // exclusively from the user's prompt.
         if (isNewConversation) {
-          final titleToSave = trimmedPrompt.generateConversationTitle();
+          final titleToSave = cleanPrompt.generateConversationTitle();
           conversationToPersist =
               conversationToPersist.copyWith(title: titleToSave);
           _activeConversation = conversationToPersist;

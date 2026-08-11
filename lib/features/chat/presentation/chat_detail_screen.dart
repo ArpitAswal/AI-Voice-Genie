@@ -19,6 +19,7 @@ import '../../../shared/model/image_model.dart';
 import '../../../shared/widgets/image_view.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
+import '../../voice_speech/presentation/voice_speech_provider.dart';
 import '../domain/chat_attachment.dart';
 import 'chat_provider.dart';
 import 'widgets/change_title_dialog.dart';
@@ -52,6 +53,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   ChatProvider? _chatProvider;
+  VoiceProvider? _voiceProvider;
   int _lastMessageCount = 0;
   bool _wasGenerating = false;
   bool _isManualDeleting = false;
@@ -64,6 +66,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _scrollController.addListener(_onScroll);
 
     _chatProvider = context.read<ChatProvider>();
+    _voiceProvider = context.read<VoiceProvider>();
     _lastMessageCount = _chatProvider!.messages.length;
     _wasGenerating = _chatProvider!.isGenerating;
 
@@ -400,6 +403,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void dispose() {
     _chatProvider?.removeListener(_onChatProviderChange);
     _chatProvider?.closeActiveConversation();
+    _voiceProvider?.stopSpeaking();
     _scrollController.dispose();
     super.dispose();
   }

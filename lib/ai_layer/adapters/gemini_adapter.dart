@@ -92,8 +92,16 @@ class GeminiAdapter extends AiProviderAdapter {
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (Text Generation): ${jsonEncode(data)}');
 
+      final finishReason = data['candidates']?[0]?['finishReason'] as String?;
+
       final text = _extractTextFromResponse(data);
       if (text.isEmpty) {
+        if (finishReason == 'SAFETY') {
+          throw const AiHardErrorException(
+            message: 'error_safety_violation',
+            provider: AiProviderId.gemini,
+          );
+        }
         throw const AiTransientException(
           message: 'error_unexpected_ai',
           provider: AiProviderId.gemini,
@@ -108,7 +116,6 @@ class GeminiAdapter extends AiProviderAdapter {
           data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
       final outputTokens = candidatesTokens + thoughtsTokens;
       final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
-      final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 
       stopwatch.stop();
       return AiResponse.text(

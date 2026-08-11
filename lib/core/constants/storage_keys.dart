@@ -62,6 +62,8 @@ class StorageKeys {
   static const String useAiStt = 'useAiStt';
   // TTS playback speed (0.5 – 2.0)
   static const String ttsSpeed = 'ttsSpeed';
+  // Whether AI responses should be automatically read aloud
+  static const String autoTextToSpeech = 'autoTextToSpeech';
 
   // ── Notifications ─────────────────────────────────────────────────────────
   static const String fcmToken = 'fcmToken';
