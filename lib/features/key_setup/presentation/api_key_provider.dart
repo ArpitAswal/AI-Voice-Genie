@@ -77,6 +77,12 @@ class ApiKeyProvider extends ChangeNotifier {
     return '${key.substring(0, 4)}••••••••••${key.substring(key.length - 4)}';
   }
 
+  /// Returns the raw (decrypted) API key for [provider], or null if not stored.
+  ///
+  /// **Internal use only** — never display or log this value.
+  /// Used by services that need to call the provider API directly (e.g. Whisper STT).
+  String? rawKeyFor(AiProviderId provider) => _storedKeys[provider]?.apiKey;
+
   /// Whether at least one provider has a valid key
   bool get hasAtLeastOneValidKey =>
       _statuses.values.any((status) => status == ApiKeyStatus.valid);

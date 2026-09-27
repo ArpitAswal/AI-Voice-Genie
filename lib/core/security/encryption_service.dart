@@ -14,14 +14,35 @@ class EncryptionService {
   EncryptionService._();
 
   /// Guarantees a valid 32-byte (256-bit) key for AES-256 from [AppConstants.encryptionKey].
-  /// If no key was injected via --dart-define (e.g., during unit tests or unconfigured
-  /// dev runs), we use a zeroed-out 32-byte key so encryption never throws an error.
-  /// Any injected key from secrets.json is automatically padded or truncated to 32 characters.
+  ///
+  /// SECURITY: In release mode, a missing key is a hard failure — the app
+  /// refuses to start rather than silently falling back to an all-zero key,
+  /// which would make every stored API key trivially decryptable.
+  ///
+  /// In debug/profile mode (e.g. unit tests, local runs without secrets.json)
+  /// the same hard assertion fires — intentionally — so developers are never
+  /// silently running with a weakened key.
+  ///
+  /// To configure, run/build with:
+  ///   flutter run --dart-define-from-file=secrets.json
+  ///   flutter build apk --dart-define-from-file=secrets.json
   static Key get _key {
     var keyString = AppConstants.encryptionKey;
+
+    // ─── SECURITY GATE ────────────────────────────────────────────────────────
+    // If the encryption key was not injected at build time, refuse to operate.
+    // This prevents the silent all-zero-key fallback that would make
+    // every API key stored in Firestore trivially decryptable.
     if (keyString.isEmpty) {
-      return Key.fromUtf8('00000000000000000000000000000000');
+      throw StateError(
+        '[EncryptionService] FATAL: encryptionKey is empty.\n'
+        'Build with: flutter run --dart-define-from-file=secrets.json\n'
+        'or: flutter build apk --dart-define-from-file=secrets.json\n'
+        'Ensure secrets.json contains a non-empty "ENCRYPTION_KEY" value.',
+      );
     }
+    // ─────────────────────────────────────────────────────────────────────────
+
     if (keyString.length < 32) {
       keyString = keyString.padRight(32, '0');
     } else if (keyString.length > 32) {

@@ -184,23 +184,23 @@ class AppLocalizations {
       'claude_model_message':
           'Expert analytical reasoning and long-form PDF understanding.',
       'openai_capabilities_info':
-          '• Image Generation (GPT-Image-1)\n• Text, Vision & PDF Analysis (GPT-4o)',
+          '• Image Generation (GPT-Image-2.5 Flare)\n• Text, Vision & PDF Analysis (GPT-6 Luna)\n• High-Precision Voice Transcription (Whisper)',
       'gemini_capabilities_info':
-          '• Image Generation (Gemini 2.5 Flash Image)\n• Fast Multimodal Reasoning (Gemini 2.5 Flash)',
+          '• Image Generation (Gemini 3.1 Flash-Lite Image)\n• Fast Multimodal Reasoning (Gemini 3.5 Flash-Lite)',
       'claude_capabilities_info':
-          '• Advanced Reasoning & Coding (Claude 3.5 Sonnet)\n• Deep PDF & Vision Analysis (Claude 3.5 Sonnet)',
+          '• Advanced Reasoning & Coding (Claude Haiku 4.5)\n• Deep PDF & Vision Analysis (Claude Haiku 4.5)',
       'openai_tech_specs':
-          '• Active Models: gpt-4o, gpt-image-1\n• Unlocks 128k context window with GPT-Image-1 image generation.',
+          '• Active Models: gpt-6-luna, gpt-image-2.5-flare, whisper-1\n• Unlocks 1.05M context window, high-precision voice transcription, and image generation.',
       'gemini_tech_specs':
-          '• Active Models: gemini-2.5-flash, gemini-2.5-flash-image\n• Unlocks 1M context window with Google\'s native multimodal engine.',
+          '• Active Models: gemini-3.5-flash-lite, gemini-3.1-flash-lite-image\n• Unlocks 1M context window with Google\'s native multimodal engine.',
       'claude_tech_specs':
-          '• Active Model: claude-3-5-sonnet-latest\n• Unlocks 200k context window with Anthropic\'s flagship reasoning engine.',
+          '• Active Model: claude-haiku-4-5-20251001\n• Unlocks 200k context window with Anthropic\'s fast reasoning engine.',
       'openai_pricing_info':
-          '• Primary Model: gpt-4o (\$2.50 / 1M input tokens)\n• Image Gen: gpt-image-1 (\$0.011 - \$0.167 / image)',
+          '• Primary Model: gpt-6-luna\n• Image Gen: gpt-image-2.5-flare\n• Voice Transcription: whisper-1 (High Accuracy, \$0.006 / min)',
       'gemini_pricing_info':
-          '• Primary Model: gemini-2.5-flash (\$0.30 / 1M input tokens)\n• Image Gen: gemini-2.5-flash-image (~\$0.011 / image)',
+          '• Primary Model: gemini-3.5-flash-lite\n• Image Gen: gemini-3.1-flash-lite-image',
       'claude_pricing_info':
-          '• Primary Model: claude-3-5-sonnet (\$3.00 / 1M input tokens)\n• Output Tokens: \$15.00 / 1M (Vision & PDF included)',
+          '• Primary Model: claude-haiku-4-5-20251001\n• Vision & PDF Analysis included',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'Not supported',
@@ -665,23 +665,23 @@ class AppLocalizations {
       'claude_model_message':
           'उत्कृष्ट विश्लेषणात्मक तर्क क्षमता और पीडीएफ फॉर्मेट को समझने की क्षमता।',
       'openai_capabilities_info':
-          '• चित्र निर्माण (GPT-Image-1)\n• पाठ, दृष्टि और पीडीएफ विश्लेषण (GPT-4o)',
+          '• चित्र निर्माण (GPT-Image-2.5 Flare)\n• पाठ, दृष्टि और पीडीएफ विश्लेषण (GPT-6 Luna)\n• उच्च-सटीक वॉयस ट्रांसक्रिप्शन (Whisper)',
       'gemini_capabilities_info':
-          '• चित्र निर्माण (Gemini 2.5 Flash Image)\n• तीव्र मल्टीमॉडल तर्क (Gemini 2.5 Flash)',
+          '• चित्र निर्माण (Gemini 3.1 Flash-Lite Image)\n• तीव्र मल्टीमॉडल तर्क (Gemini 3.5 Flash-Lite)',
       'claude_capabilities_info':
-          '• उन्नत तर्क और कोडिंग (Claude 3.5 Sonnet)\n• गहन पीडीएफ और दृष्टि समझ (Claude 3.5 Sonnet)',
+          '• उन्नत तर्क और कोडिंग (Claude Haiku 4.5)\n• गहन पीडीएफ और दृष्टि समझ (Claude Haiku 4.5)',
       'openai_tech_specs':
-          '• सक्रिय मॉडल: gpt-4o, gpt-image-1\n• 128k कॉन्टेक्स्ट विंडो और GPT-Image-1 चित्र निर्माण को अनलॉक करता है।',
+          '• सक्रिय मॉडल: gpt-6-luna, gpt-image-2.5-flare, whisper-1\n• 1.05M कॉन्टेक्स्ट विंडो, उच्च-सटीक वॉयस ट्रांसक्रिप्शन और चित्र निर्माण को अनलॉक करता है।',
       'gemini_tech_specs':
-          '• सक्रिय मॉडल: gemini-2.5-flash, gemini-2.5-flash-image\n• Google के नेटिव मल्टीमॉडल इंजन के साथ 1M कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
+          '• सक्रिय मॉडल: gemini-3.5-flash-lite, gemini-3.1-flash-lite-image\n• Google के नेटिव मल्टीमॉडल इंजन के साथ 1M कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
       'claude_tech_specs':
-          '• सक्रिय मॉडल: claude-3-5-sonnet-latest\n• Anthropic के प्रमुख तर्क इंजन के साथ 200k कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
+          '• सक्रिय मॉडल: claude-haiku-4-5-20251001\n• Anthropic के तेज़ तर्क इंजन के साथ 200k कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
       'openai_pricing_info':
-          '• प्राथमिक मॉडल: gpt-4o (\$2.50 / 1M इनपुट टोकन)\n• चित्र निर्माण: gpt-image-1 (\$0.011 - \$0.167 / चित्र)',
+          '• प्राथमिक मॉडल: gpt-6-luna\n• चित्र निर्माण: gpt-image-2.5-flare\n• वॉयस ट्रांसक्रिप्शन: whisper-1 (उच्च सटीकता, \$0.006 / मिनट)',
       'gemini_pricing_info':
-          '• प्राथमिक मॉडल: gemini-2.5-flash (\$0.30 / 1M इनपुट टोकन)\n• चित्र निर्माण: gemini-2.5-flash-image (~\$0.011 / चित्र)',
+          '• प्राथमिक मॉडल: gemini-3.5-flash-lite\n• चित्र निर्माण: gemini-3.1-flash-lite-image',
       'claude_pricing_info':
-          '• प्राथमिक मॉडल: claude-3-5-sonnet (\$3.00 / 1M इनपुट टोकन)\n• आउटपुट टोकन: \$15.00 / 1M (दृष्टि और पीडीएफ शामिल)',
+          '• प्राथमिक मॉडल: claude-haiku-4-5-20251001\n• दृष्टि और पीडीएफ विश्लेषण शामिल',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'समर्थित नहीं',

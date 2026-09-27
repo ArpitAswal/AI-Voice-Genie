@@ -17,6 +17,14 @@ import '../domain/voice_speech_repository.dart';
 ///   - Microphone and TTS availability checks
 ///   - TTS speed preference from Hive
 ///
+/// ## STT backend
+/// When [openAiKeyGetter] returns a non-empty key the repository uses
+/// **OpenAI Whisper** for transcription (server-side, high accuracy).
+/// Without a key it falls back to the **platform-native** STT engine.
+/// After the user stops speaking, if Whisper is active the provider
+/// transitions to [VoiceRecordingState.processing] to indicate the
+/// brief upload/transcription delay before returning to idle.
+///
 /// Used by:
 ///   - VoiceInputButton  — reads recordingState, triggers startListening/stop
 ///   - TtsPlaybackButton — reads isPlaying, triggers speak/stop
@@ -41,7 +49,12 @@ class VoiceProvider extends ChangeNotifier {
     VoiceRepository? repository,
     AnalyticsService? analytics,
     StorageService? storage,
-  })  : _repository = repository ?? VoiceRepositoryImpl(),
+    /// Returns the current plain-text OpenAI API key, or null if not available.
+    /// Evaluated lazily at each [startListening] call so key changes take effect
+    /// without restarting the provider.
+    String? Function()? openAiKeyGetter,
+  })  : _repository = repository ??
+            VoiceRepositoryImpl(openAiKeyGetter: openAiKeyGetter),
         _analytics = analytics ?? AnalyticsService.instance,
         _storage = storage ?? StorageService() {
     _initialize();
@@ -60,7 +73,6 @@ class VoiceProvider extends ChangeNotifier {
   double _ttsSpeed = 1.0;
 
   /// Which message ID is currently being played by TTS
-  /// Used to highlight the active TTS bubble in the chat list
   String? _activeTtsMessageId;
 
   VoiceRecordingState get state => _state;
@@ -76,14 +88,16 @@ class VoiceProvider extends ChangeNotifier {
   bool get isPlaying => _state == VoiceRecordingState.playing;
   bool get isUnavailable => _state == VoiceRecordingState.unavailable;
 
+  /// Whether the Whisper backend is currently active.
+  /// Exposed so the UI can optionally show a "Transcribing…" label.
+  bool get isUsingWhisper => _repository.isUsingWhisper;
+
   // ── Initialization ─────────────────────────────────────────────────────────
 
   Future<void> _initialize() async {
-    // Check device capabilities
     _isSttAvailable = await _repository.isSttAvailable();
     _isTtsAvailable = await _repository.isTtsAvailable();
 
-    // Load TTS speed preference from Hive
     _ttsSpeed = _storage.getString(StorageKeys.ttsSpeed) != null
         ? double.tryParse(_storage.getString(StorageKeys.ttsSpeed) ?? '1.0') ??
             1.0
@@ -99,26 +113,19 @@ class VoiceProvider extends ChangeNotifier {
   /// Start listening for voice input.
   ///
   /// [onTranscriptReady] — called with the final transcript when speech ends.
-  ///   Use this to pre-fill the chat input field:
-  ///   ```dart
-  ///   voiceProvider.startListening(
-  ///     onTranscriptReady: (text) => _controller.text = text,
-  ///   );
-  ///   ```
   ///
-  /// [onPartialTranscript] — optional callback called on every partial result
-  ///   during active speech. Used by [ChatInputBar] to show continuous live
-  ///   text in the composer as the user speaks, before the final transcript
-  ///   is confirmed. If null, partial text is only stored in [partialTranscript].
+  /// **Whisper mode**: transcript arrives after a short upload delay.
+  ///   The state transitions to [VoiceRecordingState.processing] during this
+  ///   delay so the UI can show a spinner instead of the idle mic button.
+  ///
+  /// [onPartialTranscript] — optional callback for live partial text during
+  ///   native STT recording. Not used in Whisper mode (no live words).
   Future<void> startListening({
     required void Function(String transcript) onTranscriptReady,
     required void Function(String errorKey) onError,
     void Function(String partial)? onPartialTranscript,
   }) async {
-    // If TTS is currently playing, stop it first so voice input is clear
-    if (isPlaying) {
-      await stopSpeaking();
-    }
+    if (isPlaying) await stopSpeaking();
 
     if (!_isSttAvailable) {
       _setState(VoiceRecordingState.unavailable);
@@ -127,40 +134,28 @@ class VoiceProvider extends ChangeNotifier {
     }
 
     _partialTranscript = '';
-    // Move into startup immediately after tap so users wait for the active
-    // listening state instead of speaking into a microphone session still opening.
+    // Move to processing immediately so users see feedback while mic opens
     _setState(VoiceRecordingState.processing);
 
-    // Request microphone permission before listening
     final success = await _repository.requestMicrophonePermission();
     if (!success) {
       _setState(VoiceRecordingState.unavailable);
-
-      // Differentiate between permission denial and engine failure
       final status = await Permission.microphone.status;
-      if (status.isGranted) {
-        // Permission was granted, so the repository must have failed on _stt.initialize()
-        onError('voice_input_failed');
-      } else {
-        // Actual permission denial
-        onError('microphone_permission_denied');
-      }
+      onError(status.isGranted ? 'voice_input_failed' : 'microphone_permission_denied');
       return;
     }
 
     await _repository.startListening(
       onPartialResult: (partial) {
-        // Update the live transcript shown in the provider state
         _partialTranscript = partial;
-        // Also forward to the caller (e.g. ChatInputBar text field)
         onPartialTranscript?.call(partial);
         notifyListeners();
       },
-      onFinalResult: (final_) {
-        // Clear the intermediate partial text — the final result replaces it
+      onFinalResult: (finalText) {
+        // Clear partials — final result replaces everything
         _partialTranscript = '';
         _setState(VoiceRecordingState.idle);
-        onTranscriptReady(final_);
+        onTranscriptReady(finalText);
         _analytics.logFeatureUsed(AppFeature.voiceInput);
         notifyListeners();
       },
@@ -168,7 +163,6 @@ class VoiceProvider extends ChangeNotifier {
         _partialTranscript = '';
         _setState(VoiceRecordingState.error);
         onError(errorKey);
-        // Reset to idle after brief error display so the mic button is re-tappable
         Future.delayed(const Duration(seconds: 2)).then((_) {
           if (_state == VoiceRecordingState.error) {
             _setState(VoiceRecordingState.idle);
@@ -177,24 +171,40 @@ class VoiceProvider extends ChangeNotifier {
       },
     );
 
+    // Transition to listening once the backend session is open
     if (_state == VoiceRecordingState.processing) {
       _setState(VoiceRecordingState.listening);
     }
   }
 
-  /// Stop listening early (user taps mic button again to cancel).
+  /// Stop listening early (user taps mic button again).
+  ///
+  /// In Whisper mode: transitions to [processing] immediately (spinner visible
+  /// to the user) then awaits the Whisper API call; state → idle when done.
+  ///
+  /// In native STT mode: state → idle immediately (text already in input field
+  /// from partial results).
   Future<void> stopListening() async {
-    await _repository.stopListening();
     _partialTranscript = '';
-    _setState(VoiceRecordingState.idle);
+
+    if (_repository.isUsingWhisper) {
+      // Show spinner while Whisper upload is in flight
+      _setState(VoiceRecordingState.processing);
+      notifyListeners();
+    }
+
+    await _repository.stopListening();
+
+    // For Whisper: onFinalResult callback already set state to idle.
+    // For native STT: we need to set it explicitly.
+    if (_state != VoiceRecordingState.idle) {
+      _setState(VoiceRecordingState.idle);
+    }
   }
 
   // ── TTS — Voice Output ─────────────────────────────────────────────────────
 
   /// Speak an AI response aloud.
-  ///
-  /// [messageId] — the message's ID, used to highlight the active TTS bubble.
-  /// If [messageId] matches the currently playing message, stops playback.
   Future<void> speak(String text, {String? messageId}) async {
     if (!_isTtsAvailable) return;
 
@@ -204,10 +214,7 @@ class VoiceProvider extends ChangeNotifier {
       return;
     }
 
-    // Stop any current playback before starting new
-    if (isPlaying) {
-      await _repository.stopSpeaking();
-    }
+    if (isPlaying) await _repository.stopSpeaking();
 
     final idChanged = _activeTtsMessageId != messageId;
     _activeTtsMessageId = messageId;
@@ -237,9 +244,6 @@ class VoiceProvider extends ChangeNotifier {
 
   // ── Settings ───────────────────────────────────────────────────────────────
 
-  /// Update the TTS speed and persist to Hive.
-  ///
-  /// [speed] should be between 0.5 and 2.0.
   Future<void> setTtsSpeed(double speed) async {
     final clamped = speed.clamp(0.5, 2.0);
     _ttsSpeed = clamped;

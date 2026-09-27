@@ -5,17 +5,17 @@ enum AiProviderId {
   openAi(
     'openai',
     'ChatGPT',
-    '• Image Generation (GPT-Image-1)\n• Text, Vision & PDF Analysis (GPT-4o)',
+    '• Image Generation (GPT-Image-2.5 Flare)\n• Text, Vision & PDF Analysis (GPT-6 Luna)\n• High-Precision Voice (Whisper)',
   ),
   gemini(
     'gemini',
     'Gemini',
-    '• Image Generation (Gemini 2.5 Flash Image)\n• Fast Multimodal Reasoning (Gemini 2.5 Flash)',
+    '• Image Generation (Gemini 3.1 Flash-Lite Image)\n• Fast Multimodal Reasoning (Gemini 3.5 Flash-Lite)',
   ),
   claude(
     'claude',
     'Claude',
-    '• Advanced Reasoning & Coding (Claude 3.5 Sonnet)\n• Deep PDF & Vision Analysis (Claude 3.5 Sonnet)',
+    '• Advanced Reasoning & Coding (Claude Haiku 4.5)\n• Deep PDF & Vision Analysis (Claude Haiku 4.5)',
   );
 
   /// Internal ID used in Firestore, analytics, and API routing
@@ -367,14 +367,25 @@ enum ImageQuality {
 /// Desired image size for generation requests.
 enum AiImageSize {
   /// 1024×1024 — default square format
-  square(width: 1024, height: 1024, apiValue: '1024x1024', name: 'Square (1024x1024)'),
+  square(
+      width: 1024,
+      height: 1024,
+      apiValue: '1024x1024',
+      name: 'Square (1024x1024)'),
 
   /// 1024×1536 — portrait
-  portrait(width: 1024, height: 1536, apiValue: '1024x1536', name: 'Portrait (1024x1536)'),
+  portrait(
+      width: 1024,
+      height: 1536,
+      apiValue: '1024x1536',
+      name: 'Portrait (1024x1536)'),
 
   /// 1536×1024 — landscape / widescreen
   landscape(
-      width: 1536, height: 1024, apiValue: '1536x1024', name: 'Landscape (1536x1024)');
+      width: 1536,
+      height: 1024,
+      apiValue: '1536x1024',
+      name: 'Landscape (1536x1024)');
 
   const AiImageSize(
       {required this.width,
@@ -445,21 +456,71 @@ enum VisionDetailLevel {
 }
 
 /// Represents the user's preferred AI response length (max output tokens).
+///
+/// Each tier maps to provider-appropriate token bounds tailored for each model:
+/// - OpenAI (GPT-6 Luna): supports up to 16,384 output tokens
+/// - Gemini (Gemini 3.5 Flash-Lite): supports up to 16,384 output tokens
+/// - Claude (Claude Haiku 4.5): supports up to 8,192 output tokens (Anthropic API ceiling)
 enum ResponseLength {
-  short(250, 1000, 'Short', 'Good for quick and simple answers.'),
-  balanced(1000, 4000, 'Balanced',
-      'Best for standard conversations and general-purpose chat.'),
-  detailed(2048, 8000, 'Detailed',
-      'Best for long-form content, analyzing documents or generating code.'),
-  maximum(4096, 16000, 'Maximum',
-      'Ideal for extensive research articles or generating large code files.');
+  short(
+    openAiMaxTokens: 500,
+    geminiMaxTokens: 1000,
+    claudeMaxTokens: 500,
+    displayName: 'Short',
+    description: 'Good for quick and simple answers.',
+  ),
+  balanced(
+    openAiMaxTokens: 2048,
+    geminiMaxTokens: 4000,
+    claudeMaxTokens: 2048,
+    displayName: 'Balanced',
+    description: 'Best for standard conversations and general-purpose chat.',
+  ),
+  detailed(
+    openAiMaxTokens: 8192,
+    geminiMaxTokens: 8192,
+    claudeMaxTokens: 4096,
+    displayName: 'Detailed',
+    description:
+        'Best for long-form content, analyzing documents or generating code.',
+  ),
+  maximum(
+    openAiMaxTokens: 16384,
+    geminiMaxTokens: 16384,
+    claudeMaxTokens: 8192,
+    displayName: 'Maximum',
+    description:
+        'Ideal for extensive research articles or generating large code files.',
+  );
 
-  final int maxTokens;
+  final int openAiMaxTokens;
   final int geminiMaxTokens;
+  final int claudeMaxTokens;
   final String displayName;
   final String description;
 
-  const ResponseLength(this.maxTokens, this.geminiMaxTokens, this.displayName, this.description);
+  const ResponseLength({
+    required this.openAiMaxTokens,
+    required this.geminiMaxTokens,
+    required this.claudeMaxTokens,
+    required this.displayName,
+    required this.description,
+  });
+
+  /// Default token limit (defaults to OpenAI token bound for backward compatibility).
+  int get maxTokens => openAiMaxTokens;
+
+  /// Returns the token limit for a specific provider.
+  int tokensFor(AiProviderId provider) {
+    switch (provider) {
+      case AiProviderId.openAi:
+        return openAiMaxTokens;
+      case AiProviderId.gemini:
+        return geminiMaxTokens;
+      case AiProviderId.claude:
+        return claudeMaxTokens;
+    }
+  }
 
   static ResponseLength fromValue(int value) {
     return ResponseLength.values.firstWhere(

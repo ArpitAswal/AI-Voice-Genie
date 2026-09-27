@@ -14,7 +14,7 @@ class AppConstants {
   );
 
   // ── App Info ───────────────────────────────────────────────────────────────
-  static const String appVersion = '1.0.0 + 1';
+  static const String appVersion = '1.2.0';
   static const String copyrightOwner = 'AI Voice Genie';
 
   // Fill these before publishing the app on Google Play.
@@ -72,11 +72,11 @@ class AppConstants {
   // ── AI Model Capabilities (features offered by each adapter) ──────────────
   // PDF reading uses locally extracted PDF text, not native file/URL upload.
   static const String openAICapabilities =
-      '• Image Generation (GPT-Image-1)\n• Text, Vision & PDF Analysis (GPT-4o)';
+      '• Image Generation (GPT-Image-2.5 Flare)\n• Text, Vision & PDF Analysis (GPT-6 Luna)\n• High-Precision Voice (Whisper)';
   static const String geminiAICapabilities =
-      '• Image Generation (Gemini 2.5 Flash Image)\n• Fast Multimodal Reasoning (Gemini 2.5 Flash)';
+      '• Image Generation (Gemini 3.1 Flash-Lite Image)\n• Fast Multimodal Reasoning (Gemini 3.5 Flash-Lite)';
   static const String claudeAICapabilities =
-      '• Advanced Reasoning & Coding (Claude 3.5 Sonnet)\n• Deep PDF & Vision Analysis (Claude 3.5 Sonnet)';
+      '• Advanced Reasoning & Coding (Claude Haiku 4.5)\n• Deep PDF & Vision Analysis (Claude Haiku 4.5)';
 
   // ── AI Standard System Instructions ───────────────────────────────────────
   static const String aiTextSystemInstruction =
@@ -90,20 +90,35 @@ class AppConstants {
       'Carefully examine the provided PDF document(s). Extract key facts, summarize information accurately without hallucinating, answer the user\'s questions based on the document contents, and structure your response using Markdown.';
 
   // ── OpenAI Model Names ────────────────────────────────────────────────────
-  // Default models used for each capability
-  static const String openAiTextModel = 'gpt-4o';
-  static const String openAiImageGenModel = 'gpt-image-1';
-  static const String openAiVisionModel = 'gpt-4o';
+  // Verified 2026-09-27: gpt-6-luna (released 2026-09-22, 1.05M context)
+  static const String openAiTextModel = 'gpt-6-luna';
+  // Verified 2026-09-27: gpt-image-2.5-flare (released 2026-09-08, low-latency tier)
+  static const String openAiImageGenModel = 'gpt-image-2.5-flare';
+  // Vision uses same text model — gpt-6-luna natively supports multimodal input
+  static const String openAiVisionModel = 'gpt-6-luna';
+  // Whisper STT — used when the user has an OpenAI key configured
+  static const String openAiWhisperModel = 'whisper-1';
+
+  // ── Whisper STT Config ────────────────────────────────────────────────────
+  // Amplitude threshold (dBFS) above which audio is classified as speech.
+  // Values above -40 dBFS are treated as active speech for silence detection.
+  static const double whisperSpeechAmplitudeThreshold = -40.0;
+  // How often to poll amplitude for silence detection during Whisper recording
+  static const Duration whisperAmplitudePollInterval =
+      Duration(milliseconds: 300);
 
   // ── Gemini Model Names ────────────────────────────────────────────────────
-  static const String geminiTextModel = 'gemini-2.5-flash';
-  static const String geminiVisionModel = 'gemini-2.5-flash'; // multimodal
-  static const String geminiImageGenModel = 'gemini-2.5-flash-image';
+  // Verified 2026-09-27: gemini-3.5-flash-lite (deprecates gemini-2.5-flash)
+  static const String geminiTextModel = 'gemini-3.5-flash-lite';
+  static const String geminiVisionModel = 'gemini-3.5-flash-lite'; // multimodal
+  // Verified 2026-09-27: gemini-3.1-flash-lite-image (Nano Banana 2 Lite)
+  static const String geminiImageGenModel = 'gemini-3.1-flash-lite-image';
 
   // ── Claude Model Names ────────────────────────────────────────────────────
-  static const String claudeTextModel = 'claude-3-5-sonnet-latest';
+  // Verified 2026-09-27: claude-haiku-4-5-20251001 (fast/cheap, replaces sonnet)
+  static const String claudeTextModel = 'claude-haiku-4-5-20251001';
   static const String claudeVisionModel =
-      'claude-3-5-sonnet-latest'; // same, multimodal
+      'claude-haiku-4-5-20251001'; // same model, natively multimodal
   // Claude does NOT support image generation — no constant needed
 
   // ── AI API Base URLs ──────────────────────────────────────────────────────
@@ -117,10 +132,10 @@ class AppConstants {
   static const String claudeApiVersion = '2023-06-01';
 
   // ── Token / Context Window Limits ────────────────────────────────────────
-  // Context window token limits per model (approximate)
-  static const int openAiContextTokenLimit = 128000; // GPT-4o
-  static const int geminiContextTokenLimit = 1000000; // Gemini 2.5 Flash
-  static const int claudeContextTokenLimit = 200000; // Claude Sonnet
+  // Context window token limits per model (verified 2026-09-27)
+  static const int openAiContextTokenLimit = 1050000; // GPT-6 Luna
+  static const int geminiContextTokenLimit = 1000000; // Gemini 3.5 Flash-Lite
+  static const int claudeContextTokenLimit = 200000; // Claude Haiku 4.5
 
   // Safety margin — only use 70% of context limit to avoid cutoffs
   static const double contextSafetyMargin = 0.70;

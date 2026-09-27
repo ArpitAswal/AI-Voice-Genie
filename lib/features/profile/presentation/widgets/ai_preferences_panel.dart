@@ -71,6 +71,7 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
                   description: context.l10n.translate('response_length_hint'),
                   child: ResponseLengthSelector(
                     selectedLength: preferences.preferredResponseLength,
+                    provider: preferences.preferredProvider,
                     onChanged: (length) {
                       preferences.setPreferredResponseLength(length);
                     },

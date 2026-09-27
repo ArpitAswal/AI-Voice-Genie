@@ -15,12 +15,12 @@ import 'ai_provider_adapter.dart';
 /// Gemini provider adapter for AI Voice Genie.
 ///
 /// Implements all four capabilities using Google's Generative Language REST API:
-///   textGeneration     → POST /v1beta/models/gemini-2.5-flash:generateContent
-///   imageGeneration    → POST /v1beta/models/gemini-2.5-flash-image:generateContent
-///   imageUnderstanding → POST /v1beta/models/gemini-2.5-flash:generateContent (multimodal)
-///   pdfParsing         → POST /v1beta/models/gemini-2.5-flash:generateContent (inline PDF)
+///   textGeneration     → POST /v1beta/models/gemini-3.5-flash-lite:generateContent
+///   imageGeneration    → POST /v1beta/models/gemini-3.1-flash-lite-image:generateContent
+///   imageUnderstanding → POST /v1beta/models/gemini-3.5-flash-lite:generateContent (multimodal)
+///   pdfParsing         → POST /v1beta/models/gemini-3.5-flash-lite:generateContent (inline PDF)
 ///
-/// Authentication: API key passed as query parameter (?key=...) AND as x-goog-api-key header.
+/// Authentication: API key passed as x-goog-api-key header.
 /// All errors are mapped to typed AiException subclasses.
 /// Raw HTTP/provider errors never escape this class.
 class GeminiAdapter extends AiProviderAdapter {

@@ -15,10 +15,10 @@ import 'ai_provider_adapter.dart';
 /// OpenAI provider adapter for AI Voice Genie.
 ///
 /// Implements all four capabilities using OpenAI's REST API:
-///   textGeneration    → POST /v1/chat/completions (gpt-4o)
-///   imageGeneration   → POST /v1/images/generations (gpt-image-1)
-///   imageUnderstanding → POST /v1/chat/completions with image_url (gpt-4o)
-///   pdfParsing        → POST /v1/chat/completions with PDF text in context
+///   textGeneration    → POST /v1/chat/completions (gpt-6-luna)
+///   imageGeneration   → POST /v1/images/generations (gpt-image-2.5-flare)
+///   imageUnderstanding → POST /v1/chat/completions with image_url (gpt-6-luna)
+///   pdfParsing        → POST /v1/responses with inline PDF (gpt-6-luna)
 ///
 /// All errors are mapped to typed AiException subclasses.
 /// Raw HTTP/provider errors never escape this class.
@@ -55,7 +55,7 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       final requestBody = {
         'model': AppConstants.openAiTextModel,
-        'max_tokens': request.responseLength.maxTokens,
+        'max_tokens': request.responseLength.openAiMaxTokens,
         'temperature': 0.7,
         'messages': messages,
       };
@@ -240,9 +240,9 @@ class OpenAiAdapter extends AiProviderAdapter {
       }
 
       final requestBody = {
-        // gpt-4o natively supports multi-image vision
+        // gpt-6-luna natively supports multi-image vision
         'model': AppConstants.openAiVisionModel,
-        'max_tokens': request.responseLength.maxTokens,
+        'max_tokens': request.responseLength.openAiMaxTokens,
         'temperature': 0.4,
         'messages': [
           {
@@ -337,10 +337,10 @@ class OpenAiAdapter extends AiProviderAdapter {
         }
       }
       final requestBody = {
-        // gpt-4o supports native PDF reading in the Responses API
+        // gpt-6-luna supports native PDF reading in the Responses API
         'model': AppConstants.openAiVisionModel,
         'instructions': AppConstants.aiPdfSystemInstruction,
-        'max_output_tokens': request.responseLength.maxTokens,
+        'max_output_tokens': request.responseLength.openAiMaxTokens,
         'temperature': 0.3,
         'input': [
           {

@@ -84,10 +84,12 @@ class DefaultValueDropdownSelector<T> extends StatelessWidget {
                     ),
                   ),
                   if (option == selectedValue)
-                    Icon(Icons.check_rounded,
-                        color: context.isDark
-                            ? AppColors.white
-                            : AppColors.primaryLight, size: context.textTheme.bodyMedium?.fontSize,
+                    Icon(
+                      Icons.check_rounded,
+                      color: context.isDark
+                          ? AppColors.white
+                          : AppColors.primaryLight,
+                      size: context.textTheme.bodyMedium?.fontSize,
                     ),
                 ],
               ),
@@ -116,15 +118,17 @@ class DefaultValueDropdownSelector<T> extends StatelessWidget {
           color: context.primaryColor.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(context.screenWidth * 0.05),
           border: Border.all(
-            color: context.isDark ? context.theme.colorScheme.primary : context.theme.colorScheme.secondary,
+            color: context.isDark
+                ? context.theme.colorScheme.primary
+                : context.theme.colorScheme.secondary,
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(getTitle(selectedValue),
-                style: context.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600)),
+                style: context.textTheme.bodySmall
+                    ?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(width: 4),
             Icon(Icons.keyboard_arrow_down_rounded,
                 size: context.textTheme.bodySmall?.fontSize,
@@ -244,11 +248,13 @@ class ModelImageQualitySelector extends StatelessWidget {
 class ResponseLengthSelector extends StatelessWidget {
   final ResponseLength selectedLength;
   final ValueChanged<ResponseLength> onChanged;
+  final AiProviderId? provider;
 
   const ResponseLengthSelector({
     super.key,
     required this.selectedLength,
     required this.onChanged,
+    this.provider,
   });
 
   @override
@@ -258,7 +264,11 @@ class ResponseLengthSelector extends StatelessWidget {
       options: ResponseLength.values,
       onChanged: onChanged,
       getTitle: (length) => length.displayName,
-      getTitleSuffix: (length) => "(${length.maxTokens} / Gemini: ${length.geminiMaxTokens})",
+      getTitleSuffix: (length) {
+        final tokens =
+            provider != null ? length.tokensFor(provider!) : length.maxTokens;
+        return "($tokens tokens)";
+      },
       getSubtitle: (length) => length.description,
     );
   }

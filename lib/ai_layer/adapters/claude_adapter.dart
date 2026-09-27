@@ -15,9 +15,9 @@ import 'ai_provider_adapter.dart';
 /// Claude provider adapter for AI Voice Genie.
 ///
 /// Implements three capabilities using Anthropic's Messages API:
-///   textGeneration     → POST /v1/messages (claude-sonnet-4-5)
+///   textGeneration     → POST /v1/messages (claude-haiku-4-5-20251001)
 ///   imageUnderstanding → POST /v1/messages with base64 image content block
-///   pdfParsing         → POST /v1/messages with PDF text in system prompt
+///   pdfParsing         → POST /v1/messages with PDF document content blocks
 ///
 /// imageGeneration is NOT supported by Claude.
 /// Calling generateImage() throws UnsupportedError — this should never
@@ -56,7 +56,7 @@ class ClaudeAdapter extends AiProviderAdapter {
 
       final requestBody = {
         'model': AppConstants.claudeTextModel,
-        'max_tokens': request.responseLength.maxTokens,
+        'max_tokens': request.responseLength.claudeMaxTokens,
         'system': AppConstants.aiTextSystemInstruction,
         'messages': messages,
       };
@@ -157,7 +157,7 @@ class ClaudeAdapter extends AiProviderAdapter {
 
       final requestBody = {
         'model': AppConstants.claudeVisionModel,
-        'max_tokens': request.responseLength.maxTokens,
+        'max_tokens': request.responseLength.claudeMaxTokens,
         'system': AppConstants.aiVisionSystemInstruction,
         'messages': [
           {
@@ -172,7 +172,7 @@ class ClaudeAdapter extends AiProviderAdapter {
             'system': AppConstants.aiVisionSystemInstruction,
             'prompt': request.prompt,
             'image_count': request.imageBytes?.length ?? 0,
-            'max_tokens': request.responseLength.maxTokens,
+            'max_tokens': request.responseLength.claudeMaxTokens,
           })}');
 
       final response = await _post(
@@ -237,7 +237,7 @@ class ClaudeAdapter extends AiProviderAdapter {
 
       final body = <String, dynamic>{
         'model': AppConstants.claudeVisionModel,
-        'max_tokens': request.responseLength.maxTokens,
+        'max_tokens': request.responseLength.claudeMaxTokens,
         'system': AppConstants.aiPdfSystemInstruction,
         'messages': [
           {'role': 'user', 'content': contentParts},
@@ -249,7 +249,7 @@ class ClaudeAdapter extends AiProviderAdapter {
             'system': AppConstants.aiPdfSystemInstruction,
             'prompt': request.prompt,
             'pdf_count': request.pdfBytes?.length ?? 0,
-            'max_tokens': request.responseLength.maxTokens,
+            'max_tokens': request.responseLength.claudeMaxTokens,
           })}');
 
       final response = await _post(

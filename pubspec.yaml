@@ -99,6 +99,7 @@ dependencies:
   path_provider: ^2.1.5
   # Platform runtime permission request handler for camera and microphone access
   permission_handler: ^12.0.1
+  record: ^7.1.1
 
 dev_dependencies:
   flutter_test:

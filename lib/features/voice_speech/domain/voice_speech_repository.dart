@@ -1,16 +1,30 @@
 /// Abstract repository for voice input (STT) and output (TTS) operations.
 ///
-/// Phase 7 uses device-native implementations:
-///   STT → speech_to_text package
-///   TTS → flutter_tts package
+/// Two STT backends are supported, selected automatically at runtime:
 ///
-/// Phase 8 Settings will allow switching to AI-powered alternatives:
-///   STT → OpenAI Whisper API
-///   TTS → OpenAI TTS API
+///   **Whisper mode** (when the user has an OpenAI key configured):
+///     Records audio with the `record` package → sends to OpenAI Whisper API
+///     (`POST /v1/audio/transcriptions`, model: whisper-1) → returns transcript.
+///     Accuracy equivalent to the ChatGPT web voice mode. No segment-seam word
+///     drops. Shows a "Transcribing…" partial during the brief upload+decode.
+///
+///   **Native STT mode** (fallback for Gemini / Claude-only users):
+///     Uses the `speech_to_text` package wrapping the platform engine:
+///     Android → Google Speech Recognition
+///     iOS     → Apple Speech Recognition (on-device)
+///
+/// TTS always uses the device-native `flutter_tts` engine.
 ///
 /// Implementation: VoiceRepositoryImpl
 abstract class VoiceRepository {
   // ── STT — Speech To Text ──────────────────────────────────────────────────
+
+  /// Whether Whisper mode is currently active for this session.
+  ///
+  /// True when the user has a valid OpenAI key configured.
+  /// VoiceProvider reads this to decide whether to show a "Transcribing…"
+  /// processing state while the Whisper API call is in flight.
+  bool get isUsingWhisper;
 
   /// Check whether STT is available on this device.
   ///
