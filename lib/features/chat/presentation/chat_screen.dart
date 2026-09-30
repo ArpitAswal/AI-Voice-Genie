@@ -319,7 +319,6 @@ class _WelcomeContent extends StatelessWidget {
             opacity: animation,
             child: SizeTransition(
               sizeFactor: animation,
-              axisAlignment: -1,
               child: child,
             ),
           ),

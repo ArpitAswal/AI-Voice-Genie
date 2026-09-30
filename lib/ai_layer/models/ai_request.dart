@@ -108,6 +108,12 @@ class AiRequest {
   /// The user's preferred response length/max tokens.
   final ResponseLength responseLength;
 
+  /// The user's preferred thinking / reasoning level for Gemini 3.8 Flash.
+  final GeminiThinkingLevel? thinkingLevel;
+
+  /// The user's preferred aspect ratio for Gemini image generation (1:1, 16:9, 9:16).
+  final GeminiAspectRatio? geminiAspectRatio;
+
   // ── Request Metadata ───────────────────────────────────────────────────────
 
   /// Unique request ID — used for deduplication and logging
@@ -125,6 +131,8 @@ class AiRequest {
     this.imageMimeType,
     this.visionDetailLevel = VisionDetailLevel.auto,
     this.responseLength = ResponseLength.balanced,
+    this.thinkingLevel = GeminiThinkingLevel.medium,
+    this.geminiAspectRatio = GeminiAspectRatio.square,
     this.imageSize = AiImageSize.square,
     this.imageQuality = ImageQuality.low,
     this.imageCount = 1,

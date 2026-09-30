@@ -44,7 +44,7 @@ class AuthRepositoryImpl implements AuthRepository {
       StorageService? storage,
       EffectBus? effectBus})
       : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
+        _firestore = firestore ?? FirebaseCollections.firestore,
         _googleSignIn = googleSignIn ?? GoogleSignIn(),
         _storage = storage ?? StorageService();
 
@@ -433,6 +433,10 @@ class AuthRepositoryImpl implements AuthRepository {
       }
 
       // 4. Delete user from Firebase Auth
+      // NOTE: We intentionally do NOT delete the hashed identity in
+      // RegisteredAccounts/{emailHash}. This ensures that if the user recreates
+      // an account with the same email, they are not treated as a new user again
+      // (prevents re-registration credit/benefit farming exploits).
       await user.delete();
       debugPrint('🗑️ Deleted Firebase Auth user');
 
@@ -485,13 +489,56 @@ class AuthRepositoryImpl implements AuthRepository {
     final docRef = _firestore.doc(FirebaseCollections.userDoc(uid));
 
     try {
-      // Fetch existing document to determine new vs returning user
+      // Fetch existing document to determine if an active user profile exists
       final existingDoc = await docRef.get();
-      final isNewUser = !existingDoc.exists;
 
-      String resolvedDisplayName;
-      String resolvedEmail;
-      String resolvedPhotoUrl;
+      // Resolve display name from OAuth provider before determining user status
+      String resolvedDisplayName = _resolveDisplayName(
+        firebaseUser: firebaseUser,
+        provider: provider,
+        appleGivenName: appleGivenName,
+      );
+
+      // Resolve email from OAuth provider (or Apple credentials fallback)
+      String resolvedEmail = _resolveEmail(
+        firebaseUser: firebaseUser,
+        provider: provider,
+        appleEmail: appleEmail,
+      );
+
+      // Resolve profile photo URL (Google provides photo; Apple does not)
+      String resolvedPhotoUrl = provider == SocialAuthProvider.google
+          ? (firebaseUser.photoURL ?? '')
+          : '';
+
+      // ── Anti-Abuse Email Hash Registry ─────────────────────────────────────
+      // Compute a one-way SHA-256 hash of the normalized email (or fallback to UID).
+      // This persistent registry survives account deletion so that if a user deletes
+      // their account and re-registers, they cannot re-farm first-time user benefits.
+      final normalizedIdentifier =
+          (resolvedEmail.isNotEmpty ? resolvedEmail : uid).toLowerCase().trim();
+      final emailHash = _sha256ofString(normalizedIdentifier);
+
+      // Check whether this identity has EVER registered in the app's history
+      DocumentReference<Map<String, dynamic>>? registryRef;
+      bool hasEverRegistered = false;
+      try {
+        final registryDocPath =
+            FirebaseCollections.registeredAccountDoc(emailHash);
+        registryRef = _firestore.doc(registryDocPath);
+        final registryDoc = await registryRef.get();
+        hasEverRegistered = registryDoc.exists;
+      } catch (e) {
+        // Non-blocking: if Firestore security rules are pending or offline, log warning
+        debugPrint(
+            '⚠️ AuthRepository: RegisteredAccounts check skipped/failed (non-fatal): $e');
+      }
+
+      // A user is genuinely new ONLY IF:
+      // 1. Their email has NEVER registered before in RegisteredAccounts (!hasEverRegistered)
+      // 2. Their active Firestore user document does not exist (!existingDoc.exists)
+      final isNewUser = !hasEverRegistered && !existingDoc.exists;
+
       DateTime? createdAt;
       DateTime? lastLoginAt;
       DateTime? lastUpdatedAt;
@@ -506,23 +553,27 @@ class AuthRepositoryImpl implements AuthRepository {
       DateTime? termsAcceptedAt;
       String? termsVersionAccepted;
 
-      if (isNewUser) {
-        // ── NEW USER ─────────────────────────────────────────────────────────
-        // For Google: use Firebase user data directly
-        // For Apple: use credential data (available on first sign-in only)
-        resolvedDisplayName = _resolveDisplayName(
-          firebaseUser: firebaseUser,
-          provider: provider,
-          appleGivenName: appleGivenName,
-        );
-        resolvedEmail = _resolveEmail(
-          firebaseUser: firebaseUser,
-          provider: provider,
-          appleEmail: appleEmail,
-        );
-        resolvedPhotoUrl = provider == SocialAuthProvider.google
-            ? (firebaseUser.photoURL ?? '')
-            : ''; // Apple never provides photo
+      if (!existingDoc.exists) {
+        // ── NEW OR RE-REGISTERED USER DOCUMENT CREATION ───────────────────────
+        // If this email was never registered before, record it in the permanent registry
+        if (!hasEverRegistered) {
+          try {
+            await registryRef?.set({
+              FirebaseCollections.fieldRegisteredAt:
+                  FieldValue.serverTimestamp(),
+              FirebaseCollections.fieldRegisteredProvider: provider.id,
+              FirebaseCollections.fieldRegisteredUid: uid,
+            });
+            debugPrint(
+                '📝 AuthRepository: Recorded new email hash in RegisteredAccounts registry');
+          } catch (e) {
+            debugPrint(
+                '⚠️ AuthRepository: Failed to record email hash in registry (non-fatal): $e');
+          }
+        } else {
+          debugPrint(
+              'ℹ️ AuthRepository: Re-registration detected for previously deleted account. isNewUser marked as false.');
+        }
 
         // Build the user model for the new document
         final newUser = UserModel(
@@ -531,20 +582,22 @@ class AuthRepositoryImpl implements AuthRepository {
           displayName: resolvedDisplayName,
           photoUrl: resolvedPhotoUrl,
           authProvider: provider,
-          isNewUser: true,
+          // True for genuinely new users; false if re-registering after deleting account
+          isNewUser: isNewUser,
           onboardingDone: false,
           keySetupDone: false,
           termsAccepted: true,
           termsAcceptedAt: DateTime.now().toUtc(),
           termsVersionAccepted: AppConstants.currentTermsVersion,
-          createdAt: DateTime.now().toUtc(), // Fix: populate createdAt immediately for UI
+          createdAt:
+              DateTime.now().toUtc(), // Populate createdAt immediately for UI
         );
 
-        // Write new user document with server timestamps
+        // Write new user document to Firestore (includes isNewUser flag)
         await docRef.set(newUser.toFirestoreNewUser());
         debugPrint(
-            "⚠️ AuthRepositoryImpl: User data set to firestore successfully");
-        // Persist session to Hive
+            "⚠️ AuthRepositoryImpl: User data set to firestore successfully (isNewUser: $isNewUser)");
+        // Persist session to Hive for instant offline/cold start retrieval
         await _persistSession(newUser);
 
         return newUser;
@@ -563,7 +616,8 @@ class AuthRepositoryImpl implements AuthRepository {
         if (resolvedPhotoUrl.isEmpty && provider == SocialAuthProvider.google) {
           resolvedPhotoUrl = firebaseUser.photoURL ?? '';
           if (resolvedPhotoUrl.isNotEmpty) {
-            docRef.update({FirebaseCollections.fieldPhotoUrl: resolvedPhotoUrl});
+            docRef
+                .update({FirebaseCollections.fieldPhotoUrl: resolvedPhotoUrl});
           }
         }
         onboardingDone =
@@ -599,10 +653,24 @@ class AuthRepositoryImpl implements AuthRepository {
             (existingData[FirebaseCollections.fieldLastUpdatedAt] as Timestamp?)
                 ?.toDate();
 
-        // Update only lastLoginAt — preserve all other fields
+        // Backfill registry for existing users who registered before the registry existed
+        if (!hasEverRegistered) {
+          try {
+            await registryRef?.set({
+              FirebaseCollections.fieldRegisteredAt:
+                  FieldValue.serverTimestamp(),
+              FirebaseCollections.fieldRegisteredProvider: provider.id,
+              FirebaseCollections.fieldRegisteredUid: uid,
+            });
+            debugPrint(
+                '📝 AuthRepository: Backfilled existing account into RegisteredAccounts registry');
+          } catch (_) {}
+        }
+
+        // Update lastLoginAt and explicitly ensure isNewUser is false for returning users
         await docRef.update({
           FirebaseCollections.fieldLastLoginAt: FieldValue.serverTimestamp(),
-          FirebaseCollections.fieldNewUser: false
+          FirebaseCollections.fieldNewUser: false,
         });
 
         final returningUser = UserModel(

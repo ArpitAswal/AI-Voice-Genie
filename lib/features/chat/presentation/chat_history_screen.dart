@@ -202,7 +202,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
         );
       } else {
         context.showSuccessToast(
-          AppLocalizations.of(context)!.translate('conversation_deleted'),
+          context.l10n.conversationDeleted,
         );
       }
     } catch (e) {

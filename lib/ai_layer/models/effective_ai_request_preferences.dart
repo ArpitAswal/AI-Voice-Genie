@@ -37,6 +37,11 @@ class EffectiveAiRequestPreferences {
   /// Gemini output aspect ratio (1:1, 16:9, etc.) — Gemini only.
   final GeminiAspectRatio? geminiAspectRatio;
 
+  // ── Gemini Reasoning / Thinking ─────────────────────────────────────────────
+
+  /// Gemini reasoning thinking level (low / medium / high) — Gemini only.
+  final GeminiThinkingLevel? geminiThinkingLevel;
+
   // ── Vision ─────────────────────────────────────────────────────────────────
 
   /// Resolution hint for vision image analysis — OpenAI only.
@@ -56,6 +61,7 @@ class EffectiveAiRequestPreferences {
     this.imageCount,
     this.geminiImageSize,
     this.geminiAspectRatio,
+    this.geminiThinkingLevel,
     this.visionDetailLevel,
     this.droppedControls = const [],
   });
@@ -65,5 +71,5 @@ class EffectiveAiRequestPreferences {
       'provider: ${droppedControls.isEmpty ? 'all supported' : 'dropped: $droppedControls'}, '
       'responseLength: $responseLength, imageSize: $imageSize, '
       'imageQuality: $imageQuality, geminiImageSize: $geminiImageSize, '
-      'geminiAspectRatio: $geminiAspectRatio)';
+      'geminiAspectRatio: $geminiAspectRatio, geminiThinkingLevel: $geminiThinkingLevel)';
 }

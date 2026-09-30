@@ -273,3 +273,46 @@ class ResponseLengthSelector extends StatelessWidget {
     );
   }
 }
+
+class GeminiThinkingLevelSelector extends StatelessWidget {
+  final GeminiThinkingLevel selectedLevel;
+  final ValueChanged<GeminiThinkingLevel> onChanged;
+
+  const GeminiThinkingLevelSelector({
+    super.key,
+    required this.selectedLevel,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultValueDropdownSelector<GeminiThinkingLevel>(
+      selectedValue: selectedLevel,
+      options: GeminiThinkingLevel.values,
+      onChanged: onChanged,
+      getTitle: (level) => level.displayName,
+      getSubtitle: (level) => level.description,
+    );
+  }
+}
+
+class GeminiAspectRatioSelector extends StatelessWidget {
+  final GeminiAspectRatio selectedRatio;
+  final ValueChanged<GeminiAspectRatio> onChanged;
+
+  const GeminiAspectRatioSelector({
+    super.key,
+    required this.selectedRatio,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultValueDropdownSelector<GeminiAspectRatio>(
+      selectedValue: selectedRatio,
+      options: GeminiAspectRatio.values,
+      onChanged: onChanged,
+      getTitle: (ratio) => ratio.displayName,
+    );
+  }
+}

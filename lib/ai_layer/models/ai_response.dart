@@ -11,10 +11,14 @@ class AiImageData {
   /// The prompt used to generate the image, if revised by the provider
   final String? revisedPrompt;
 
+  /// MIME type of the generated image (e.g. 'image/jpeg', 'image/png')
+  final String? mimeType;
+
   const AiImageData({
     this.b64Json,
     this.url,
     this.revisedPrompt,
+    this.mimeType,
   });
 }
 

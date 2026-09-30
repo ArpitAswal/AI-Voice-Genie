@@ -45,6 +45,11 @@ class StorageKeys {
   static const String preferredVisionDetailLevel = 'preferredVisionDetailLevel';
   // The user's preferred response length/max tokens
   static const String preferredResponseLength = 'preferredResponseLength';
+  // The user's preferred Gemini thinking level (low / medium / high)
+  static const String preferredGeminiThinkingLevel =
+      'preferredGeminiThinkingLevel';
+  // The user's preferred Gemini aspect ratio (1:1, 16:9, 9:16)
+  static const String preferredGeminiAspectRatio = 'preferredGeminiAspectRatio';
 
   /// Helper to generate a provider-specific storage key.
   static String providerPrefKey(String baseKey, String providerId) {

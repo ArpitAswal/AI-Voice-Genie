@@ -1,4 +1,4 @@
-package com.example.voice_genie
+package com.voicegenie.app
 
 import android.content.ContentValues
 import android.content.Context
@@ -19,7 +19,7 @@ import java.io.FileOutputStream
 ///   into the public Pictures directory, which requires WRITE_EXTERNAL_STORAGE
 ///   declared with maxSdkVersion="28" in AndroidManifest.xml.
 ///
-/// Channel: "com.example.voice_genie/image_save"
+/// Channel: "com.voicegenie.app/image_save"
 /// Method:  "saveImageBytes" with arguments:
 ///   "bytes"    → ByteArray   — raw image bytes
 ///   "fileName" → String      — safe file name including extension
@@ -30,7 +30,7 @@ import java.io.FileOutputStream
 ///   "error"    → String? (null on success)
 object ImageSavePlugin {
 
-    private const val CHANNEL = "com.example.voice_genie/image_save"
+    private const val CHANNEL = "com.voicegenie.app/image_save"
 
     fun register(context: Context, channel: MethodChannel) {
         channel.setMethodCallHandler { call, result ->

@@ -108,10 +108,12 @@ class AppConstants {
       Duration(milliseconds: 300);
 
   // ── Gemini Model Names ────────────────────────────────────────────────────
-  // Verified 2026-09-27: gemini-3.5-flash-lite (deprecates gemini-2.5-flash)
-  static const String geminiTextModel = 'gemini-3.5-flash-lite';
-  static const String geminiVisionModel = 'gemini-3.5-flash-lite'; // multimodal
-  // Verified 2026-09-27: gemini-3.1-flash-lite-image (Nano Banana 2 Lite)
+  // Primary: gemini-3.8-flash (Latest Flash with reasoning, multimodal, and fresh 2026 knowledge)
+  static const String geminiTextModel = 'gemini-3.8-flash';
+  static const String geminiVisionModel = 'gemini-3.8-flash'; // multimodal
+  // Budget Fallback: gemini-3.5-flash-lite
+  static const String geminiFlashLiteModel = 'gemini-3.5-flash-lite';
+  // Image Generation: gemini-3.1-flash-lite-image
   static const String geminiImageGenModel = 'gemini-3.1-flash-lite-image';
 
   // ── Claude Model Names ────────────────────────────────────────────────────

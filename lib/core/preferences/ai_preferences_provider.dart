@@ -43,6 +43,10 @@ class AiPreferencesProvider extends ChangeNotifier {
       _service.preferredVisionDetailLevel(_preferredProvider);
   ResponseLength get preferredResponseLength =>
       _service.preferredResponseLength(_preferredProvider);
+  GeminiThinkingLevel get preferredGeminiThinkingLevel =>
+      _service.preferredGeminiThinkingLevel(_preferredProvider);
+  GeminiAspectRatio get preferredGeminiAspectRatio =>
+      _service.preferredGeminiAspectRatio(_preferredProvider);
 
   Future<void> setPreferredProvider(AiProviderId provider) async {
     if (_preferredProvider == provider) return;
@@ -93,6 +97,19 @@ class AiPreferencesProvider extends ChangeNotifier {
   Future<void> setPreferredResponseLength(ResponseLength length) async {
     if (preferredResponseLength == length) return;
     await _service.setPreferredResponseLength(_preferredProvider, length);
+    notifyListeners();
+  }
+
+  Future<void> setPreferredGeminiThinkingLevel(
+      GeminiThinkingLevel level) async {
+    if (preferredGeminiThinkingLevel == level) return;
+    await _service.setPreferredGeminiThinkingLevel(_preferredProvider, level);
+    notifyListeners();
+  }
+
+  Future<void> setPreferredGeminiAspectRatio(GeminiAspectRatio ratio) async {
+    if (preferredGeminiAspectRatio == ratio) return;
+    await _service.setPreferredGeminiAspectRatio(_preferredProvider, ratio);
     notifyListeners();
   }
 

@@ -108,17 +108,17 @@ class LegalScreen extends StatelessWidget {
                     // Terms of Service badges
                     _buildStatusChip(
                       context,
-                      label: context.l10n.translate('user_agreement'),
+                      label: context.l10n.userAgreement,
                       icon: Icons.gavel_rounded,
                     ),
                     _buildStatusChip(
                       context,
-                      label: context.l10n.translate('last_updated'),
+                      label: context.l10n.lastUpdated,
                       icon: Icons.update_rounded,
                     ),
                     _buildStatusChip(
                       context,
-                      label: context.l10n.translate('ai_guidelines'),
+                      label: context.l10n.aiGuidelines,
                       icon: Icons.rule_rounded,
                     ),
                   ]
@@ -126,17 +126,17 @@ class LegalScreen extends StatelessWidget {
                     // Privacy Policy badges
                     _buildStatusChip(
                       context,
-                      label: context.l10n.translate('official_document'),
+                      label: context.l10n.officialDocument,
                       icon: Icons.verified_rounded,
                     ),
                     _buildStatusChip(
                       context,
-                      label: context.l10n.translate('last_updated'),
+                      label: context.l10n.lastUpdated,
                       icon: Icons.update_rounded,
                     ),
                     _buildStatusChip(
                       context,
-                      label: context.l10n.translate('no_data_selling'),
+                      label: context.l10n.noDataSelling,
                       icon: Icons.lock_outline_rounded,
                     ),
                   ],

@@ -21,7 +21,7 @@ class UsageRepositoryImpl implements UsageRepository {
   final FirebaseFirestore _db;
 
   UsageRepositoryImpl({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+      : _db = db ?? FirebaseCollections.firestore;
 
   // ── Event Write ─────────────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ class UsageRepositoryImpl implements UsageRepository {
       await batch.commit();
       debugPrint('📊 UsageRepository: Batch write completed successfully!');
       debugPrint(
-          '   - Saved: ${event.provider.id} | ${event.totalTokens} tokens | \$${event.estimatedCostUsd.toStringAsFixed(4)}');
+          '   - Saved: ${event.provider.id} | ${event.totalTokens} tokens | \$${event.estimatedCostUsd.toStringAsFixed(6)}');
     } catch (e) {
       // Never fail the AI flow due to usage tracking errors
       debugPrint('❌ UsageRepository: Batch write failed (non-fatal): $e');
@@ -263,4 +263,3 @@ class UsageRepositoryImpl implements UsageRepository {
     }
   }
 }
-

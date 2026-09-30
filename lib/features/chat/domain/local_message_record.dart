@@ -85,7 +85,8 @@ class LocalMessageRecord {
           ?.map((p) => {
                 'path': p.path,
                 'name': p.name,
-                'fileSizeBytes': p.fileSizeBytes
+                'fileSizeBytes': p.fileSizeBytes,
+                if (p.url != null) 'url': p.url,
               })
           .toList(),
       'imageSize': imageSize?.apiValue,
@@ -109,6 +110,7 @@ class LocalMessageRecord {
                 path: p['path'] as String? ?? '',
                 name: p['name'] as String? ?? '',
                 fileSizeBytes: p['fileSizeBytes'] as int? ?? 0,
+                url: p['url'] as String?,
               ))
           .toList();
     }

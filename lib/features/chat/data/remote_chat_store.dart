@@ -12,7 +12,7 @@ class RemoteChatStore {
   static final RemoteChatStore instance = RemoteChatStore._();
   RemoteChatStore._();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore => FirebaseCollections.firestore;
 
   // ── Write Operations ───────────────────────────────────────────────────────
 

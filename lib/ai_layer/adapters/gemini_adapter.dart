@@ -59,6 +59,9 @@ class GeminiAdapter extends AiProviderAdapter {
         },
       ];
 
+      final thinkingLevel = request.thinkingLevel?.apiValue ??
+          GeminiThinkingLevel.medium.apiValue;
+
       final requestBody = {
         // System instruction — equivalent to OpenAI's system message
         'systemInstruction': {
@@ -69,9 +72,17 @@ class GeminiAdapter extends AiProviderAdapter {
           ]
         },
         'contents': contents,
+        // Google Search Grounding: provides real-time web access and live citations
+        'tools': [
+          {'googleSearch': {}}
+        ],
         'generationConfig': {
           'maxOutputTokens': request.responseLength.geminiMaxTokens,
-          'temperature': 0.7,
+          // Gemini 3.8 Flash replaces temperature/thinking_budget with thinkingLevel:
+          // 'low', 'medium', or 'high'. Note: 'minimal' is not supported on 3.8 Flash.
+          'thinkingConfig': {
+            'thinkingLevel': thinkingLevel,
+          },
         },
       };
 
@@ -79,15 +90,57 @@ class GeminiAdapter extends AiProviderAdapter {
             'model': AppConstants.geminiTextModel,
             'message_count': contents.length,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
+            'thinkingLevel': thinkingLevel,
             'prompt': request.prompt,
-            // We omit systemInstruction and full history to prevent terminal truncation
+            'grounding': true,
           })}');
 
-      final response = await _post(
-        model: AppConstants.geminiTextModel,
+      http.Response response = await _postWithFallback(
+        primaryModel: AppConstants.geminiTextModel,
+        fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
-      ).timeout(AppConstants.aiRequestTimeout);
+      );
+
+      // If tools (Google Search) is unsupported on this specific key tier/region, retry without tools
+      if (response.statusCode == 400 && requestBody.containsKey('tools')) {
+        final bodyStr = response.body.toLowerCase();
+        if (bodyStr.contains('tool') ||
+            bodyStr.contains('search') ||
+            bodyStr.contains('googlesearch')) {
+          debugPrint(
+              '⚠️ Gemini: Google Search tool unsupported on this key tier, retrying without tools');
+          final bodyWithoutTools = Map<String, dynamic>.from(requestBody)
+            ..remove('tools');
+          response = await _postWithFallback(
+            primaryModel: AppConstants.geminiTextModel,
+            fallbackModel: AppConstants.geminiFlashLiteModel,
+            apiKey: apiKey,
+            body: bodyWithoutTools,
+          );
+        }
+      }
+
+      // Defensive fallback: If thinkingConfig is rejected by a tier or older model endpoint, retry without it
+      if (response.statusCode == 400 &&
+          requestBody.containsKey('generationConfig')) {
+        final bodyStr = response.body.toLowerCase();
+        if (bodyStr.contains('thinking') || bodyStr.contains('thinkinglevel')) {
+          debugPrint(
+              '⚠️ Gemini: thinkingConfig rejected by endpoint, retrying without thinkingConfig');
+          final genConfig = Map<String, dynamic>.from(
+              requestBody['generationConfig'] as Map<String, dynamic>)
+            ..remove('thinkingConfig');
+          final bodyWithoutThinking = Map<String, dynamic>.from(requestBody)
+            ..['generationConfig'] = genConfig;
+          response = await _postWithFallback(
+            primaryModel: AppConstants.geminiTextModel,
+            fallbackModel: AppConstants.geminiFlashLiteModel,
+            apiKey: apiKey,
+            body: bodyWithoutThinking,
+          );
+        }
+      }
 
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (Text Generation): ${jsonEncode(data)}');
@@ -114,8 +167,15 @@ class GeminiAdapter extends AiProviderAdapter {
           data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
       final thoughtsTokens =
           data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
+      // Google Cloud Gemini 3.8 specification: thoughtsTokenCount is included in billed output tokens
       final outputTokens = candidatesTokens + thoughtsTokens;
-      final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
+      final rawTotalTokens =
+          data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
+      final tokenCount =
+          rawTotalTokens > 0 ? rawTotalTokens : (inputTokens + outputTokens);
+
+      debugPrint(
+          '📊 Gemini Tokens: input=$inputTokens, output=$outputTokens (candidates=$candidatesTokens, thoughts=$thoughtsTokens), total=$tokenCount');
 
       stopwatch.stop();
       return AiResponse.text(
@@ -146,12 +206,11 @@ class GeminiAdapter extends AiProviderAdapter {
     final stopwatch = Stopwatch()..start();
 
     try {
-      // Gemini 2.5 Flash Image (gemini-2.5-flash-image) is the dedicated image
-      // generation model. It uses responseModalities to request both TEXT and IMAGE
-      // parts in the response.
-      //
-      // Note: The Gemini REST API does not currently support `response_format`
-      // or `aspect_ratio`/`image_size` directly in the payload for this endpoint.
+      // gemini-3.1-flash-lite-image is the dedicated image generation model.
+      // It uses responseModalities to request both TEXT and IMAGE parts in the response.
+      // imageConfig specifies the desired shape (aspectRatio) — e.g. 1:1, 16:9, 9:16.
+      final aspectRatio = request.geminiAspectRatio?.apiValue ?? '1:1';
+
       final requestBody = {
         'contents': [
           {
@@ -163,17 +222,43 @@ class GeminiAdapter extends AiProviderAdapter {
         ],
         'generationConfig': {
           'responseModalities': ['TEXT', 'IMAGE'],
+          'imageConfig': {
+            'aspectRatio': aspectRatio,
+          },
         },
       };
 
       debugPrint(
           '📤 Gemini Request (Image Generation): ${jsonEncode(requestBody)}');
 
-      final response = await _post(
+      var response = await _post(
         model: AppConstants.geminiImageGenModel,
         apiKey: apiKey,
         body: requestBody,
       ).timeout(AppConstants.aiRequestTimeout);
+
+      // Defensive fallback: If imageConfig is rejected by a tier or regional endpoint, retry without it
+      if (response.statusCode == 400 &&
+          (requestBody['generationConfig'] as Map<String, dynamic>?)
+                  ?.containsKey('imageConfig') ==
+              true) {
+        final bodyStr = response.body.toLowerCase();
+        if (bodyStr.contains('imageconfig') ||
+            bodyStr.contains('aspectratio')) {
+          debugPrint(
+              '⚠️ Gemini: imageConfig rejected by endpoint, retrying without imageConfig');
+          final genConfig = Map<String, dynamic>.from(
+              requestBody['generationConfig'] as Map<String, dynamic>)
+            ..remove('imageConfig');
+          final fallbackBody = Map<String, dynamic>.from(requestBody)
+            ..['generationConfig'] = genConfig;
+          response = await _post(
+            model: AppConstants.geminiImageGenModel,
+            apiKey: apiKey,
+            body: fallbackBody,
+          ).timeout(AppConstants.aiRequestTimeout);
+        }
+      }
 
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (Image Generation): ${jsonEncode({
@@ -227,7 +312,9 @@ class GeminiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         imageBase64: base64Image,
-        generatedImages: [AiImageData(b64Json: base64Image)],
+        generatedImages: [
+          AiImageData(b64Json: base64Image, mimeType: mimeType),
+        ],
         inputTokens: inputTokens,
         outputTokens: outputTokens,
         tokenCount: tokenCount,
@@ -296,11 +383,12 @@ class GeminiAdapter extends AiProviderAdapter {
             'prompt': request.prompt,
           })}');
 
-      final response = await _post(
-        model: AppConstants.geminiVisionModel,
+      final response = await _postWithFallback(
+        primaryModel: AppConstants.geminiVisionModel,
+        fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
-      ).timeout(AppConstants.aiRequestTimeout);
+      );
 
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (Image Analysis): ${jsonEncode(data)}');
@@ -393,11 +481,12 @@ class GeminiAdapter extends AiProviderAdapter {
           })}');
 
       // Use vision model for PDF (it has the multimodal context window)
-      final response = await _post(
-        model: AppConstants.geminiVisionModel,
+      final response = await _postWithFallback(
+        primaryModel: AppConstants.geminiVisionModel,
+        fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
-      ).timeout(AppConstants.aiRequestTimeout);
+      );
 
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (PDF Parsing): ${jsonEncode(data)}');
@@ -432,7 +521,35 @@ class GeminiAdapter extends AiProviderAdapter {
     }
   }
 
-  // ── Private Helpers ────────────────────────────────────────────────────────
+  /// POSTs a request with automatic fallback if the latest model returns 404.
+  Future<http.Response> _postWithFallback({
+    required String primaryModel,
+    String? fallbackModel,
+    required String apiKey,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _post(
+      model: primaryModel,
+      apiKey: apiKey,
+      body: body,
+    ).timeout(AppConstants.aiRequestTimeout);
+
+    // If primary model returns 404 (model not found on API key tier/region), try fallback
+    if (response.statusCode == 404 &&
+        fallbackModel != null &&
+        fallbackModel.isNotEmpty &&
+        fallbackModel != primaryModel) {
+      debugPrint(
+          '⚠️ Gemini: Primary model $primaryModel returned 404. Falling back to $fallbackModel.');
+      return await _post(
+        model: fallbackModel,
+        apiKey: apiKey,
+        body: body,
+      ).timeout(AppConstants.aiRequestTimeout);
+    }
+
+    return response;
+  }
 
   /// Make an authenticated POST request to the Gemini Generative Language API.
   ///
@@ -504,14 +621,41 @@ class GeminiAdapter extends AiProviderAdapter {
   /// Extract text from Gemini's nested response structure.
   ///
   /// Gemini response: candidates[0].content.parts[].text
+  /// Automatically parses and appends Google Search Grounding sources if present.
   String _extractTextFromResponse(Map<String, dynamic> data) {
-    final parts = data['candidates']?[0]?['content']?['parts'] as List?;
+    final candidate = data['candidates']?[0];
+    final parts = candidate?['content']?['parts'] as List?;
     if (parts == null || parts.isEmpty) return '';
 
-    return parts
+    String text = parts
         .whereType<Map>()
         .map((part) => part['text'] as String? ?? '')
         .join('');
+
+    // If Google Search Grounding was triggered, extract and append web sources
+    final groundingMetadata =
+        candidate?['groundingMetadata'] as Map<String, dynamic>?;
+    if (groundingMetadata != null && text.isNotEmpty) {
+      final chunks = groundingMetadata['groundingChunks'] as List?;
+      if (chunks != null && chunks.isNotEmpty) {
+        final sources = <String>[];
+        for (final chunk in chunks) {
+          if (chunk is Map && chunk['web'] is Map) {
+            final web = chunk['web'] as Map;
+            final title = web['title'] as String? ?? 'Source';
+            final uri = web['uri'] as String? ?? '';
+            if (uri.isNotEmpty && !sources.any((s) => s.contains(uri))) {
+              sources.add('* [$title]($uri)');
+            }
+          }
+        }
+        if (sources.isNotEmpty) {
+          text += '\n\n**Sources:**\n${sources.take(3).join('\n')}';
+        }
+      }
+    }
+
+    return text;
   }
 
   /// Map non-HTTP errors (network, timeout, etc.) to typed AiException.

@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 /// Firestore collection and field name constants for AI Voice Genie.
 ///
 /// Every Firestore path must reference constants from here.
@@ -17,6 +20,22 @@
 ///       {uid}/
 ///         {providerId}                           ← API key (document)
 class FirebaseCollections {
+  // ── Database ID ────────────────────────────────────────────────────────────
+  // Explicitly points to the named 'default' database in Firebase Console
+  // (avoids connecting to the nonexistent '(default)' database).
+  static const String databaseId = 'default';
+
+  static FirebaseFirestore get firestore {
+    try {
+      return FirebaseFirestore.instanceFor(
+        app: Firebase.app(),
+        databaseId: databaseId,
+      );
+    } catch (_) {
+      return FirebaseFirestore.instance;
+    }
+  }
+
   // ── Root Collection ───────────────────────────────────────────────────────
   // MUST be the app name — defined once here, never hardcoded elsewhere
   static const String root = 'AIVoiceGenie';
@@ -27,6 +46,7 @@ class FirebaseCollections {
   static const String conversations = 'Conversations';
   static const String messages = 'ModelMessages';
   static const String apiKeys = 'UsersAPIKeys';
+  static const String registeredAccounts = 'RegisteredAccounts';
 
   // ── Firestore Path Builders ───────────────────────────────────────────────
   // Use these everywhere instead of manually constructing paths.
@@ -39,6 +59,16 @@ class FirebaseCollections {
   //   AI_Voice_Genie (collection) → Users_API_Keys (doc) → {uid} (collection) → {providerId} (doc)
   //   AI_Voice_Genie (collection) → AI_Conversations (doc) → {uid} (collection) → {conversationId} (doc)
   //     → messages (collection) → {messageId} (doc)
+  static const String accountInfo = 'AccountInfo';
+
+  /// Path: AIVoiceGenie/RegisteredAccounts/{emailHash}/AccountInfo
+  ///
+  /// Permanent ledger of hashed email identities to track first-time vs returning
+  /// registrations across account deletion lifecycles without storing PII.
+  /// Strictly adheres to Firestore 4-segment alternating collection/doc path rules:
+  ///   AIVoiceGenie (col) -> RegisteredAccounts (doc) -> {emailHash} (col) -> AccountInfo (doc)
+  static String registeredAccountDoc(String emailHash) =>
+      '$root/$registeredAccounts/$emailHash/$accountInfo';
 
   /// Path: AIVoiceGenie/AllUsers/{uid}
   static String userDoc(String uid) => '$root/$users/$uid/$userModel';
@@ -67,6 +97,7 @@ class FirebaseCollections {
       '$root/$conversations/$uid/$conversationId/$messages/$messageId';
 
   // ── User Document Field Names ─────────────────────────────────────────────
+  static const String fieldUid = 'uid';
   static const String fieldDisplayName = 'displayName';
   static const String fieldEmail = 'email';
   static const String fieldPhotoUrl = 'photoUrl';
@@ -90,6 +121,11 @@ class FirebaseCollections {
   static const String fieldTermsAccepted = 'termsAccepted';
   static const String fieldTermsAcceptedAt = 'termsAcceptedAt';
   static const String fieldTermsVersionAccepted = 'termsVersionAccepted';
+
+  // ── Registered Accounts Document Field Names ──────────────────────────────
+  static const String fieldRegisteredAt = 'registeredAt';
+  static const String fieldRegisteredProvider = 'provider';
+  static const String fieldRegisteredUid = 'uid';
 
   // ── API Key Document Field Names ──────────────────────────────────────────
   static const String fieldApiKey = 'apiKey';
@@ -252,4 +288,46 @@ class FirebaseCollections {
   static const String budgetFieldMonthlyBudgetUsd = 'monthlyBudgetUsd';
   static const String budgetFieldEnabled = 'enabled';
   static const String budgetFieldAlreadyUsedUsd = 'alreadyUsedUsd';
+
+  // ── Cloud Storage Path Builders & Constants ───────────────────────────────
+  // Scoped strictly under users/{uid}/conversations/{conversationId}/ to unify
+  // all media attachments and AI outputs per conversation.
+  static const String storageUsers = 'users';
+  static const String storageConversations = 'conversations';
+  static const String storageImages = 'images';
+  static const String storagePdfs = 'pdfs';
+  static const String storageGenerated = 'generated';
+
+  /// Path to a conversation's root storage directory:
+  /// users/{uid}/conversations/{conversationId}
+  static String storageConversationDir(String uid, String conversationId) =>
+      '$storageUsers/$uid/$storageConversations/$conversationId';
+
+  /// Path to a user-uploaded image:
+  /// users/{uid}/conversations/{conversationId}/images/{fileName}
+  static String storageImagePath(
+          String uid, String conversationId, String fileName) =>
+      '${storageConversationDir(uid, conversationId)}/$storageImages/$fileName';
+
+  /// Path to a user-uploaded PDF:
+  /// users/{uid}/conversations/{conversationId}/pdfs/{fileName}
+  static String storagePdfPath(
+          String uid, String conversationId, String fileName) =>
+      '${storageConversationDir(uid, conversationId)}/$storagePdfs/$fileName';
+
+  /// Path to an AI-generated image:
+  /// users/{uid}/conversations/{conversationId}/generated/{fileName}
+  static String storageGeneratedImagePath(
+          String uid, String conversationId, String fileName) =>
+      '${storageConversationDir(uid, conversationId)}/$storageGenerated/$fileName';
+
+  // ── Cloud Storage Custom Metadata Keys ────────────────────────────────────
+  static const String storageMetaUploadedBy = 'uploadedBy';
+  static const String storageMetaGeneratedBy = 'generatedBy';
+  static const String storageMetaConversationId = 'conversationId';
+  static const String storageMetaOriginalName = 'originalName';
+  static const String storageMetaUploadedAt = 'uploadedAt';
+  static const String storageMetaGeneratedAt = 'generatedAt';
+  static const String storageMetaType = 'type';
+  static const String storageMetaTypeAiGenerated = 'ai_generated';
 }

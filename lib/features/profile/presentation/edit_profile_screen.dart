@@ -268,12 +268,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                         // Display Name (Required)
                         _buildFieldLabel(
-                          context.l10n.translate('display_name'),
+                          context.l10n.displayName,
                           isRequired: true,
                         ),
                         context.themedTextField(
                           controller: _nameController,
-                          hint: context.l10n.translate('fake_name'),
+                          hint: context.l10n.fakeName,
                           prefixIcon: Icons.person_4,
                           textCapitalization: TextCapitalization.words,
                           validator: (value) {
@@ -287,12 +287,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                         // Email (Required / Read only)
                         _buildFieldLabel(
-                          context.l10n.translate('email_address'),
+                          context.l10n.emailAddress,
                           isRequired: true,
                         ),
                         context.themedTextField(
                           controller: _emailController,
-                          hint: context.l10n.translate('fake_email'),
+                          hint: context.l10n.fakeEmail,
                           prefixIcon: Icons.email_rounded,
                         ),
                         const SizedBox(height: 20),

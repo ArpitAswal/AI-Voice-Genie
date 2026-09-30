@@ -29,11 +29,12 @@ import '../../auth/presentation/auth_provider.dart';
 class KeySetupScreen extends StatefulWidget {
   /// Whether this is the initial setup (true) or accessed from Settings (false)
   final bool isInitialSetup;
-  
+
   /// The provider to automatically focus when the screen opens (e.g. from deep link or button)
   final AiProviderId? initialFocusProvider;
 
-  const KeySetupScreen({super.key, this.isInitialSetup = true, this.initialFocusProvider});
+  const KeySetupScreen(
+      {super.key, this.isInitialSetup = true, this.initialFocusProvider});
 
   @override
   State<KeySetupScreen> createState() => _KeySetupScreenState();
@@ -57,12 +58,10 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
   Future<void> switchScreenShotState(bool value) async {
     if (value) {
       // Disable screenshots & screen recording
-      final result = await noScreenshot.screenshotOff();
-      debugPrint('screenshotOff: $result');
+      await noScreenshot.screenshotOff();
     } else {
       // Re-enable screenshots & screen recording
-      final result = await noScreenshot.screenshotOn();
-      debugPrint('screenshotOn: $result');
+      await noScreenshot.screenshotOn();
     }
     // Toggle between enabled / disabled
     // await noScreenshot.toggleScreenshot();
@@ -540,7 +539,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                context.l10n.translate('delete_key'),
+                                context.l10n.deleteKey,
                                 style: context.textTheme.labelSmall?.copyWith(
                                     color: widget.provider.brandColor(context)),
                               ),

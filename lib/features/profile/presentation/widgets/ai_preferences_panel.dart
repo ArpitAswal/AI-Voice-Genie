@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../ai_layer/registry/provider_registry.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -67,13 +68,28 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
               // ── Response Length ────────────────────────────────────────────
               if (profile.supports(AiPreferenceControl.responseLength)) ...[
                 _PreferenceRow(
-                  title: context.l10n.translate('response_length'),
-                  description: context.l10n.translate('response_length_hint'),
+                  title: context.l10n.responseLength,
+                  description: context.l10n.responseLengthHint,
                   child: ResponseLengthSelector(
                     selectedLength: preferences.preferredResponseLength,
                     provider: preferences.preferredProvider,
                     onChanged: (length) {
                       preferences.setPreferredResponseLength(length);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // ── Gemini Thinking Level ──────────────────────────────────────
+              if (profile.supports(AiPreferenceControl.geminiThinkingLevel)) ...[
+                _PreferenceRow(
+                  title: context.l10n.geminiThinkingLevel,
+                  description: context.l10n.geminiThinkingLevelHint,
+                  child: GeminiThinkingLevelSelector(
+                    selectedLevel: preferences.preferredGeminiThinkingLevel,
+                    onChanged: (level) {
+                      preferences.setPreferredGeminiThinkingLevel(level);
                     },
                   ),
                 ),
@@ -132,12 +148,25 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
               ],
+              // ── Gemini Image Aspect Ratio ──────────────────────────────────
+              if (profile.supports(AiPreferenceControl.geminiAspectRatio)) ...[
+                _PreferenceRow(
+                  title: context.l10n.geminiAspectRatio,
+                  description: context.l10n.geminiAspectRatioHint,
+                  child: GeminiAspectRatioSelector(
+                    selectedRatio: preferences.preferredGeminiAspectRatio,
+                    onChanged: (ratio) {
+                      preferences.setPreferredGeminiAspectRatio(ratio);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               // ── Vision Controls ────────────────────────────────────────────
               if (profile.supports(AiPreferenceControl.visionImageCount)) ...[
                 _PreferenceRow(
-                  title: context.l10n.translate('vision_image_count'),
-                  description:
-                      context.l10n.translate('vision_image_count_hint'),
+                  title: context.l10n.visionImageCount,
+                  description: context.l10n.visionImageCountHint,
                   child: ImageGenerateCountSelector(
                     selectedCount: preferences.preferredVisionImageCount,
                     onChanged: (count) {
@@ -149,8 +178,8 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
               ],
               if (profile.supports(AiPreferenceControl.visionPdfCount)) ...[
                 _PreferenceRow(
-                  title: context.l10n.translate('vision_pdf_count'),
-                  description: context.l10n.translate('vision_pdf_count_hint'),
+                  title: context.l10n.visionPdfCount,
+                  description: context.l10n.visionPdfCountHint,
                   child: ImageGenerateCountSelector(
                     selectedCount: preferences.preferredVisionPdfCount,
                     onChanged: (count) {
@@ -162,9 +191,8 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
               ],
               if (profile.supports(AiPreferenceControl.visionDetailLevel)) ...[
                 _PreferenceRow(
-                  title: context.l10n.translate('vision_detail_level'),
-                  description:
-                      context.l10n.translate('vision_detail_level_hint'),
+                  title: context.l10n.visionDetailLevel,
+                  description: context.l10n.visionDetailLevelHint,
                   child: VisionDetailLevelSelector(
                     selectedLevel: preferences.preferredVisionDetailLevel,
                     onChanged: (level) {
@@ -173,6 +201,12 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
+              ],
+
+              // ── Gemini Key Note / Information Banner ───────────────────────
+              if (preferences.preferredProvider == AiProviderId.gemini) ...[
+                const SizedBox(height: 4),
+                const _GeminiInfoBanner(),
               ],
             ],
           );
@@ -209,6 +243,60 @@ class _PreferenceRow extends StatelessWidget {
         SizedBox(height: (title.toLowerCase().contains('speech')) ? 0 : 10),
         Align(alignment: Alignment.centerLeft, child: child),
       ],
+    );
+  }
+}
+
+class _GeminiInfoBanner extends StatelessWidget {
+  const _GeminiInfoBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.primaryColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: context.primaryColor.withValues(alpha: 0.25),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            size: 20,
+            color: context.primaryColor,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.l10n.geminiInfoTitle,
+                  style: context.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: context.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.l10n.geminiInfoDesc,
+                  style: context.textTheme.bodySmall?.copyWith(
+                    color: context.isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.lightTextSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -45,7 +45,7 @@ class MessageModel {
   final MessageStatus status;
 
   /// Optional image URLs — populated for imageGeneration responses.
-  /// Holds Cloudinary URLs after generation.
+  /// Holds Firebase Cloud Storage URLs after generation.
   final List<String>? imageUrls;
 
   /// Optional PDF attachments — populated for pdfParsing responses.
@@ -66,6 +66,27 @@ class MessageModel {
   /// Optional image quality for image generation responses.
   final ImageQuality? imageQuality;
 
+  /// Optional image MIME type for image generation responses (e.g. 'image/jpeg', 'image/png').
+  final String? mimeType;
+
+  /// Formatted image size / aspect ratio for Firestore persistence.
+  /// For Gemini: "Square (1:1)", "Landscape (16:9)", "Portrait (9:16)"
+  /// For OpenAI: "Square (1024x1024)", "Landscape (1536x1024)", "Portrait (1024x1536)"
+  String? get effectiveImageSizeString {
+    if (imageSize == null) return null;
+    if (modelRequest == AiProviderId.gemini) {
+      switch (imageSize!) {
+        case AiImageSize.landscape:
+          return 'Landscape (16:9)';
+        case AiImageSize.portrait:
+          return 'Portrait (9:16)';
+        case AiImageSize.square:
+          return 'Square (1:1)';
+      }
+    }
+    return imageSize!.name;
+  }
+
   /// Standard constructor for [MessageModel]. All key fields are required.
   const MessageModel({
     required this.id,
@@ -83,6 +104,7 @@ class MessageModel {
     this.imageCount,
     this.imageBytes,
     this.imageQuality,
+    this.mimeType,
   });
 
   /// Factory constructor to build a new optimistic User message.
@@ -96,6 +118,7 @@ class MessageModel {
     AiImageSize? imageSize,
     int? imageCount,
     ImageQuality? imageQuality,
+    String? mimeType,
   }) {
     return MessageModel(
       id: const Uuid().v4(),
@@ -111,6 +134,7 @@ class MessageModel {
       imageSize: imageSize,
       imageCount: imageCount,
       imageQuality: imageQuality,
+      mimeType: mimeType,
     );
   }
 
@@ -127,6 +151,7 @@ class MessageModel {
     int? imageCount,
     Uint8List? imageBytes,
     ImageQuality? imageQuality,
+    String? mimeType,
   }) {
     return MessageModel(
       id: const Uuid().v4(),
@@ -143,6 +168,7 @@ class MessageModel {
       imageCount: imageCount,
       imageBytes: imageBytes,
       imageQuality: imageQuality,
+      mimeType: mimeType,
     );
   }
 
@@ -189,6 +215,7 @@ class MessageModel {
           : (data['imageQuality'] is String
               ? ImageQuality.fromValue(data['imageQuality'] as String)
               : null),
+      mimeType: data['mimeType'] as String?,
     );
   }
 
@@ -210,11 +237,14 @@ class MessageModel {
       if (pdfInfo != null && pdfInfo!.isNotEmpty)
         FirebaseCollections.fieldPdfInfo:
             pdfInfo!.map((e) => e.toMap()).toList(),
-      if (imageSize != null)
-        FirebaseCollections.fieldImageSize: imageSize!.name,
+      if (effectiveImageSizeString != null)
+        FirebaseCollections.fieldImageSize: effectiveImageSizeString,
       if (imageCount != null) FirebaseCollections.fieldImageCount: imageCount,
-      if (imageQuality != null)
+      if (modelRequest == AiProviderId.gemini)
+        FirebaseCollections.fieldImageQuality: null
+      else if (imageQuality != null)
         FirebaseCollections.fieldImageQuality: imageQuality!.name,
+      if (mimeType != null) 'mimeType': mimeType,
     };
   }
 
@@ -237,11 +267,14 @@ class MessageModel {
       if (pdfInfo != null && pdfInfo!.isNotEmpty)
         FirebaseCollections.fieldPdfInfo:
             pdfInfo!.map((e) => e.toMap()).toList(),
-      if (imageSize != null)
-        FirebaseCollections.fieldImageSize: imageSize!.name,
+      if (effectiveImageSizeString != null)
+        FirebaseCollections.fieldImageSize: effectiveImageSizeString,
       if (imageCount != null) FirebaseCollections.fieldImageCount: imageCount,
-      if (imageQuality != null)
+      if (modelRequest == AiProviderId.gemini)
+        FirebaseCollections.fieldImageQuality: null
+      else if (imageQuality != null)
         FirebaseCollections.fieldImageQuality: imageQuality!.name,
+      if (mimeType != null) 'mimeType': mimeType,
     };
   }
 
@@ -261,10 +294,15 @@ class MessageModel {
       if (imageUrls != null && imageUrls!.isNotEmpty) 'imageUrls': imageUrls,
       if (pdfInfo != null && pdfInfo!.isNotEmpty)
         'pdfInfo': pdfInfo!.map((e) => e.toMap()).toList(),
-      if (imageSize != null) 'imageSize': imageSize!.name,
+      if (effectiveImageSizeString != null)
+        'imageSize': effectiveImageSizeString,
       if (imageCount != null) 'imageCount': imageCount,
       if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
-      if (imageQuality != null) 'imageQuality': imageQuality!.name,
+      if (modelRequest == AiProviderId.gemini)
+        'imageQuality': null
+      else if (imageQuality != null)
+        'imageQuality': imageQuality!.name,
+      if (mimeType != null) 'mimeType': mimeType,
     };
   }
 
@@ -305,6 +343,7 @@ class MessageModel {
       imageQuality: data['imageQuality'] is String
           ? ImageQuality.fromValue(data['imageQuality'] as String)
           : null,
+      mimeType: data['mimeType'] as String?,
     );
   }
 
@@ -323,7 +362,7 @@ class MessageModel {
   ///
   /// IMPORTANT: Raw image payloads (base64/data-URI) must never be written to
   /// Firestore — they exceed the 1 MB document limit and cause INVALID_ARGUMENT.
-  /// Before calling this, ensure [aiMessage.imageUrls] contains Cloudinary URLs.
+  /// Before calling this, ensure [aiMessage.imageUrls] contains Cloud Storage URLs.
   static Map<String, dynamic> pairToFirestore({
     required MessageModel userMessage,
     required MessageModel aiMessage,
@@ -341,12 +380,15 @@ class MessageModel {
       if (aiMessage.pdfInfo != null && aiMessage.pdfInfo!.isNotEmpty)
         FirebaseCollections.fieldPdfInfo:
             aiMessage.pdfInfo!.map((e) => e.toMap()).toList(),
-      if (aiMessage.imageSize != null)
-        FirebaseCollections.fieldImageSize: aiMessage.imageSize!.name,
+      if (aiMessage.effectiveImageSizeString != null)
+        FirebaseCollections.fieldImageSize: aiMessage.effectiveImageSizeString,
       if (aiMessage.imageCount != null)
         FirebaseCollections.fieldImageCount: aiMessage.imageCount,
-      if (aiMessage.imageQuality != null)
+      if (aiMessage.modelRequest == AiProviderId.gemini)
+        FirebaseCollections.fieldImageQuality: null
+      else if (aiMessage.imageQuality != null)
         FirebaseCollections.fieldImageQuality: aiMessage.imageQuality!.name,
+      if (aiMessage.mimeType != null) 'mimeType': aiMessage.mimeType,
     };
   }
 
@@ -417,6 +459,7 @@ class MessageModel {
           : (data['imageQuality'] is String
               ? ImageQuality.fromValue(data['imageQuality'] as String)
               : null),
+      mimeType: data['mimeType'] as String?,
     );
 
     return [userMsg, aiMsg];
@@ -440,6 +483,7 @@ class MessageModel {
     Object? imageCount = _unset,
     Object? imageBytes = _unset,
     Object? imageQuality = _unset,
+    Object? mimeType = _unset,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -470,6 +514,8 @@ class MessageModel {
       imageQuality: identical(imageQuality, _unset)
           ? this.imageQuality
           : imageQuality as ImageQuality?,
+      mimeType:
+          identical(mimeType, _unset) ? this.mimeType : mimeType as String?,
     );
   }
 
@@ -558,23 +604,28 @@ List<PdfAttachmentInfo>? _parsePdfInfo(Map<String, dynamic>? data) {
   return null;
 }
 
-/// Immutable class representing combined PDF attachment path and name.
+/// Immutable class representing combined PDF attachment path, cloud URL, and name.
 class PdfAttachmentInfo {
   final String path;
   final String name;
   final int? fileSizeBytes;
+  final String? url;
 
   const PdfAttachmentInfo({
     required this.path,
     required this.name,
     this.fileSizeBytes,
+    this.url,
   });
 
   factory PdfAttachmentInfo.fromMap(Map<String, dynamic> map) {
+    final rawPath = map['path'] as String? ?? '';
+    final rawUrl = map['url'] as String?;
     return PdfAttachmentInfo(
-      path: map['path'] as String? ?? '',
+      path: rawPath,
       name: map['name'] as String? ?? '',
       fileSizeBytes: map['fileSizeBytes'] as int?,
+      url: rawUrl ?? (rawPath.startsWith('http') ? rawPath : null),
     );
   }
 
@@ -583,7 +634,22 @@ class PdfAttachmentInfo {
       'path': path,
       'name': name,
       if (fileSizeBytes != null) 'fileSizeBytes': fileSizeBytes,
+      if (url != null) 'url': url,
     };
+  }
+
+  PdfAttachmentInfo copyWith({
+    String? path,
+    String? name,
+    int? fileSizeBytes,
+    String? url,
+  }) {
+    return PdfAttachmentInfo(
+      path: path ?? this.path,
+      name: name ?? this.name,
+      fileSizeBytes: fileSizeBytes ?? this.fileSizeBytes,
+      url: url ?? this.url,
+    );
   }
 
   String get fileSizeLabel {
@@ -596,5 +662,5 @@ class PdfAttachmentInfo {
 
   @override
   String toString() =>
-      'PdfAttachmentInfo(name: $name, path: $path, size: $fileSizeBytes)';
+      'PdfAttachmentInfo(name: $name, path: $path, size: $fileSizeBytes, url: $url)';
 }

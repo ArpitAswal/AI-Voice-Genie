@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
+
+import 'package:flutter/foundation.dart';
 
 import 'package:ai_voice_genie/core/constants/app_assets.dart';
 import 'package:ai_voice_genie/features/chat/domain/chat_attachment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
@@ -150,7 +152,7 @@ class MessageBubble extends StatelessWidget {
   void _copyToClipboard(BuildContext context) {
     Clipboard.setData(ClipboardData(text: message.content));
     context.showSuccessToast(
-      AppLocalizations.of(context)!.translate('copied_to_clipboard'),
+      context.l10n.copiedToClipboard,
     );
   }
 }
@@ -227,12 +229,12 @@ class _MessageBubbleContent extends StatelessWidget {
       );
 
       if (!isUser) {
-        textWidget = Selector<ChatProvider, String?>(
-          selector: (_, p) => p.lastGeneratedMessageId,
-          builder: (_, lastId, __) {
+        textWidget = Selector<ChatProvider, bool>(
+          selector: (_, p) => p.shouldAnimateMessage(message.id),
+          builder: (context, shouldAnimate, _) {
             return TypewriterText(
               text: text,
-              animate: message.id == lastId,
+              animate: shouldAnimate,
               style: baseStyle,
               onTick: onTypewriterTick,
               onAnimationStart: () {
@@ -242,6 +244,9 @@ class _MessageBubbleContent extends StatelessWidget {
                       .read<VoiceProvider>()
                       .speak(text, messageId: message.id);
                 }
+              },
+              onComplete: () {
+                context.read<ChatProvider>().markMessageAnimated(message.id);
               },
             );
           },
@@ -254,14 +259,14 @@ class _MessageBubbleContent extends StatelessWidget {
     // Compile the children based on what attachments the message has.
     final children = <Widget>[
       // 1. If images are present, render the image grid.
-      // Only AI (non-user) image-generation responses get the download button.
+      // Both AI-generated images and user-attached images get the download button.
       if (message.imageUrls != null && message.imageUrls!.isNotEmpty)
         _ChatImage(
           images: message.imageUrls!,
           size: message.imageSize ?? AiImageSize.square,
-          // Pass metadata only for AI messages — user-attached images do not get the button.
-          messageId: isUser ? null : message.id,
-          provider: isUser ? null : (message.modelRequest?.id ?? 'unknown'),
+          messageId: message.id,
+          provider:
+              message.modelRequest?.id ?? (isUser ? 'user_upload' : 'unknown'),
         ),
 
       // 2. If PDFs are present, render the PDF cards.
@@ -463,11 +468,14 @@ class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
       }
     } else if (!url.startsWith('/') &&
         !url.startsWith('file:') &&
-        url.length > 200) {
+        url.length > 100) {
       isBase64 = true;
     }
 
     if (isBase64) {
+      // Strip any whitespace for cache key and decoding consistency
+      base64Data = base64Data.replaceAll(RegExp(r'\s+'), '');
+
       if (_base64Cache.containsKey(base64Data)) {
         setState(() {
           _decodedBytes = _base64Cache[base64Data];
@@ -494,11 +502,16 @@ class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
     }
   }
 
+  static Uint8List _decodeBase64(String data) {
+    final cleaned = data.replaceAll(RegExp(r'\s+'), '');
+    return base64Decode(base64.normalize(cleaned));
+  }
+
   Future<void> _decodeAsync(String base64Data) async {
     try {
-      final bytes = await Isolate.run(() => base64Decode(base64Data));
+      final bytes = await compute(_decodeBase64, base64Data);
       if (!mounted) return;
-      if (_base64Cache.length >= 50) {
+      if (_base64Cache.length >= 25) {
         _base64Cache.remove(_base64Cache.keys.first);
       }
       _base64Cache[base64Data] = bytes;
@@ -600,7 +613,7 @@ class _ImageFallback extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              l10n?.translate('failed_to_load_image') ?? 'Failed to load image',
+              l10n?.failedToLoadImage ?? 'Failed to load image',
               style: context.textTheme.headlineSmall?.copyWith(
                   fontSize: (gifSize * 0.1), fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
@@ -636,86 +649,129 @@ Widget _pdfView(
     ),
   );
 
-  return Container(
-    constraints: BoxConstraints(
-      minHeight: (squareView) ? 100 : 60,
-    ),
-    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-    decoration: BoxDecoration(
-      color: context.isDark
-          ? AppColors.pdfBackgroundDark
-          : AppColors.pdfBackgroundLight,
+  final actionIcon = (pdfInfo.url != null && pdfInfo.url!.isNotEmpty)
+      ? Icon(
+          Icons.open_in_new_rounded,
+          color: context.isDark ? AppColors.primaryLight : AppColors.white,
+          size: 20,
+        )
+      : Icon(
+          Icons.check_circle_rounded,
+          color: context.isDark ? AppColors.primaryLight : AppColors.white,
+          size: 20,
+        );
+
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: () => _openOrDownloadPdf(context, pdfInfo),
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(
-          color: context.isDark ? Colors.black54 : Colors.white70, width: 1),
-    ),
-    child: (squareView)
-        ? Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Container(
+        constraints: BoxConstraints(
+          minHeight: (squareView) ? 100 : 60,
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        decoration: BoxDecoration(
+          color: context.isDark
+              ? AppColors.pdfBackgroundDark
+              : AppColors.pdfBackgroundLight,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: context.isDark ? Colors.black54 : Colors.white70,
+              width: 1),
+        ),
+        child: (squareView)
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      pdfView,
+                      const SizedBox(width: spacing),
+                      actionIcon,
+                    ],
+                  ),
+                  const SizedBox(height: spacing / 2),
+                  Text(pdfInfo.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodySmall?.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: spacing / 2),
+                  if (pdfInfo.fileSizeLabel.isNotEmpty)
+                    Text(pdfInfo.fileSizeLabel,
+                        style: context.textTheme.bodySmall?.copyWith(
+                            color: Colors.white, fontWeight: FontWeight.w500))
+                ],
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   pdfView,
                   const SizedBox(width: spacing),
-                  Icon(
-                    Icons.check_circle_rounded,
-                    color: context.isDark
-                        ? AppColors.primaryLight
-                        : AppColors.white,
-                    size: 20,
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(pdfInfo.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textTheme.bodySmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500)),
+                        const SizedBox(height: spacing / 2),
+                        if (pdfInfo.fileSizeLabel.isNotEmpty)
+                          Text(pdfInfo.fileSizeLabel,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500))
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: spacing),
+                  actionIcon,
                 ],
               ),
-              const SizedBox(height: spacing / 2),
-              Text(pdfInfo.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.bodySmall?.copyWith(
-                      color: Colors.white, fontWeight: FontWeight.w500)),
-              const SizedBox(height: spacing / 2),
-              if (pdfInfo.fileSizeLabel.isNotEmpty)
-                Text(pdfInfo.fileSizeLabel,
-                    style: context.textTheme.bodySmall?.copyWith(
-                        color: Colors.white, fontWeight: FontWeight.w500))
-            ],
-          )
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              pdfView,
-              const SizedBox(width: spacing),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(pdfInfo.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textTheme.bodySmall?.copyWith(
-                            color: Colors.white, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: spacing / 2),
-                    if (pdfInfo.fileSizeLabel.isNotEmpty)
-                      Text(pdfInfo.fileSizeLabel,
-                          style: context.textTheme.bodySmall?.copyWith(
-                              color: Colors.white, fontWeight: FontWeight.w500))
-                  ],
-                ),
-              ),
-              const SizedBox(width: spacing),
-              Icon(
-                Icons.check_circle_rounded,
-                color:
-                    context.isDark ? AppColors.primaryLight : AppColors.white,
-                size: 20,
-              ),
-            ],
-          ),
+      ),
+    ),
   );
+}
+
+Future<void> _openOrDownloadPdf(
+    BuildContext context, PdfAttachmentInfo pdfInfo) async {
+  final targetUrl = pdfInfo.url;
+  if (targetUrl != null && targetUrl.isNotEmpty) {
+    final uri = Uri.tryParse(targetUrl);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+  }
+
+  if (pdfInfo.path.isNotEmpty) {
+    final file = File(pdfInfo.path.replaceFirst('file://', ''));
+    if (await file.exists()) {
+      final uri = Uri.file(file.path);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+        return;
+      }
+    }
+  }
+
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Cannot open PDF: ${pdfInfo.name}'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 }
 
 class _OneAttachmentView extends StatelessWidget {

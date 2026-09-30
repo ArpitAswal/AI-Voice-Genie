@@ -43,7 +43,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final authProvider = context.read<AuthProvider>();
 
     // Show loading before async gap — context is valid here
-    context.showLoading(message: context.l10n.translate('signing_in'));
+    context.showLoading(message: context.l10n.signingIn);
 
     await authProvider.signInWithGoogle();
 
@@ -68,7 +68,7 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> _handleAppleSignIn() async {
     final authProvider = context.read<AuthProvider>();
 
-    context.showLoading(message: context.l10n.translate('signing_in'));
+    context.showLoading(message: context.l10n.signingIn);
 
     await authProvider.signInWithApple();
 
@@ -237,7 +237,7 @@ class _AuthScreenState extends State<AuthScreen> {
       text: TextSpan(
         style: normalStyle,
         children: [
-          TextSpan(text: l10n.translate('privacy_note_prefix')),
+          TextSpan(text: l10n.privacyNotePrefix),
           TextSpan(
             text: l10n.termsOfService,
             style: linkStyle,
@@ -251,7 +251,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     },
                   ),
           ),
-          TextSpan(text: l10n.translate('privacy_note_and')),
+          TextSpan(text: l10n.privacyNoteAnd),
           TextSpan(
             text: l10n.privacyPolicy,
             style: linkStyle,
@@ -265,7 +265,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     },
                   ),
           ),
-          TextSpan(text: l10n.translate('privacy_note_suffix')),
+          TextSpan(text: l10n.privacyNoteSuffix),
         ],
       ),
     );

@@ -253,6 +253,15 @@ class AppLocalizations {
       // ── AI Preferences ─────────────────────────────────────────────────────
       'response_length': 'Response Length',
       'response_length_hint': 'Adjust the maximum length of model replies.',
+      'gemini_thinking_level': 'Thinking Level (Reasoning)',
+      'gemini_thinking_level_hint':
+          'Adjust reasoning depth and thinking budget for Gemini 3.8 Flash.',
+      'gemini_aspect_ratio': 'Image Aspect Ratio',
+      'gemini_aspect_ratio_hint':
+          'Choose output shape: Square (1:1), Landscape (16:9), or Portrait (9:16).',
+      'gemini_info_title': 'Key Note: Gemini Image Generation',
+      'gemini_info_desc':
+          'Google Gemini 3.1 Flash-Lite automatically generates all images in native 1K resolution with full photorealistic quality, automatic lighting, and opaque backgrounds. Advanced options like quality levels, transparency, or multi-image counts are managed internally by Google’s model and cannot be customized manually.',
       'vision_image_count': 'Vision Image Count',
       'vision_image_count_hint':
           'Set the default limit for multi-modal image attachments.',
@@ -732,6 +741,15 @@ class AppLocalizations {
       // ── AI Preferences ─────────────────────────────────────────────────────
       'response_length': 'उत्तर लंबाई',
       'response_length_hint': 'मॉडल के उत्तर की अधिकतम लंबाई बदलें।',
+      'gemini_thinking_level': 'सोचने का स्तर (Reasoning)',
+      'gemini_thinking_level_hint':
+          'Gemini 3.8 Flash के लिए तर्क क्षमता और थिंकिंग बजट चुनें।',
+      'gemini_aspect_ratio': 'इमेज पहलू अनुपात (Aspect Ratio)',
+      'gemini_aspect_ratio_hint':
+          'इमेज का आकार चुनें: चौकोर (1:1), लैंडस्केप (16:9), या पोर्ट्रेट (9:16)।',
+      'gemini_info_title': 'विशेष नोट: Gemini इमेज जनरेशन',
+      'gemini_info_desc':
+          'Google Gemini 3.1 Flash-Lite सभी इमेज को 1K रिज़ॉल्यूशन और उत्कृष्ट क्वालिटी के साथ स्वतः जनरेट करता है। क्वालिटी स्तर, बैकग्राउंड प्रभाव या मल्टी-इमेज जैसे विकल्प Google के मॉडल द्वारा स्वयं प्रबंधित होते हैं।',
       'vision_image_count': 'विज़न इमेज संख्या',
       'vision_image_count_hint':
           'बहु-मोडल इमेज अटैचमेंट की डिफ़ॉल्ट सीमा तय करें।',
@@ -1247,6 +1265,86 @@ class AppLocalizations {
       translate('image_save_permission_denied');
   String get imageSaveNoSpace => translate('image_save_no_space');
   String get imageDownloadFailed => translate('image_download_failed');
+
+  // ── Auth & Privacy ────────────────────────────────────────────────────────
+  String get privacyNotePrefix => translate('privacy_note_prefix');
+  String get privacyNoteAnd => translate('privacy_note_and');
+  String get privacyNoteSuffix => translate('privacy_note_suffix');
+  String get signingIn => translate('signing_in');
+
+  // ── Keys & Account ────────────────────────────────────────────────────────
+  String get deleteKey => translate('delete_key');
+  String get activeUser => translate('active_user');
+  String get newUser => translate('new_user');
+  String get displayName => translate('display_name');
+  String get fakeName => translate('fake_name');
+  String get emailAddress => translate('email_address');
+  String get fakeEmail => translate('fake_email');
+  String get themeLight => translate('theme_light');
+  String get themeDark => translate('theme_dark');
+  String get languageEn => translate('language_en');
+  String get languageHi => translate('language_hi');
+
+  // ── AI Preferences ────────────────────────────────────────────────────────
+  String get responseLength => translate('response_length');
+  String get responseLengthHint => translate('response_length_hint');
+  String get geminiThinkingLevel => translate('gemini_thinking_level');
+  String get geminiThinkingLevelHint => translate('gemini_thinking_level_hint');
+  String get geminiAspectRatio => translate('gemini_aspect_ratio');
+  String get geminiAspectRatioHint => translate('gemini_aspect_ratio_hint');
+  String get geminiInfoTitle => translate('gemini_info_title');
+  String get geminiInfoDesc => translate('gemini_info_desc');
+  String get visionImageCount => translate('vision_image_count');
+  String get visionImageCountHint => translate('vision_image_count_hint');
+  String get visionPdfCount => translate('vision_pdf_count');
+  String get visionPdfCountHint => translate('vision_pdf_count_hint');
+  String get visionDetailLevel => translate('vision_detail_level');
+  String get visionDetailLevelHint => translate('vision_detail_level_hint');
+
+  // ── Legal & About ─────────────────────────────────────────────────────────
+  String get aboutMissionTitle => translate('about_mission_title');
+  String get aboutMissionBody => translate('about_mission_body');
+  String get legal => translate('legal');
+  String get readInApp => translate('read_in_app');
+  String get contactSupport => translate('contact_support');
+  String get notConfigured => translate('not_configured');
+  String get creditsAttribution => translate('credits_attribution');
+  String get openSourceLicenses => translate('open_source_licenses');
+  String get viewLicenses => translate('view_licenses');
+  String get userAgreement => translate('user_agreement');
+  String get lastUpdated => translate('last_updated');
+  String get aiGuidelines => translate('ai_guidelines');
+  String get officialDocument => translate('official_document');
+  String get noDataSelling => translate('no_data_selling');
+  String get aboutDeveloper => translate('about_developer');
+  String get independentDeveloper => translate('independent_developer');
+  String get copyright => translate('copyright');
+
+  // ── Chat & Attachments ────────────────────────────────────────────────────
+  String get deleteConversationConfirm =>
+      translate('delete_conversation_confirm');
+  String get conversationDeleted => translate('conversation_deleted');
+  String get renaming => translate('renaming');
+  String get conversationNameUpdate => translate('conversation_name_update');
+  String get renameConversationName => translate('rename_conversation_name');
+  String get rename => translate('rename');
+  String get chooseFromGallery => translate('choose_from_gallery');
+  String get takePhoto => translate('take_photo');
+  String get choosePdf => translate('choose_pdf');
+  String get cannotMixImagesAndPdfs => translate('cannot_mix_images_and_pdfs');
+  String get attachFile => translate('attach_file');
+  String get removeFile => translate('remove_file');
+  String get copiedToClipboard => translate('copied_to_clipboard');
+  String get failedToLoadImage => translate('failed_to_load_image');
+  String maxImageAttachments(int count) =>
+      translate('max_image_attachments').replaceAll('{count}', '$count');
+  String maxPdfAttachments(int count) =>
+      translate('max_pdf_attachments').replaceAll('{count}', '$count');
+
+  // ── Intro & Voice ─────────────────────────────────────────────────────────
+  String get tapToStartVoiceChat => translate('tap_to_start_voice_chat');
+  String get speechTextUnavailable => translate('speech_text_unavailable');
+  String get voiceAssistant => translate('voice_assistant');
 }
 
 // ==========================================================================

@@ -401,7 +401,22 @@ enum AiImageSize {
   double get aspectRatio => width / height;
 
   static AiImageSize fromValue(String value) {
-    // Check both name (e.g. 'square') and apiValue (e.g. '1024x1024') for backward compatibility
+    final lower = value.toLowerCase();
+    if (lower.contains('landscape') ||
+        lower.contains('16:9') ||
+        lower.contains('1536x1024')) {
+      return AiImageSize.landscape;
+    }
+    if (lower.contains('portrait') ||
+        lower.contains('9:16') ||
+        lower.contains('1024x1536')) {
+      return AiImageSize.portrait;
+    }
+    if (lower.contains('square') ||
+        lower.contains('1:1') ||
+        lower.contains('1024x1024')) {
+      return AiImageSize.square;
+    }
     return AiImageSize.values.firstWhere(
       (size) => size.name == value || size.apiValue == value,
       orElse: () => AiImageSize.square,
@@ -585,6 +600,55 @@ enum AiPreferenceControl {
   /// Gemini-specific: controls image_size tier in response_format (1K / 2K / 4K).
   /// Only exposed for Gemini image generation.
   geminiImageSize,
+
+  /// Gemini-specific: controls reasoning thinking level (low / medium / high).
+  /// Exposed for Gemini 3.8 Flash text generation.
+  geminiThinkingLevel,
+}
+
+// =============================================================================
+// GEMINI THINKING CONFIG ENUMS
+// =============================================================================
+
+/// Thinking level for Gemini 3.8 models (reasoning budget and depth).
+///
+/// Sent as `thinkingLevel` within `thinkingConfig` in `generationConfig`.
+///
+/// Supported levels for gemini-3.8-flash:
+///   - low: Fastest response with minimal reasoning tokens (low cost/latency).
+///   - medium: Balanced reasoning (Google's default setting).
+///   - high: Deep reasoning for complex math, coding, and multi-step logic.
+/// Note: `minimal` is explicitly NOT supported by gemini-3.8-flash (returns 400).
+enum GeminiThinkingLevel {
+  /// Low reasoning depth — fast response, minimal thinking tokens
+  low('low', 'Low', 'Fastest response with minimal reasoning tokens'),
+
+  /// Medium reasoning depth — balanced quality and speed (Default)
+  medium('medium', 'Medium', 'Balanced reasoning for everyday tasks (Default)'),
+
+  /// High reasoning depth — deep reasoning for complex problems
+  high('high', 'High', 'Deep reasoning for complex math, coding & logic');
+
+  /// Value sent to the Gemini API in `generationConfig.thinkingConfig.thinkingLevel`.
+  final String apiValue;
+
+  /// Human-readable display name shown in the UI.
+  final String displayName;
+
+  /// Brief explanation of the thinking level behavior.
+  final String description;
+
+  const GeminiThinkingLevel(this.apiValue, this.displayName, this.description);
+
+  /// Safe deserialization from storage string or API value.
+  static GeminiThinkingLevel fromString(String? value) {
+    if (value == null || value.isEmpty) return GeminiThinkingLevel.medium;
+    final lower = value.toLowerCase();
+    return GeminiThinkingLevel.values.firstWhere(
+      (e) => e.apiValue == lower || e.name == lower,
+      orElse: () => GeminiThinkingLevel.medium,
+    );
+  }
 }
 
 // =============================================================================

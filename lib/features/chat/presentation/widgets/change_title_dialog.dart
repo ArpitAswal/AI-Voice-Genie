@@ -39,7 +39,7 @@ class _ChangeTitleDialogState extends State<ChangeTitleDialog> {
 
     return AppAlertDialog(
       title: Text(
-        l10n.translate('rename_conversation_name'),
+        l10n.renameConversationName,
         style: theme.textTheme.titleLarge,
       ),
       insetPadding: const EdgeInsets.all(20),
@@ -53,7 +53,7 @@ class _ChangeTitleDialogState extends State<ChangeTitleDialog> {
         child: context.themedTextField(
             controller: _controller,
             textCapitalization: TextCapitalization.sentences,
-            hint: l10n.translate('rename_conversation_name'),
+            hint: l10n.renameConversationName,
             border: OutlineInputBorder(
               borderSide: BorderSide(color: context.primaryColor),
               borderRadius: BorderRadius.circular(14),
@@ -64,7 +64,7 @@ class _ChangeTitleDialogState extends State<ChangeTitleDialog> {
           Expanded(
             child: context.themedOutlinedButton(
               onPressed: () => Navigator.of(context).pop(),
-              label: l10n.translate('cancel'),
+              label: l10n.cancel,
             ),
           ),
           const SizedBox(width: 16),
@@ -78,7 +78,7 @@ class _ChangeTitleDialogState extends State<ChangeTitleDialog> {
                   Navigator.of(context).pop();
                 }
               },
-              label: l10n.translate('rename'),
+              label: l10n.rename,
             ),
           )
         ])

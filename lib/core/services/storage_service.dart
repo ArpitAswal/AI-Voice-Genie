@@ -147,6 +147,8 @@ class StorageService {
       StorageKeys.preferredVisionPdfCount,
       StorageKeys.preferredVisionDetailLevel,
       StorageKeys.preferredResponseLength,
+      StorageKeys.preferredGeminiThinkingLevel,
+      StorageKeys.preferredGeminiAspectRatio,
       StorageKeys.lastOpenConversationId,
       StorageKeys.useAiTts,
       StorageKeys.useAiStt,

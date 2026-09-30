@@ -107,44 +107,78 @@ class UserModel {
 
   /// Construct a UserModel from an existing Firestore document map.
   ///
-  /// Used when reading a returning user's document.
+  /// Resilient DTO parsing: uses defensive type conversion helpers so that if
+  /// any field type, key, or format changes in Firestore (e.g. number as string,
+  /// timestamp as ISO string, boolean as int), the app will never crash with a TypeError.
   factory UserModel.fromFirestore(Map<String, dynamic> data) {
     return UserModel(
-      uid: data['uid'] as String? ?? '',
-      email: data['email'] as String? ?? '',
-      displayName: data['displayName'] as String? ?? 'User',
-      photoUrl: data['photoUrl'] as String? ?? '',
+      uid: _parseString(data[FirebaseCollections.fieldUid]),
+      email: _parseString(data[FirebaseCollections.fieldEmail]),
+      displayName:
+          _parseString(data[FirebaseCollections.fieldDisplayName], 'User'),
+      photoUrl: _parseString(data[FirebaseCollections.fieldPhotoUrl]),
       authProvider: SocialAuthProvider.fromId(
-        data['authProvider'] as String? ?? 'google',
+        _parseString(data[FirebaseCollections.fieldAuthProvider], 'google'),
       ),
-      isNewUser: false,
-      onboardingDone: data['onboardingDone'] as bool? ?? false,
-      keySetupDone: data['keySetupDone'] as bool? ?? false,
-      termsAccepted:
-          data[FirebaseCollections.fieldTermsAccepted] as bool? ?? false,
-      termsAcceptedAt: data[FirebaseCollections.fieldTermsAcceptedAt] != null
-          ? (data[FirebaseCollections.fieldTermsAcceptedAt] as Timestamp)
-              .toDate()
-          : null,
+      // Read isNewUser from Firestore (safely handles bool, string, or int)
+      isNewUser: _parseBool(data[FirebaseCollections.fieldNewUser]),
+      onboardingDone: _parseBool(data[FirebaseCollections.fieldOnboardingDone]),
+      keySetupDone: _parseBool(data[FirebaseCollections.fieldKeySetupDone]),
+      termsAccepted: _parseBool(data[FirebaseCollections.fieldTermsAccepted]),
+      termsAcceptedAt:
+          _parseDateTime(data[FirebaseCollections.fieldTermsAcceptedAt]),
       termsVersionAccepted:
-          data[FirebaseCollections.fieldTermsVersionAccepted] as String?,
-      dateOfBirth: data['dateOfBirth'] != null
-          ? (data['dateOfBirth'] as Timestamp).toDate()
-          : null,
-      age: data['age'] as int?,
-      gender: data[FirebaseCollections.fieldGender] as String?,
-      country: data[FirebaseCollections.fieldCountry] as String?,
-      state: data[FirebaseCollections.fieldState] as String?,
-      createdAt: data[FirebaseCollections.fieldCreatedAt] != null
-          ? (data[FirebaseCollections.fieldCreatedAt] as Timestamp).toDate()
-          : null,
-      lastLoginAt: data[FirebaseCollections.fieldLastLoginAt] != null
-          ? (data[FirebaseCollections.fieldLastLoginAt] as Timestamp).toDate()
-          : null,
-      lastUpdatedAt: data[FirebaseCollections.fieldLastUpdatedAt] != null
-          ? (data[FirebaseCollections.fieldLastUpdatedAt] as Timestamp).toDate()
-          : null,
+          data[FirebaseCollections.fieldTermsVersionAccepted]?.toString(),
+      dateOfBirth: _parseDateTime(data[FirebaseCollections.fieldDateOfBirth]),
+      age: _parseInt(data[FirebaseCollections.fieldAge]),
+      gender: data[FirebaseCollections.fieldGender]?.toString(),
+      country: data[FirebaseCollections.fieldCountry]?.toString(),
+      state: data[FirebaseCollections.fieldState]?.toString(),
+      createdAt: _parseDateTime(data[FirebaseCollections.fieldCreatedAt]),
+      lastLoginAt: _parseDateTime(data[FirebaseCollections.fieldLastLoginAt]),
+      lastUpdatedAt:
+          _parseDateTime(data[FirebaseCollections.fieldLastUpdatedAt]),
     );
+  }
+
+  // ── DTO Defensive Parsing Helpers ──────────────────────────────────────────
+
+  /// Safely converts any dynamic value to a String with a default fallback.
+  static String _parseString(dynamic value, [String fallback = '']) {
+    if (value == null) return fallback;
+    if (value is String) return value.trim();
+    return value.toString().trim();
+  }
+
+  /// Safely converts dynamic value to boolean (handles bool, int 1/0, and 'true'/'false').
+  static bool _parseBool(dynamic value, [bool fallback = false]) {
+    if (value == null) return fallback;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final lower = value.toLowerCase().trim();
+      return lower == 'true' || lower == '1';
+    }
+    return fallback;
+  }
+
+  /// Safely converts dynamic value to int (handles int, double, and numeric string).
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim());
+    return null;
+  }
+
+  /// Safely converts dynamic value to DateTime (handles Timestamp, ISO string, and epoch int).
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value.trim());
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    return null;
   }
 
   // ── Serialization ─────────────────────────────────────────────────────────
@@ -155,18 +189,20 @@ class UserModel {
   /// FieldValue.serverTimestamp() directly in the repository.
   Map<String, dynamic> toFirestoreNewUser() {
     return {
-      'uid': uid,
-      'email': email,
-      'displayName': displayName,
-      'photoUrl': photoUrl,
-      'authProvider': authProvider.id,
-      'onboardingDone': false,
-      'keySetupDone': false,
+      FirebaseCollections.fieldUid: uid,
+      FirebaseCollections.fieldEmail: email,
+      FirebaseCollections.fieldDisplayName: displayName,
+      FirebaseCollections.fieldPhotoUrl: photoUrl,
+      FirebaseCollections.fieldAuthProvider: authProvider.id,
+      // Persist isNewUser state (true for first-time users, false if re-registered after deletion)
+      FirebaseCollections.fieldNewUser: isNewUser,
+      FirebaseCollections.fieldOnboardingDone: false,
+      FirebaseCollections.fieldKeySetupDone: false,
       FirebaseCollections.fieldTermsAccepted: termsAccepted,
       FirebaseCollections.fieldTermsAcceptedAt: FieldValue.serverTimestamp(),
       FirebaseCollections.fieldTermsVersionAccepted: termsVersionAccepted,
-      'dateOfBirth': null,
-      'age': null,
+      FirebaseCollections.fieldDateOfBirth: null,
+      FirebaseCollections.fieldAge: null,
       FirebaseCollections.fieldGender: null,
       FirebaseCollections.fieldCountry: null,
       FirebaseCollections.fieldState: null,

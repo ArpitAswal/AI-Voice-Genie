@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
@@ -15,7 +16,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/error/ai_exception.dart';
 import '../../../core/services/ai_preferences_service.dart';
-import '../../../core/services/cloudinary_service.dart';
+import '../../../core/services/cloud_storage_service.dart';
 import '../data/chat_repository_impl.dart';
 import '../data/chat_sync_service.dart';
 import '../data/local_chat_store.dart';
@@ -92,6 +93,26 @@ class ChatProvider extends ChangeNotifier {
   /// ID of the most recently completed AI message — used by [MessageBubble]
   /// to trigger the typewriter animation on only the latest response.
   String? get lastGeneratedMessageId => _lastGeneratedMessageId;
+
+  /// IDs of AI messages that have already run their typewriter animation.
+  final Set<String> _animatedMessageIds = {};
+
+  /// Whether a given AI message should run the typewriter animation.
+  /// Returns true ONLY for the latest AI message and ONLY if it hasn't animated yet.
+  bool shouldAnimateMessage(String messageId) {
+    return _lastGeneratedMessageId == messageId &&
+        !_animatedMessageIds.contains(messageId);
+  }
+
+  /// Marks an AI message as having completed its typewriter animation so it
+  /// never re-animates on ListView scroll recycling.
+  void markMessageAnimated(String messageId) {
+    _animatedMessageIds.add(messageId);
+    if (_lastGeneratedMessageId == messageId) {
+      _lastGeneratedMessageId = null;
+    }
+  }
+
   bool get isLoadingMoreMessages => _isLoadingMoreMessages;
   bool get hasMoreMessages => _hasMoreMessages;
   String? get errorMessage => _errorMessage;
@@ -118,6 +139,7 @@ class ChatProvider extends ChangeNotifier {
     _activeConversation = null;
     _messages.clear(); // Synchronously clear old messages immediately
     _lastGeneratedMessageId = null; // Prevent old messages from animating
+    _animatedMessageIds.clear();
     _hasMoreMessages = true;
     _messageCursor = null;
     notifyListeners();
@@ -255,6 +277,7 @@ class ChatProvider extends ChangeNotifier {
       _activeConversation = null;
     }
     _lastGeneratedMessageId = null;
+    _animatedMessageIds.clear();
     _messagesSubscription?.cancel();
   }
 
@@ -308,9 +331,13 @@ class ChatProvider extends ChangeNotifier {
               .toList()
           : null,
       imageSize: (requestCapability == AiCapability.imageGeneration)
-          ? _preferences.preferredImageSize(selectedProvider)
+          ? (selectedProvider == AiProviderId.gemini
+              ? _geminiRatioToImageSize(
+                  _preferences.preferredGeminiAspectRatio(selectedProvider))
+              : _preferences.preferredImageSize(selectedProvider))
           : null,
-      imageQuality: (requestCapability == AiCapability.imageGeneration)
+      imageQuality: (requestCapability == AiCapability.imageGeneration &&
+              selectedProvider != AiProviderId.gemini)
           ? _preferences.preferredImageQuality(selectedProvider)
           : null,
       imageCount: (requestCapability == AiCapability.imageGeneration)
@@ -378,6 +405,10 @@ class ChatProvider extends ChangeNotifier {
         rawImageCount: _preferences.preferredImageCount(selectedProvider),
         rawVisionDetailLevel:
             _preferences.preferredVisionDetailLevel(selectedProvider),
+        rawGeminiThinkingLevel:
+            _preferences.preferredGeminiThinkingLevel(selectedProvider),
+        rawGeminiAspectRatio:
+            _preferences.preferredGeminiAspectRatio(selectedProvider),
       );
 
       final aiResponse = await _orchestrator.execute(
@@ -390,6 +421,10 @@ class ChatProvider extends ChangeNotifier {
               effectivePrefs.visionDetailLevel ?? VisionDetailLevel.auto,
           responseLength:
               effectivePrefs.responseLength ?? ResponseLength.balanced,
+          thinkingLevel: effectivePrefs.geminiThinkingLevel ??
+              _preferences.preferredGeminiThinkingLevel(selectedProvider),
+          geminiAspectRatio: effectivePrefs.geminiAspectRatio ??
+              _preferences.preferredGeminiAspectRatio(selectedProvider),
           imageSize: effectivePrefs.imageSize ?? AiImageSize.square,
           imageQuality: effectivePrefs.imageQuality ?? ImageQuality.low,
           imageCount: effectivePrefs.imageCount ?? 1,
@@ -411,18 +446,43 @@ class ChatProvider extends ChangeNotifier {
         selectedProvider: selectedProvider,
       );
 
-      // ── Upload Base64 to Cloudinary ─────────────────────────────────────────
+      // ── Upload Base64 to Firebase Cloud Storage ───────────────────────────
       List<String> uploadedUrls = [];
       if (aiResponse.contentType == AiResponseContentType.imageBase64 &&
           aiResponse.generatedImages != null &&
           aiResponse.generatedImages!.isNotEmpty) {
-        final futures = aiResponse.generatedImages!
+        final conversationId = _activeConversation?.id ?? const Uuid().v4();
+        final validImages = aiResponse.generatedImages!
             .where((img) => img.b64Json != null && img.b64Json!.isNotEmpty)
-            .map((img) =>
-                CloudinaryService.instance.uploadBase64Image(img.b64Json!));
+            .toList();
+
+        final futures = <Future<String?>>[];
+        for (int i = 0; i < validImages.length; i++) {
+          futures.add(
+            CloudStorageService.instance.uploadGeneratedImageBase64(
+              uid: uid,
+              conversationId: conversationId,
+              base64String: validImages[i].b64Json!,
+              index: i,
+              mimeType: validImages[i].mimeType,
+            ),
+          );
+        }
 
         final results = await Future.wait(futures);
-        uploadedUrls = results.whereType<String>().toList();
+
+        for (int i = 0; i < validImages.length; i++) {
+          final cloudUrl = results[i];
+          if (cloudUrl != null && cloudUrl.isNotEmpty) {
+            uploadedUrls.add(cloudUrl);
+          } else {
+            // Fallback to data URI if upload failed so user can still see image
+            final raw = validImages[i].b64Json!;
+            final mime = validImages[i].mimeType ?? 'image/png';
+            uploadedUrls.add(
+                raw.startsWith('data:image') ? raw : 'data:$mime;base64,$raw');
+          }
+        }
       }
 
       // ── Step 5: Build AI response message ──────────────────────────────────
@@ -463,16 +523,67 @@ class ChatProvider extends ChangeNotifier {
 
       if (messageToPersist != null && conversationToPersist != null) {
         // ── Step 6: Persist ──────────────────────────
+        final conversationId = conversationToPersist.id;
 
-        // ── Compress Images for Persistence ────────────────────────
+        // ── Upload Attachments to Cloud Storage ──────────────────────
         List<String>? persistImagePaths = userMessage.imageUrls;
-        if (persistImagePaths != null && persistImagePaths.isNotEmpty) {
-          persistImagePaths = await _compressImagesToBase64(persistImagePaths);
+        List<PdfAttachmentInfo>? persistPdfs = userMessage.pdfInfo;
+
+        final imageAttachments = attachments.where((a) => a.isImage).toList();
+        final pdfAttachments = attachments.where((a) => a.isPdf).toList();
+
+        // 1. Upload Images in parallel to Firebase Storage
+        if (imageAttachments.isNotEmpty) {
+          final uploadFutures = imageAttachments
+              .map((att) => CloudStorageService.instance.uploadImage(
+                    uid: uid,
+                    conversationId: conversationId,
+                    bytes: att.bytes,
+                    fileName: att.name,
+                    mimeType: att.mimeType,
+                  ));
+          final uploadedUrls = await Future.wait(uploadFutures);
+
+          final List<String> resolvedImages = [];
+          for (int i = 0; i < imageAttachments.length; i++) {
+            final cloudUrl = (i < uploadedUrls.length) ? uploadedUrls[i] : null;
+            if (cloudUrl != null && cloudUrl.isNotEmpty) {
+              resolvedImages.add(cloudUrl);
+            } else {
+              // Fallback to micro-thumbnail if cloud upload was offline/failed
+              final fallback = await _compressImagesToMicroThumbnails(
+                [imageAttachments[i].path ?? ''],
+                attachments: [imageAttachments[i]],
+              );
+              resolvedImages.add(fallback.first);
+            }
+          }
+          persistImagePaths = resolvedImages;
+        }
+
+        // 2. Upload PDFs in parallel to Firebase Storage
+        if (pdfAttachments.isNotEmpty) {
+          final pdfFutures = pdfAttachments.map((att) async {
+            final cloudUrl = await CloudStorageService.instance.uploadPdf(
+              uid: uid,
+              conversationId: conversationId,
+              bytes: att.bytes,
+              fileName: att.name,
+            );
+            return PdfAttachmentInfo(
+              path: att.path ?? '',
+              name: att.name,
+              fileSizeBytes: att.fileSizeBytes ?? att.bytes.lengthInBytes,
+              url: cloudUrl,
+            );
+          });
+          persistPdfs = await Future.wait(pdfFutures);
         }
 
         final userMessageToPersist = userMessage.copyWith(
           status: MessageStatus.delivered,
           imageUrls: persistImagePaths,
+          pdfInfo: persistPdfs,
         );
 
         // Update in memory so cache also has base64
@@ -544,6 +655,14 @@ class ChatProvider extends ChangeNotifier {
       await _repository.deleteConversationLocalFirst(
         uid: uid,
         conversationId: conversationId,
+      );
+
+      // Clean up Cloud Storage attachments for this conversation in the background
+      unawaited(
+        CloudStorageService.instance.deleteConversationAttachments(
+          uid: uid,
+          conversationId: conversationId,
+        ),
       );
 
       // Clear in-memory state only when we deleted the currently active convo
@@ -713,15 +832,27 @@ class ChatProvider extends ChangeNotifier {
     List<String> uploadedUrls = const [],
   }) {
     if (response.contentType == AiResponseContentType.imageBase64) {
+      final isGemini = selectedProvider == AiProviderId.gemini ||
+          response.modelUsed == AiProviderId.gemini;
+      final generatedMime = (response.generatedImages != null &&
+              response.generatedImages!.isNotEmpty)
+          ? response.generatedImages!.first.mimeType
+          : null;
       return MessageModel.aiResponse(
         content: response.text ?? '',
         modelUsed: response.modelUsed,
         contentType: AiCapability.imageGeneration,
         imageUrls: uploadedUrls.isNotEmpty ? uploadedUrls : null,
         tokenCount: response.tokenCount,
-        imageSize: _preferences.preferredImageSize(selectedProvider),
-        imageQuality: _preferences.preferredImageQuality(selectedProvider),
+        imageSize: isGemini
+            ? _geminiRatioToImageSize(
+                _preferences.preferredGeminiAspectRatio(selectedProvider))
+            : _preferences.preferredImageSize(selectedProvider),
+        imageQuality: isGemini
+            ? null
+            : _preferences.preferredImageQuality(selectedProvider),
         imageCount: _preferences.preferredImageCount(selectedProvider),
+        mimeType: generatedMime,
       );
     } else if (response.contentType == AiResponseContentType.analysis) {
       // Determine the specific analysis type from the attachment context
@@ -747,6 +878,17 @@ class ChatProvider extends ChangeNotifier {
       modelUsed: response.modelUsed,
       tokenCount: response.tokenCount,
     );
+  }
+
+  static AiImageSize _geminiRatioToImageSize(GeminiAspectRatio ratio) {
+    switch (ratio) {
+      case GeminiAspectRatio.square:
+        return AiImageSize.square;
+      case GeminiAspectRatio.landscape:
+        return AiImageSize.landscape;
+      case GeminiAspectRatio.portrait:
+        return AiImageSize.portrait;
+    }
   }
 
   MessageModel _buildFailedAiMessage({
@@ -823,32 +965,88 @@ class ChatProvider extends ChangeNotifier {
     _conversationHistoryVersion++;
   }
 
-  Future<List<String>> _compressImagesToBase64(List<String> paths) async {
-    final List<String> result = [];
-    for (final path in paths) {
-      if (path.startsWith('data:image') || path.startsWith('http')) {
-        result.add(path); // Already processed or network url
-        continue;
+  /// Compresses attached user images in parallel into lightweight Base64 micro-thumbnails
+  /// (~15-25 KB each) for storage in Hive and Firestore.
+  ///
+  /// Micro-thumbnails keep the total message document size well below Firestore's 1 MB
+  /// hard limit (even with 4 attachments ~70 KB total), eliminate network transfer bloat,
+  /// and compress concurrently via [Future.wait].
+  Future<List<String>> _compressImagesToMicroThumbnails(
+    List<String> paths, {
+    List<ChatAttachment>? attachments,
+  }) async {
+    if (paths.isEmpty) return const [];
+
+    final Map<String, Uint8List> bytesByPath = {};
+    if (attachments != null) {
+      for (final a in attachments) {
+        if (a.isImage && a.path != null && a.bytes.isNotEmpty) {
+          bytesByPath[a.path!] = a.bytes;
+        }
       }
+    }
+
+    final futures = paths.map((path) async {
+      if (path.startsWith('data:image') || path.startsWith('http')) {
+        return path;
+      }
+
+      Uint8List? fallbackBytes = bytesByPath[path];
+
+      // 1. Attempt native compression directly from file path (micro-thumbnail: 480x480, quality: 60)
       try {
         final compressedBytes = await FlutterImageCompress.compressWithFile(
           path,
-          minWidth: 1024,
-          minHeight: 1024,
-          quality: 80,
+          minWidth: 480,
+          minHeight: 480,
+          quality: 60,
         );
-        if (compressedBytes != null) {
-          final base64String = base64Encode(compressedBytes);
-          result.add('data:image/jpeg;base64,$base64String');
-        } else {
-          result.add(path); // Fallback to original if compression fails
+        if (compressedBytes != null && compressedBytes.isNotEmpty) {
+          return 'data:image/jpeg;base64,${base64Encode(compressedBytes)}';
         }
       } catch (e) {
-        debugPrint('Error compressing image to thumbnail: $e');
-        result.add(path); // Fallback
+        debugPrint(
+            '⚠️ FlutterImageCompress.compressWithFile failed for $path: $e');
       }
-    }
-    return result;
+
+      // 2. Fallback: Read file bytes if not provided in attachments
+      if (fallbackBytes == null || fallbackBytes.isEmpty) {
+        try {
+          final file = File(path.replaceFirst('file://', ''));
+          if (await file.exists()) {
+            fallbackBytes = await file.readAsBytes();
+          }
+        } catch (_) {}
+      }
+
+      // 3. Attempt native compression using in-memory bytes
+      if (fallbackBytes != null && fallbackBytes.isNotEmpty) {
+        try {
+          final compressedFromBytes =
+              await FlutterImageCompress.compressWithList(
+            fallbackBytes,
+            minWidth: 480,
+            minHeight: 480,
+            quality: 60,
+          );
+          if (compressedFromBytes.isNotEmpty) {
+            return 'data:image/jpeg;base64,${base64Encode(compressedFromBytes)}';
+          }
+        } catch (e) {
+          debugPrint('⚠️ FlutterImageCompress.compressWithList failed: $e');
+        }
+
+        // 4. Safe fallback: If native compression failed, directly encode raw bytes
+        // (if within reasonable size limit) to ensure cross-device sync receives valid image data
+        if (fallbackBytes.lengthInBytes <= 256 * 1024) {
+          return 'data:image/jpeg;base64,${base64Encode(fallbackBytes)}';
+        }
+      }
+
+      return path;
+    }).toList();
+
+    return Future.wait(futures);
   }
   // ── Conversation History Pagination ──────────────────────────────────────
 

@@ -45,7 +45,7 @@ class ChatRepositoryImpl implements ChatRepository {
   ChatRepositoryImpl({
     FirebaseFirestore? firestore,
     StorageService? storage,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+  })  : _firestore = firestore ?? FirebaseCollections.firestore,
         _storage = storage ?? StorageService();
 
   // ── Message Operations ────────────────────────────────────────────────────

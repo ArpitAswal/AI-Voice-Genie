@@ -183,7 +183,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
     final provider = context.read<AiPreferencesProvider>().preferredProvider;
     final usageProvider = context.read<UsageProvider>();
     final summary = usageProvider.summaryFor(provider);
-    
+
     if (summary != null && summary.isExceeded()) {
       context.showError(AppLocalizations.of(context)!
           .chatProviderLimitReached(provider.displayName));
@@ -214,7 +214,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_rounded),
-              title: Text(l10n.translate('choose_from_gallery')),
+              title: Text(l10n.chooseFromGallery),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
@@ -222,7 +222,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera_rounded),
-              title: Text(l10n.translate('take_photo')),
+              title: Text(l10n.takePhoto),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.camera);
@@ -230,7 +230,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
             ),
             ListTile(
               leading: const Icon(Icons.picture_as_pdf_rounded),
-              title: Text(l10n.translate('choose_pdf')),
+              title: Text(l10n.choosePdf),
               onTap: () {
                 Navigator.pop(context);
                 _pickPdf();
@@ -247,7 +247,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
     if (_attachments.first.type != newType) {
       if (mounted) {
         context.showError(
-          AppLocalizations.of(context)!.translate('cannot_mix_images_and_pdfs'),
+          context.l10n.cannotMixImagesAndPdfs,
         );
       }
       return false;
@@ -259,13 +259,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
     if (_attachments.length >= maxLimit) {
       if (mounted) {
         context.showError(
-          AppLocalizations.of(context)!
-              .translate(
-                newType == ChatAttachmentType.image
-                    ? 'max_image_attachments'
-                    : 'max_pdf_attachments',
-              )
-              .replaceAll('{count}', '$maxLimit'),
+          newType == ChatAttachmentType.image
+              ? context.l10n.maxImageAttachments(maxLimit)
+              : context.l10n.maxPdfAttachments(maxLimit),
         );
       }
       return false;
@@ -512,7 +508,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
               onTap: widget.isGenerating ? null : _showAttachmentSheet,
               isTablet: widget.isTablet,
               color: AppColors.primaryLight,
-              tooltip: l10n.translate('attach_file'),
+              tooltip: l10n.attachFile,
             ),
             const SizedBox(width: 4),
             Expanded(
@@ -524,7 +520,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   focus: _focusNode,
                   scrollController: _scrollController,
                   minLines: 1,
-                  maxLines: 6,
+                  maxLines: 4,
                   textCapitalization: TextCapitalization.sentences,
                   inputAction: TextInputAction.newline,
                   keyboardType: TextInputType.multiline,
@@ -554,7 +550,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   : VoiceInputButton(
                       key: _voiceMicKey,
                       isTablet: widget.isTablet,
-                      tooltip: l10n.translate('tap_to_speak'),
+                      tooltip: l10n.tapToSpeak,
                       // Called with confirmed final text when speech ends
                       onTranscriptReady: _onTranscriptReady,
                       // Called live on every partial result while speaking
@@ -647,7 +643,7 @@ class _AttachmentPreview extends StatelessWidget {
                   color: Theme.of(context).textTheme.bodySmall?.color,
                   size: 21,
                 ),
-                tooltip: AppLocalizations.of(context)!.translate('remove_file'),
+                tooltip: context.l10n.removeFile,
                 visualDensity: VisualDensity.compact,
               ),
             ],

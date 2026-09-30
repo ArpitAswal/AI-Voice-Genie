@@ -35,7 +35,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
     FirebaseFirestore? firestore,
     StorageService? storage,
     http.Client? httpClient,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+  })  : _firestore = firestore ?? FirebaseCollections.firestore,
         _storage = storage ?? StorageService(),
         _httpClient = httpClient ?? http.Client();
 

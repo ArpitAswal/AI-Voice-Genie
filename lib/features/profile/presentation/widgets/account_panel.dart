@@ -34,7 +34,7 @@ class ProfileAccountPanel extends StatelessWidget {
           const SizedBox(height: 10),
           ProfileListTile(
             icon: Icons.delete_forever_rounded,
-            title: AppLocalizations.of(context)!.translate('delete_account'),
+            title: context.l10n.deleteAccount,
             titleColor:
                 context.isDark ? AppColors.darkError : AppColors.lightError,
             iconColor:

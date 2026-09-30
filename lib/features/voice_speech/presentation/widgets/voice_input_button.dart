@@ -180,7 +180,7 @@ class VoiceInputButtonState extends State<VoiceInputButton>
             if (isListening) ...[
               const SizedBox(height: 4),
               Text(
-                AppLocalizations.of(context)!.translate('listening'),
+                context.l10n.listening,
                 style: context.textTheme.labelSmall?.copyWith(
                     color: context.isDark
                         ? AppColors.darkError

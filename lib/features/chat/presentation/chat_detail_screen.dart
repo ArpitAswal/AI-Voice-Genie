@@ -203,7 +203,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     // jump instantly to avoid rendering hundreds of items and freezing the main thread.
     if (!animated || distance > 2000) {
       _scrollController.jumpTo(target);
-      
+
       if (_scrollLoopCount > 3) {
         // Prevent infinite loop if layout never settles
         _scrollLoopCount = 0;
@@ -288,20 +288,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AppAlertDialog(
-        title: Text(l10n.translate('delete_conversation')),
-        content: Text(l10n.translate('delete_conversation_confirm')),
+        title: Text(l10n.deleteConversation),
+        content: Text(l10n.deleteConversationConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              l10n.translate('cancel'),
+              l10n.cancel,
               style: TextStyle(color: context.textTheme.headlineSmall!.color),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              l10n.translate('delete'),
+              l10n.delete,
               style: TextStyle(
                   color: context.isDark
                       ? AppColors.darkError
@@ -347,7 +347,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         );
       } else {
         context.showSuccessToast(
-          AppLocalizations.of(context)!.translate('conversation_deleted'),
+          context.l10n.conversationDeleted,
         );
       }
       // Pop with `true` so the history screen knows to reload its list.
@@ -381,13 +381,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
 
-    LoadingOverlay.show(context,
-        message: AppLocalizations.of(context)!.translate('renaming'));
+    LoadingOverlay.show(context, message: context.l10n.renaming);
     try {
       await chatProvider.updateConversationTitle(newTitle, uid);
       if (mounted) {
         context.showSuccessToast(
-          AppLocalizations.of(context)!.translate('conversation_name_update'),
+          context.l10n.conversationNameUpdate,
         );
       }
     } catch (e) {
@@ -441,7 +440,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             }
 
             return Text(
-              titleStr.isEmpty ? l10n.translate('new_conversation') : titleStr,
+              titleStr.isEmpty ? l10n.newConversation : titleStr,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
               style: context.textTheme.headlineSmall,

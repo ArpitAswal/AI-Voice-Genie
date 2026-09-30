@@ -132,7 +132,7 @@ class IntroScreen extends StatelessWidget {
   Widget _buildTapToSpeak(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     // Semantic tooltip informs screen readers what this button does
-    final voiceTooltip = l10n.translate('tap_to_start_voice_chat');
+    final voiceTooltip = l10n.tapToStartVoiceChat;
 
     return Center(
       child: Column(
@@ -154,7 +154,7 @@ class IntroScreen extends StatelessWidget {
                   if (!voiceProvider.isSttAvailable ||
                       voiceProvider.isUnavailable) {
                     context.showError(
-                      l10n.translate('speech_text_unavailable'),
+                      l10n.speechTextUnavailable,
                     );
                     return;
                   }
@@ -212,7 +212,7 @@ class IntroScreen extends StatelessWidget {
             ),
           ),
           SizedBox(height: context.isTablet ? 16 : 8),
-          Text(l10n.translate('voice_assistant').toUpperCase(),
+          Text(l10n.voiceAssistant.toUpperCase(),
               style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,

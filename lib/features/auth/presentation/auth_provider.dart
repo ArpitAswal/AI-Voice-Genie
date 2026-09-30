@@ -455,8 +455,11 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (_watchedUid == uid && _userExistsSub != null) return;
     _watchedUid = uid;
     _userExistsSub?.cancel();
+    bool hasSeenExistingDoc = _currentUser != null && !_currentUser!.isNewUser;
     _userExistsSub = _repository.watchUserExists(uid).listen((exists) async {
-      if (!exists &&
+      if (exists) {
+        hasSeenExistingDoc = true;
+      } else if (hasSeenExistingDoc &&
           _authState == AuthState.authenticated &&
           !_isLocalSignOutOrDelete) {
         debugPrint(

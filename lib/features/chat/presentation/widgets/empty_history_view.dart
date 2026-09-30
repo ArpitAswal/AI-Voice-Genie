@@ -37,7 +37,7 @@ class EmptyHistoryView extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
           child: context.themedElevatedButton(
               onPressed: () => AppRoutes.navigateTo(context, AppRoutes.chat),
-              label: l10n.translate('new_conversation'),
+              label: l10n.newConversation,
               align: Alignment.center),
         ),
       ],

@@ -176,13 +176,13 @@ class AboutFooter extends StatelessWidget {
     return Column(
       children: [
         Text(
-            '${context.l10n.translate('about_developer')}: '
-            '${context.l10n.translate('independent_developer')}',
+            '${context.l10n.aboutDeveloper}: '
+            '${context.l10n.independentDeveloper}',
             textAlign: TextAlign.center,
             style: context.textTheme.bodySmall),
         const SizedBox(height: 6),
         Text(
-            '${context.l10n.translate('copyright')} © $year '
+            '${context.l10n.copyright} © $year '
             '${AppConstants.copyrightOwner}',
             textAlign: TextAlign.center,
             style: context.textTheme.bodySmall)

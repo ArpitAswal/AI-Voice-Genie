@@ -15,9 +15,9 @@ class ProfileSupportPanel extends StatelessWidget {
     final result = await viewModel.openSupport(context.l10n.appName);
     if (!context.mounted) return;
     if (result == ProfileLinkResult.missing) {
-      context.showWarning(context.l10n.translate('link_unavailable'));
+      context.showWarning(context.l10n.linkUnavailable);
     } else if (result == ProfileLinkResult.failed) {
-      context.showError(context.l10n.translate('could_not_open_link'));
+      context.showError(context.l10n.couldNotOpenLink);
     }
   }
 

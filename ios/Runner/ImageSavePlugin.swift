@@ -7,7 +7,7 @@ import UIKit
 /// Uses PHPhotoLibrary with add-only authorization (PHAuthorizationStatusAuthorized
 /// or limited), which corresponds to NSPhotoLibraryAddUsageDescription in Info.plist.
 ///
-/// Channel: "com.example.voice_genie/image_save"
+/// Channel: "com.voicegenie.app/image_save"
 /// Method:  "saveImageBytes" with arguments:
 ///   "bytes"    → FlutterStandardTypedData (bytes) — raw image bytes
 ///   "fileName" → String  — included for naming context (iOS Photos ignores it)
@@ -20,7 +20,7 @@ class ImageSavePlugin: NSObject, FlutterPlugin {
 
     static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(
-            name: "com.example.voice_genie/image_save",
+            name: "com.voicegenie.app/image_save",
             binaryMessenger: registrar.messenger()
         )
         let instance = ImageSavePlugin()
