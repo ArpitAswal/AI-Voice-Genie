@@ -11,6 +11,7 @@ import 'package:ai_voice_genie/features/auth/presentation/auth_provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
+import '../../usage/presentation/usage_provider.dart';
 
 /// Splash screen for AI Voice Genie.
 ///
@@ -97,6 +98,7 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     } else {
       context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
+      context.read<UsageProvider>().loadForMonth(user.uid);
     }
 
     if (!user.onboardingDone) {

@@ -63,9 +63,9 @@ class ChatRepositoryImpl implements ChatRepository {
       final batch = _firestore.batch();
 
       // Determine the effective last message and its timestamp based on AI vs User content
-      final hasAiContent = aiMessage.content.trim().isNotEmpty;
+      final hasAiContent = aiMessage.lastPrompt.trim().isNotEmpty;
       final effectiveLastMessage =
-          hasAiContent ? aiMessage.content : userMessage.content;
+          hasAiContent ? aiMessage.lastPrompt : userMessage.lastPrompt;
       final effectiveLastMessageAt =
           hasAiContent ? aiMessage.timestamp : userMessage.timestamp;
 
@@ -171,7 +171,7 @@ class ChatRepositoryImpl implements ChatRepository {
 
         return message.copyWith(
             content:
-                message.content.isNotEmpty ? message.content : cached.content,
+                message.lastPrompt.isNotEmpty ? message.lastPrompt : cached.lastPrompt,
             imageUrls: message.imageUrls ?? cached.imageUrls,
             pdfInfo: message.pdfInfo ?? cached.pdfInfo);
       }).toList();
@@ -468,7 +468,7 @@ class ChatRepositoryImpl implements ChatRepository {
 
     // ── Step 1: Write conversation metadata to Hive ───────────────────────────
     // This is the local-first write. The UI stream updates immediately.
-    String effectiveLastMessage = userMessage.content.trim();
+    String effectiveLastMessage = userMessage.lastPrompt.trim();
     if (effectiveLastMessage.isEmpty) {
       if (userMessage.imageUrls?.isNotEmpty == true) {
         effectiveLastMessage = 'Image(s)';

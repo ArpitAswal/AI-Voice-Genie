@@ -95,11 +95,11 @@ class UsageSummaryModel {
     return (remaining / totalBudgetUsd!).clamp(0.0, 1.0);
   }
 
-  /// True if the user has exceeded their total budget
+  /// True if the user has reached or exceeded their total budget
   bool isExceeded() {
     if (!hasBudget) return false;
     final total = lifetimeSpend();
-    return total > totalBudgetUsd!;
+    return total >= totalBudgetUsd!;
   }
 
   /// True if there's any recorded activity in the entire profile

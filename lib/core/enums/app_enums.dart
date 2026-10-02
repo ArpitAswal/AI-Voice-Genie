@@ -53,7 +53,10 @@ enum AiCapability {
   imageUnderstanding('image_understanding', 'Image Reading'),
 
   /// Extract text from a PDF and answer questions about it
-  pdfParsing('pdf_parsing', 'PDF Reading');
+  pdfParsing('pdf_parsing', 'PDF Reading'),
+
+  /// Generate a formatted PDF document from a user prompt
+  pdfGeneration('pdf_generation', 'PDF Generation');
 
   final String id;
   final String displayName;
@@ -357,8 +360,9 @@ enum ImageQuality {
   const ImageQuality(this.value);
 
   static ImageQuality fromValue(String value) {
+    final lower = value.toLowerCase();
     return ImageQuality.values.firstWhere(
-      (e) => e.value == value,
+      (e) => e.value.toLowerCase() == lower || e.name.toLowerCase() == lower,
       orElse: () => ImageQuality.low,
     );
   }

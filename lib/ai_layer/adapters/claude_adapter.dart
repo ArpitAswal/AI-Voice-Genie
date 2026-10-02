@@ -104,12 +104,10 @@ class ClaudeAdapter extends AiProviderAdapter {
     required AiRequest request,
     required String apiKey,
   }) {
-    // This should never be called — ProviderRegistry excludes Claude
-    // from imageGeneration, so ModelSelector never routes here.
-    // Defensive guard in case of incorrect direct instantiation.
-    throw UnsupportedError(
-      'Claude does not support image generation. '
-      'This method should never be called — check ProviderRegistry.',
+    throw const AiCapabilityGapException(
+      message: 'error_selected_model_capability_gap',
+      provider: AiProviderId.claude,
+      missingCapability: AiCapability.imageGeneration,
     );
   }
 
@@ -255,6 +253,7 @@ class ClaudeAdapter extends AiProviderAdapter {
       final response = await _post(
         apiKey: apiKey,
         body: body,
+        extraHeaders: const {'anthropic-beta': 'pdfs-2024-09-25'},
       ).timeout(AppConstants.aiRequestTimeout);
 
       final data = await _parseResponse(response, request.requestId);
@@ -285,12 +284,85 @@ class ClaudeAdapter extends AiProviderAdapter {
     }
   }
 
+  @override
+  Future<AiResponse> generatePdf({
+    required AiRequest request,
+    required String apiKey,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+
+    try {
+      final messages = [
+        ...request.conversationHistory.map((msg) => {
+              'role': msg['role'],
+              'content': msg['content'] ?? '',
+            }),
+        {
+          'role': 'user',
+          'content': request.prompt,
+        },
+      ];
+
+      final requestBody = {
+        'model': AppConstants.claudeTextModel,
+        'max_tokens': request.responseLength.claudeMaxTokens,
+        'system': AppConstants.aiPdfGenerationSystemInstruction,
+        'messages': messages,
+      };
+
+      debugPrint('📤 Claude Request (PDF Generation): ${jsonEncode({
+            'model': AppConstants.claudeTextModel,
+            'max_tokens': request.responseLength.claudeMaxTokens,
+            'prompt': request.prompt,
+          })}');
+
+      final response = await _post(
+        apiKey: apiKey,
+        body: requestBody,
+      ).timeout(AppConstants.aiRequestTimeout);
+
+      final data = await _parseResponse(response, request.requestId);
+      debugPrint('📥 Claude Response (PDF Generation): ${jsonEncode(data)}');
+
+      final text = data['content']?[0]?['text'] as String? ?? '';
+      if (text.isEmpty) {
+        throw const AiTransientException(
+          message: 'error_unexpected_ai',
+          provider: AiProviderId.claude,
+        );
+      }
+
+      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
+      final tokenCount = inputTokens + outputTokens;
+      final finishReason = data['stop_reason'] as String?;
+
+      stopwatch.stop();
+      return AiResponse.text(
+        modelUsed: AiProviderId.claude,
+        capability: AiCapability.pdfGeneration,
+        requestId: request.requestId,
+        responseTimeMs: stopwatch.elapsedMilliseconds,
+        text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
+        tokenCount: tokenCount,
+        finishReason: finishReason,
+      );
+    } on AiException {
+      rethrow;
+    } catch (e) {
+      throw _mapError(e);
+    }
+  }
+
   // ── Private Helpers ────────────────────────────────────────────────────────
 
   /// Make an authenticated POST request to the Claude Messages API.
   Future<http.Response> _post({
     required String apiKey,
     required Map<String, dynamic> body,
+    Map<String, String>? extraHeaders,
   }) {
     return _client.post(
       Uri.parse('${AppConstants.claudeBaseUrl}/messages'),
@@ -298,6 +370,7 @@ class ClaudeAdapter extends AiProviderAdapter {
         'x-api-key': apiKey,
         'anthropic-version': AppConstants.claudeApiVersion,
         'content-type': 'application/json',
+        if (extraHeaders != null) ...extraHeaders,
       },
       body: jsonEncode(body),
     );

@@ -17,6 +17,7 @@ import '../../../core/preferences/ai_preferences_provider.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
+import '../../usage/presentation/usage_provider.dart';
 import '../domain/chat_attachment.dart';
 import 'chat_provider.dart';
 
@@ -50,13 +51,21 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Guards against calling startVoiceInput more than once per screen lifecycle.
   bool _didAutoStartVoice = false;
 
+  late ChatProvider _chatProvider;
+
   @override
   void initState() {
     super.initState();
     // Clear any previous conversation state when starting fresh
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<ChatProvider>().clearConversation();
+      _chatProvider = context.read<ChatProvider>();
+      _chatProvider.clearConversation();
+
+      final uid = context.read<AuthProvider>().currentUser?.uid;
+      if (uid != null) {
+        context.read<UsageProvider>().loadForMonth(uid);
+      }
 
       // Auto-start voice input when opened from the Home voice button.
       // We guard with _didAutoStartVoice to ensure this fires at most once
@@ -69,26 +78,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _handleSend(
-      String prompt, List<ChatAttachment> attachments) async {
-    _hideSuggestions();
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
-
-    final apiKeyProvider = context.read<ApiKeyProvider>();
-    final selectedProvider =
-        context.read<AiPreferencesProvider>().preferredProvider;
-    if (!apiKeyProvider.validProviders.contains(selectedProvider)) {
-      MessageUtils.showErrorToast(context, context.l10n.noKeyForModel);
-      return;
-    }
-
-    final chatProvider = context.read<ChatProvider>();
-
-    // Start sending message without awaiting its completion.
-    // This allows synchronous state setup inside ChatProvider to complete,
-    // and then execution yields back to navigate immediately.
-    chatProvider.sendMessage(
-      uid: uid,
+    String prompt,
+    List<ChatAttachment> attachments,
+    AiProviderId selectedProvider,
+  ) async {
+    final conversationId = _chatProvider.startNewConversation(
       prompt: prompt,
       selectedProvider: selectedProvider,
       attachments: attachments,
@@ -96,12 +90,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (!mounted) return;
 
-    final conversationID = chatProvider.activeConversation?.id;
     AppRoutes.navigateAndReplace(
       context,
       AppRoutes.chatDetail,
       arguments: ChatDetailArguments(
-          conversationId: conversationID ?? '', initialTitle: null),
+        conversationId: conversationId,
+        initialTitle: null,
+      ),
     );
   }
 
@@ -196,11 +191,10 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
 
           // ── Input Bar with Background Container ────────────────────────
-          Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
+          Consumer2<ApiKeyProvider, AiPreferencesProvider>(
             builder: (
               _,
               apiKeyProvider,
-              chatProvider,
               preferences,
               __,
             ) {
@@ -228,18 +222,34 @@ class _ChatScreenState extends State<ChatScreen> {
                       ChatModelSelectorDropdown(
                         providers: AiProviderId.values,
                         selectedProvider: selectedProvider,
-                        isEnabled: !chatProvider.isGenerating,
+                        isEnabled: !_chatProvider.isGenerating,
                         onChanged: (provider) {
                           FocusManager.instance.primaryFocus?.unfocus();
                           preferences.setPreferredProvider(provider);
+
+                          if (!apiKeyProvider.validProviders
+                              .contains(provider)) {
+                            MessageUtils.showErrorToast(
+                              context,
+                              context.l10n.noKeyForModel,
+                            );
+                          } else {
+                            final usageProvider = context.read<UsageProvider>();
+                            final summary = usageProvider.summaryFor(provider);
+                            if (summary != null && summary.isExceeded()) {
+                              MessageUtils.showErrorToast(
+                                context,
+                                context.l10n.chatProviderLimitReached(
+                                    provider.displayName),
+                              );
+                            }
+                          }
                         },
                       ),
                       const SizedBox(height: 4.0),
                       // The Input Component itself
                       Flexible(
                         child: ChatInputBar(
-                          isGenerating: chatProvider.isGenerating,
-                          isTablet: isTablet,
                           controller: _chatInputController,
                           onUserInteracted: _hideSuggestions,
                           onSend: _handleSend,

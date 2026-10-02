@@ -88,6 +88,19 @@ class AppConstants {
   static const String aiPdfSystemInstruction =
       'You are AI Voice Genie, an expert document analysis assistant. '
       'Carefully examine the provided PDF document(s). Extract key facts, summarize information accurately without hallucinating, answer the user\'s questions based on the document contents, and structure your response using Markdown.';
+  static const String aiPdfGenerationSystemInstruction =
+      'You are AI Voice Genie, an elite publication and executive document compiler. '
+      'When asked to generate or create a document, PDF, report, invoice, resume, comparison, or whitepaper, '
+      'produce impeccably structured, publication-ready Markdown tailored for PDF compilation.\n\n'
+      'CRITICAL FORMATTING RULES FOR PDF COMPILATION:\n'
+      '1. Start immediately with a clean H1 title: # Document Title\n'
+      '2. Follow with an optional short italicized subtitle or document meta info (e.g. *Published: October 2026 | Prepared for Executive Review*)\n'
+      '3. Use hierarchical numbered or named section headers: ## 1. Section Title, ### Subsection\n'
+      '4. TABLES: Always format comparative or pricing data using standard GitHub Markdown tables (| Column 1 | Column 2 |). NEVER use ASCII art, box-drawing characters (such as ┌, ─, │), or pseudo-text diagrams inside code blocks.\n'
+      '5. CALLOUTS & KEY TAKEAWAYS: Use standard blockquotes (> **Key Takeaway:** description) for important highlights and insights.\n'
+      '6. BULLETS & LISTS: Use clean bullet points (- or *) with concise, substantive descriptions.\n'
+      '7. CITATIONS & SOURCES: When citing sources or web references, use clean readable domain labels (e.g., "- Source: Google Developers (ai.google.dev)" or "- Reference: DeepMind Research"). NEVER output raw search redirect URLs, tracking query strings, or unshortened search engine redirect tokens.\n'
+      '8. CLEANLINESS: Strictly NO conversational filler (e.g., "Sure, here is your PDF", "Below is the document", "I hope this helps"). Output ONLY the document content starting directly from the # title.';
 
   // ── OpenAI Model Names ────────────────────────────────────────────────────
   // Verified 2026-09-27: gpt-6-luna (released 2026-09-22, 1.05M context)
@@ -150,14 +163,18 @@ class AppConstants {
   static const int maxRetryAttempts = 2;
 
   // ── PDF Handling ──────────────────────────────────────────────────────────
-  // Maximum PDF file size allowed (10MB)
+  // Maximum single PDF file size allowed (10MB)
   static const int maxPdfSizeBytes = 10 * 1024 * 1024;
+  // Maximum combined PDF payload size for AI inline request (15MB -> ~20MB base64)
+  static const int maxPdfCombinedSizeBytes = 15 * 1024 * 1024;
   // Maximum characters extracted from PDF sent to AI (cost optimization)
   static const int maxPdfCharactersForAi = 20000;
 
   // ── Image Handling ────────────────────────────────────────────────────────
-  // Maximum image size for vision requests (compressed before sending)
+  // Maximum single image size for vision requests (compressed before sending)
   static const int maxImageSizeBytes = 5 * 1024 * 1024;
+  // Maximum combined image payload size for AI inline request (15MB -> ~20MB base64)
+  static const int maxImageCombinedSizeBytes = 15 * 1024 * 1024;
 
   // Maximum allowed image size in bytes — guards against OOM on decode.
   // Set to 25 MB as recommended in the image download plan.

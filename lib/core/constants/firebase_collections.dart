@@ -168,6 +168,8 @@ class FirebaseCollections {
   static const String fieldImageSize = 'imageSize';
   static const String fieldImageCount = 'imageCount';
   static const String fieldImageQuality = 'imageQuality';
+  static const String fieldImageBackground = 'imageBackground';
+  static const String fieldVisionDetailLevel = 'visionDetailLevel';
 
   // ── Legacy Message Field Names (used by Hive cache serialization) ─────────
   static const String fieldMessageID = 'messageID';
@@ -320,6 +322,12 @@ class FirebaseCollections {
   static String storageGeneratedImagePath(
           String uid, String conversationId, String fileName) =>
       '${storageConversationDir(uid, conversationId)}/$storageGenerated/$fileName';
+
+  /// Path to an AI-generated PDF document:
+  /// users/{uid}/conversations/{conversationId}/generated_pdfs/{fileName}
+  static String storageGeneratedPdfPath(
+          String uid, String conversationId, String fileName) =>
+      '${storageConversationDir(uid, conversationId)}/generated_pdfs/$fileName';
 
   // ── Cloud Storage Custom Metadata Keys ────────────────────────────────────
   static const String storageMetaUploadedBy = 'uploadedBy';

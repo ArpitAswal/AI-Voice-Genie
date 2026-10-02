@@ -55,7 +55,7 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       final requestBody = {
         'model': AppConstants.openAiTextModel,
-        'max_tokens': request.responseLength.openAiMaxTokens,
+        'max_completion_tokens': request.responseLength.openAiMaxTokens,
         'temperature': 0.7,
         'messages': messages,
       };
@@ -97,7 +97,8 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
       final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
-      final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
+      final tokenCount = (data['usage']?['total_tokens'] as int?) ??
+          (inputTokens + outputTokens);
 
       stopwatch.stop();
       debugPrint('📥 OpenAI Response (Text Generation): ${jsonEncode(data)}');
@@ -156,6 +157,7 @@ class OpenAiAdapter extends AiProviderAdapter {
                 b64Json: e['b64_json'] as String?,
                 url: e['url'] as String?,
                 revisedPrompt: e['revised_prompt'] as String?,
+                mimeType: 'image/png',
               ))
           .toList();
 
@@ -242,7 +244,7 @@ class OpenAiAdapter extends AiProviderAdapter {
       final requestBody = {
         // gpt-6-luna natively supports multi-image vision
         'model': AppConstants.openAiVisionModel,
-        'max_tokens': request.responseLength.openAiMaxTokens,
+        'max_completion_tokens': request.responseLength.openAiMaxTokens,
         'temperature': 0.4,
         'messages': [
           {
@@ -280,7 +282,8 @@ class OpenAiAdapter extends AiProviderAdapter {
       final text = choices[0]['message']?['content'] as String? ?? '';
       final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
       final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
-      final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
+      final tokenCount = (data['usage']?['total_tokens'] as int?) ??
+          (inputTokens + outputTokens);
       final finishReason = choices[0]['finish_reason'] as String?;
 
       stopwatch.stop();
@@ -396,6 +399,80 @@ class OpenAiAdapter extends AiProviderAdapter {
       return AiResponse.analysis(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.pdfParsing,
+        requestId: request.requestId,
+        responseTimeMs: stopwatch.elapsedMilliseconds,
+        text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
+        tokenCount: tokenCount,
+        finishReason: finishReason,
+      );
+    } on AiException {
+      rethrow;
+    } catch (e) {
+      throw _mapError(e, request.requestId);
+    }
+  }
+
+  @override
+  Future<AiResponse> generatePdf({
+    required AiRequest request,
+    required String apiKey,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+
+    try {
+      final messages = [
+        {
+          'role': 'system',
+          'content': AppConstants.aiPdfGenerationSystemInstruction,
+        },
+        ...request.conversationHistory,
+        {
+          'role': 'user',
+          'content': request.prompt,
+        },
+      ];
+
+      final requestBody = {
+        'model': AppConstants.openAiTextModel,
+        'messages': messages,
+        'max_completion_tokens': request.responseLength.openAiMaxTokens,
+      };
+
+      debugPrint('📤 OpenAI Request (PDF Generation): ${jsonEncode({
+            'model': AppConstants.openAiTextModel,
+            'max_completion_tokens': request.responseLength.openAiMaxTokens,
+            'prompt': request.prompt,
+          })}');
+
+      final response = await _post(
+        endpoint: '/chat/completions',
+        apiKey: apiKey,
+        body: requestBody,
+      ).timeout(AppConstants.aiRequestTimeout);
+
+      final data = await _parseResponse(response, request.requestId);
+      debugPrint('📥 OpenAI Response (PDF Generation): ${jsonEncode(data)}');
+
+      final text = data['choices']?[0]?['message']?['content'] as String? ?? '';
+      if (text.isEmpty) {
+        throw const AiTransientException(
+          message: 'error_unexpected_ai',
+          provider: AiProviderId.openAi,
+        );
+      }
+
+      final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
+      final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
+      final tokenCount = data['usage']?['total_tokens'] as int? ??
+          (inputTokens + outputTokens);
+      final finishReason = data['choices']?[0]?['finish_reason'] as String?;
+
+      stopwatch.stop();
+      return AiResponse.text(
+        modelUsed: AiProviderId.openAi,
+        capability: AiCapability.pdfGeneration,
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,

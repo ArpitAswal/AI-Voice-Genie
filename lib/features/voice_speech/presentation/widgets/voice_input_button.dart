@@ -152,7 +152,6 @@ class VoiceInputButtonState extends State<VoiceInputButton>
                 onTap: isProcessing
                     ? null
                     : () => _handleTap(context, voiceProvider),
-                isTablet: widget.isTablet,
                 isLoading: isProcessing,
                 tooltip: widget.tooltip,
                 color: isListening

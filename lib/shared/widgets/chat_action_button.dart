@@ -1,4 +1,3 @@
-import 'package:ai_voice_genie/core/constants/app_colors.dart';
 import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +8,6 @@ class ChatActionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
   final String? tooltip;
-  final bool isTablet;
   final bool isLoading;
   final Color? color;
   final List<BoxShadow>? boxShadow;
@@ -18,7 +16,6 @@ class ChatActionButton extends StatelessWidget {
     super.key,
     required this.icon,
     required this.onTap,
-    required this.isTablet,
     this.tooltip,
     this.isLoading = false,
     this.color,
@@ -27,7 +24,7 @@ class ChatActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = isTablet ? 44.0 : 38.0;
+    final size = context.isTablet ? 44.0 : 38.0;
 
     Widget child = Container(
       width: size,
@@ -47,8 +44,8 @@ class ChatActionButton extends StatelessWidget {
             )
           : Icon(
               icon,
-              color: color ?? AppColors.white,
-              size: isTablet ? 22 : 20,
+              color: color ?? context.colorScheme.primary,
+              size: context.isTablet ? 22 : 20,
             ),
     );
 

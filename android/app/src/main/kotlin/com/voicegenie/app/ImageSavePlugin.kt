@@ -34,10 +34,10 @@ object ImageSavePlugin {
 
     fun register(context: Context, channel: MethodChannel) {
         channel.setMethodCallHandler { call, result ->
-            if (call.method == "saveImageBytes") {
-                handleSave(context, call, result)
-            } else {
-                result.notImplemented()
+            when (call.method) {
+                "saveImageBytes" -> handleSave(context, call, result)
+                "saveDocumentBytes" -> handleSaveDocument(context, call, result)
+                else -> result.notImplemented()
             }
         }
     }
@@ -60,6 +60,75 @@ object ImageSavePlugin {
             }
         } catch (e: Exception) {
             result.success(mapOf("success" to false, "error" to "unexpected: ${e.message}"))
+        }
+    }
+
+    private fun handleSaveDocument(context: Context, call: MethodCall, result: MethodChannel.Result) {
+        try {
+            val bytes = call.argument<ByteArray>("bytes")
+                ?: return result.success(mapOf("success" to false, "error" to "no_bytes"))
+            val fileName = call.argument<String>("fileName")
+                ?: return result.success(mapOf("success" to false, "error" to "no_filename"))
+            val mimeType = call.argument<String>("mimeType") ?: "application/pdf"
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                saveDocumentWithMediaStore(context, bytes, fileName, mimeType, result)
+            } else {
+                saveDocumentLegacy(bytes, fileName, result)
+            }
+        } catch (e: Exception) {
+            result.success(mapOf("success" to false, "error" to "unexpected: ${e.message}"))
+        }
+    }
+
+    private fun saveDocumentWithMediaStore(
+        context: Context,
+        bytes: ByteArray,
+        fileName: String,
+        mimeType: String,
+        result: MethodChannel.Result
+    ) {
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/AI Voice Genie")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
+
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: return result.success(mapOf("success" to false, "error" to "mediastore_insert_failed"))
+
+        try {
+            resolver.openOutputStream(uri)?.use { stream ->
+                stream.write(bytes)
+            } ?: return result.success(mapOf("success" to false, "error" to "stream_open_failed"))
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                values.clear()
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+            }
+
+            result.success(mapOf("success" to true, "error" to null))
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            result.success(mapOf("success" to false, "error" to "write_failed: ${e.message}"))
+        }
+    }
+
+    private fun saveDocumentLegacy(bytes: ByteArray, fileName: String, result: MethodChannel.Result) {
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val appDir = File(downloadsDir, "AI Voice Genie").apply { mkdirs() }
+        val file = File(appDir, fileName)
+
+        try {
+            FileOutputStream(file).use { stream -> stream.write(bytes) }
+            result.success(mapOf("success" to true, "error" to null))
+        } catch (e: Exception) {
+            result.success(mapOf("success" to false, "error" to "legacy_write_failed: ${e.message}"))
         }
     }
 

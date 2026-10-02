@@ -27,11 +27,25 @@ class UsageProvider extends ChangeNotifier {
   final Map<AiProviderId, UsageSummaryModel> _summaries = {};
 
   StreamSubscription<List<UsageSummaryModel>>? _summarySub;
+  String? _activeUid;
 
   @override
   void dispose() {
     _summarySub?.cancel();
+    _summarySub = null;
+    _activeUid = null;
     super.dispose();
+  }
+
+  /// Clear in-memory summaries and cancel active Firestore stream subscription.
+  void clear() {
+    _summarySub?.cancel();
+    _summarySub = null;
+    _activeUid = null;
+    _summaries.clear();
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
   }
 
   // ── Getters ────────────────────────────────────────────────────────────────
@@ -61,8 +75,10 @@ class UsageProvider extends ChangeNotifier {
 
   /// Load all summaries.
   ///
-  /// Safe to call multiple times — re-loading will refresh data from Firestore.
-  Future<void> loadForMonth(String uid, {String? monthKey}) async {
+  /// Safe to call multiple times — skips redundant setup if already watching for the same uid.
+  Future<void> loadForMonth(String uid, {String? monthKey, bool force = false}) async {
+    if (!force && _activeUid == uid && _summarySub != null) return;
+    _activeUid = uid;
     _isLoading = true;
     _error = null;
     _currentMonthKey = monthKey ?? UsageEventModel.currentMonthKey;

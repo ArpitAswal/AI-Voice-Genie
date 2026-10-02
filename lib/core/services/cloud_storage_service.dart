@@ -97,6 +97,56 @@ class CloudStorageService {
     }
   }
 
+  /// Uploads an AI-generated PDF document to Firebase Cloud Storage.
+  ///
+  /// Path: `users/{uid}/conversations/{conversationId}/generated_pdfs/generated_{timestamp}_{fileName}.pdf`
+  ///
+  /// Returns the public HTTPS download URL on success, or null on failure.
+  Future<String?> uploadGeneratedPdfBytes({
+    required String uid,
+    required String conversationId,
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    try {
+      if (bytes.isEmpty) return null;
+
+      final safeName = _sanitizeFileName(
+          fileName.endsWith('.pdf') ? fileName : '$fileName.pdf');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final storageFileName = 'generated_${timestamp}_$safeName';
+      final path = FirebaseCollections.storageGeneratedPdfPath(
+        uid,
+        conversationId,
+        storageFileName,
+      );
+
+      final ref = _storage.ref().child(path);
+      final metadata = SettableMetadata(
+        contentType: 'application/pdf',
+        customMetadata: {
+          FirebaseCollections.storageMetaGeneratedBy: uid,
+          FirebaseCollections.storageMetaConversationId: conversationId,
+          FirebaseCollections.storageMetaType:
+              FirebaseCollections.storageMetaTypeAiGenerated,
+          FirebaseCollections.storageMetaOriginalName: fileName,
+          FirebaseCollections.storageMetaGeneratedAt:
+              DateTime.now().toIso8601String(),
+        },
+      );
+
+      final uploadTask = await ref.putData(bytes, metadata);
+      final downloadUrl = await uploadTask.ref.getDownloadURL();
+
+      debugPrint('☁️ CloudStorage: Uploaded generated PDF -> $path');
+      return downloadUrl;
+    } catch (e, stackTrace) {
+      debugPrint('⚠️ CloudStorageService.uploadGeneratedPdfBytes error: $e');
+      debugPrint(stackTrace.toString());
+      return null;
+    }
+  }
+
   /// Uploads a user-attached image to Firebase Cloud Storage.
   ///
   /// Path: `users/{uid}/conversations/{conversationId}/images/{timestamp}_{fileName}`

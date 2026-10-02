@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
@@ -26,10 +24,10 @@ class MessageModel {
   final MessageRole role;
 
   /// The text content of the message (either user prompt or AI response).
-  final String content;
+  final String lastPrompt;
 
   /// The type of content represented by this message (text, imageUrl, pdfSummary, etc.).
-  final AiCapability contentType;
+  final AiCapability requestCapability;
 
   /// The timestamp indicating when the message was created.
   final DateTime timestamp;
@@ -58,16 +56,25 @@ class MessageModel {
   final AiImageSize? imageSize;
 
   /// Optional image count for image generation responses.
-  final int? imageCount;
+  final int? generateImageRequest;
 
-  /// Optional decoded image bytes for fast rendering in the UI without main-thread base64 decoding.
-  final Uint8List? imageBytes;
-
-  /// Optional image quality for image generation responses.
+  /// Optional image quality for image generation responses (OpenAI only).
   final ImageQuality? imageQuality;
+
+  /// Optional image background for image generation responses (OpenAI only).
+  final ImageGenerateBackground? imageBackground;
+
+  /// Optional vision detail level for image understanding requests (OpenAI only).
+  final VisionDetailLevel? visionDetailLevel;
 
   /// Optional image MIME type for image generation responses (e.g. 'image/jpeg', 'image/png').
   final String? mimeType;
+
+  /// Convenience getter for imageCount matching generateImageRequest.
+  int? get imageCount => generateImageRequest;
+
+  /// Convenience getter for message text content.
+  String get content => lastPrompt;
 
   /// Formatted image size / aspect ratio for Firestore persistence.
   /// For Gemini: "Square (1:1)", "Landscape (16:9)", "Portrait (9:16)"
@@ -91,40 +98,43 @@ class MessageModel {
   const MessageModel({
     required this.id,
     required this.role,
-    required this.content,
+    required this.lastPrompt,
     required this.timestamp,
     required this.modelRequest,
-    this.contentType = AiCapability.textGeneration,
+    this.requestCapability = AiCapability.textGeneration,
     this.tokenCount = 0,
     this.status = MessageStatus.partial,
     this.imageUrls,
     this.pdfInfo,
     this.isOptimistic = false,
     this.imageSize,
-    this.imageCount,
-    this.imageBytes,
+    this.generateImageRequest,
     this.imageQuality,
+    this.imageBackground,
+    this.visionDetailLevel,
     this.mimeType,
   });
 
   /// Factory constructor to build a new optimistic User message.
   /// Used to instantly show the user's message in the UI before sending it to the server.
-  factory MessageModel.userMessage(
-    String content,
-    AiProviderId? validProvider, {
-    AiCapability contentType = AiCapability.textGeneration,
+  factory MessageModel.userMessage({
+    required String lastPrompt,
+    required AiProviderId validProvider,
+    AiCapability requestCapability = AiCapability.textGeneration,
     List<String>? imagePaths,
     List<PdfAttachmentInfo>? pdfInfo,
     AiImageSize? imageSize,
-    int? imageCount,
+    int? generateImageRequest,
     ImageQuality? imageQuality,
+    ImageGenerateBackground? imageBackground,
+    VisionDetailLevel? visionDetailLevel,
     String? mimeType,
   }) {
     return MessageModel(
       id: const Uuid().v4(),
       role: MessageRole.user,
-      content: content,
-      contentType: contentType,
+      lastPrompt: lastPrompt,
+      requestCapability: requestCapability,
       timestamp: DateTime.now(),
       modelRequest: validProvider,
       status: MessageStatus.sending,
@@ -132,8 +142,10 @@ class MessageModel {
       pdfInfo: pdfInfo,
       isOptimistic: true,
       imageSize: imageSize,
-      imageCount: imageCount,
+      generateImageRequest: generateImageRequest,
       imageQuality: imageQuality,
+      imageBackground: imageBackground,
+      visionDetailLevel: visionDetailLevel,
       mimeType: mimeType,
     );
   }
@@ -148,16 +160,18 @@ class MessageModel {
     List<String>? imageUrls,
     List<PdfAttachmentInfo>? pdfInfo,
     AiImageSize? imageSize,
+    int? generateImageRequest,
     int? imageCount,
-    Uint8List? imageBytes,
     ImageQuality? imageQuality,
+    ImageGenerateBackground? imageBackground,
+    VisionDetailLevel? visionDetailLevel,
     String? mimeType,
   }) {
     return MessageModel(
       id: const Uuid().v4(),
       role: MessageRole.assistant,
-      content: content,
-      contentType: contentType,
+      lastPrompt: content,
+      requestCapability: contentType,
       timestamp: DateTime.now(),
       modelRequest: modelUsed,
       tokenCount: tokenCount,
@@ -165,9 +179,10 @@ class MessageModel {
       imageUrls: imageUrls,
       pdfInfo: pdfInfo,
       imageSize: imageSize,
-      imageCount: imageCount,
-      imageBytes: imageBytes,
+      generateImageRequest: generateImageRequest ?? imageCount,
       imageQuality: imageQuality,
+      imageBackground: imageBackground,
+      visionDetailLevel: visionDetailLevel,
       mimeType: mimeType,
     );
   }
@@ -180,14 +195,18 @@ class MessageModel {
       role: MessageRole.fromValue(
         data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
       ),
-      content: data[FirebaseCollections.fieldMessageContent] as String? ?? '',
-      contentType: AiCapability.fromValue(
+      lastPrompt:
+          data[FirebaseCollections.fieldMessageContent] as String? ?? '',
+      requestCapability: AiCapability.fromValue(
         data[FirebaseCollections.fieldMessageContentType] as String? ??
             'text_generation',
       ),
-      timestamp: (data[FirebaseCollections.fieldMessageTimestamp] as Timestamp?)
-              ?.toDate() ??
-          DateTime.now(),
+      timestamp: data[FirebaseCollections.fieldMessageTimestamp] is Timestamp
+          ? (data[FirebaseCollections.fieldMessageTimestamp] as Timestamp)
+              .toDate()
+          : (data[FirebaseCollections.fieldMessageTimestamp] is DateTime
+              ? data[FirebaseCollections.fieldMessageTimestamp] as DateTime
+              : DateTime.now()),
       modelRequest: data[FirebaseCollections.fieldMessageModelUsed] is String
           ? AiProviderId.fromId(
               data[FirebaseCollections.fieldMessageModelUsed] as String)
@@ -207,7 +226,7 @@ class MessageModel {
           : (data['imageSize'] is String
               ? AiImageSize.fromValue(data['imageSize'] as String)
               : null),
-      imageCount: data[FirebaseCollections.fieldImageCount] as int? ??
+      generateImageRequest: data[FirebaseCollections.fieldImageCount] as int? ??
           data['imageCount'] as int?,
       imageQuality: data[FirebaseCollections.fieldImageQuality] is String
           ? ImageQuality.fromValue(
@@ -215,9 +234,26 @@ class MessageModel {
           : (data['imageQuality'] is String
               ? ImageQuality.fromValue(data['imageQuality'] as String)
               : null),
+      imageBackground: data[FirebaseCollections.fieldImageBackground] is String
+          ? ImageGenerateBackground.fromString(
+              data[FirebaseCollections.fieldImageBackground] as String)
+          : (data['imageBackground'] is String
+              ? ImageGenerateBackground.fromString(
+                  data['imageBackground'] as String)
+              : null),
+      visionDetailLevel: data[FirebaseCollections.fieldVisionDetailLevel]
+              is String
+          ? VisionDetailLevel.fromValue(
+              data[FirebaseCollections.fieldVisionDetailLevel] as String)
+          : (data['visionDetailLevel'] is String
+              ? VisionDetailLevel.fromValue(data['visionDetailLevel'] as String)
+              : null),
       mimeType: data['mimeType'] as String?,
     );
   }
+
+  /// Convenience getter indicating if the message originated from the human user.
+  bool get isUser => role == MessageRole.user;
 
   /// Serializes the message model for storage in Firestore.
   /// Maps object properties to standard database keys.
@@ -225,8 +261,8 @@ class MessageModel {
     return {
       FirebaseCollections.fieldMessageID: id,
       FirebaseCollections.fieldMessageRole: role.value,
-      FirebaseCollections.fieldMessageContent: content,
-      FirebaseCollections.fieldMessageContentType: contentType.id,
+      FirebaseCollections.fieldMessageContent: lastPrompt,
+      FirebaseCollections.fieldMessageContentType: requestCapability.id,
       FirebaseCollections.fieldMessageTimestamp: FieldValue.serverTimestamp(),
       FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
@@ -239,11 +275,16 @@ class MessageModel {
             pdfInfo!.map((e) => e.toMap()).toList(),
       if (effectiveImageSizeString != null)
         FirebaseCollections.fieldImageSize: effectiveImageSizeString,
-      if (imageCount != null) FirebaseCollections.fieldImageCount: imageCount,
+      if (generateImageRequest != null)
+        FirebaseCollections.fieldImageCount: generateImageRequest,
       if (modelRequest == AiProviderId.gemini)
         FirebaseCollections.fieldImageQuality: null
       else if (imageQuality != null)
         FirebaseCollections.fieldImageQuality: imageQuality!.name,
+      if (imageBackground != null)
+        FirebaseCollections.fieldImageBackground: imageBackground!.name,
+      if (visionDetailLevel != null)
+        FirebaseCollections.fieldVisionDetailLevel: visionDetailLevel!.name,
       if (mimeType != null) 'mimeType': mimeType,
     };
   }
@@ -255,8 +296,8 @@ class MessageModel {
     return {
       FirebaseCollections.fieldMessageID: id,
       FirebaseCollections.fieldMessageRole: role.value,
-      FirebaseCollections.fieldMessageContent: content,
-      FirebaseCollections.fieldMessageContentType: contentType.id,
+      FirebaseCollections.fieldMessageContent: lastPrompt,
+      FirebaseCollections.fieldMessageContentType: requestCapability.id,
       FirebaseCollections.fieldMessageTimestamp: timestamp.toIso8601String(),
       FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
@@ -269,11 +310,16 @@ class MessageModel {
             pdfInfo!.map((e) => e.toMap()).toList(),
       if (effectiveImageSizeString != null)
         FirebaseCollections.fieldImageSize: effectiveImageSizeString,
-      if (imageCount != null) FirebaseCollections.fieldImageCount: imageCount,
+      if (generateImageRequest != null)
+        FirebaseCollections.fieldImageCount: generateImageRequest,
       if (modelRequest == AiProviderId.gemini)
         FirebaseCollections.fieldImageQuality: null
       else if (imageQuality != null)
         FirebaseCollections.fieldImageQuality: imageQuality!.name,
+      if (imageBackground != null)
+        FirebaseCollections.fieldImageBackground: imageBackground!.name,
+      if (visionDetailLevel != null)
+        FirebaseCollections.fieldVisionDetailLevel: visionDetailLevel!.name,
       if (mimeType != null) 'mimeType': mimeType,
     };
   }
@@ -284,8 +330,8 @@ class MessageModel {
     return {
       'id': id,
       FirebaseCollections.fieldMessageRole: role.value,
-      FirebaseCollections.fieldMessageContent: content,
-      FirebaseCollections.fieldMessageContentType: contentType.id,
+      FirebaseCollections.fieldMessageContent: lastPrompt,
+      FirebaseCollections.fieldMessageContentType: requestCapability.id,
       FirebaseCollections.fieldMessageTimestamp: timestamp.toIso8601String(),
       FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
@@ -296,12 +342,14 @@ class MessageModel {
         'pdfInfo': pdfInfo!.map((e) => e.toMap()).toList(),
       if (effectiveImageSizeString != null)
         'imageSize': effectiveImageSizeString,
-      if (imageCount != null) 'imageCount': imageCount,
-      if (imageBytes != null) 'imageBytes': base64Encode(imageBytes!),
+      if (generateImageRequest != null) 'imageCount': generateImageRequest,
       if (modelRequest == AiProviderId.gemini)
         'imageQuality': null
       else if (imageQuality != null)
         'imageQuality': imageQuality!.name,
+      if (imageBackground != null) 'imageBackground': imageBackground!.name,
+      if (visionDetailLevel != null)
+        'visionDetailLevel': visionDetailLevel!.name,
       if (mimeType != null) 'mimeType': mimeType,
     };
   }
@@ -314,8 +362,9 @@ class MessageModel {
       role: MessageRole.fromValue(
         data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
       ),
-      content: data[FirebaseCollections.fieldMessageContent] as String? ?? '',
-      contentType: AiCapability.fromValue(
+      lastPrompt:
+          data[FirebaseCollections.fieldMessageContent] as String? ?? '',
+      requestCapability: AiCapability.fromValue(
         data[FirebaseCollections.fieldMessageContentType] as String? ??
             'text_generation',
       ),
@@ -336,12 +385,16 @@ class MessageModel {
       imageSize: data['imageSize'] is String
           ? AiImageSize.fromValue(data['imageSize'] as String)
           : null,
-      imageCount: data['imageCount'] as int?,
-      imageBytes: data['imageBytes'] is String
-          ? _tryBase64Decode(data['imageBytes'] as String)
-          : null,
+      generateImageRequest: data['imageCount'] as int?,
       imageQuality: data['imageQuality'] is String
           ? ImageQuality.fromValue(data['imageQuality'] as String)
+          : null,
+      imageBackground: data['imageBackground'] is String
+          ? ImageGenerateBackground.fromString(
+              data['imageBackground'] as String)
+          : null,
+      visionDetailLevel: data['visionDetailLevel'] is String
+          ? VisionDetailLevel.fromValue(data['visionDetailLevel'] as String)
           : null,
       mimeType: data['mimeType'] as String?,
     );
@@ -352,7 +405,7 @@ class MessageModel {
   Map<String, String> toHistoryEntry() {
     return {
       'role': role.value,
-      'content': content,
+      'content': lastPrompt,
     };
   }
 
@@ -368,11 +421,11 @@ class MessageModel {
     required MessageModel aiMessage,
   }) {
     return {
-      FirebaseCollections.fieldPrompt: userMessage.content,
-      FirebaseCollections.fieldResponse: aiMessage.content,
+      FirebaseCollections.fieldPrompt: userMessage.lastPrompt,
+      FirebaseCollections.fieldResponse: aiMessage.lastPrompt,
       FirebaseCollections.fieldModelUsed: aiMessage.modelRequest?.id,
       FirebaseCollections.fieldTokenCount: aiMessage.tokenCount,
-      FirebaseCollections.fieldContentType: aiMessage.contentType.id,
+      FirebaseCollections.fieldContentType: aiMessage.requestCapability.id,
       FirebaseCollections.fieldStatus: aiMessage.status.value,
       FirebaseCollections.fieldTimestamp: FieldValue.serverTimestamp(),
       if (aiMessage.imageUrls != null && aiMessage.imageUrls!.isNotEmpty)
@@ -382,12 +435,25 @@ class MessageModel {
             aiMessage.pdfInfo!.map((e) => e.toMap()).toList(),
       if (aiMessage.effectiveImageSizeString != null)
         FirebaseCollections.fieldImageSize: aiMessage.effectiveImageSizeString,
-      if (aiMessage.imageCount != null)
-        FirebaseCollections.fieldImageCount: aiMessage.imageCount,
+      if (aiMessage.generateImageRequest != null)
+        FirebaseCollections.fieldImageCount: aiMessage.generateImageRequest
+      else if (userMessage.generateImageRequest != null)
+        FirebaseCollections.fieldImageCount: userMessage.generateImageRequest,
       if (aiMessage.modelRequest == AiProviderId.gemini)
         FirebaseCollections.fieldImageQuality: null
       else if (aiMessage.imageQuality != null)
-        FirebaseCollections.fieldImageQuality: aiMessage.imageQuality!.name,
+        FirebaseCollections.fieldImageQuality: aiMessage.imageQuality!.name
+      else if (userMessage.imageQuality != null)
+        FirebaseCollections.fieldImageQuality: userMessage.imageQuality!.name,
+      if (aiMessage.imageBackground != null)
+        FirebaseCollections.fieldImageBackground:
+            aiMessage.imageBackground!.name
+      else if (userMessage.imageBackground != null)
+        FirebaseCollections.fieldImageBackground:
+            userMessage.imageBackground!.name,
+      if (userMessage.visionDetailLevel != null)
+        FirebaseCollections.fieldVisionDetailLevel:
+            userMessage.visionDetailLevel!.name,
       if (aiMessage.mimeType != null) 'mimeType': aiMessage.mimeType,
     };
   }
@@ -406,26 +472,48 @@ class MessageModel {
     final userMsg = MessageModel(
       id: normalizedId,
       role: MessageRole.user,
-      content: data[FirebaseCollections.fieldPrompt] as String? ??
+      lastPrompt: data[FirebaseCollections.fieldPrompt] as String? ??
           data[FirebaseCollections.fieldMessageContent] as String? ??
           '',
       timestamp: timestamp,
       modelRequest: null,
-      contentType: AiCapability.fromValue(
+      requestCapability: AiCapability.fromValue(
         data[FirebaseCollections.fieldContentType] as String? ??
             'text_generation',
       ),
       status: MessageStatus.delivered,
+      imageUrls:
+          _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]) ??
+              _parseImageUrls(data['imageUrls']),
       pdfInfo: _parsePdfInfo(data),
+      imageSize: data[FirebaseCollections.fieldImageSize] is String
+          ? AiImageSize.fromValue(
+              data[FirebaseCollections.fieldImageSize] as String)
+          : null,
+      generateImageRequest: data[FirebaseCollections.fieldImageCount] as int? ??
+          data['imageCount'] as int?,
+      imageQuality: data[FirebaseCollections.fieldImageQuality] is String
+          ? ImageQuality.fromValue(
+              data[FirebaseCollections.fieldImageQuality] as String)
+          : null,
+      imageBackground: data[FirebaseCollections.fieldImageBackground] is String
+          ? ImageGenerateBackground.fromString(
+              data[FirebaseCollections.fieldImageBackground] as String)
+          : null,
+      visionDetailLevel:
+          data[FirebaseCollections.fieldVisionDetailLevel] is String
+              ? VisionDetailLevel.fromValue(
+                  data[FirebaseCollections.fieldVisionDetailLevel] as String)
+              : null,
     );
 
     final aiMsg = MessageModel(
       id: normalizedId,
       role: MessageRole.assistant,
-      content: data[FirebaseCollections.fieldResponse] as String? ??
+      lastPrompt: data[FirebaseCollections.fieldResponse] as String? ??
           data[FirebaseCollections.fieldMessageContent] as String? ??
           '',
-      contentType: AiCapability.fromValue(
+      requestCapability: AiCapability.fromValue(
         data[FirebaseCollections.fieldContentType] as String? ??
             'text_generation',
       ),
@@ -448,16 +536,27 @@ class MessageModel {
           : (data['imageSize'] is String
               ? AiImageSize.fromValue(data['imageSize'] as String)
               : null),
-      imageCount: data[FirebaseCollections.fieldImageCount] as int? ??
+      generateImageRequest: data[FirebaseCollections.fieldImageCount] as int? ??
           data['imageCount'] as int?,
-      imageBytes: data['imageBytes'] is String
-          ? _tryBase64Decode(data['imageBytes'] as String)
-          : null,
       imageQuality: data[FirebaseCollections.fieldImageQuality] is String
           ? ImageQuality.fromValue(
               data[FirebaseCollections.fieldImageQuality] as String)
           : (data['imageQuality'] is String
               ? ImageQuality.fromValue(data['imageQuality'] as String)
+              : null),
+      imageBackground: data[FirebaseCollections.fieldImageBackground] is String
+          ? ImageGenerateBackground.fromString(
+              data[FirebaseCollections.fieldImageBackground] as String)
+          : (data['imageBackground'] is String
+              ? ImageGenerateBackground.fromString(
+                  data['imageBackground'] as String)
+              : null),
+      visionDetailLevel: data[FirebaseCollections.fieldVisionDetailLevel]
+              is String
+          ? VisionDetailLevel.fromValue(
+              data[FirebaseCollections.fieldVisionDetailLevel] as String)
+          : (data['visionDetailLevel'] is String
+              ? VisionDetailLevel.fromValue(data['visionDetailLevel'] as String)
               : null),
       mimeType: data['mimeType'] as String?,
     );
@@ -478,18 +577,19 @@ class MessageModel {
     Object? imageUrls = _unset,
     Object? pdfInfo = _unset,
     bool? isOptimistic,
-    List<AiProviderId>? validProviders,
     Object? imageSize = _unset,
+    Object? generateImageRequest = _unset,
     Object? imageCount = _unset,
-    Object? imageBytes = _unset,
     Object? imageQuality = _unset,
+    Object? imageBackground = _unset,
+    Object? visionDetailLevel = _unset,
     Object? mimeType = _unset,
   }) {
     return MessageModel(
       id: id ?? this.id,
       role: role ?? this.role,
-      content: content ?? this.content,
-      contentType: contentType ?? this.contentType,
+      lastPrompt: content ?? lastPrompt,
+      requestCapability: contentType ?? requestCapability,
       timestamp: timestamp ?? this.timestamp,
       modelRequest: identical(modelUsed, _unset)
           ? modelRequest
@@ -506,14 +606,20 @@ class MessageModel {
       imageSize: identical(imageSize, _unset)
           ? this.imageSize
           : imageSize as AiImageSize?,
-      imageCount:
-          identical(imageCount, _unset) ? this.imageCount : imageCount as int?,
-      imageBytes: identical(imageBytes, _unset)
-          ? this.imageBytes
-          : imageBytes as Uint8List?,
+      generateImageRequest: identical(generateImageRequest, _unset)
+          ? (identical(imageCount, _unset)
+              ? this.generateImageRequest
+              : imageCount as int?)
+          : generateImageRequest as int?,
       imageQuality: identical(imageQuality, _unset)
           ? this.imageQuality
           : imageQuality as ImageQuality?,
+      imageBackground: identical(imageBackground, _unset)
+          ? this.imageBackground
+          : imageBackground as ImageGenerateBackground?,
+      visionDetailLevel: identical(visionDetailLevel, _unset)
+          ? this.visionDetailLevel
+          : visionDetailLevel as VisionDetailLevel?,
       mimeType:
           identical(mimeType, _unset) ? this.mimeType : mimeType as String?,
     );
@@ -551,15 +657,6 @@ List<String>? _parseImageUrls(dynamic data) {
   if (data is String) return [data];
   if (data is List) return data.map((e) => e.toString()).toList();
   return null;
-}
-
-Uint8List? _tryBase64Decode(String? str) {
-  if (str == null || str.isEmpty) return null;
-  try {
-    return base64Decode(str);
-  } catch (_) {
-    return null;
-  }
 }
 
 /// Helper method to parse PDF attachments from dynamic cache/Firestore structure.

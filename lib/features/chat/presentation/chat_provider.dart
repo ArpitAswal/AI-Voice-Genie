@@ -2,11 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:ai_voice_genie/core/extensions/string_extension.dart';
+
+import '../../../core/constants/storage_keys.dart';
+import '../../../core/services/storage_service.dart';
 
 import '../../../ai_layer/models/ai_request.dart';
 import '../../../ai_layer/models/ai_response.dart';
@@ -17,6 +21,7 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/error/ai_exception.dart';
 import '../../../core/services/ai_preferences_service.dart';
 import '../../../core/services/cloud_storage_service.dart';
+import '../../../core/services/pdf_document_service.dart';
 import '../data/chat_repository_impl.dart';
 import '../data/chat_sync_service.dart';
 import '../data/local_chat_store.dart';
@@ -125,14 +130,36 @@ class ChatProvider extends ChangeNotifier {
   bool get hasMoreConversations => _hasMoreConversations;
   String? get searchQuery => _searchQuery;
 
+  /// Resolves the current user's UID.
+  ///
+  /// Uses [explicitUid] if provided, otherwise looks up from local storage
+  /// or the FirebaseAuth session.
+  String _resolveUid([String? explicitUid]) {
+    if (explicitUid != null && explicitUid.isNotEmpty) {
+      return explicitUid;
+    }
+    final storedUid = StorageService().getUserData<String>(StorageKeys.userId);
+    if (storedUid != null && storedUid.isNotEmpty) {
+      return storedUid;
+    }
+    final authUid = FirebaseAuth.instance.currentUser?.uid;
+    if (authUid != null && authUid.isNotEmpty) {
+      return authUid;
+    }
+    throw StateError(
+      'User ID could not be resolved. User must be authenticated to chat.',
+    );
+  }
+
   // ── Load Conversation ──────────────────────────────────────────────────────
 
   /// Load an existing conversation by ID.
   ///
   Future<void> loadConversation({
-    required String uid,
+    String? uid,
     required String conversationId,
   }) async {
+    final resolvedUid = _resolveUid(uid);
     _isLoadingMessages = true;
     _isGenerating = false;
     _errorMessage = null;
@@ -153,14 +180,14 @@ class ChatProvider extends ChangeNotifier {
     try {
       // 1. Fetch conversation metadata from Local Hive
       final localConv =
-          LocalChatStore.instance.getConversation(uid, conversationId);
+          LocalChatStore.instance.getConversation(resolvedUid, conversationId);
       if (localConv != null) {
         _activeConversation = localConv.toConversationModel();
       }
 
       // 2. Fetch latest page of messages
       final page = await _repository.getLatestMessagePage(
-        uid: uid,
+        uid: resolvedUid,
         conversationId: conversationId,
         limit: AppConstants.initialMessageLoadCount,
       );
@@ -177,8 +204,8 @@ class ChatProvider extends ChangeNotifier {
       notifyListeners();
     }
 
-    _subscribeToMessages(uid, conversationId);
-    _subscribeToConversation(uid, conversationId);
+    _subscribeToMessages(resolvedUid, conversationId);
+    _subscribeToConversation(resolvedUid, conversationId);
   }
 
   void _subscribeToConversation(String uid, String conversationId) {
@@ -232,13 +259,15 @@ class ChatProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> loadOlderMessages(String uid) async {
+  Future<void> loadOlderMessages([String? uid]) async {
     if (_activeConversation == null ||
         _isLoadingMoreMessages ||
         !_hasMoreMessages ||
         _messageCursor == null) {
       return;
     }
+
+    final resolvedUid = _resolveUid(uid);
 
     _isLoadingMoreMessages = true;
     notifyListeners();
@@ -248,7 +277,7 @@ class ChatProvider extends ChangeNotifier {
       await Future.delayed(const Duration(milliseconds: 600));
 
       final page = await _repository.getOlderMessagePage(
-        uid: uid,
+        uid: resolvedUid,
         conversationId: _activeConversation!.id,
         before: _messageCursor!,
         limit: AppConstants.messagePageSize,
@@ -260,7 +289,7 @@ class ChatProvider extends ChangeNotifier {
       _messageCursor = page.nextCursor as MessagePageCursor?;
 
       // Recreate subscription with new limit so real-time updates don't truncate older messages
-      _subscribeToMessages(uid, _activeConversation!.id);
+      _subscribeToMessages(resolvedUid, _activeConversation!.id);
     } catch (e) {
       debugPrint('⚠️ loadOlderMessages error: $e');
     } finally {
@@ -283,38 +312,72 @@ class ChatProvider extends ChangeNotifier {
 
   // ── Send Message ───────────────────────────────────────────────────────────
 
-  /// Send a user prompt and receive an AI response.
-  ///
-  /// [uid]              — current user's Firebase UID
-  /// [prompt]           — the user's message text
-  /// [selectedProvider] — provider selected for this single request
-  /// [capability]       — defaults to textGeneration (chat). Override for image/PDF.
-  ///
-  /// Returns true on success, false on failure.
-  Future<void> sendMessage({
-    required String uid,
+  /// Starts a new conversation synchronously, returns the newly generated conversation ID
+  /// immediately for routing, and kicks off AI message processing in the background.
+  String startNewConversation({
+    String? uid,
     required String prompt,
     required AiProviderId selectedProvider,
     List<ChatAttachment> attachments = const [],
+  }) {
+    clearConversation();
+    final conversationId = const Uuid().v4();
+    unawaited(sendMessage(
+      uid: uid,
+      prompt: prompt,
+      selectedProvider: selectedProvider,
+      attachments: attachments,
+      newConversationId: conversationId,
+    ));
+    return conversationId;
+  }
+
+  /// Send a user prompt and receive an AI response.
+  ///
+  /// [uid]              — current user's Firebase UID (optional, resolved automatically if omitted)
+  /// [prompt]           — the user's message text
+  /// [selectedProvider] — provider selected for this single request
+  /// [attachments]      — optional media and PDF documents
+  /// [newConversationId]— optional pre-generated conversation ID when creating a new conversation
+  Future<void> sendMessage({
+    String? uid,
+    required String prompt,
+    required AiProviderId selectedProvider,
+    List<ChatAttachment> attachments = const [],
+    String? newConversationId,
   }) async {
+    // Synchronous guard: drop any concurrent invocation immediately
+    if (_isGenerating) return;
+
     final trimmedPrompt = prompt.trim();
     if (trimmedPrompt.isEmpty && attachments.isEmpty) return;
 
+    _errorMessage = null;
+
+    // resolving the uid
+    final resolvedUid = _resolveUid(uid);
+    // cleaning greetings from prompt.
     final cleanPrompt = trimmedPrompt.stripGreetings();
 
-    _errorMessage = null;
+    // Resolve the request capability based on the prompt
     final requestCapability = _resolveRequestCapability(
       prompt: trimmedPrompt,
       attachments: attachments,
     );
 
-    // ── Step 1: Optimistic user message ──────────────────────────────────────
+    final isImageGen = requestCapability == AiCapability.imageGeneration;
+    final isImageUnderstanding =
+        requestCapability == AiCapability.imageUnderstanding;
+    final isOpenAi = selectedProvider == AiProviderId.openAi;
+    final isGemini = selectedProvider == AiProviderId.gemini;
+
+    // ── Optimistic user message ──────────────────────────────────────
     // We add the user message to the UI instantly so the app feels responsive.
     // If the request later fails, this optimistic message will be marked as failed.
     final userMessage = MessageModel.userMessage(
-      trimmedPrompt,
-      selectedProvider,
-      contentType: requestCapability,
+      lastPrompt: trimmedPrompt,
+      validProvider: selectedProvider,
+      requestCapability: requestCapability,
       imagePaths: attachments.isNotEmpty && attachments.first.isImage == true
           ? attachments.map((e) => e.path!).toList()
           : null,
@@ -330,18 +393,29 @@ class ChatProvider extends ChangeNotifier {
               )
               .toList()
           : null,
-      imageSize: (requestCapability == AiCapability.imageGeneration)
-          ? (selectedProvider == AiProviderId.gemini
+      imageSize: isImageGen
+          ? (isGemini
               ? _geminiRatioToImageSize(
                   _preferences.preferredGeminiAspectRatio(selectedProvider))
-              : _preferences.preferredImageSize(selectedProvider))
+              : (isOpenAi
+                  ? _preferences.preferredImageSize(selectedProvider)
+                  : null))
           : null,
-      imageQuality: (requestCapability == AiCapability.imageGeneration &&
-              selectedProvider != AiProviderId.gemini)
+      imageQuality: (isImageGen && isOpenAi)
           ? _preferences.preferredImageQuality(selectedProvider)
           : null,
-      imageCount: (requestCapability == AiCapability.imageGeneration)
-          ? _preferences.preferredImageCount(selectedProvider)
+      imageBackground: (isImageGen && isOpenAi)
+          ? _preferences.preferredImageBackground(selectedProvider)
+          : null,
+      generateImageRequest: isImageGen
+          ? (isGemini
+              ? 1
+              : (isOpenAi
+                  ? _preferences.preferredImageCount(selectedProvider)
+                  : null))
+          : null,
+      visionDetailLevel: (isImageUnderstanding && isOpenAi)
+          ? _preferences.preferredVisionDetailLevel(selectedProvider)
           : null,
     );
 
@@ -358,7 +432,7 @@ class ChatProvider extends ChangeNotifier {
     if (isNewConversation) {
       // Build the conversation model in memory — written to Firestore
       // together with the first message pair in one batch (Step 6)
-      final conversationId = const Uuid().v4();
+      final conversationId = newConversationId ?? const Uuid().v4();
 
       // Initially set an empty title so the UI shows a shimmering placeholder
       // while we wait for the AI response to generate a combined title.
@@ -375,7 +449,7 @@ class ChatProvider extends ChangeNotifier {
 
       // Start watching the newly created conversation stream so future
       // updates (e.g. from other devices) arrive automatically.
-      _subscribeToMessages(uid, conversationId);
+      _subscribeToMessages(resolvedUid, conversationId);
     }
 
     // ── Step 3: Build context-aware history ───────────────────────────────────
@@ -414,7 +488,7 @@ class ChatProvider extends ChangeNotifier {
       final aiResponse = await _orchestrator.execute(
         request: AiRequest(
           capability: requestCapability,
-          uid: uid,
+          uid: resolvedUid,
           prompt: cleanPrompt.isNotEmpty ? cleanPrompt : trimmedPrompt,
           conversationHistory: history,
           visionDetailLevel:
@@ -460,7 +534,7 @@ class ChatProvider extends ChangeNotifier {
         for (int i = 0; i < validImages.length; i++) {
           futures.add(
             CloudStorageService.instance.uploadGeneratedImageBase64(
-              uid: uid,
+              uid: resolvedUid,
               conversationId: conversationId,
               base64String: validImages[i].b64Json!,
               index: i,
@@ -485,11 +559,61 @@ class ChatProvider extends ChangeNotifier {
         }
       }
 
+      // ── Compile & Upload AI-Generated PDF to Cloud Storage ────────────────
+      List<PdfAttachmentInfo>? generatedPdfInfo;
+      if (aiResponse.capability == AiCapability.pdfGeneration &&
+          aiResponse.text != null &&
+          aiResponse.text!.isNotEmpty) {
+        final conversationId = _activeConversation?.id ?? const Uuid().v4();
+        final docTitle = PdfDocumentService.extractDocumentTitle(
+          cleanPrompt.isNotEmpty ? cleanPrompt : trimmedPrompt,
+          aiResponse.text!,
+        );
+
+        try {
+          final pdfBytes =
+              await PdfDocumentService.instance.compileMarkdownToPdf(
+            title: docTitle,
+            markdownContent: aiResponse.text!,
+          );
+
+          final cleanFileName =
+              '${docTitle.replaceAll(RegExp(r'[^\w\s-]'), '').trim().replaceAll(RegExp(r'\s+'), '_')}.pdf';
+
+          final cloudUrl =
+              await CloudStorageService.instance.uploadGeneratedPdfBytes(
+            uid: resolvedUid,
+            conversationId: conversationId,
+            bytes: pdfBytes,
+            fileName: cleanFileName,
+          );
+
+          final localPath = await PdfDocumentService.instance.savePdfToDevice(
+            bytes: pdfBytes,
+            fileName: cleanFileName,
+          );
+
+          generatedPdfInfo = [
+            PdfAttachmentInfo(
+              path: localPath ?? '',
+              name: cleanFileName,
+              fileSizeBytes: pdfBytes.lengthInBytes,
+              url: cloudUrl,
+            ),
+          ];
+        } catch (e) {
+          debugPrint('⚠️ ChatProvider: Error compiling or saving PDF: $e');
+        }
+      }
+
       // ── Step 5: Build AI response message ──────────────────────────────────
-      aiMessage = _buildAiMessage(aiResponse,
-          selectedProvider: selectedProvider,
-          attachments: attachments,
-          uploadedUrls: uploadedUrls);
+      aiMessage = _buildAiMessage(
+        aiResponse,
+        selectedProvider: selectedProvider,
+        attachments: attachments,
+        uploadedUrls: uploadedUrls,
+        generatedPdfInfo: generatedPdfInfo,
+      );
 
       // Step 6 to 8 follow in finally, because whether the response is success or fail it has to store.
     } on AiExhaustedException catch (e) {
@@ -522,78 +646,7 @@ class ChatProvider extends ChangeNotifier {
       var conversationToPersist = _activeConversation;
 
       if (messageToPersist != null && conversationToPersist != null) {
-        // ── Step 6: Persist ──────────────────────────
-        final conversationId = conversationToPersist.id;
-
-        // ── Upload Attachments to Cloud Storage ──────────────────────
-        List<String>? persistImagePaths = userMessage.imageUrls;
-        List<PdfAttachmentInfo>? persistPdfs = userMessage.pdfInfo;
-
-        final imageAttachments = attachments.where((a) => a.isImage).toList();
-        final pdfAttachments = attachments.where((a) => a.isPdf).toList();
-
-        // 1. Upload Images in parallel to Firebase Storage
-        if (imageAttachments.isNotEmpty) {
-          final uploadFutures = imageAttachments
-              .map((att) => CloudStorageService.instance.uploadImage(
-                    uid: uid,
-                    conversationId: conversationId,
-                    bytes: att.bytes,
-                    fileName: att.name,
-                    mimeType: att.mimeType,
-                  ));
-          final uploadedUrls = await Future.wait(uploadFutures);
-
-          final List<String> resolvedImages = [];
-          for (int i = 0; i < imageAttachments.length; i++) {
-            final cloudUrl = (i < uploadedUrls.length) ? uploadedUrls[i] : null;
-            if (cloudUrl != null && cloudUrl.isNotEmpty) {
-              resolvedImages.add(cloudUrl);
-            } else {
-              // Fallback to micro-thumbnail if cloud upload was offline/failed
-              final fallback = await _compressImagesToMicroThumbnails(
-                [imageAttachments[i].path ?? ''],
-                attachments: [imageAttachments[i]],
-              );
-              resolvedImages.add(fallback.first);
-            }
-          }
-          persistImagePaths = resolvedImages;
-        }
-
-        // 2. Upload PDFs in parallel to Firebase Storage
-        if (pdfAttachments.isNotEmpty) {
-          final pdfFutures = pdfAttachments.map((att) async {
-            final cloudUrl = await CloudStorageService.instance.uploadPdf(
-              uid: uid,
-              conversationId: conversationId,
-              bytes: att.bytes,
-              fileName: att.name,
-            );
-            return PdfAttachmentInfo(
-              path: att.path ?? '',
-              name: att.name,
-              fileSizeBytes: att.fileSizeBytes ?? att.bytes.lengthInBytes,
-              url: cloudUrl,
-            );
-          });
-          persistPdfs = await Future.wait(pdfFutures);
-        }
-
-        final userMessageToPersist = userMessage.copyWith(
-          status: MessageStatus.delivered,
-          imageUrls: persistImagePaths,
-          pdfInfo: persistPdfs,
-        );
-
-        // Update in memory so cache also has base64
-        if (optimisticIndex != -1) {
-          _messages[optimisticIndex] = userMessageToPersist;
-        }
-
-        // ── Refine conversation title on first message ─────────────────────
-        // Once the first AI response arrives, we generate the final title
-        // exclusively from the user's prompt.
+        // Refine conversation title on first message in memory
         if (isNewConversation) {
           final titleToSave = cleanPrompt.generateConversationTitle();
           conversationToPersist =
@@ -601,32 +654,123 @@ class ChatProvider extends ChangeNotifier {
           _activeConversation = conversationToPersist;
         }
 
+        // 1. Deliver response message to memory state and update UI immediately
         _messages.add(messageToPersist);
         _lastGeneratedMessageId = messageToPersist.id;
+        _isGenerating = false;
+        notifyListeners();
 
-        // Isolated local-first save — writes to Hive immediately and enqueues
-        // a background Firestore sync task via the outbox. This replaces the old
-        // saveMessagePair which blocked on Firestore and could freeze the UI.
-        try {
-          await _repository.createOrAppendMessagePair(
-            uid: uid,
-            conversation: conversationToPersist,
-            userMessage: userMessageToPersist,
-            aiMessage: messageToPersist,
-            isFirstMessage: isNewConversation,
-          );
-        } catch (e) {
-          // Local Hive write failed (extremely rare) — log and continue
-          // so _isGenerating=false is always reached below.
-          debugPrint(
-              '\u26a0\ufe0f ChatProvider.createOrAppendMessagePair failed: $e');
+        // 2. Perform storage uploads and local/remote persistence in background
+        unawaited(_persistMessagePairInBackground(
+          uid: resolvedUid,
+          conversation: conversationToPersist,
+          userMessage: userMessage,
+          aiMessage: messageToPersist,
+          attachments: attachments,
+          isNewConversation: isNewConversation,
+          optimisticIndex: optimisticIndex,
+        ));
+      } else {
+        _isGenerating = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Persists the message pair to local storage (Hive) and enqueues cloud sync (Firestore Outbox)
+  /// completely in the background without delaying UI response rendering.
+  Future<void> _persistMessagePairInBackground({
+    required String uid,
+    required ConversationModel conversation,
+    required MessageModel userMessage,
+    required MessageModel aiMessage,
+    required List<ChatAttachment> attachments,
+    required bool isNewConversation,
+    required int optimisticIndex,
+  }) async {
+    try {
+      final conversationId = conversation.id;
+
+      // ── Upload Attachments to Cloud Storage ──────────────────────
+      List<String>? persistImagePaths = userMessage.imageUrls;
+      List<PdfAttachmentInfo>? persistPdfs = userMessage.pdfInfo;
+
+      final imageAttachments = attachments.where((a) => a.isImage).toList();
+      final pdfAttachments = attachments.where((a) => a.isPdf).toList();
+
+      // 1. Upload Images in parallel to Firebase Storage
+      if (imageAttachments.isNotEmpty) {
+        final uploadFutures = imageAttachments
+            .map((att) => CloudStorageService.instance.uploadImage(
+                  uid: uid,
+                  conversationId: conversationId,
+                  bytes: att.bytes,
+                  fileName: att.name,
+                  mimeType: att.mimeType,
+                ));
+        final uploadedUrls = await Future.wait(uploadFutures);
+
+        final List<String> resolvedImages = [];
+        for (int i = 0; i < imageAttachments.length; i++) {
+          final cloudUrl = (i < uploadedUrls.length) ? uploadedUrls[i] : null;
+          if (cloudUrl != null && cloudUrl.isNotEmpty) {
+            resolvedImages.add(cloudUrl);
+          } else {
+            // Fallback to micro-thumbnail if cloud upload was offline/failed
+            final fallback = await _compressImagesToMicroThumbnails(
+              [imageAttachments[i].path ?? ''],
+              attachments: [imageAttachments[i]],
+            );
+            resolvedImages.add(fallback.first);
+          }
         }
-
-        _markConversationHistoryDirty();
+        persistImagePaths = resolvedImages;
       }
 
-      _isGenerating = false;
-      notifyListeners();
+      // 2. Upload PDFs in parallel to Firebase Storage
+      if (pdfAttachments.isNotEmpty) {
+        final pdfFutures = pdfAttachments.map((att) async {
+          final cloudUrl = await CloudStorageService.instance.uploadPdf(
+            uid: uid,
+            conversationId: conversationId,
+            bytes: att.bytes,
+            fileName: att.name,
+          );
+          return PdfAttachmentInfo(
+            path: att.path ?? '',
+            name: att.name,
+            fileSizeBytes: att.fileSizeBytes ?? att.bytes.lengthInBytes,
+            url: cloudUrl,
+          );
+        });
+        persistPdfs = await Future.wait(pdfFutures);
+      }
+
+      final userMessageToPersist = userMessage.copyWith(
+        status: MessageStatus.delivered,
+        imageUrls: persistImagePaths,
+        pdfInfo: persistPdfs,
+      );
+
+      // Update in memory so cache also has resolved URLs
+      if (optimisticIndex != -1 && optimisticIndex < _messages.length) {
+        _messages[optimisticIndex] = userMessageToPersist;
+      }
+
+      // Isolated local-first save — writes to Hive immediately and enqueues
+      // a background Firestore sync task via the outbox.
+      await _repository.createOrAppendMessagePair(
+        uid: uid,
+        conversation: conversation,
+        userMessage: userMessageToPersist,
+        aiMessage: aiMessage,
+        isFirstMessage: isNewConversation,
+      );
+
+      _markConversationHistoryDirty();
+    } catch (e) {
+      debugPrint(
+          '⚠️ ChatProvider._persistMessagePairInBackground non-fatal error: $e');
     }
   }
 
@@ -646,21 +790,22 @@ class ChatProvider extends ChangeNotifier {
   ///
   /// Returns true on success, false on failure.
   Future<bool> deleteConversation({
-    required String uid,
+    String? uid,
     required String conversationId,
   }) async {
+    final resolvedUid = _resolveUid(uid);
     try {
       // Local-first delete: hides the conversation from the UI instantly.
       // The Firestore delete runs in the background via ChatSyncService.
       await _repository.deleteConversationLocalFirst(
-        uid: uid,
+        uid: resolvedUid,
         conversationId: conversationId,
       );
 
       // Clean up Cloud Storage attachments for this conversation in the background
       unawaited(
         CloudStorageService.instance.deleteConversationAttachments(
-          uid: uid,
+          uid: resolvedUid,
           conversationId: conversationId,
         ),
       );
@@ -682,11 +827,12 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateConversationTitle(String newTitle, String uid) async {
+  Future<void> updateConversationTitle(String newTitle, [String? uid]) async {
     if (_activeConversation == null) return;
+    final resolvedUid = _resolveUid(uid);
     try {
       await _repository.updateConversationTitle(
-        uid: uid,
+        uid: resolvedUid,
         conversationId: _activeConversation!.id,
         newTitle: newTitle,
       );
@@ -806,6 +952,9 @@ class ChatProvider extends ChangeNotifier {
     if (attachments.isNotEmpty && attachments.first.isPdf == true) {
       return AiCapability.pdfParsing;
     }
+    if (_looksLikePdfGenerationPrompt(prompt)) {
+      return AiCapability.pdfGeneration;
+    }
     if (_looksLikeImageGenerationPrompt(prompt)) {
       return AiCapability.imageGeneration;
     }
@@ -822,6 +971,9 @@ class ChatProvider extends ChangeNotifier {
     if (attachments.isNotEmpty && attachments.first.isPdf == true) {
       return 'PDF: $prompt';
     }
+    if (_looksLikePdfGenerationPrompt(prompt)) {
+      return 'Generated PDF: $prompt';
+    }
     return 'Text: $prompt';
   }
 
@@ -830,10 +982,13 @@ class ChatProvider extends ChangeNotifier {
     required AiProviderId selectedProvider,
     List<ChatAttachment> attachments = const [],
     List<String> uploadedUrls = const [],
+    List<PdfAttachmentInfo>? generatedPdfInfo,
   }) {
     if (response.contentType == AiResponseContentType.imageBase64) {
       final isGemini = selectedProvider == AiProviderId.gemini ||
           response.modelUsed == AiProviderId.gemini;
+      final isOpenAi = selectedProvider == AiProviderId.openAi ||
+          response.modelUsed == AiProviderId.openAi;
       final generatedMime = (response.generatedImages != null &&
               response.generatedImages!.isNotEmpty)
           ? response.generatedImages!.first.mimeType
@@ -847,12 +1002,32 @@ class ChatProvider extends ChangeNotifier {
         imageSize: isGemini
             ? _geminiRatioToImageSize(
                 _preferences.preferredGeminiAspectRatio(selectedProvider))
-            : _preferences.preferredImageSize(selectedProvider),
-        imageQuality: isGemini
-            ? null
-            : _preferences.preferredImageQuality(selectedProvider),
-        imageCount: _preferences.preferredImageCount(selectedProvider),
+            : (isOpenAi
+                ? _preferences.preferredImageSize(selectedProvider)
+                : null),
+        imageQuality: isOpenAi
+            ? _preferences.preferredImageQuality(selectedProvider)
+            : null,
+        imageBackground: isOpenAi
+            ? _preferences.preferredImageBackground(selectedProvider)
+            : null,
+        generateImageRequest: isGemini
+            ? 1
+            : (isOpenAi
+                ? _preferences.preferredImageCount(selectedProvider)
+                : null),
         mimeType: generatedMime,
+      );
+    } else if (response.capability == AiCapability.pdfGeneration ||
+        generatedPdfInfo != null) {
+      return MessageModel.aiResponse(
+        content: generatedPdfInfo != null
+            ? 'Here is the required PDF as you requested.'
+            : (response.text ?? ''),
+        modelUsed: response.modelUsed,
+        contentType: AiCapability.pdfGeneration,
+        pdfInfo: generatedPdfInfo,
+        tokenCount: response.tokenCount,
       );
     } else if (response.contentType == AiResponseContentType.analysis) {
       // Determine the specific analysis type from the attachment context
@@ -899,7 +1074,7 @@ class ChatProvider extends ChangeNotifier {
     return MessageModel(
       id: const Uuid().v4(),
       role: MessageRole.assistant,
-      content: content,
+      lastPrompt: content,
       timestamp: DateTime.now(),
       modelRequest: _providerForError(error, selectedProvider),
       status: MessageStatus.failed,
@@ -920,6 +1095,30 @@ class ChatProvider extends ChangeNotifier {
   String _friendlyAiErrorMessage(Object error) {
     if (error is AiException) return error.message;
     return 'something_went_wrong';
+  }
+
+  bool _looksLikePdfGenerationPrompt(String prompt) {
+    final lower = prompt.trim().toLowerCase();
+
+    // 1. Explicit exclusions: Questions about existing files or asking how-to
+    final askingAbout = RegExp(
+      r'\b(how to|how do|how can|can you read|summarize this|explain this|what is in|analyze this|read this)\b',
+    ).hasMatch(lower);
+    if (askingAbout) return false;
+
+    // 2. Strong match: Verb + "pdf" / "document" / "report" / "invoice" / "resume"
+    final strongMatch = RegExp(
+      r'\b(create|generate|make|build|export|produce|write|give me|download)\b.{0,60}\b(pdf|pdf file|pdf doc|pdf document|document as pdf|report as pdf)\b',
+    ).hasMatch(lower);
+    if (strongMatch) return true;
+
+    // 3. Command starting with "pdf of", "generate pdf", "create pdf"
+    final commandAtStart = RegExp(
+      r'^(can you|could you|please|i want to|i need to)?\s*(generate|create|make|build|export|write)\s+(a\s+|the\s+)?(pdf|pdf document|pdf report|pdf invoice|pdf resume)\b',
+    ).hasMatch(lower);
+    if (commandAtStart) return true;
+
+    return false;
   }
 
   bool _looksLikeImageGenerationPrompt(String prompt) {

@@ -88,6 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     LoadingOverlay.hide();
 
     if (!mounted) return;
+    context.read<UsageProvider>().clear();
     MessageUtils.showSuccess(context, context.l10n.signOutSuccess);
     AppRoutes.navigateAndRemoveUntil(context, AppRoutes.login);
   }
@@ -131,6 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (!mounted) return;
     if (success) {
+      context.read<UsageProvider>().clear();
       // Only navigate away if the account was successfully wiped and deleted.
       MessageUtils.showSuccess(context, context.l10n.accountDeleted);
       AppRoutes.navigateAndRemoveUntil(context, AppRoutes.login);

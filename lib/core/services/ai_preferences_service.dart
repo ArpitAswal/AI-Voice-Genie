@@ -101,7 +101,7 @@ class AiPreferencesService {
     final key = StorageKeys.providerPrefKey(
         StorageKeys.preferredImageCount, provider.id);
     final count = _storage.getInt(key, defaultValue: 1);
-    return count.clamp(1, 10).toInt();
+    return count.clamp(1, 4).toInt();
   }
 
   Future<void> setPreferredProvider(AiProviderId provider) async {

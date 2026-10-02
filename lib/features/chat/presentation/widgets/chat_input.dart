@@ -13,10 +13,12 @@ import '../../../../core/utils/app_validators.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/preferences/ai_preferences_provider.dart';
 import '../../../../shared/widgets/chat_action_button.dart';
+import '../../../key_setup/presentation/api_key_provider.dart';
 import '../../../voice_speech/presentation/voice_speech_provider.dart';
 import '../../../voice_speech/presentation/widgets/voice_input_button.dart';
 import '../../../usage/presentation/usage_provider.dart';
 import '../../domain/chat_attachment.dart';
+import '../chat_provider.dart';
 
 /// Imperative bridge used by parent screens to prepare the chat composer.
 ///
@@ -66,18 +68,17 @@ class ChatInputController {
 
 /// Chat input bar with text, media attachment preview, send, and voice actions.
 class ChatInputBar extends StatefulWidget {
-  final bool isGenerating;
-  final bool isTablet;
-  final Future<void> Function(String prompt, List<ChatAttachment> attachments)
-      onSend;
+  final Future<void> Function(
+    String prompt,
+    List<ChatAttachment> attachments,
+    AiProviderId selectedProvider,
+  ) onSend;
   final ChatInputController? controller;
   final VoidCallback? onUserInteracted;
   final VoidCallback? onEmptyInput;
 
   const ChatInputBar({
     super.key,
-    required this.isGenerating,
-    required this.isTablet,
     required this.onSend,
     this.controller,
     this.onUserInteracted,
@@ -101,6 +102,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
   bool _canSend = false;
   bool _hasText = false;
   bool _isApplyingTemplate = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -160,49 +162,65 @@ class _ChatInputBarState extends State<ChatInputBar> {
   }
 
   Future<void> _handleSend() async {
-    // Stop any active voice listening before sending so mic is released
-    final voiceProvider = context.read<VoiceProvider>();
-    if (voiceProvider.isListening) {
-      await voiceProvider.stopListening();
-    }
+    // Drop rapid-tap or duplicate events immediately if generating or submitting
+    if (_isSubmitting || context.read<ChatProvider>().isGenerating) return;
 
-    if (!mounted) return;
+    _isSubmitting = true;
+    try {
+      _focusNode.unfocus();
 
-    _focusNode.unfocus();
-    final prompt = _controller.text.trim();
-    // Validate text prompt limits unless an attachment is providing the context
-    if (_attachments.isEmpty || prompt.isNotEmpty) {
+      // Stop any active voice listening before sending so mic is released
+      if (context.read<VoiceProvider>().isListening) {
+        await context.read<VoiceProvider>().stopListening();
+        if (!mounted) return;
+      }
+
+      final prompt = _controller.text.trim();
+      final attachments = List<ChatAttachment>.from(_attachments);
+
       final error = Validators.validatePrompt(prompt, context: context);
       if (error != null) {
         context.showError(error);
         return;
       }
+
+      // Verify API key is configured before clearing input
+      final provider = context.read<AiPreferencesProvider>().preferredProvider;
+      final apiKeyProvider = context.read<ApiKeyProvider>();
+      if (!apiKeyProvider.validProviders.contains(provider)) {
+        MessageUtils.showErrorToast(context, context.l10n.noKeyForModel);
+        return;
+      }
+
+      // Verify usage budget limits
+      final usageProvider = context.read<UsageProvider>();
+      final summary = usageProvider.summaryFor(provider);
+
+      if (summary != null && summary.isExceeded()) {
+        MessageUtils.showErrorToast(
+          context,
+          context.l10n.chatProviderLimitReached(provider.displayName),
+        );
+        return;
+      }
+
+      await widget.onSend(prompt, attachments, provider);
+
+      _controller.clear();
+      setState(() {
+        _attachments.clear();
+        _canSend = false;
+        _hasText = false;
+      });
+    } finally {
+      if (mounted) {
+        _isSubmitting = false;
+      }
     }
-
-    // Verify usage budget limits
-    final provider = context.read<AiPreferencesProvider>().preferredProvider;
-    final usageProvider = context.read<UsageProvider>();
-    final summary = usageProvider.summaryFor(provider);
-
-    if (summary != null && summary.isExceeded()) {
-      context.showError(AppLocalizations.of(context)!
-          .chatProviderLimitReached(provider.displayName));
-      return;
-    }
-
-    final attachments = List<ChatAttachment>.from(_attachments);
-    _controller.clear();
-    setState(() {
-      _attachments.clear();
-      _canSend = false;
-      _hasText = false;
-    });
-
-    await widget.onSend(prompt, attachments);
   }
 
   Future<void> _showAttachmentSheet() async {
-    if (widget.isGenerating) return;
+    if (context.read<ChatProvider>().isGenerating) return;
     final l10n = AppLocalizations.of(context)!;
 
     await showModalBottomSheet<void>(
@@ -296,10 +314,32 @@ class _ChatInputBarState extends State<ChatInputBar> {
         }
 
         final bytes = await image.readAsBytes();
-        if (bytes.lengthInBytes > AppConstants.maxImageSizeBytes) {
+        if (!mounted) return false;
+        final fileBytesLen = bytes.lengthInBytes;
+
+        // 1. Single image file limit check (Max 5 MB)
+        if (fileBytesLen > AppConstants.maxImageSizeBytes) {
           debugPrint('⚠️ Image file too large — '
-              '${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(1)} MB');
+              '${(fileBytesLen / (1024 * 1024)).toStringAsFixed(1)} MB');
           if (mounted) context.showError('error_image_too_large');
+          continue;
+        }
+
+        // 2. Combined image payload limit check (Max 15 MB total across all attachments)
+        final currentTotalBytes = _attachments.fold<int>(
+          0,
+          (sum, a) => sum + (a.fileSizeBytes ?? a.bytes.lengthInBytes),
+        );
+        if (currentTotalBytes + fileBytesLen >
+            AppConstants.maxImageCombinedSizeBytes) {
+          final totalMB = ((currentTotalBytes + fileBytesLen) / (1024 * 1024))
+              .toStringAsFixed(1);
+          debugPrint('⚠️ Combined image payload too large: $totalMB MB');
+          if (mounted) {
+            context.showError(
+              context.l10n.imagePayloadTooLargeDetail(totalMB),
+            );
+          }
           continue;
         }
 
@@ -363,12 +403,38 @@ class _ChatInputBarState extends State<ChatInputBar> {
           if (mounted) context.showError('pdf_read_failed');
           continue;
         }
-        if (bytes.lengthInBytes > AppConstants.maxPdfSizeBytes) {
-          debugPrint(
-            '⚠️ Pdf file too large — '
-            '${(bytes.lengthInBytes / (1024 * 1024)).toStringAsFixed(1)} MB',
-          );
-          if (mounted) context.showError('pdf_too_large');
+        final fileBytesLen = bytes.lengthInBytes;
+        final fileSizeMB = (fileBytesLen / (1024 * 1024)).toStringAsFixed(1);
+
+        // 1. Single PDF file limit check (Max 10 MB)
+        if (fileBytesLen > AppConstants.maxPdfSizeBytes) {
+          debugPrint('⚠️ PDF file too large: ${file.name} ($fileSizeMB MB)');
+          if (mounted) {
+            context.showError(
+              context.l10n.pdfFileTooLargeDetail(
+                name: file.name,
+                sizeMB: fileSizeMB,
+              ),
+            );
+          }
+          continue;
+        }
+
+        // 2. Combined PDF payload limit check (Max 15 MB total across all attachments)
+        final currentTotalBytes = _attachments.fold<int>(
+          0,
+          (sum, a) => sum + (a.fileSizeBytes ?? a.bytes.lengthInBytes),
+        );
+        if (currentTotalBytes + fileBytesLen >
+            AppConstants.maxPdfCombinedSizeBytes) {
+          final totalMB = ((currentTotalBytes + fileBytesLen) / (1024 * 1024))
+              .toStringAsFixed(1);
+          debugPrint('⚠️ Combined PDF payload too large: $totalMB MB');
+          if (mounted) {
+            context.showError(
+              context.l10n.pdfPayloadTooLargeDetail(totalMB),
+            );
+          }
           continue;
         }
         setState(() {
@@ -467,13 +533,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isListening = context.watch<VoiceProvider>().isListening;
+    final isGenerating =
+        context.select<ChatProvider, bool>((p) => p.isGenerating);
+    final isTablet = context.isTablet;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (_attachments.isNotEmpty) ...[
           SizedBox(
-            height: widget.isTablet ? 112 : 72,
+            height: isTablet ? 112 : 72,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _attachments.length,
@@ -486,8 +555,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
                 final att = _attachments[index];
                 return _AttachmentPreview(
                   attachment: att,
-                  isTablet: widget.isTablet,
-                  onRemove: widget.isGenerating
+                  onRemove: isGenerating
                       ? null
                       : () {
                           setState(() => _attachments.removeAt(index));
@@ -505,8 +573,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
           children: [
             ChatActionButton(
               icon: Icons.attach_file_rounded,
-              onTap: widget.isGenerating ? null : _showAttachmentSheet,
-              isTablet: widget.isTablet,
+              onTap: isGenerating ? null : _showAttachmentSheet,
               color: AppColors.primaryLight,
               tooltip: l10n.attachFile,
             ),
@@ -520,11 +587,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   focus: _focusNode,
                   scrollController: _scrollController,
                   minLines: 1,
-                  maxLines: 4,
+                  maxLines: 3,
                   textCapitalization: TextCapitalization.sentences,
                   inputAction: TextInputAction.newline,
                   keyboardType: TextInputType.multiline,
-                  enabled: !widget.isGenerating,
+                  enabled: !isGenerating,
                   hint: l10n.askGenie,
                   border: InputBorder.none,
                   contentPad: const EdgeInsets.all(8),
@@ -540,16 +607,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
                   ? ChatActionButton(
                       key: const ValueKey('send'),
                       icon: Icons.send_rounded,
-                      onTap: widget.isGenerating ? null : _handleSend,
-                      isLoading: widget.isGenerating,
-                      isTablet: widget.isTablet,
-                      color: context.isDark
-                          ? AppColors.primaryDark
-                          : AppColors.primaryLight,
+                      onTap: isGenerating ? null : _handleSend,
+                      isLoading: isGenerating,
                     )
                   : VoiceInputButton(
                       key: _voiceMicKey,
-                      isTablet: widget.isTablet,
+                      isTablet: isTablet,
                       tooltip: l10n.tapToSpeak,
                       // Called with confirmed final text when speech ends
                       onTranscriptReady: _onTranscriptReady,
@@ -566,18 +629,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
 class _AttachmentPreview extends StatelessWidget {
   final ChatAttachment attachment;
-  final bool isTablet;
   final VoidCallback? onRemove;
 
   const _AttachmentPreview({
     required this.attachment,
-    required this.isTablet,
     required this.onRemove,
   });
 
   @override
   Widget build(BuildContext context) {
-    final previewSize = isTablet ? 96.0 : 48.0;
+    final previewSize = context.isTablet ? 96.0 : 48.0;
 
     return Align(
       alignment: Alignment.centerLeft,

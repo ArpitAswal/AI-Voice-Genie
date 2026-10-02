@@ -7,13 +7,16 @@ import 'package:ai_voice_genie/core/constants/app_assets.dart';
 import 'package:ai_voice_genie/features/chat/domain/chat_attachment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/extensions/string_extension.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/services/pdf_document_service.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../shared/model/image_model.dart';
@@ -71,7 +74,7 @@ class MessageBubble extends StatelessWidget {
   bool get _canSpeakMessage =>
       !_isUser &&
       message.status != MessageStatus.failed &&
-      message.content.trim().isNotEmpty &&
+      message.lastPrompt.trim().isNotEmpty &&
       (message.imageUrls == null || message.imageUrls!.isEmpty) &&
       (message.pdfInfo == null || message.pdfInfo!.isEmpty);
 
@@ -138,7 +141,7 @@ class MessageBubble extends StatelessWidget {
           ttsButton: _canSpeakMessage
               ? TtsPlaybackButton(
                   messageId: message.id,
-                  messageContent: message.content,
+                  messageContent: message.lastPrompt,
                   isTablet: isTablet,
                 )
               : null,
@@ -150,7 +153,7 @@ class MessageBubble extends StatelessWidget {
 
   /// Copies the text content to clipboard and shows a toast
   void _copyToClipboard(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: message.content));
+    Clipboard.setData(ClipboardData(text: message.lastPrompt));
     context.showSuccessToast(
       context.l10n.copiedToClipboard,
     );
@@ -247,6 +250,7 @@ class _MessageBubbleContent extends StatelessWidget {
               },
               onComplete: () {
                 context.read<ChatProvider>().markMessageAnimated(message.id);
+                onTypewriterTick?.call();
               },
             );
           },
@@ -303,10 +307,17 @@ class _MessageBubbleContent extends StatelessWidget {
   String _displayText(BuildContext context) {
     if (message.status == MessageStatus.failed) {
       // Try to translate the failure reason, fallback to raw message
-      return AppLocalizations.of(context)?.translate(message.content) ??
-          message.content;
+      return AppLocalizations.of(context)?.translate(message.lastPrompt) ??
+          message.lastPrompt;
     }
-    return message.content;
+    // For generated PDF messages, ensure we never render the raw markdown document in the bubble.
+    if (message.requestCapability == AiCapability.pdfGeneration &&
+        message.pdfInfo != null &&
+        message.pdfInfo!.isNotEmpty) {
+      return AppLocalizations.of(context)?.hereIsYourPdf ??
+          'Here is the required PDF as you requested.';
+    }
+    return message.lastPrompt;
   }
 }
 
@@ -649,17 +660,58 @@ Widget _pdfView(
     ),
   );
 
-  final actionIcon = (pdfInfo.url != null && pdfInfo.url!.isNotEmpty)
-      ? Icon(
-          Icons.open_in_new_rounded,
-          color: context.isDark ? AppColors.primaryLight : AppColors.white,
-          size: 20,
+  final openButton = IconButton(
+    padding: EdgeInsets.zero,
+    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+    icon: Icon(
+      Icons.visibility_outlined,
+      color: context.isDark ? AppColors.primaryLight : AppColors.white,
+      size: 19,
+    ),
+    tooltip: 'View PDF',
+    onPressed: () => _openOrDownloadPdf(context, pdfInfo),
+  );
+
+  final shareButton = (pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
+          pdfInfo.path.isNotEmpty)
+      ? IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+          icon: Icon(
+            Icons.share_outlined,
+            color: context.isDark ? AppColors.primaryLight : AppColors.white,
+            size: 18,
+          ),
+          tooltip: 'Share PDF',
+          onPressed: () => _sharePdf(context, pdfInfo),
         )
-      : Icon(
-          Icons.check_circle_rounded,
-          color: context.isDark ? AppColors.primaryLight : AppColors.white,
-          size: 20,
-        );
+      : const SizedBox.shrink();
+
+  final downloadButton = (pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
+          pdfInfo.path.isNotEmpty)
+      ? IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+          icon: Icon(
+            Icons.file_download_outlined,
+            color: context.isDark ? AppColors.primaryLight : AppColors.white,
+            size: 20,
+          ),
+          tooltip: 'Download PDF',
+          onPressed: () => _downloadPdfToDevice(context, pdfInfo),
+        )
+      : const SizedBox.shrink();
+
+  final actionRow = Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      openButton,
+      const SizedBox(width: 2),
+      shareButton,
+      const SizedBox(width: 2),
+      downloadButton,
+    ],
+  );
 
   return Material(
     color: Colors.transparent,
@@ -691,7 +743,7 @@ Widget _pdfView(
                     children: [
                       pdfView,
                       const SizedBox(width: spacing),
-                      actionIcon,
+                      actionRow,
                     ],
                   ),
                   const SizedBox(height: spacing / 2),
@@ -734,7 +786,7 @@ Widget _pdfView(
                     ),
                   ),
                   const SizedBox(width: spacing),
-                  actionIcon,
+                  actionRow,
                 ],
               ),
       ),
@@ -744,31 +796,123 @@ Widget _pdfView(
 
 Future<void> _openOrDownloadPdf(
     BuildContext context, PdfAttachmentInfo pdfInfo) async {
-  final targetUrl = pdfInfo.url;
-  if (targetUrl != null && targetUrl.isNotEmpty) {
-    final uri = Uri.tryParse(targetUrl);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      return;
-    }
+  final openResult = await PdfDocumentService.instance.openPdf(pdfInfo);
+  if (openResult.type != ResultType.done && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(openResult.message.isNotEmpty
+            ? openResult.message
+            : 'Cannot open ${pdfInfo.name}'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
+}
 
-  if (pdfInfo.path.isNotEmpty) {
-    final file = File(pdfInfo.path.replaceFirst('file://', ''));
-    if (await file.exists()) {
-      final uri = Uri.file(file.path);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-        return;
+Future<void> _sharePdf(BuildContext context, PdfAttachmentInfo pdfInfo) async {
+  try {
+    final safeName =
+        pdfInfo.name.endsWith('.pdf') ? pdfInfo.name : '${pdfInfo.name}.pdf';
+    final docsDir = await getApplicationDocumentsDirectory();
+    final cachedFile = File('${docsDir.path}/generated_pdfs/$safeName');
+    String? localPath;
+
+    if (await cachedFile.exists() && await cachedFile.length() > 0) {
+      localPath = cachedFile.path;
+    } else {
+      final bytes = await PdfDocumentService.instance.resolvePdfBytes(pdfInfo);
+      if (bytes != null && bytes.isNotEmpty) {
+        localPath = await PdfDocumentService.instance.savePdfLocally(
+          bytes: bytes,
+          fileName: safeName,
+        );
       }
     }
+
+    if (localPath != null && await File(localPath).exists()) {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(localPath, mimeType: 'application/pdf', name: safeName)],
+          subject: pdfInfo.name,
+        ),
+      );
+      return;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cannot share ${pdfInfo.name}: file unavailable'),
+          backgroundColor: AppColors.darkError,
+        ),
+      );
+    }
+  } catch (e) {
+    debugPrint('⚠️ Error sharing PDF: $e');
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to share PDF: $e'),
+          backgroundColor: AppColors.darkError,
+        ),
+      );
+    }
   }
+}
+
+Future<void> _downloadPdfToDevice(
+    BuildContext context, PdfAttachmentInfo pdfInfo) async {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const SizedBox(
+            width: 14,
+            height: 14,
+            child:
+                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Downloading ${pdfInfo.name}...',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      duration: const Duration(seconds: 1),
+    ),
+  );
+
+  final bytes = await PdfDocumentService.instance.resolvePdfBytes(pdfInfo);
+  if (bytes == null || bytes.isEmpty) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download ${pdfInfo.name}'),
+          backgroundColor: AppColors.darkError,
+        ),
+      );
+    }
+    return;
+  }
+
+  final saved = await PdfDocumentService.instance.savePdfToPublicDownloads(
+    bytes: bytes,
+    fileName: pdfInfo.name,
+  );
 
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Cannot open PDF: ${pdfInfo.name}'),
-        duration: const Duration(seconds: 2),
+        content: Text(
+          saved
+              ? 'PDF saved to Downloads (${pdfInfo.name})'
+              : 'Failed to save PDF to Downloads',
+        ),
+        backgroundColor: saved ? AppColors.darkSuccess : AppColors.darkError,
+        duration: const Duration(seconds: 3),
       ),
     );
   }

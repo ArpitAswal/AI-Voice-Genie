@@ -102,7 +102,7 @@ abstract final class UsagePricingTable {
         switch (capability) {
           case AiCapability.imageGeneration:
             return AppConstants.openAiImageGenModel;
-          case AiCapability.textGeneration:
+          case AiCapability.textGeneration || AiCapability.pdfGeneration:
             return AppConstants.openAiTextModel;
           default:
             return AppConstants.openAiVisionModel;
@@ -111,7 +111,7 @@ abstract final class UsagePricingTable {
         switch (capability) {
           case AiCapability.imageGeneration:
             return AppConstants.geminiImageGenModel;
-          case AiCapability.textGeneration:
+          case AiCapability.textGeneration || AiCapability.pdfGeneration:
             return AppConstants.geminiTextModel;
           default:
             return AppConstants.geminiVisionModel;

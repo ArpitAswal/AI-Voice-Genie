@@ -55,6 +55,7 @@ class ProviderRegistry {
         AiCapability.imageGeneration,
         AiCapability.imageUnderstanding,
         AiCapability.pdfParsing,
+        AiCapability.pdfGeneration,
       },
       priority: 1,
       contextWindowTokens: AppConstants.openAiContextTokenLimit,
@@ -66,6 +67,7 @@ class ProviderRegistry {
         AiCapability.imageGeneration,
         AiCapability.imageUnderstanding,
         AiCapability.pdfParsing,
+        AiCapability.pdfGeneration,
       },
       priority: 2,
       contextWindowTokens: AppConstants.geminiContextTokenLimit,
@@ -78,6 +80,7 @@ class ProviderRegistry {
         AiCapability.textGeneration,
         AiCapability.imageUnderstanding,
         AiCapability.pdfParsing,
+        AiCapability.pdfGeneration,
       },
       priority: 3,
       contextWindowTokens: AppConstants.claudeContextTokenLimit,
@@ -214,12 +217,17 @@ class ProviderRegistry {
     }
 
     // ── Gemini Thinking Level ─────────────────────────────────────────────────
-    final isText = capability == AiCapability.textGeneration;
+    final supportsThinking = capability == AiCapability.textGeneration ||
+        capability == AiCapability.pdfParsing ||
+        capability == AiCapability.pdfGeneration ||
+        capability == AiCapability.imageUnderstanding;
     final GeminiThinkingLevel? effectiveGeminiThinkingLevel =
-        (isText && profile.supports(AiPreferenceControl.geminiThinkingLevel))
+        (supportsThinking &&
+                profile.supports(AiPreferenceControl.geminiThinkingLevel))
             ? (rawGeminiThinkingLevel ?? GeminiThinkingLevel.medium)
             : null;
-    if (isText && !profile.supports(AiPreferenceControl.geminiThinkingLevel)) {
+    if (supportsThinking &&
+        !profile.supports(AiPreferenceControl.geminiThinkingLevel)) {
       dropped.add(AiPreferenceControl.geminiThinkingLevel);
     }
 

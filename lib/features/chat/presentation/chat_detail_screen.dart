@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:ai_voice_genie/features/chat/presentation/widgets/chat_input.dart';
 import 'package:ai_voice_genie/shared/widgets/chat_model_selector_dropdown.dart';
 import 'package:ai_voice_genie/features/chat/presentation/widgets/message_bubble.dart';
@@ -7,6 +8,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/enums/app_enums.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/widgets/app_alert_dialog.dart';
@@ -19,6 +21,7 @@ import '../../../shared/model/image_model.dart';
 import '../../../shared/widgets/image_view.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
+import '../../usage/presentation/usage_provider.dart';
 import '../../voice_speech/presentation/voice_speech_provider.dart';
 import '../domain/chat_attachment.dart';
 import 'chat_provider.dart';
@@ -59,6 +62,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _isManualDeleting = false;
   bool _isFetchingOldMessages = false;
   double _previousMaxScrollExtent = 0;
+  bool _showScrollToBottom = false;
 
   @override
   void initState() {
@@ -70,11 +74,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _lastMessageCount = _chatProvider!.messages.length;
     _wasGenerating = _chatProvider!.isGenerating;
 
-    if (_chatProvider!.messages.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _scrollToBottom(animated: false);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_chatProvider!.messages.isNotEmpty) {
+        _scrollToBottom(animated: false);
+      }
+      final uid = context.read<AuthProvider>().currentUser?.uid;
+      if (uid != null) {
+        context.read<UsageProvider>().loadForMonth(uid);
+      }
+    });
     _chatProvider!.addListener(_onChatProviderChange);
 
     if (widget.initialTitle != null) {
@@ -85,12 +94,64 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void _onScroll() {
     if (!_scrollController.hasClients || _chatProvider == null) return;
 
-    if (_scrollController.position.pixels <= 100) {
-      final uid = context.read<AuthProvider>().currentUser?.uid;
-      if (uid != null) {
-        _chatProvider!.loadOlderMessages(uid);
-      }
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentOffset = _scrollController.offset;
+    final distanceFromBottom = maxScroll - currentOffset;
+
+    // Show floating button when user is scrolled away from the bottom (> 100px)
+    final shouldShowFab = distanceFromBottom > 100;
+    if (shouldShowFab != _showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = shouldShowFab;
+      });
     }
+
+    if (_scrollController.position.pixels <= 100) {
+      _chatProvider!.loadOlderMessages();
+    }
+  }
+
+  void _scrollToBottomAnimated() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// Called on every character/token revealed during typewriter animation.
+  /// Keeps the live response in view if the user is following at the bottom,
+  /// or automatically shows the scroll-to-bottom FAB if they scrolled away.
+  void _onTypewriterTick() {
+    if (!mounted || !_scrollController.hasClients) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final currentOffset = _scrollController.offset;
+      final distanceFromBottom = maxScroll - currentOffset;
+
+      final isUserDragging =
+          _scrollController.position.isScrollingNotifier.value;
+
+      if (!isUserDragging && distanceFromBottom <= 140) {
+        _scrollController.jumpTo(maxScroll);
+        if (_showScrollToBottom) {
+          setState(() {
+            _showScrollToBottom = false;
+          });
+        }
+      } else {
+        final shouldShowFab = distanceFromBottom > 100;
+        if (shouldShowFab != _showScrollToBottom) {
+          setState(() {
+            _showScrollToBottom = shouldShowFab;
+          });
+        }
+      }
+    });
   }
 
   void _onChatProviderChange() {
@@ -139,12 +200,25 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     bool shouldScroll = false;
 
-    // Only scroll to bottom for new messages, not when loading older ones
+    final isLastMessageFromUser = _chatProvider!.messages.isNotEmpty &&
+        _chatProvider!.messages.last.isUser;
+
+    // Only scroll to bottom for new messages if the user sent it, or if they are already near the bottom
     if (currentMessageCount > _lastMessageCount &&
         !_isFetchingOldMessages &&
         !currentLoadingMore &&
         !justFinishedFetchingOldMessages) {
-      shouldScroll = true;
+      if (isLastMessageFromUser) {
+        shouldScroll = true;
+      } else {
+        final isNearBottom = !_scrollController.hasClients ||
+            (_scrollController.position.maxScrollExtent -
+                    _scrollController.offset <=
+                80.0);
+        if (isNearBottom) {
+          shouldScroll = true;
+        }
+      }
     }
     if (currentGenerating && !_wasGenerating) {
       shouldScroll = true;
@@ -161,126 +235,45 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _loadConversation() {
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChatProvider>().loadConversation(
-            uid: uid,
             conversationId: widget.conversationId,
           );
     });
   }
 
-  /// Scroll to the bottom of the message list
-  void _scrollToBottom({bool animated = true}) async {
-    if (!_scrollController.hasClients) return;
-
-    // Short delay gives the layout engine time to fully calculate
-    // the height of very large MessageBubbles before we record 'maxScrollExtent'.
-    await Future.delayed(const Duration(milliseconds: 150));
-    if (!mounted || !_scrollController.hasClients) return;
-
-    _doScroll(animated: animated);
-  }
-
-  int _scrollLoopCount = 0;
-
-  void _doScroll({required bool animated}) {
+  /// Scroll to the bottom of the message list (non-recursive, single invocation)
+  void _scrollToBottom({bool animated = true}) {
     if (!mounted || !_scrollController.hasClients) return;
 
     final target = _scrollController.position.maxScrollExtent;
     final offset = _scrollController.offset;
     final distance = target - offset;
 
-    // Keep scrolling if we are not at the very bottom
-    if (distance <= 10.0) {
-      _scrollLoopCount = 0;
-      return;
-    }
+    if (distance <= 10.0) return;
 
-    // If we have to travel a huge distance (e.g., initial load of a large chat),
-    // jump instantly to avoid rendering hundreds of items and freezing the main thread.
     if (!animated || distance > 2000) {
       _scrollController.jumpTo(target);
-
-      if (_scrollLoopCount > 3) {
-        // Prevent infinite loop if layout never settles
-        _scrollLoopCount = 0;
-        return;
-      }
-      _scrollLoopCount++;
-
-      // After jumping, maxScrollExtent might increase because new items were lazily built.
-      // Schedule a trailing jump.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _scrollController.hasClients) {
-          if (_scrollController.position.maxScrollExtent >
-              _scrollController.offset + 10.0) {
-            _doScroll(animated: false);
-          } else {
-            _scrollLoopCount = 0;
-          }
-        }
-      });
       return;
     }
 
-    _scrollLoopCount = 0;
-
-    _scrollController
-        .animateTo(
+    _scrollController.animateTo(
       target,
       duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    )
-        .then((_) {
-      if (mounted && _scrollController.hasClients) {
-        // As lazy ListView items build during animation, maxScrollExtent increases.
-        // We catch this change and run a trailing scroll if needed.
-        if (_scrollController.position.maxScrollExtent >
-            _scrollController.offset + 10.0) {
-          _doScroll(animated: true);
-        }
-      }
-    });
+      curve: Curves.easeOutCubic,
+    );
   }
 
   Future<void> _handleSend(
-      String prompt, List<ChatAttachment> attachments) async {
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
-
-    final apiKeyProvider = context.read<ApiKeyProvider>();
-    final validProviders = apiKeyProvider.validProviders;
-    final preferences = context.read<AiPreferencesProvider>();
-    final selectedProvider = ChatModelSelection.resolveSelectedProvider(
-          availableProviders: validProviders,
-          selectedProvider: preferences.preferredProvider,
-          preferredProvider: preferences.preferredProvider,
-        ) ??
-        preferences.preferredProvider;
-
-    if (!validProviders.contains(selectedProvider)) {
-      MessageUtils.showError(context, context.l10n.noKeyForModel);
-      return;
-    }
-
-    await context.read<ChatProvider>().sendMessage(
-          uid: uid,
+    String prompt,
+    List<ChatAttachment> attachments,
+    AiProviderId selectedProvider,
+  ) async {
+    context.read<ChatProvider>().sendMessage(
           prompt: prompt,
           selectedProvider: selectedProvider,
           attachments: attachments,
         );
-
-    // Error handling
-    if (!mounted) return;
-
-    final error = context.read<ChatProvider>().errorMessage;
-    if (error != null) {
-      context.showError(context.l10n.translate(error));
-      context.read<ChatProvider>().clearError();
-    }
   }
 
   Future<void> _handleDelete() async {
@@ -314,9 +307,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     if (confirmed != true || !mounted) return;
 
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
-
     setState(() {
       _isManualDeleting = true;
     });
@@ -324,7 +314,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     LoadingOverlay.show(context, message: context.l10n.deleting);
 
     final success = await context.read<ChatProvider>().deleteConversation(
-          uid: uid,
           conversationId: widget.conversationId,
         );
 
@@ -378,12 +367,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       return;
     }
 
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
-
     LoadingOverlay.show(context, message: context.l10n.renaming);
     try {
-      await chatProvider.updateConversationTitle(newTitle, uid);
+      await chatProvider.updateConversationTitle(newTitle);
       if (mounted) {
         context.showSuccessToast(
           context.l10n.conversationNameUpdate,
@@ -469,64 +455,90 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       body: Column(
         children: [
           Expanded(
-            child: Consumer<ChatProvider>(
-              builder: (context, chatProvider, _) {
-                final messages = chatProvider.messages;
-                if (chatProvider.isLoadingMessages && messages.isEmpty) {
-                  return const Center(
-                    child: CircularProgressIndicator.adaptive(),
-                  );
-                }
-
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: EdgeInsets.symmetric(
-                    vertical: isTablet ? 16 : 12,
-                    horizontal: isTablet ? 16 : 12,
-                  ),
-                  itemCount: messages.length +
-                      (chatProvider.isGenerating ? 1 : 0) +
-                      (chatProvider.isLoadingMoreMessages ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    // Load more indicator at top
-                    if (index == 0 && chatProvider.isLoadingMoreMessages) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
+            child: Stack(
+              children: [
+                Consumer<ChatProvider>(
+                  builder: (context, chatProvider, _) {
+                    final messages = chatProvider.messages;
+                    if (chatProvider.isLoadingMessages && messages.isEmpty) {
+                      return const Center(
+                        child: CircularProgressIndicator.adaptive(),
                       );
                     }
 
-                    final adjustedIndex =
-                        chatProvider.isLoadingMoreMessages ? index - 1 : index;
+                    return NotificationListener<ScrollMetricsNotification>(
+                      onNotification: (notification) {
+                        final metrics = notification.metrics;
+                        final distanceFromBottom =
+                            metrics.maxScrollExtent - metrics.pixels;
+                        final shouldShowFab = distanceFromBottom > 100;
+                        if (shouldShowFab != _showScrollToBottom) {
+                          setState(() {
+                            _showScrollToBottom = shouldShowFab;
+                          });
+                        }
+                        return false;
+                      },
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.symmetric(
+                          vertical: isTablet ? 16 : 12,
+                          horizontal: isTablet ? 16 : 12,
+                        ),
+                        itemCount: messages.length +
+                            (chatProvider.isGenerating ? 1 : 0) +
+                            (chatProvider.isLoadingMoreMessages ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // Load more indicator at top
+                          if (index == 0 && chatProvider.isLoadingMoreMessages) {
+                            return const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                            );
+                          }
 
-                    // Typing indicator at bottom
-                    if (adjustedIndex == messages.length &&
-                        chatProvider.isGenerating) {
-                      return const TypingIndicator();
-                    }
+                          final adjustedIndex = chatProvider.isLoadingMoreMessages
+                              ? index - 1
+                              : index;
 
-                    if (adjustedIndex < 0 || adjustedIndex >= messages.length) {
-                      return const SizedBox.shrink();
-                    }
+                          // Typing indicator at bottom
+                          if (adjustedIndex == messages.length &&
+                              chatProvider.isGenerating) {
+                            return const TypingIndicator();
+                          }
 
-                    return MessageBubble(
-                      message: messages[adjustedIndex],
-                      isTablet: isTablet,
-                      // Provide a scroll callback only for the last message so
-                      // the typewriter animation keeps the new text in view.
-                      onTypewriterTick: adjustedIndex == messages.length - 1
-                          ? () => _doScroll(animated: false)
-                          : null,
+                          if (adjustedIndex < 0 ||
+                              adjustedIndex >= messages.length) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return MessageBubble(
+                            message: messages[adjustedIndex],
+                            isTablet: isTablet,
+                            onTypewriterTick: _onTypewriterTick,
+                          );
+                        },
+                      ),
                     );
                   },
-                );
-              },
+                ),
+                // Glass-style Scroll to Bottom Floating Action Button
+                Positioned(
+                  bottom: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _buildScrollToBottomButton(context),
+                  ),
+                ),
+              ],
             ),
           ),
           // ── Input Bar ──────────────────────────────────────────────────────
@@ -538,14 +550,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               preferences,
               __,
             ) {
-              final validProviders = apiKeyProvider.validProviders;
-              final selectedProvider =
-                  ChatModelSelection.resolveSelectedProvider(
-                        availableProviders: validProviders,
-                        selectedProvider: preferences.preferredProvider,
-                        preferredProvider: preferences.preferredProvider,
-                      ) ??
-                      preferences.preferredProvider;
+              final selectedProvider = preferences.preferredProvider;
 
               return Container(
                 decoration: BoxDecoration(
@@ -564,19 +569,35 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ChatModelSelectorDropdown(
-                      providers: validProviders,
+                      providers: AiProviderId.values,
                       selectedProvider: selectedProvider,
                       isEnabled: !chatProvider.isGenerating,
                       onChanged: (provider) {
                         FocusManager.instance.primaryFocus?.unfocus();
                         preferences.setPreferredProvider(provider);
+
+                        final apiKeyProvider = context.read<ApiKeyProvider>();
+                        if (!apiKeyProvider.validProviders.contains(provider)) {
+                          MessageUtils.showErrorToast(
+                            context,
+                            context.l10n.noKeyForModel,
+                          );
+                        } else {
+                          final usageProvider = context.read<UsageProvider>();
+                          final summary = usageProvider.summaryFor(provider);
+                          if (summary != null && summary.isExceeded()) {
+                            MessageUtils.showErrorToast(
+                              context,
+                              context.l10n.chatProviderLimitReached(
+                                  provider.displayName),
+                            );
+                          }
+                        }
                       },
                     ),
                     const SizedBox(height: 4.0),
                     Flexible(
                       child: ChatInputBar(
-                        isGenerating: chatProvider.isGenerating,
-                        isTablet: isTablet,
                         onSend: _handleSend,
                       ),
                     ),
@@ -586,6 +607,65 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  /// Glass-style floating action button displayed at bottom-center when user is scrolled up.
+  Widget _buildScrollToBottomButton(BuildContext context) {
+    return AnimatedScale(
+      scale: _showScrollToBottom ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutBack,
+      child: AnimatedOpacity(
+        opacity: _showScrollToBottom ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 150),
+        child: IgnorePointer(
+          ignoring: !_showScrollToBottom,
+          child: ClipOval(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _scrollToBottomAnimated,
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: context.isDark
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : Colors.black.withValues(alpha: 0.07),
+                      border: Border.all(
+                        color: context.isDark
+                            ? Colors.white.withValues(alpha: 0.20)
+                            : Colors.black.withValues(alpha: 0.12),
+                        width: 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                              alpha: context.isDark ? 0.35 : 0.10),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 24,
+                      color: context.isDark
+                          ? Colors.white.withValues(alpha: 0.90)
+                          : Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

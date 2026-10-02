@@ -57,6 +57,15 @@ abstract class AiProviderAdapter {
     required String apiKey,
   });
 
+  /// Generate a structured, publication-ready document for compiling into a PDF.
+  ///
+  /// Capability: AiCapability.pdfGeneration
+  /// Supported by: OpenAI, Gemini, Claude
+  Future<AiResponse> generatePdf({
+    required AiRequest request,
+    required String apiKey,
+  });
+
   // ── Routing Helper ─────────────────────────────────────────────────────────
 
   /// Route a request to the correct adapter method based on capability.
@@ -76,6 +85,8 @@ abstract class AiProviderAdapter {
         return analyzeImage(request: request, apiKey: apiKey);
       case AiCapability.pdfParsing:
         return parsePdf(request: request, apiKey: apiKey);
+      case AiCapability.pdfGeneration:
+        return generatePdf(request: request, apiKey: apiKey);
     }
   }
 }

@@ -27,6 +27,8 @@ class LocalMessageRecord {
   final AiImageSize? imageSize;
   final int? imageCount;
   final ImageQuality? imageQuality;
+  final ImageGenerateBackground? imageBackground;
+  final VisionDetailLevel? visionDetailLevel;
 
   // ── Local-only sync metadata ──────────────────────────────────────────────
 
@@ -60,6 +62,8 @@ class LocalMessageRecord {
     this.imageSize,
     this.imageCount,
     this.imageQuality,
+    this.imageBackground,
+    this.visionDetailLevel,
     this.isDeleted = false,
     this.syncStatus = SyncStatus.pendingCreate,
     this.remoteUpdatedAt,
@@ -92,6 +96,8 @@ class LocalMessageRecord {
       'imageSize': imageSize?.apiValue,
       'imageCount': imageCount,
       'imageQuality': imageQuality?.name,
+      'imageBackground': imageBackground?.name,
+      'visionDetailLevel': visionDetailLevel?.apiValue,
       'isDeleted': isDeleted,
       'syncStatus': syncStatus.value,
       'localUpdatedAt': localUpdatedAt.toIso8601String(),
@@ -154,6 +160,12 @@ class LocalMessageRecord {
               orElse: () => ImageQuality.low,
             )
           : null,
+      imageBackground: map['imageBackground'] != null
+          ? ImageGenerateBackground.fromString(map['imageBackground'] as String)
+          : null,
+      visionDetailLevel: map['visionDetailLevel'] != null
+          ? VisionDetailLevel.fromValue(map['visionDetailLevel'] as String)
+          : null,
       isDeleted: map['isDeleted'] as bool? ?? false,
       syncStatus: SyncStatus.fromValue(
         map['syncStatus'] as String? ?? SyncStatus.pendingCreate.value,
@@ -183,8 +195,8 @@ class LocalMessageRecord {
       conversationId: conversationId,
       messageId: message.id,
       role: message.role,
-      content: message.content,
-      contentType: message.contentType,
+      content: message.lastPrompt,
+      contentType: message.requestCapability,
       timestamp: message.timestamp,
       modelRequest: message.modelRequest,
       tokenCount: message.tokenCount,
@@ -192,8 +204,10 @@ class LocalMessageRecord {
       imageUrls: message.imageUrls,
       pdfInfo: message.pdfInfo,
       imageSize: message.imageSize,
-      imageCount: message.imageCount,
+      imageCount: message.generateImageRequest,
       imageQuality: message.imageQuality,
+      imageBackground: message.imageBackground,
+      visionDetailLevel: message.visionDetailLevel,
       localUpdatedAt: DateTime.now(),
       syncStatus: syncStatus,
     );
@@ -204,8 +218,8 @@ class LocalMessageRecord {
     return MessageModel(
       id: messageId,
       role: role,
-      content: content,
-      contentType: contentType,
+      lastPrompt: content,
+      requestCapability: contentType,
       timestamp: timestamp,
       modelRequest: modelRequest,
       tokenCount: tokenCount,
@@ -213,8 +227,10 @@ class LocalMessageRecord {
       imageUrls: imageUrls,
       pdfInfo: pdfInfo,
       imageSize: imageSize,
-      imageCount: imageCount,
+      generateImageRequest: imageCount,
       imageQuality: imageQuality,
+      imageBackground: imageBackground,
+      visionDetailLevel: visionDetailLevel,
     );
   }
 
@@ -239,6 +255,8 @@ class LocalMessageRecord {
     AiImageSize? imageSize,
     int? imageCount,
     ImageQuality? imageQuality,
+    ImageGenerateBackground? imageBackground,
+    VisionDetailLevel? visionDetailLevel,
     bool? isDeleted,
     SyncStatus? syncStatus,
     DateTime? localUpdatedAt,
@@ -260,6 +278,8 @@ class LocalMessageRecord {
       imageSize: imageSize ?? this.imageSize,
       imageCount: imageCount ?? this.imageCount,
       imageQuality: imageQuality ?? this.imageQuality,
+      imageBackground: imageBackground ?? this.imageBackground,
+      visionDetailLevel: visionDetailLevel ?? this.visionDetailLevel,
       isDeleted: isDeleted ?? this.isDeleted,
       syncStatus: syncStatus ?? this.syncStatus,
       localUpdatedAt: localUpdatedAt ?? this.localUpdatedAt,

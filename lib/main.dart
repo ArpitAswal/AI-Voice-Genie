@@ -1,9 +1,8 @@
-import 'dart:ui';
-
 import 'package:ai_voice_genie/features/usage/presentation/usage_provider.dart';
 import 'package:ai_voice_genie/features/voice_speech/presentation/voice_speech_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -38,6 +37,12 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // In release builds, disable debugPrint output to eliminate console overhead.
+  // In development/debug mode, debugPrint outputs normally so logs can be monitored.
+  if (kReleaseMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
 
   // ── Firebase ────────────────────────────────────────────────────────────────
   // Uncomment after running: flutterfire configure

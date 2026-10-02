@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ai_voice_genie/core/enums/app_enums.dart';
 import 'package:ai_voice_genie/ai_layer/registry/provider_registry.dart';
 import 'package:ai_voice_genie/ai_layer/models/ai_request.dart';
+import 'package:ai_voice_genie/core/constants/app_constants.dart';
 import 'package:ai_voice_genie/features/chat/domain/message_model.dart';
 
 void main() {
@@ -233,6 +234,28 @@ void main() {
       expect(openAiFirestore['imageSize'], 'Landscape (1536x1024)');
       expect(openAiFirestore['imageQuality'], 'low');
       expect(openAiFirestore['mimeType'], 'image/png');
+    });
+
+    test('Gemini profile supports thinkingLevel for vision/imageUnderstanding', () {
+      final sanitized = ProviderRegistry.instance.sanitizePreferences(
+        providerId: AiProviderId.gemini,
+        capability: AiCapability.imageUnderstanding,
+        rawResponseLength: ResponseLength.balanced,
+        rawImageSize: AiImageSize.square,
+        rawImageQuality: ImageQuality.low,
+        rawImageBackground: ImageGenerateBackground.auto,
+        rawImageCount: 1,
+        rawVisionDetailLevel: VisionDetailLevel.auto,
+        rawGeminiThinkingLevel: GeminiThinkingLevel.high,
+      );
+      expect(sanitized.geminiThinkingLevel, GeminiThinkingLevel.high);
+    });
+
+    test('AppConstants image attachment limits align with PDF payload limits', () {
+      expect(AppConstants.maxImageSizeBytes, 5 * 1024 * 1024);
+      expect(AppConstants.maxImageCombinedSizeBytes, 15 * 1024 * 1024);
+      expect(AppConstants.maxPdfSizeBytes, 10 * 1024 * 1024);
+      expect(AppConstants.maxPdfCombinedSizeBytes, 15 * 1024 * 1024);
     });
   });
 }

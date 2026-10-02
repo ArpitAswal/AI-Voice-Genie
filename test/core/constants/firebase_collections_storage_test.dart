@@ -49,6 +49,18 @@ void main() {
       );
     });
 
+    test('storageGeneratedPdfPath generates conversation-scoped generated pdf path', () {
+      final path = FirebaseCollections.storageGeneratedPdfPath(
+        uid,
+        conversationId,
+        'gen_doc.pdf',
+      );
+      expect(
+        path,
+        'users/test-user-123/conversations/conv-456/generated_pdfs/gen_doc.pdf',
+      );
+    });
+
     test('storage metadata keys are defined', () {
       expect(FirebaseCollections.storageMetaUploadedBy, 'uploadedBy');
       expect(FirebaseCollections.storageMetaGeneratedBy, 'generatedBy');

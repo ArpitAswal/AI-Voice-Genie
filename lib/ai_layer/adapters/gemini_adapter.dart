@@ -340,9 +340,17 @@ class GeminiAdapter extends AiProviderAdapter {
       // Images must come BEFORE the text prompt in the parts list.
       final List<Map<String, dynamic>> parts = [];
 
+      int totalImageBytes = 0;
       if (request.imageBytes != null && request.imageBytes!.isNotEmpty) {
         // Add each image as an inlineData block
         for (final att in request.imageBytes!) {
+          if (att.lengthInBytes > AppConstants.maxImageSizeBytes) {
+            throw const AiHardErrorException(
+              provider: AiProviderId.gemini,
+              message: 'error_image_too_large',
+            );
+          }
+          totalImageBytes += att.lengthInBytes;
           parts.add({
             'inlineData': {
               'mimeType': request.imageMimeType ?? 'image/jpeg',
@@ -352,8 +360,18 @@ class GeminiAdapter extends AiProviderAdapter {
         }
       }
 
+      if (totalImageBytes > AppConstants.maxImageCombinedSizeBytes) {
+        throw const AiHardErrorException(
+          provider: AiProviderId.gemini,
+          message: 'image_payload_too_large',
+        );
+      }
+
       // Add the user's text prompt as the last part
       parts.add({'text': request.prompt});
+
+      final thinkingLevel = request.thinkingLevel?.apiValue ??
+          GeminiThinkingLevel.medium.apiValue;
 
       final requestBody = {
         'systemInstruction': {
@@ -371,7 +389,9 @@ class GeminiAdapter extends AiProviderAdapter {
         ],
         'generationConfig': {
           'maxOutputTokens': request.responseLength.geminiMaxTokens,
-          'temperature': 0.4,
+          'thinkingConfig': {
+            'thinkingLevel': thinkingLevel,
+          },
         },
       };
 
@@ -380,15 +400,37 @@ class GeminiAdapter extends AiProviderAdapter {
             'image_count': request.imageBytes?.length ?? 0,
             'mimeType': request.imageMimeType,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
+            'thinkingLevel': thinkingLevel,
             'prompt': request.prompt,
           })}');
 
-      final response = await _postWithFallback(
+      http.Response response = await _postWithFallback(
         primaryModel: AppConstants.geminiVisionModel,
         fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
       );
+
+      // Defensive fallback: If thinkingConfig is rejected by a tier or older model endpoint, retry without it
+      if (response.statusCode == 400 &&
+          requestBody.containsKey('generationConfig')) {
+        final bodyStr = response.body.toLowerCase();
+        if (bodyStr.contains('thinking') || bodyStr.contains('thinkinglevel')) {
+          debugPrint(
+              '⚠️ Gemini Vision: thinkingConfig rejected by endpoint, retrying without thinkingConfig');
+          final genConfig = Map<String, dynamic>.from(
+              requestBody['generationConfig'] as Map<String, dynamic>)
+            ..remove('thinkingConfig');
+          final bodyWithoutThinking = Map<String, dynamic>.from(requestBody)
+            ..['generationConfig'] = genConfig;
+          response = await _postWithFallback(
+            primaryModel: AppConstants.geminiVisionModel,
+            fallbackModel: AppConstants.geminiFlashLiteModel,
+            apiKey: apiKey,
+            body: bodyWithoutThinking,
+          );
+        }
+      }
 
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (Image Analysis): ${jsonEncode(data)}');
@@ -401,7 +443,10 @@ class GeminiAdapter extends AiProviderAdapter {
       final thoughtsTokens =
           data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
       final outputTokens = candidatesTokens + thoughtsTokens;
-      final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
+      final rawTotalTokens =
+          data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
+      final tokenCount =
+          rawTotalTokens > 0 ? rawTotalTokens : (inputTokens + outputTokens);
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 
       stopwatch.stop();
@@ -433,14 +478,23 @@ class GeminiAdapter extends AiProviderAdapter {
     final stopwatch = Stopwatch()..start();
 
     try {
-      // Gemini 2.5 Flash natively supports inline PDF via inlineData blocks.
+      // Gemini natively supports inline PDF via inlineData blocks.
       // PDFs are passed as base64-encoded application/pdf mime type.
       final List<Map<String, dynamic>> parts = [];
 
       final hasPdfs = request.pdfBytes != null && request.pdfBytes!.isNotEmpty;
+      int totalPdfBytes = 0;
       if (hasPdfs) {
         for (int i = 0; i < request.pdfBytes!.length; i++) {
-          final base64Data = base64Encode(request.pdfBytes![i]);
+          final fileBytes = request.pdfBytes![i];
+          totalPdfBytes += fileBytes.lengthInBytes;
+          if (fileBytes.lengthInBytes > AppConstants.maxPdfSizeBytes) {
+            throw const AiHardErrorException(
+              message: 'pdf_too_large',
+              provider: AiProviderId.gemini,
+            );
+          }
+          final base64Data = base64Encode(fileBytes);
           parts.add({
             'inlineData': {
               'mimeType': 'application/pdf',
@@ -449,8 +503,19 @@ class GeminiAdapter extends AiProviderAdapter {
           });
         }
       }
+
+      if (totalPdfBytes > AppConstants.maxPdfCombinedSizeBytes) {
+        throw const AiHardErrorException(
+          message: 'pdf_payload_too_large',
+          provider: AiProviderId.gemini,
+        );
+      }
+
       // Text prompt comes after the PDF attachments
       parts.add({'text': request.prompt});
+
+      final thinkingLevel = request.thinkingLevel?.apiValue ??
+          GeminiThinkingLevel.medium.apiValue;
 
       final requestBody = {
         'systemInstruction': {
@@ -468,7 +533,9 @@ class GeminiAdapter extends AiProviderAdapter {
         ],
         'generationConfig': {
           'maxOutputTokens': request.responseLength.geminiMaxTokens,
-          'temperature': 0.3,
+          'thinkingConfig': {
+            'thinkingLevel': thinkingLevel,
+          },
         },
       };
 
@@ -477,16 +544,38 @@ class GeminiAdapter extends AiProviderAdapter {
             'pdf_count': request.pdfBytes?.length ?? 0,
             'pdf_names': request.pdfNames,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
+            'thinkingLevel': thinkingLevel,
             'prompt': request.prompt,
           })}');
 
-      // Use vision model for PDF (it has the multimodal context window)
-      final response = await _postWithFallback(
+      // Use vision model for PDF (gemini-3.8-flash has the 1M multimodal context window)
+      http.Response response = await _postWithFallback(
         primaryModel: AppConstants.geminiVisionModel,
         fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
       );
+
+      // Defensive fallback: If thinkingConfig is rejected by a tier or older model endpoint, retry without it
+      if (response.statusCode == 400 &&
+          requestBody.containsKey('generationConfig')) {
+        final bodyStr = response.body.toLowerCase();
+        if (bodyStr.contains('thinking') || bodyStr.contains('thinkinglevel')) {
+          debugPrint(
+              '⚠️ Gemini PDF: thinkingConfig rejected by endpoint, retrying without thinkingConfig');
+          final genConfig = Map<String, dynamic>.from(
+              requestBody['generationConfig'] as Map<String, dynamic>)
+            ..remove('thinkingConfig');
+          final bodyWithoutThinking = Map<String, dynamic>.from(requestBody)
+            ..['generationConfig'] = genConfig;
+          response = await _postWithFallback(
+            primaryModel: AppConstants.geminiVisionModel,
+            fallbackModel: AppConstants.geminiFlashLiteModel,
+            apiKey: apiKey,
+            body: bodyWithoutThinking,
+          );
+        }
+      }
 
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (PDF Parsing): ${jsonEncode(data)}');
@@ -506,6 +595,145 @@ class GeminiAdapter extends AiProviderAdapter {
       return AiResponse.analysis(
         modelUsed: AiProviderId.gemini,
         capability: AiCapability.pdfParsing,
+        requestId: request.requestId,
+        responseTimeMs: stopwatch.elapsedMilliseconds,
+        text: text,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
+        tokenCount: tokenCount,
+        finishReason: finishReason,
+      );
+    } on AiException {
+      rethrow;
+    } catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  @override
+  Future<AiResponse> generatePdf({
+    required AiRequest request,
+    required String apiKey,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+
+    try {
+      final List<Map<String, dynamic>> contents = [
+        ...request.conversationHistory.map((msg) => {
+              'role': msg['role'] == 'user' ? 'user' : 'model',
+              'parts': [
+                {'text': msg['content'] ?? ''},
+              ],
+            }),
+        {
+          'role': 'user',
+          'parts': [
+            {'text': request.prompt},
+          ],
+        },
+      ];
+
+      final thinkingLevel = request.thinkingLevel?.apiValue ??
+          GeminiThinkingLevel.medium.apiValue;
+
+      final requestBody = {
+        'systemInstruction': {
+          'parts': [
+            {
+              'text': AppConstants.aiPdfGenerationSystemInstruction,
+            }
+          ]
+        },
+        'contents': contents,
+        'tools': [
+          {'googleSearch': {}}
+        ],
+        'generationConfig': {
+          'maxOutputTokens': request.responseLength.geminiMaxTokens,
+          'thinkingConfig': {
+            'thinkingLevel': thinkingLevel,
+          },
+        },
+      };
+
+      debugPrint('📤 Gemini Request (PDF Generation): ${jsonEncode({
+            'model': AppConstants.geminiTextModel,
+            'maxOutputTokens': request.responseLength.geminiMaxTokens,
+            'thinkingLevel': thinkingLevel,
+            'prompt': request.prompt,
+          })}');
+
+      http.Response response = await _postWithFallback(
+        primaryModel: AppConstants.geminiTextModel,
+        fallbackModel: AppConstants.geminiFlashLiteModel,
+        apiKey: apiKey,
+        body: requestBody,
+      );
+
+      // Retry without tools if Google Search rejected
+      if (response.statusCode == 400 && requestBody.containsKey('tools')) {
+        final bodyStr = response.body.toLowerCase();
+        if (bodyStr.contains('tool') ||
+            bodyStr.contains('search') ||
+            bodyStr.contains('googlesearch')) {
+          final bodyWithoutTools = Map<String, dynamic>.from(requestBody)
+            ..remove('tools');
+          response = await _postWithFallback(
+            primaryModel: AppConstants.geminiTextModel,
+            fallbackModel: AppConstants.geminiFlashLiteModel,
+            apiKey: apiKey,
+            body: bodyWithoutTools,
+          );
+        }
+      }
+
+      // Defensive fallback: If thinkingConfig rejected
+      if (response.statusCode == 400 &&
+          requestBody.containsKey('generationConfig')) {
+        final bodyStr = response.body.toLowerCase();
+        if (bodyStr.contains('thinking') || bodyStr.contains('thinkinglevel')) {
+          final genConfig = Map<String, dynamic>.from(
+              requestBody['generationConfig'] as Map<String, dynamic>)
+            ..remove('thinkingConfig');
+          final bodyWithoutThinking = Map<String, dynamic>.from(requestBody)
+            ..['generationConfig'] = genConfig;
+          response = await _postWithFallback(
+            primaryModel: AppConstants.geminiTextModel,
+            fallbackModel: AppConstants.geminiFlashLiteModel,
+            apiKey: apiKey,
+            body: bodyWithoutThinking,
+          );
+        }
+      }
+
+      final data = await _parseResponse(response, request.requestId);
+      debugPrint('📥 Gemini Response (PDF Generation): ${jsonEncode(data)}');
+
+      final text = _extractTextFromResponse(data);
+      if (text.isEmpty) {
+        throw const AiTransientException(
+          message: 'error_unexpected_ai',
+          provider: AiProviderId.gemini,
+        );
+      }
+
+      final inputTokens =
+          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
+      final candidatesTokens =
+          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
+      final thoughtsTokens =
+          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
+      final outputTokens = candidatesTokens + thoughtsTokens;
+      final rawTotalTokens =
+          data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
+      final tokenCount =
+          rawTotalTokens > 0 ? rawTotalTokens : (inputTokens + outputTokens);
+      final finishReason = data['candidates']?[0]?['finishReason'] as String?;
+
+      stopwatch.stop();
+      return AiResponse.text(
+        modelUsed: AiProviderId.gemini,
+        capability: AiCapability.pdfGeneration,
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
@@ -594,7 +822,16 @@ class GeminiAdapter extends AiProviderAdapter {
 
     debugPrint('🔷 Gemini error body: ${response.body}');
 
-    // Gemini returns 400 for both invalid API keys and malformed requests.
+    // Gemini returns 413 or 400 when payload limits are exceeded.
+    if (response.statusCode == 413) {
+      throw const AiHardErrorException(
+        message: 'pdf_payload_too_large',
+        provider: AiProviderId.gemini,
+        statusCode: 413,
+      );
+    }
+
+    // Gemini returns 400 for both invalid API keys, malformed requests, and payload size errors.
     // Inspect the body to differentiate between them.
     if (response.statusCode == 400) {
       final bodyString = response.body;
@@ -605,6 +842,15 @@ class GeminiAdapter extends AiProviderAdapter {
           message.toLowerCase().contains('invalid')) {
         throw const AiHardErrorException(
           message: 'error_invalid_key',
+          provider: AiProviderId.gemini,
+          statusCode: 400,
+        );
+      }
+      if (message.toLowerCase().contains('payload size') ||
+          message.toLowerCase().contains('request entity too large') ||
+          message.toLowerCase().contains('exceeds the limit')) {
+        throw const AiHardErrorException(
+          message: 'pdf_payload_too_large',
           provider: AiProviderId.gemini,
           statusCode: 400,
         );

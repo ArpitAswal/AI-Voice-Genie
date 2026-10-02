@@ -278,8 +278,19 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF uploaded.',
       'reading_pdf': 'Reading PDF...',
       'ask_about_pdf': 'Ask anything about this PDF...',
+      'here_is_your_pdf': 'Here is the required PDF as you requested.',
       'file_already_attached': 'This file is already attached.',
       'pdf_too_large': 'PDF is too large. Maximum size is 10MB.',
+      'pdf_payload_too_large':
+          'Combined PDF attachments exceed the 15MB limit. Please attach fewer or smaller files.',
+      'pdf_file_too_large_detail':
+          '"{name}" ({size} MB) exceeds the 10MB limit.',
+      'pdf_payload_too_large_detail':
+          'Combined size of attachments ({size} MB) exceeds the 15MB limit.',
+      'image_payload_too_large':
+          'Combined image attachments exceed the 15MB limit. Please attach fewer or smaller files.',
+      'image_payload_too_large_detail':
+          'Combined size of images ({size} MB) exceeds the 15MB limit.',
       'pdf_read_failed': 'Could not read this PDF. Please try another file.',
       'pdf_attached': 'PDF attached',
       'remove_pdf': 'Remove PDF',
@@ -766,8 +777,19 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF अपलोड हो गई।',
       'reading_pdf': 'PDF पढ़ी जा रही है...',
       'ask_about_pdf': 'इस PDF के बारे में कुछ भी पूछें...',
+      'here_is_your_pdf': 'यह रहा आपका अनुरोधित PDF दस्तावेज़।',
       'file_already_attached': 'यह फ़ाइल पहले से ही जुड़ी हुई है।',
       'pdf_too_large': 'PDF बहुत बड़ी है। अधिकतम आकार 10MB है।',
+      'pdf_payload_too_large':
+          'संयुक्त PDF अटैचमेंट 15MB की सीमा से अधिक हैं। कृपया छोटी या कम फ़ाइलें संलग्न करें।',
+      'pdf_file_too_large_detail':
+          '"{name}" ({size} MB) 10MB की सीमा से अधिक है।',
+      'pdf_payload_too_large_detail':
+          'अटैचमेंट्स का कुल आकार ({size} MB) 15MB की सीमा से अधिक है।',
+      'image_payload_too_large':
+          'संयुक्त चित्र संलग्नक 15MB की सीमा से अधिक हैं। कृपया छोटी या कम फ़ाइलें संलग्न करें।',
+      'image_payload_too_large_detail':
+          'चित्रों का कुल आकार ({size} MB) 15MB की सीमा से अधिक है।',
       'pdf_read_failed': 'यह PDF नहीं पढ़ी जा सकी।',
       'pdf_attached': 'PDF जोड़ी गई',
       'remove_pdf': 'PDF हटाएं',
@@ -1114,6 +1136,7 @@ class AppLocalizations {
   String get askQuestion => translate('ask_question');
   String get generateImage => translate('generate_image');
   String get uploadPdf => translate('upload_pdf');
+  String get hereIsYourPdf => translate('here_is_your_pdf');
   String get intelligentModels => translate('intelligent_models');
   String get chatGPTModelMessage => translate('gpt_model_message');
   String get geminiModelMessage => translate('gemini_model_message');
@@ -1340,6 +1363,20 @@ class AppLocalizations {
       translate('max_image_attachments').replaceAll('{count}', '$count');
   String maxPdfAttachments(int count) =>
       translate('max_pdf_attachments').replaceAll('{count}', '$count');
+  String get pdfTooLarge => translate('pdf_too_large');
+  String get pdfPayloadTooLarge => translate('pdf_payload_too_large');
+  String pdfFileTooLargeDetail(
+          {required String name, required String sizeMB}) =>
+      translate('pdf_file_too_large_detail')
+          .replaceAll('{name}', name)
+          .replaceAll('{size}', sizeMB);
+  String pdfPayloadTooLargeDetail(String totalSizeMB) =>
+      translate('pdf_payload_too_large_detail')
+          .replaceAll('{size}', totalSizeMB);
+  String get imagePayloadTooLarge => translate('image_payload_too_large');
+  String imagePayloadTooLargeDetail(String totalSizeMB) =>
+      translate('image_payload_too_large_detail')
+          .replaceAll('{size}', totalSizeMB);
 
   // ── Intro & Voice ─────────────────────────────────────────────────────────
   String get tapToStartVoiceChat => translate('tap_to_start_voice_chat');
