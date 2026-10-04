@@ -428,18 +428,6 @@ enum AiImageSize {
   }
 }
 
-/// How the response content should be rendered in the UI.
-enum AiResponseContentType {
-  /// Plain or markdown text
-  text,
-
-  /// Analysing image/pdf content and providing a summary
-  analysis,
-
-  /// Base64-encoded image data
-  imageBase64,
-}
-
 /// Vision detail level for OpenAI image analysis requests.
 ///
 /// Controls the resolution the model uses when analysing each image:

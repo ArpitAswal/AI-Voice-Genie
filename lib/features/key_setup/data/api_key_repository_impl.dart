@@ -180,12 +180,27 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
   // ── Load Keys ──────────────────────────────────────────────────────────────
 
   @override
-  Future<Map<AiProviderId, ApiKeyModel>> loadKeys(String uid) async {
+  Future<Map<AiProviderId, ApiKeyModel>> loadKeys({
+    required String uid,
+    AiProviderId? providerId,
+  }) async {
+    // Step 1: Memory cache short-circuit.
+    // If the caller requested an individual provider whose key is already cached,
+    // return immediately without initiating a Firestore roundtrip.
+    if (providerId != null && _memoryCache.containsKey(providerId)) {
+      debugPrint('🚀 KeyRepository: memory cache hit [${providerId.id}]');
+      return {providerId: _memoryCache[providerId]!};
+    }
+
+    // Step 2: Determine target documents to fetch.
+    // If providerId is specified, fetch only that document (1 read).
+    // Otherwise, fetch all known providers in parallel.
+    final targets = providerId != null ? [providerId] : AiProviderId.values;
     final result = <AiProviderId, ApiKeyModel>{};
 
     try {
-      // Fetch all three provider docs in parallel — max 3 Firestore reads
-      final futures = AiProviderId.values.map(
+      // Step 3: Concurrently fetch targeted Firestore documents via Future.wait.
+      final futures = targets.map(
         (provider) => _firestore
             .doc(FirebaseCollections.apiKeyDoc(uid, provider.id))
             .get(),
@@ -193,6 +208,7 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
 
       final snapshots = await Future.wait(futures);
 
+      // Step 4: Parse valid Firestore documents into ApiKeyModel domain instances.
       for (final snapshot in snapshots) {
         if (snapshot.exists && snapshot.data() != null) {
           final model = ApiKeyModel.fromFirestore(snapshot.data()!);
@@ -200,20 +216,34 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
         }
       }
 
-      // Sync memory cache
-      _memoryCache.clear();
+      // Step 5: Merge fetched results into local in-memory cache for fast subsequent access.
       _memoryCache.addAll(result);
 
       debugPrint(
-          '📦 Loaded ${result.length} keys for user $uid (and cached locally)');
+        '📦 KeyRepository: loaded ${result.length} keys for user $uid '
+        '${providerId != null ? '[single: ${providerId.id}]' : '[all]'}',
+      );
       return result;
     } on FirebaseException catch (e) {
-      debugPrint('⚠️ loadKeys Firestore error: ${e.code}');
-      // Return empty map — UI will show all providers as notAdded
-      return result;
+      // Step 6a: Translate Firebase connection errors into typed ApiKeyException.
+      debugPrint('⚠️ loadKeys Firestore error: ${e.code} — ${e.message}');
+      final code =
+          (e.code == 'unavailable' || e.code == 'network-request-failed')
+              ? ApiKeyErrorCodes.noInternet
+              : ApiKeyErrorCodes.unknown;
+      throw ApiKeyException(
+        code,
+        technicalMessage: 'Firestore loadKeys failed: ${e.code} — ${e.message}',
+      );
+    } on SocketException catch (e) {
+      // Step 6b: Translate low-level socket drops into noInternet error code.
+      debugPrint('⚠️ loadKeys network error: $e');
+      throw const ApiKeyException(ApiKeyErrorCodes.noInternet);
     } catch (e) {
+      // Step 6c: Rethrow known exceptions or wrap unexpected errors safely.
+      if (e is ApiKeyException) rethrow;
       debugPrint('⚠️ loadKeys unexpected error: $e');
-      return result;
+      throw ApiKeyException(ApiKeyErrorCodes.unknown, technicalMessage: '$e');
     }
   }
 
@@ -242,35 +272,6 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
 
       return result;
     });
-  }
-
-  @override
-  Future<ApiKeyModel?> loadKey({
-    required String uid,
-    required AiProviderId providerId,
-  }) async {
-    // Check memory cache first
-    if (_memoryCache.containsKey(providerId)) {
-      debugPrint('🚀 KeyRepository: memory cache hit [${providerId.id}]');
-      return _memoryCache[providerId];
-    }
-
-    try {
-      final doc = await _firestore
-          .doc(FirebaseCollections.apiKeyDoc(uid, providerId.id))
-          .get();
-
-      if (!doc.exists || doc.data() == null) return null;
-      final model = ApiKeyModel.fromFirestore(doc.data()!);
-
-      // Update memory cache
-      _memoryCache[providerId] = model;
-
-      return model;
-    } catch (e) {
-      debugPrint('⚠️ loadKey [${providerId.id}] error: $e');
-      return null;
-    }
   }
 
   // ── Delete Key ─────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -5,6 +6,7 @@ import '../../core/enums/app_enums.dart';
 import '../../core/error/ai_exception.dart';
 import '../../core/error/effect_bus.dart';
 import '../../core/services/analytics_service.dart';
+import '../../features/key_setup/domain/api_key_model.dart';
 import '../../features/key_setup/domain/api_key_repository.dart';
 import '../../features/key_setup/data/api_key_repository_impl.dart';
 import '../../features/usage/data/usage_cost_estimator.dart';
@@ -39,7 +41,6 @@ import '../registry/provider_registry.dart';
 /// final response = await AiOrchestrator.instance.execute(
 ///   request: AiRequest(
 ///     capability: AiCapability.textGeneration,
-///     uid: authProvider.currentUser!.uid,
 ///     prompt: userMessage,
 ///     conversationHistory: history,
 ///   ),
@@ -50,7 +51,26 @@ class AiOrchestrator {
   // Singleton — one orchestrator for the entire app
   static final AiOrchestrator instance = AiOrchestrator._();
 
-  AiOrchestrator._();
+  /// Cached UID of the active authenticated user.
+  /// Initialized once on startup and updated via authStateChanges so it is not
+  /// rechecked on every execute call.
+  static String currentUid = '';
+
+  AiOrchestrator._() {
+    _initAuth();
+  }
+
+  void _initAuth() {
+    try {
+      currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      FirebaseAuth.instance.authStateChanges().listen((user) {
+        currentUid = user?.uid ?? '';
+      });
+    } catch (e) {
+      // Gracefully handled for headless unit testing environments
+      debugPrint('ℹ️ AiOrchestrator: Auth listener skipped ($e)');
+    }
+  }
 
   // ── Dependencies ───────────────────────────────────────────────────────────
 
@@ -80,11 +100,24 @@ class AiOrchestrator {
     required AiRequest request,
     required AiProviderId selectedProvider,
   }) async {
-    debugPrint(
-      '🎯 Orchestrator: ${selectedProvider.displayName}, ${request.capability.id}, '
-      '[requestId: ${request.requestId}]',
-    );
+    // Step 1: Capability Guard.
+    // Fail fast if the selected provider cannot perform this capability
+    // (e.g. Claude does not support image generation). Prevents unnecessary API calls.
+    if (!_registry.supports(selectedProvider, request.capability)) {
+      debugPrint(
+        '⚠️ Orchestrator: ${selectedProvider.id} does not support '
+        '${request.capability.id}',
+      );
 
+      throw AiCapabilityGapException(
+        message: 'error_selected_model_capability_gap',
+        provider: selectedProvider,
+        missingCapability: request.capability,
+      );
+    }
+
+    // Step 2: Asynchronously track initiation for valid executable requests.
+    // Wrapped in safeEffect so analytics failures never disrupt the AI flow.
     _effectBus.safeEffect(() async {
       await _analytics.logAiRequestInitiated(
         modelAttempted: selectedProvider,
@@ -93,57 +126,70 @@ class AiOrchestrator {
       );
     });
 
-    // Step 1: Ensure: Fail fast if the selected provider cannot do this task.
-    if (!_registry.supports(selectedProvider, request.capability)) {
-      final error = AiCapabilityGapException(
-        message: 'error_selected_model_capability_gap',
-        provider: selectedProvider,
-        missingCapability: request.capability,
-      );
-
-      await _analytics.logAiCapabilityGap(
-        modelSelected: selectedProvider,
-        capabilityAttempted: request.capability,
-      );
-
-      debugPrint(
-        '⚠️ Orchestrator: ${selectedProvider.id} does not support '
-        '${request.capability.id}',
-      );
-
-      throw error;
-    }
-
-    // Step 3: Execute only the selected provider.
+    // Step 3: Execute single-provider workflow with automatic transient retry.
     try {
-      return await _executeWithRetry(
+      final response = await _executeWithRetry(
         request: request,
         providerId: selectedProvider,
       );
+
+      // Track successful completion with response latency
+      _effectBus.safeEffect(() async {
+        await _analytics.logAiRequestSuccess(
+          modelUsed: selectedProvider,
+          capability: request.capability,
+          responseTimeMs: response.responseTimeMs,
+          requestId: request.requestId,
+        );
+      });
+
+      return response;
     } on AiException catch (e) {
-      await _analytics.logAiRequestFailed(
+      // Step 3a: Track AI failure event in analytics
+      _effectBus.safeEffect(() async {
+        await _analytics.logAiRequestFailed(
           modelAttempted: selectedProvider,
           capability: request.capability,
           failureType: e.failureType,
           failureReason: e.message,
-          requestId: request.requestId);
+          requestId: request.requestId,
+        );
+      });
 
+      // Step 3b: Convert transient retry-exhausted errors and rate limits to AiExhaustedException
+      // bound explicitly to the selected provider, then emit to EffectBus for global UI notification.
       if (e is AiTransientException) {
         final exhaustedError = AiExhaustedException(
-          message: 'server_busy',
-          triedProviders: [selectedProvider],
+          message: e.message,
+          provider: selectedProvider,
         );
         _effectBus.emit(exhaustedError, StackTrace.current);
         throw exhaustedError;
       } else if (e is AiRateLimitException) {
         final exhaustedError = AiExhaustedException(
-          message: 'error_quota_exceeded',
-          triedProviders: [selectedProvider],
+          message: e.message,
+          provider: selectedProvider,
         );
         _effectBus.emit(exhaustedError, StackTrace.current);
         throw exhaustedError;
       }
       rethrow;
+    } catch (e) {
+      // Step 3c: Catch any unexpected exceptions, convert to AiHardErrorException, and log
+      final hardError = AiHardErrorException(
+        message: 'something_went_wrong',
+        provider: selectedProvider,
+      );
+      _effectBus.safeEffect(() async {
+        await _analytics.logAiRequestFailed(
+          modelAttempted: selectedProvider,
+          capability: request.capability,
+          failureType: hardError.failureType,
+          failureReason: e.toString(),
+          requestId: request.requestId,
+        );
+      });
+      throw hardError;
     }
   }
 
@@ -151,8 +197,14 @@ class AiOrchestrator {
 
   /// Execute a request on a specific provider with transient retry logic.
   ///
-  /// Retries up to [AppConstants.maxRetryAttempts] times for transient errors.
-  /// Adds exponential backoff between retries.
+  /// Flow:
+  /// 1. Fetches the provider's API key from repository (memory cache or Firestore).
+  /// 2. If no key is found, throws [AiHardErrorException].
+  /// 3. Executes the provider adapter within a retry loop:
+  ///    - [AiHardErrorException]: Never retried (invalid key, bad prompt).
+  ///    - [AiRateLimitException]: Never retried on the same provider (quota exhausted).
+  ///    - [AiTransientException]: Retried up to [AppConstants.maxRetryAttempts] with exponential backoff.
+  /// 4. Dispatches asynchronous usage recording via [_saveUsageEvent] without blocking return.
   Future<AiResponse> _executeWithRetry({
     required AiRequest request,
     required AiProviderId providerId,
@@ -160,14 +212,35 @@ class AiOrchestrator {
     final adapter = _adapters[providerId]!;
     int attempt = 0;
 
-    // Retrieve API key from Firestore (uses local cache after first read)
-    final keyModel = await _keyRepository.loadKey(
-      uid: request.uid,
-      providerId: providerId,
-    );
+    // Retrieve API key from repository (short-circuits to local cache if present)
+    Map<AiProviderId, ApiKeyModel> keys;
+    try {
+      keys = await _keyRepository.loadKeys(
+        uid: currentUid,
+        providerId: providerId,
+      );
+    } on ApiKeyException catch (e) {
+      if (e.code == ApiKeyErrorCodes.noInternet) {
+        throw AiTransientException(
+          message: 'no_internet_connection',
+          provider: providerId,
+        );
+      }
+      throw AiHardErrorException(
+        message: e.code,
+        provider: providerId,
+      );
+    } catch (e) {
+      throw AiHardErrorException(
+        message: 'something_went_wrong',
+        provider: providerId,
+      );
+    }
+
+    final keyModel = keys[providerId];
 
     if (keyModel == null || keyModel.apiKey.isEmpty) {
-      // Key was deleted mid-session — treat as unavailable
+      // Key was deleted or not registered — treat as unavailable
       debugPrint(
         '⚠️ Orchestrator: no key found for ${providerId.id}',
       );
@@ -181,67 +254,44 @@ class AiOrchestrator {
       attempt++;
 
       try {
-        debugPrint(
-          '▶️ Orchestrator: attempt $attempt on ${providerId.id}',
-        );
-
+        // Execute request against provider adapter
         final response = await adapter.execute(
           request: request,
           apiKey: keyModel.apiKey,
         );
 
-        _effectBus.safeEffect(() async {
-          await _analytics.logAiRequestSuccess(
-            modelUsed: providerId,
-            capability: request.capability,
-            responseTimeMs: response.responseTimeMs,
-            tokenCount: response.tokenCount,
-            requestId: request.requestId,
-          );
-        });
-
-        // Fire-and-forget usage tracking — must never block the AI response
+        // Fire-and-forget usage tracking — must never block returning the AI response to UI
         _effectBus.safeEffect(() async {
           _saveUsageEvent(
-              uid: request.uid, request: request, response: response);
+            uid: currentUid,
+            request: request,
+            response: response,
+          );
         });
-
-        debugPrint(
-          '✅ Orchestrator: success on ${providerId.id}, '
-          'completion time (${response.responseTimeMs}ms)',
-        );
-
         return response;
       } on AiHardErrorException {
-        // Hard errors are never retried
+        // Hard errors are permanent (e.g. invalid key, bad parameters) — never retried
         rethrow;
       } on AiRateLimitException {
-        // Rate limits are never retried on the same provider
+        // Rate limits are exhausted quotas — never retried on the same provider
         rethrow;
       } on AiTransientException {
+        // Transient errors (network blips, 503 engine overload) are retried with backoff
         if (attempt >= AppConstants.maxRetryAttempts) {
-          // Retries exhausted — surface failure for the selected provider.
-          debugPrint("🔄 Maximum orchestra retry attempts reached");
+          // Maximum retries reached — rethrow to surface failure
           rethrow;
         }
 
-        // Exponential backoff: 500ms, then 1000ms
+        // Exponential backoff: 500ms on 1st retry, 1000ms on 2nd retry
         final delayMs = 500 * attempt;
-        debugPrint(
-          '🔄 Orchestrator: retry $attempt in ${delayMs}ms '
-          '[${providerId.id}]',
-        );
         await Future.delayed(Duration(milliseconds: delayMs));
+      } catch (e) {
+        throw AiHardErrorException(
+          message: 'something_went_wrong',
+          provider: providerId,
+        );
       }
     }
-  }
-
-  // ── Injectable Adapters (for testing) ─────────────────────────────────────
-
-  /// Replace an adapter — used in tests to inject mock adapters.
-  @visibleForTesting
-  void injectAdapter(AiProviderId providerId, AiProviderAdapter adapter) {
-    _adapters[providerId] = adapter;
   }
 
   // ── Usage Tracking ─────────────────────────────────────────────────────────
@@ -255,14 +305,10 @@ class AiOrchestrator {
     required AiRequest request,
     required AiResponse response,
   }) async {
-    debugPrint(
-        '📊 Orchestrator: _saveUsageEvent called for ${response.modelUsed.id}');
     try {
       final summary =
           await _usageRepo.getSummary(uid: uid, provider: response.modelUsed);
       if (summary == null || !summary.enabled) {
-        debugPrint(
-            '📊 Orchestrator: Skipping usage event — usage tracking not enabled for ${response.modelUsed.id}');
         return;
       }
       final now = DateTime.now();

@@ -86,7 +86,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     });
     _chatProvider!.addListener(_onChatProviderChange);
 
-    if (widget.initialTitle != null) {
+    // Conditionally load conversation messages:
+    // If navigating from history (initialTitle != null) or if the active conversation
+    // is not already loaded into memory for this ID, fetch from local Hive/repository.
+    // If coming straight from ChatScreen.startNewConversation, activeConversation is already
+    // initialized in memory with optimistic state, so reloading is skipped to prevent UI flicker.
+    if (widget.initialTitle != null ||
+        _chatProvider!.activeConversation?.id != widget.conversationId) {
       _loadConversation();
     }
   }
@@ -269,10 +275,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     List<ChatAttachment> attachments,
     AiProviderId selectedProvider,
   ) async {
+    // Explicitly pass conversationId so subsequent messages in this screen
+    // are strictly appended to this conversation thread even during navigation transitions.
     context.read<ChatProvider>().sendMessage(
           prompt: prompt,
           selectedProvider: selectedProvider,
           attachments: attachments,
+          conversationId: widget.conversationId,
         );
   }
 

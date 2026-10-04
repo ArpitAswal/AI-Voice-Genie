@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -72,10 +73,8 @@ class ClaudeAdapter extends AiProviderAdapter {
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Claude Response (Text Generation): ${jsonEncode(data)}');
 
-      final text = data['content']?[0]?['text'] as String? ?? '';
-      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
-      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
-      final tokenCount = inputTokens + outputTokens;
+      final text = _extractTextFromResponse(data);
+      final tokens = _extractTokenUsage(data);
       final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
@@ -85,9 +84,9 @@ class ClaudeAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -181,10 +180,8 @@ class ClaudeAdapter extends AiProviderAdapter {
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Claude Response (Image Analysis): ${jsonEncode(data)}');
 
-      final text = data['content']?[0]?['text'] as String? ?? '';
-      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
-      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
-      final tokenCount = inputTokens + outputTokens;
+      final text = _extractTextFromResponse(data);
+      final tokens = _extractTokenUsage(data);
       final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
@@ -194,9 +191,9 @@ class ClaudeAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -259,10 +256,8 @@ class ClaudeAdapter extends AiProviderAdapter {
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Claude Response (PDF Parsing): ${jsonEncode(data)}');
 
-      final text = data['content']?[0]?['text'] as String? ?? '';
-      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
-      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
-      final tokenCount = inputTokens + outputTokens;
+      final text = _extractTextFromResponse(data);
+      final tokens = _extractTokenUsage(data);
       final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
@@ -272,9 +267,9 @@ class ClaudeAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -324,7 +319,7 @@ class ClaudeAdapter extends AiProviderAdapter {
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Claude Response (PDF Generation): ${jsonEncode(data)}');
 
-      final text = data['content']?[0]?['text'] as String? ?? '';
+      final text = _extractTextFromResponse(data);
       if (text.isEmpty) {
         throw const AiTransientException(
           message: 'error_unexpected_ai',
@@ -332,9 +327,7 @@ class ClaudeAdapter extends AiProviderAdapter {
         );
       }
 
-      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
-      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
-      final tokenCount = inputTokens + outputTokens;
+      final tokens = _extractTokenUsage(data);
       final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
@@ -344,9 +337,9 @@ class ClaudeAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -399,10 +392,49 @@ class ClaudeAdapter extends AiProviderAdapter {
     );
   }
 
+  /// Extracts text content blocks from Claude's Messages API response.
+  ///
+  /// Flow:
+  /// Claude returns an array of content blocks: [{'type': 'text', 'text': '...'}].
+  /// Filters for text blocks and concatenates their strings into a unified output.
+  String _extractTextFromResponse(Map<String, dynamic> data) {
+    final content = data['content'] as List?;
+    if (content == null || content.isEmpty) return '';
+    return content
+        .whereType<Map>()
+        .where((c) => c['type'] == 'text')
+        .map((c) => c['text'] as String? ?? '')
+        .join('');
+  }
+
+  /// Extracts input, output, and total token usage from Claude's usage metadata.
+  _ClaudeTokenUsage _extractTokenUsage(Map<String, dynamic> data) {
+    final usage = data['usage'] as Map<String, dynamic>?;
+    final inputTokens = usage?['input_tokens'] as int? ?? 0;
+    final outputTokens = usage?['output_tokens'] as int? ?? 0;
+    return _ClaudeTokenUsage(
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
+      totalTokens: inputTokens + outputTokens,
+    );
+  }
+
+  /// Maps non-HTTP runtime errors (network connection drops, HTTP timeouts) to typed [AiException].
+  ///
+  /// Flow:
+  /// - [SocketException]: Device disconnected or network unreachable -> 'no_internet_connection'.
+  /// - [TimeoutException]: Exceeded 90s timeout -> transient retryable.
+  /// - [http.ClientException] / generic -> transient 'error_unexpected_ai'.
   AiException _mapError(Object error) {
     if (error is SocketException) {
       return const AiTransientException(
         message: 'no_internet_connection',
+        provider: AiProviderId.claude,
+      );
+    }
+    if (error is TimeoutException) {
+      return const AiTransientException(
+        message: 'error_unexpected_ai',
         provider: AiProviderId.claude,
       );
     }
@@ -417,4 +449,17 @@ class ClaudeAdapter extends AiProviderAdapter {
       provider: AiProviderId.claude,
     );
   }
+}
+
+/// Internal immutable value object holding normalized token usage counters for Claude.
+class _ClaudeTokenUsage {
+  final int inputTokens;
+  final int outputTokens;
+  final int totalTokens;
+
+  const _ClaudeTokenUsage({
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.totalTokens,
+  });
 }

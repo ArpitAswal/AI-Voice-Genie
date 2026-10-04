@@ -54,10 +54,14 @@ class ApiKeyProvider extends ChangeNotifier {
   /// Per-provider error messages — shown as inline card errors
   final Map<AiProviderId, String?> _errors = {};
 
+  /// Global error when loading keys from Firestore (e.g. no internet)
+  String? _loadError;
+
   /// Whether the "complete setup" operation is in progress
   bool _isCompletingSetup = false;
 
   bool get isCompletingSetup => _isCompletingSetup;
+  String? get loadError => _loadError;
 
   // ── Getters ────────────────────────────────────────────────────────────────
 
@@ -107,10 +111,16 @@ class ApiKeyProvider extends ChangeNotifier {
 
   /// Load any previously saved keys from Firestore on screen mount.
   ///
-  /// Populates status map so returning users see their valid keys immediately.
+  /// Flow:
+  /// 1. Resets any previous load errors.
+  /// 2. Fetches stored keys from Firestore repository (using memory cache if fresh).
+  /// 3. Updates local statuses map for UI cards (valid vs invalid).
+  /// 4. Catches typed [ApiKeyException] (e.g. no internet) or generic errors.
+  /// 5. Initiates real-time stream subscription [_startWatchingKeys] to track multi-device changes.
   Future<bool> loadExistingKeys(String uid) async {
     try {
-      final keys = await _repository.loadKeys(uid);
+      _loadError = null;
+      final keys = await _repository.loadKeys(uid: uid);
 
       for (final entry in keys.entries) {
         _storedKeys[entry.key] = entry.value;
@@ -119,13 +129,17 @@ class ApiKeyProvider extends ChangeNotifier {
       }
 
       return true;
+    } on ApiKeyException catch (e) {
+      debugPrint('⚠️ ApiKeyProvider.loadExistingKeys ApiKeyException: $e');
+      _loadError = e.code;
+      return false;
     } catch (e) {
       debugPrint('⚠️ ApiKeyProvider.loadExistingKeys error: $e');
-      // Non-fatal — all cards will show notAdded state
+      _loadError = 'something_went_wrong';
       return false;
     } finally {
       notifyListeners();
-      // Start real-time sync after initial load
+      // Start real-time sync after initial load completes
       _startWatchingKeys(uid);
     }
   }

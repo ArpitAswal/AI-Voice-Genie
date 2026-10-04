@@ -152,6 +152,11 @@ class AppConstants {
   static const int geminiContextTokenLimit = 1000000; // Gemini 3.5 Flash-Lite
   static const int claudeContextTokenLimit = 200000; // Claude Haiku 4.5
 
+  /// Maximum recent conversation turns (user + assistant message pairs) sent as LLM context.
+  /// A value of 3 preserves up to 6 alternating messages (3 user prompts + 3 assistant responses),
+  /// keeping prompt payload sizes lean, controlling token expenditure, and preventing context dilution.
+  static const int maxHistoryConversationTurns = 3;
+
   // Safety margin — only use 70% of context limit to avoid cutoffs
   static const double contextSafetyMargin = 0.70;
 

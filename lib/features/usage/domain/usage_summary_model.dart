@@ -121,9 +121,11 @@ class UsageSummaryModel {
     });
 
     return UsageSummaryModel(
+      // Resolve provider from Firestore data; if missing or invalid, provider resolves safely
       provider: AiProviderId.fromId(
-          data[FirebaseCollections.usageFieldProvider] as String? ?? 'openai'),
-      enabled: data[FirebaseCollections.budgetFieldEnabled] as bool? ?? true,
+          data[FirebaseCollections.usageFieldProvider] as String? ?? ''),
+      // Defaults to false if unconfigured — prevents unsolicited tracking until explicitly enabled
+      enabled: data[FirebaseCollections.budgetFieldEnabled] as bool? ?? false,
       totalBudgetUsd:
           (data[FirebaseCollections.budgetFieldMonthlyBudgetUsd] as num?)
               ?.toDouble(),

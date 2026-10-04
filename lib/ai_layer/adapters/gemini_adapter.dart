@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -88,6 +89,7 @@ class GeminiAdapter extends AiProviderAdapter {
 
       debugPrint('📤 Gemini Request (Text Generation): ${jsonEncode({
             'model': AppConstants.geminiTextModel,
+            'capability': AiCapability.textGeneration,
             'message_count': contents.length,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
             'thinkingLevel': thinkingLevel,
@@ -95,52 +97,12 @@ class GeminiAdapter extends AiProviderAdapter {
             'grounding': true,
           })}');
 
-      http.Response response = await _postWithFallback(
+      final response = await _postWithFallback(
         primaryModel: AppConstants.geminiTextModel,
         fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
       );
-
-      // If tools (Google Search) is unsupported on this specific key tier/region, retry without tools
-      if (response.statusCode == 400 && requestBody.containsKey('tools')) {
-        final bodyStr = response.body.toLowerCase();
-        if (bodyStr.contains('tool') ||
-            bodyStr.contains('search') ||
-            bodyStr.contains('googlesearch')) {
-          debugPrint(
-              '⚠️ Gemini: Google Search tool unsupported on this key tier, retrying without tools');
-          final bodyWithoutTools = Map<String, dynamic>.from(requestBody)
-            ..remove('tools');
-          response = await _postWithFallback(
-            primaryModel: AppConstants.geminiTextModel,
-            fallbackModel: AppConstants.geminiFlashLiteModel,
-            apiKey: apiKey,
-            body: bodyWithoutTools,
-          );
-        }
-      }
-
-      // Defensive fallback: If thinkingConfig is rejected by a tier or older model endpoint, retry without it
-      if (response.statusCode == 400 &&
-          requestBody.containsKey('generationConfig')) {
-        final bodyStr = response.body.toLowerCase();
-        if (bodyStr.contains('thinking') || bodyStr.contains('thinkinglevel')) {
-          debugPrint(
-              '⚠️ Gemini: thinkingConfig rejected by endpoint, retrying without thinkingConfig');
-          final genConfig = Map<String, dynamic>.from(
-              requestBody['generationConfig'] as Map<String, dynamic>)
-            ..remove('thinkingConfig');
-          final bodyWithoutThinking = Map<String, dynamic>.from(requestBody)
-            ..['generationConfig'] = genConfig;
-          response = await _postWithFallback(
-            primaryModel: AppConstants.geminiTextModel,
-            fallbackModel: AppConstants.geminiFlashLiteModel,
-            apiKey: apiKey,
-            body: bodyWithoutThinking,
-          );
-        }
-      }
 
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (Text Generation): ${jsonEncode(data)}');
@@ -161,21 +123,9 @@ class GeminiAdapter extends AiProviderAdapter {
         );
       }
 
-      final inputTokens =
-          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
-      final candidatesTokens =
-          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
-      final thoughtsTokens =
-          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
-      // Google Cloud Gemini 3.8 specification: thoughtsTokenCount is included in billed output tokens
-      final outputTokens = candidatesTokens + thoughtsTokens;
-      final rawTotalTokens =
-          data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
-      final tokenCount =
-          rawTotalTokens > 0 ? rawTotalTokens : (inputTokens + outputTokens);
-
+      final tokens = _extractTokenUsage(data);
       debugPrint(
-          '📊 Gemini Tokens: input=$inputTokens, output=$outputTokens (candidates=$candidatesTokens, thoughts=$thoughtsTokens), total=$tokenCount');
+          '📊 Gemini Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
 
       stopwatch.stop();
       return AiResponse.text(
@@ -184,9 +134,9 @@ class GeminiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -296,28 +246,17 @@ class GeminiAdapter extends AiProviderAdapter {
       debugPrint('📥 Gemini: Image received, mimeType=$mimeType, '
           'base64Length=${base64Image.length}');
 
-      final inputTokens =
-          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
-      final candidatesTokens =
-          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
-      final thoughtsTokens =
-          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
-      final outputTokens = candidatesTokens + thoughtsTokens;
-      final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
+      final tokens = _extractTokenUsage(data);
 
       stopwatch.stop();
-      // Wrap the single base64 image in an AiImageData list for API consistency with OpenAI
-      return AiResponse.imageBase64(
+      return AiResponse.image(
         modelUsed: AiProviderId.gemini,
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         imageBase64: base64Image,
-        generatedImages: [
-          AiImageData(b64Json: base64Image, mimeType: mimeType),
-        ],
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
       );
     } on AiException {
       rethrow;
@@ -404,49 +343,18 @@ class GeminiAdapter extends AiProviderAdapter {
             'prompt': request.prompt,
           })}');
 
-      http.Response response = await _postWithFallback(
+      final response = await _postWithFallback(
         primaryModel: AppConstants.geminiVisionModel,
         fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
       );
 
-      // Defensive fallback: If thinkingConfig is rejected by a tier or older model endpoint, retry without it
-      if (response.statusCode == 400 &&
-          requestBody.containsKey('generationConfig')) {
-        final bodyStr = response.body.toLowerCase();
-        if (bodyStr.contains('thinking') || bodyStr.contains('thinkinglevel')) {
-          debugPrint(
-              '⚠️ Gemini Vision: thinkingConfig rejected by endpoint, retrying without thinkingConfig');
-          final genConfig = Map<String, dynamic>.from(
-              requestBody['generationConfig'] as Map<String, dynamic>)
-            ..remove('thinkingConfig');
-          final bodyWithoutThinking = Map<String, dynamic>.from(requestBody)
-            ..['generationConfig'] = genConfig;
-          response = await _postWithFallback(
-            primaryModel: AppConstants.geminiVisionModel,
-            fallbackModel: AppConstants.geminiFlashLiteModel,
-            apiKey: apiKey,
-            body: bodyWithoutThinking,
-          );
-        }
-      }
-
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (Image Analysis): ${jsonEncode(data)}');
 
       final text = _extractTextFromResponse(data);
-      final inputTokens =
-          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
-      final candidatesTokens =
-          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
-      final thoughtsTokens =
-          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
-      final outputTokens = candidatesTokens + thoughtsTokens;
-      final rawTotalTokens =
-          data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
-      final tokenCount =
-          rawTotalTokens > 0 ? rawTotalTokens : (inputTokens + outputTokens);
+      final tokens = _extractTokenUsage(data);
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 
       stopwatch.stop();
@@ -456,9 +364,9 @@ class GeminiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -549,46 +457,18 @@ class GeminiAdapter extends AiProviderAdapter {
           })}');
 
       // Use vision model for PDF (gemini-3.8-flash has the 1M multimodal context window)
-      http.Response response = await _postWithFallback(
+      final response = await _postWithFallback(
         primaryModel: AppConstants.geminiVisionModel,
         fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
       );
 
-      // Defensive fallback: If thinkingConfig is rejected by a tier or older model endpoint, retry without it
-      if (response.statusCode == 400 &&
-          requestBody.containsKey('generationConfig')) {
-        final bodyStr = response.body.toLowerCase();
-        if (bodyStr.contains('thinking') || bodyStr.contains('thinkinglevel')) {
-          debugPrint(
-              '⚠️ Gemini PDF: thinkingConfig rejected by endpoint, retrying without thinkingConfig');
-          final genConfig = Map<String, dynamic>.from(
-              requestBody['generationConfig'] as Map<String, dynamic>)
-            ..remove('thinkingConfig');
-          final bodyWithoutThinking = Map<String, dynamic>.from(requestBody)
-            ..['generationConfig'] = genConfig;
-          response = await _postWithFallback(
-            primaryModel: AppConstants.geminiVisionModel,
-            fallbackModel: AppConstants.geminiFlashLiteModel,
-            apiKey: apiKey,
-            body: bodyWithoutThinking,
-          );
-        }
-      }
-
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (PDF Parsing): ${jsonEncode(data)}');
 
       final text = _extractTextFromResponse(data);
-      final inputTokens =
-          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
-      final candidatesTokens =
-          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
-      final thoughtsTokens =
-          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
-      final outputTokens = candidatesTokens + thoughtsTokens;
-      final tokenCount = data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
+      final tokens = _extractTokenUsage(data);
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 
       stopwatch.stop();
@@ -598,9 +478,9 @@ class GeminiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -663,48 +543,12 @@ class GeminiAdapter extends AiProviderAdapter {
             'prompt': request.prompt,
           })}');
 
-      http.Response response = await _postWithFallback(
+      final response = await _postWithFallback(
         primaryModel: AppConstants.geminiTextModel,
         fallbackModel: AppConstants.geminiFlashLiteModel,
         apiKey: apiKey,
         body: requestBody,
       );
-
-      // Retry without tools if Google Search rejected
-      if (response.statusCode == 400 && requestBody.containsKey('tools')) {
-        final bodyStr = response.body.toLowerCase();
-        if (bodyStr.contains('tool') ||
-            bodyStr.contains('search') ||
-            bodyStr.contains('googlesearch')) {
-          final bodyWithoutTools = Map<String, dynamic>.from(requestBody)
-            ..remove('tools');
-          response = await _postWithFallback(
-            primaryModel: AppConstants.geminiTextModel,
-            fallbackModel: AppConstants.geminiFlashLiteModel,
-            apiKey: apiKey,
-            body: bodyWithoutTools,
-          );
-        }
-      }
-
-      // Defensive fallback: If thinkingConfig rejected
-      if (response.statusCode == 400 &&
-          requestBody.containsKey('generationConfig')) {
-        final bodyStr = response.body.toLowerCase();
-        if (bodyStr.contains('thinking') || bodyStr.contains('thinkinglevel')) {
-          final genConfig = Map<String, dynamic>.from(
-              requestBody['generationConfig'] as Map<String, dynamic>)
-            ..remove('thinkingConfig');
-          final bodyWithoutThinking = Map<String, dynamic>.from(requestBody)
-            ..['generationConfig'] = genConfig;
-          response = await _postWithFallback(
-            primaryModel: AppConstants.geminiTextModel,
-            fallbackModel: AppConstants.geminiFlashLiteModel,
-            apiKey: apiKey,
-            body: bodyWithoutThinking,
-          );
-        }
-      }
 
       final data = await _parseResponse(response, request.requestId);
       debugPrint('📥 Gemini Response (PDF Generation): ${jsonEncode(data)}');
@@ -717,17 +561,7 @@ class GeminiAdapter extends AiProviderAdapter {
         );
       }
 
-      final inputTokens =
-          data['usageMetadata']?['promptTokenCount'] as int? ?? 0;
-      final candidatesTokens =
-          data['usageMetadata']?['candidatesTokenCount'] as int? ?? 0;
-      final thoughtsTokens =
-          data['usageMetadata']?['thoughtsTokenCount'] as int? ?? 0;
-      final outputTokens = candidatesTokens + thoughtsTokens;
-      final rawTotalTokens =
-          data['usageMetadata']?['totalTokenCount'] as int? ?? 0;
-      final tokenCount =
-          rawTotalTokens > 0 ? rawTotalTokens : (inputTokens + outputTokens);
+      final tokens = _extractTokenUsage(data);
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 
       stopwatch.stop();
@@ -737,9 +571,9 @@ class GeminiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -749,8 +583,73 @@ class GeminiAdapter extends AiProviderAdapter {
     }
   }
 
-  /// POSTs a request with automatic fallback if the latest model returns 404.
+  /// POSTs a request with automatic fallbacks:
+  /// 1. 404 Fallback: Tries [fallbackModel] if [primaryModel] is not found.
+  /// 2. Parameter Sanitization Fallbacks (HTTP 400):
+  ///    - If 'tools' (Google Search) is unsupported on the key tier/region, strips 'tools' and retries.
+  ///    - If 'thinkingConfig' is unsupported on the endpoint, strips 'thinkingConfig' and retries.
   Future<http.Response> _postWithFallback({
+    required String primaryModel,
+    String? fallbackModel,
+    required String apiKey,
+    required Map<String, dynamic> body,
+  }) async {
+    Map<String, dynamic> currentBody = Map<String, dynamic>.from(body);
+
+    http.Response response = await _sendWithModelFallback(
+      primaryModel: primaryModel,
+      fallbackModel: fallbackModel,
+      apiKey: apiKey,
+      body: currentBody,
+    );
+
+    // Parameter Fallback 1: Retry without 'tools' if rejected by key tier or endpoint
+    if (response.statusCode == 400 && currentBody.containsKey('tools')) {
+      final bodyLower = response.body.toLowerCase();
+      if (bodyLower.contains('tool') ||
+          bodyLower.contains('search') ||
+          bodyLower.contains('googlesearch')) {
+        debugPrint(
+            '⚠️ Gemini: tools unsupported on this key tier, retrying without tools');
+        currentBody = Map<String, dynamic>.from(currentBody)..remove('tools');
+        response = await _sendWithModelFallback(
+          primaryModel: primaryModel,
+          fallbackModel: fallbackModel,
+          apiKey: apiKey,
+          body: currentBody,
+        );
+      }
+    }
+
+    // Parameter Fallback 2: Retry without 'thinkingConfig' if rejected by endpoint
+    if (response.statusCode == 400 &&
+        currentBody['generationConfig'] is Map &&
+        (currentBody['generationConfig'] as Map)
+            .containsKey('thinkingConfig')) {
+      final bodyLower = response.body.toLowerCase();
+      if (bodyLower.contains('thinking') ||
+          bodyLower.contains('thinkinglevel')) {
+        debugPrint(
+            '⚠️ Gemini: thinkingConfig rejected by endpoint, retrying without thinkingConfig');
+        final genConfig = Map<String, dynamic>.from(
+            currentBody['generationConfig'] as Map<String, dynamic>)
+          ..remove('thinkingConfig');
+        currentBody = Map<String, dynamic>.from(currentBody)
+          ..['generationConfig'] = genConfig;
+        response = await _sendWithModelFallback(
+          primaryModel: primaryModel,
+          fallbackModel: fallbackModel,
+          apiKey: apiKey,
+          body: currentBody,
+        );
+      }
+    }
+
+    return response;
+  }
+
+  /// Sends a POST request, falling back to [fallbackModel] if [primaryModel] returns 404.
+  Future<http.Response> _sendWithModelFallback({
     required String primaryModel,
     String? fallbackModel,
     required String apiKey,
@@ -762,7 +661,6 @@ class GeminiAdapter extends AiProviderAdapter {
       body: body,
     ).timeout(AppConstants.aiRequestTimeout);
 
-    // If primary model returns 404 (model not found on API key tier/region), try fallback
     if (response.statusCode == 404 &&
         fallbackModel != null &&
         fallbackModel.isNotEmpty &&
@@ -789,7 +687,6 @@ class GeminiAdapter extends AiProviderAdapter {
     required String apiKey,
     required Map<String, dynamic> body,
   }) {
-    debugPrint('🔷 Gemini request: $model');
     final uri = Uri.parse(
       '${AppConstants.geminiBaseUrl}/models/$model:generateContent',
     );
@@ -808,9 +705,6 @@ class GeminiAdapter extends AiProviderAdapter {
     http.Response response,
     String requestId,
   ) async {
-    debugPrint(
-        '🔷 Gemini [${response.request?.url.path}]: ${response.statusCode}');
-
     if (response.statusCode == 200) {
       final bodyString = response.body;
       // Offload heavy JSON parsing to a background isolate.
@@ -819,8 +713,6 @@ class GeminiAdapter extends AiProviderAdapter {
       return await Isolate.run(
           () => jsonDecode(bodyString) as Map<String, dynamic>);
     }
-
-    debugPrint('🔷 Gemini error body: ${response.body}');
 
     // Gemini returns 413 or 400 when payload limits are exceeded.
     if (response.statusCode == 413) {
@@ -831,24 +723,22 @@ class GeminiAdapter extends AiProviderAdapter {
       );
     }
 
-    // Gemini returns 400 for both invalid API keys, malformed requests, and payload size errors.
-    // Inspect the body to differentiate between them.
+    // Gemini returns 400 for invalid API keys, malformed requests, and payload size errors.
+    // Inspect the body to differentiate between them without risking unhandled FormatException.
     if (response.statusCode == 400) {
-      final bodyString = response.body;
-      final body = await Isolate.run(
-          () => jsonDecode(bodyString) as Map<String, dynamic>?);
-      final message = body?['error']?['message'] as String? ?? '';
-      if (message.toLowerCase().contains('api key') ||
-          message.toLowerCase().contains('invalid')) {
+      final bodyLower = response.body.toLowerCase();
+      if (bodyLower.contains('api key') ||
+          bodyLower.contains('api_key') ||
+          bodyLower.contains('invalid')) {
         throw const AiHardErrorException(
           message: 'error_invalid_key',
           provider: AiProviderId.gemini,
           statusCode: 400,
         );
       }
-      if (message.toLowerCase().contains('payload size') ||
-          message.toLowerCase().contains('request entity too large') ||
-          message.toLowerCase().contains('exceeds the limit')) {
+      if (bodyLower.contains('payload size') ||
+          bodyLower.contains('request entity too large') ||
+          bodyLower.contains('exceeds the limit')) {
         throw const AiHardErrorException(
           message: 'pdf_payload_too_large',
           provider: AiProviderId.gemini,
@@ -904,11 +794,47 @@ class GeminiAdapter extends AiProviderAdapter {
     return text;
   }
 
-  /// Map non-HTTP errors (network, timeout, etc.) to typed AiException.
+  /// Extracts token usage from Gemini's usageMetadata object.
+  ///
+  /// Flow and calculation:
+  /// - [promptTokenCount]: Input tokens consumed by prompt, history, and media attachments.
+  /// - [candidatesTokenCount]: Output tokens produced in the model's textual response.
+  /// - [thoughtsTokenCount]: Output tokens produced during chain-of-thought thinking (Gemini 3.8).
+  /// - Total output tokens = candidatesTokenCount + thoughtsTokenCount.
+  /// - If [totalTokenCount] is omitted in response metadata, computes inputTokens + outputTokens.
+  _GeminiTokenUsage _extractTokenUsage(Map<String, dynamic> data) {
+    final metadata = data['usageMetadata'] as Map<String, dynamic>?;
+    final inputTokens = metadata?['promptTokenCount'] as int? ?? 0;
+    final candidatesTokens = metadata?['candidatesTokenCount'] as int? ?? 0;
+    final thoughtsTokens = metadata?['thoughtsTokenCount'] as int? ?? 0;
+    final outputTokens = candidatesTokens + thoughtsTokens;
+    final rawTotalTokens = metadata?['totalTokenCount'] as int? ?? 0;
+    final totalTokens =
+        rawTotalTokens > 0 ? rawTotalTokens : (inputTokens + outputTokens);
+
+    return _GeminiTokenUsage(
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
+      totalTokens: totalTokens,
+    );
+  }
+
+  /// Maps non-HTTP runtime errors (network disconnections, HTTP timeouts) to typed [AiException].
+  ///
+  /// Flow:
+  /// - [SocketException]: Device disconnected or network unreachable -> 'no_internet_connection'.
+  /// - [TimeoutException]: Exceeded 90s request timeout -> transient retryable.
+  /// - [http.ClientException] / generic -> transient 'error_unexpected_ai'.
   AiException _mapError(Object error) {
     if (error is SocketException) {
       return const AiTransientException(
         message: 'no_internet_connection',
+        provider: AiProviderId.gemini,
+      );
+    }
+    if (error is TimeoutException) {
+      return const AiTransientException(
+        message: 'error_unexpected_ai',
         provider: AiProviderId.gemini,
       );
     }
@@ -923,4 +849,17 @@ class GeminiAdapter extends AiProviderAdapter {
       provider: AiProviderId.gemini,
     );
   }
+}
+
+/// Internal immutable value object holding normalized token usage counters for Gemini.
+class _GeminiTokenUsage {
+  final int inputTokens;
+  final int outputTokens;
+  final int totalTokens;
+
+  const _GeminiTokenUsage({
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.totalTokens,
+  });
 }

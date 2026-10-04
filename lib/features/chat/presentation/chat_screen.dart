@@ -51,7 +51,7 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Guards against calling startVoiceInput more than once per screen lifecycle.
   bool _didAutoStartVoice = false;
 
-  late ChatProvider _chatProvider;
+  ChatProvider? _chatProvider;
 
   @override
   void initState() {
@@ -60,7 +60,7 @@ class _ChatScreenState extends State<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _chatProvider = context.read<ChatProvider>();
-      _chatProvider.clearConversation();
+      _chatProvider?.clearConversation();
 
       final uid = context.read<AuthProvider>().currentUser?.uid;
       if (uid != null) {
@@ -77,12 +77,19 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  /// Handles dispatching a new prompt from the root chat screen.
+  ///
+  /// Flow:
+  /// 1. Synchronously starts a new conversation via [ChatProvider.startNewConversation],
+  ///    which generates a conversation ID and immediately dispatches the AI request in the background.
+  /// 2. Immediately transitions to [ChatDetailScreen] with the conversation ID so the user
+  ///    observes the optimistic user message and typing indicator instantly without UI freeze.
   Future<void> _handleSend(
     String prompt,
     List<ChatAttachment> attachments,
     AiProviderId selectedProvider,
   ) async {
-    final conversationId = _chatProvider.startNewConversation(
+    final conversationId = _chatProvider?.startNewConversation(
       prompt: prompt,
       selectedProvider: selectedProvider,
       attachments: attachments,
@@ -94,7 +101,7 @@ class _ChatScreenState extends State<ChatScreen> {
       context,
       AppRoutes.chatDetail,
       arguments: ChatDetailArguments(
-        conversationId: conversationId,
+        conversationId: conversationId ?? '',
         initialTitle: null,
       ),
     );
@@ -222,7 +229,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       ChatModelSelectorDropdown(
                         providers: AiProviderId.values,
                         selectedProvider: selectedProvider,
-                        isEnabled: !_chatProvider.isGenerating,
+                        isEnabled: (_chatProvider?.isGenerating == true) ? false : true,
                         onChanged: (provider) {
                           FocusManager.instance.primaryFocus?.unfocus();
                           preferences.setPreferredProvider(provider);

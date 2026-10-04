@@ -58,13 +58,11 @@ class AnalyticsService {
     required AiCapability capability,
     required int responseTimeMs,
     required String requestId,
-    int tokenCount = 0,
   }) async {
     await _safeLog(FirebaseCollections.eventAiRequestSuccess, {
       FirebaseCollections.paramModelUsed: modelUsed.id,
       FirebaseCollections.paramCapability: capability.id,
       FirebaseCollections.paramResponseTimeMs: responseTimeMs,
-      FirebaseCollections.paramTokenCount: tokenCount,
       FirebaseCollections.paramRequestId: requestId,
     });
   }
@@ -121,31 +119,6 @@ class AnalyticsService {
     });
   }
 
-  /// Log when a conversation is started (new conversation created)
-  Future<void> logConversationStarted({
-    required AiCapability capability,
-    required AiProviderId provider,
-  }) async {
-    await _safeLog(FirebaseCollections.eventConversationStarted, {
-      FirebaseCollections.paramCapability: capability.id,
-      FirebaseCollections.paramModelUsed: provider.id,
-    });
-  }
-
-  /// Log when user uses voice-to-text input
-  Future<void> logVoiceInputUsed({required bool usedAiStt}) async {
-    await _safeLog(FirebaseCollections.eventVoiceInputUsed, {
-      'used_ai_stt': usedAiStt.toString(),
-    });
-  }
-
-  /// Log when user plays a voice response
-  Future<void> logVoiceOutputUsed({required bool usedAiTts}) async {
-    await _safeLog(FirebaseCollections.eventVoiceOutputUsed, {
-      'used_ai_tts': usedAiTts.toString(),
-    });
-  }
-
   // ── Key Management Events ─────────────────────────────────────────────────
 
   /// Log when user successfully adds an API key for a provider
@@ -164,17 +137,6 @@ class AnalyticsService {
       FirebaseCollections.paramModelUsed: provider.id,
       FirebaseCollections.paramModelName: provider.displayName,
       FirebaseCollections.paramModelFeatures: provider.features,
-    });
-  }
-
-  /// Log when user manually switches their preferred AI model
-  Future<void> logModelSwitched({
-    required AiProviderId fromModel,
-    required AiProviderId toModel,
-  }) async {
-    await _safeLog(FirebaseCollections.eventModelSwitched, {
-      FirebaseCollections.paramFromModel: fromModel.id,
-      FirebaseCollections.paramToModel: toModel.id,
     });
   }
 
@@ -278,7 +240,6 @@ class AnalyticsService {
   ) async {
     try {
       await _analytics.logEvent(name: eventName, parameters: parameters);
-      debugPrint('📊 Analytics Event Log: $eventName → $parameters');
     } catch (e) {
       // Analytics failures are silent — never interrupt the user flow
       debugPrint('⚠️ Analytics log failed [$eventName]: $e');

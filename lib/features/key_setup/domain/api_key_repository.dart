@@ -31,18 +31,15 @@ abstract class ApiKeyRepository {
     required String apiKey,
   });
 
-  /// Load all existing API keys for a user from Firestore.
+  /// Load API keys for a user from Firestore.
   ///
-  /// Returns a map of providerId → ApiKeyModel for each stored key.
-  /// Missing providers are not included in the map.
-  Future<Map<AiProviderId, ApiKeyModel>> loadKeys(String uid);
-
-  /// Load the API key for a specific provider.
-  ///
-  /// Returns null if no key exists for this provider.
-  Future<ApiKeyModel?> loadKey({
+  /// If [providerId] is provided, only loads that specific provider.
+  /// If [providerId] is null, loads all available providers.
+  /// Returns a map of providerId → ApiKeyModel.
+  /// Throws [ApiKeyException] if fetching from Firestore fails.
+  Future<Map<AiProviderId, ApiKeyModel>> loadKeys({
     required String uid,
-    required AiProviderId providerId,
+    AiProviderId? providerId,
   });
 
   /// Listen to all existing API keys for a user in real-time.

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -95,10 +96,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         );
       }
 
-      final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
-      final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
-      final tokenCount = (data['usage']?['total_tokens'] as int?) ??
-          (inputTokens + outputTokens);
+      final tokens = _extractTokenUsage(data);
 
       stopwatch.stop();
       debugPrint('📥 OpenAI Response (Text Generation): ${jsonEncode(data)}');
@@ -108,9 +106,9 @@ class OpenAiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -137,7 +135,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         'size': request.imageSize?.apiValue ?? AiImageSize.square.apiValue,
         'quality': request.imageQuality?.name ?? ImageQuality.low.name,
         'background':
-            request.imageBackground?.name ?? ImageGenerateBackground.auto,
+            (request.imageBackground ?? ImageGenerateBackground.auto).apiValue,
         'prompt': request.prompt,
       };
       debugPrint(
@@ -151,25 +149,18 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       final data = await _parseResponse(response, request.requestId);
 
-      // Parse all generated images and their attributes into AiImageData models
-      final List<AiImageData> generatedImages = (data['data'] as List<dynamic>)
-          .map((e) => AiImageData(
-                b64Json: e['b64_json'] as String?,
-                url: e['url'] as String?,
-                revisedPrompt: e['revised_prompt'] as String?,
-                mimeType: 'image/png',
-              ))
+      final List<String> imagesBase64 = (data['data'] as List<dynamic>? ?? [])
+          .map((e) => (e is Map<String, dynamic>) ? e['b64_json'] as String? : null)
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
           .toList();
 
-      if (generatedImages.isEmpty) {
+      if (imagesBase64.isEmpty) {
         throw const AiTransientException(
           message: 'error_unexpected_ai',
           provider: AiProviderId.openAi,
         );
       }
-
-      // Extract the first image's base64 for legacy compatibility in other parts of the app
-      final String? firstImageBase64 = generatedImages.first.b64Json;
 
       stopwatch.stop();
       final logData = Map<String, dynamic>.from(data);
@@ -184,22 +175,18 @@ class OpenAiAdapter extends AiProviderAdapter {
         }
         logData['data'] = truncatedData;
       }
-      final inputTokens = data['usage']?['input_tokens'] as int? ?? 0;
-      final outputTokens = data['usage']?['output_tokens'] as int? ?? 0;
-      final tokenCount = data['usage']?['total_tokens'] as int? ?? 0;
+      final tokens = _extractTokenUsage(data);
 
       debugPrint(
           '📥 OpenAI Response (Image Generation): ${jsonEncode(logData)}');
-      // Store all the valid response attributes that will be returned by image generations
-      return AiResponse.imageBase64(
+      return AiResponse.image(
         modelUsed: AiProviderId.openAi,
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
-        imageBase64: firstImageBase64,
-        generatedImages: generatedImages,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        imagesBase64: imagesBase64,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
       );
     } on AiException {
       rethrow;
@@ -235,7 +222,8 @@ class OpenAiAdapter extends AiProviderAdapter {
               // data-URI format: data:<mimeType>;base64,<encoded>
               'url': 'data:$mimeType;base64,$base64Data',
               // detail controls resolution — auto lets the model decide
-              'detail': request.visionDetailLevel.apiValue,
+              'detail': request.visionDetailLevel?.apiValue ??
+                  VisionDetailLevel.auto.apiValue,
             },
           });
         }
@@ -280,10 +268,7 @@ class OpenAiAdapter extends AiProviderAdapter {
       }
 
       final text = choices[0]['message']?['content'] as String? ?? '';
-      final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
-      final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
-      final tokenCount = (data['usage']?['total_tokens'] as int?) ??
-          (inputTokens + outputTokens);
+      final tokens = _extractTokenUsage(data);
       final finishReason = choices[0]['finish_reason'] as String?;
 
       stopwatch.stop();
@@ -294,9 +279,9 @@ class OpenAiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -385,14 +370,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         }
       }
 
-      final inputTokens = data['usage']?['prompt_tokens'] as int? ??
-          data['usage']?['input_tokens'] as int? ??
-          0;
-      final outputTokens = data['usage']?['completion_tokens'] as int? ??
-          data['usage']?['output_tokens'] as int? ??
-          0;
-      final tokenCount = data['usage']?['total_tokens'] as int? ??
-          (inputTokens + outputTokens);
+      final tokens = _extractTokenUsage(data);
 
       stopwatch.stop();
       debugPrint('📥 OpenAI Response (PDF Parsing): ${jsonEncode(data)}');
@@ -402,9 +380,9 @@ class OpenAiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -463,10 +441,7 @@ class OpenAiAdapter extends AiProviderAdapter {
         );
       }
 
-      final inputTokens = data['usage']?['prompt_tokens'] as int? ?? 0;
-      final outputTokens = data['usage']?['completion_tokens'] as int? ?? 0;
-      final tokenCount = data['usage']?['total_tokens'] as int? ??
-          (inputTokens + outputTokens);
+      final tokens = _extractTokenUsage(data);
       final finishReason = data['choices']?[0]?['finish_reason'] as String?;
 
       stopwatch.stop();
@@ -476,9 +451,9 @@ class OpenAiAdapter extends AiProviderAdapter {
         requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
-        inputTokens: inputTokens,
-        outputTokens: outputTokens,
-        tokenCount: tokenCount,
+        inputTokens: tokens.inputTokens,
+        outputTokens: tokens.outputTokens,
+        tokenCount: tokens.totalTokens,
         finishReason: finishReason,
       );
     } on AiException {
@@ -533,11 +508,46 @@ class OpenAiAdapter extends AiProviderAdapter {
     );
   }
 
-  /// Map non-HTTP errors (network, timeout, etc.) to typed AiException.
+  /// Extracts token usage from OpenAI's usage metadata.
+  ///
+  /// Flow and compatibility:
+  /// Handles Chat Completions API naming conventions (prompt_tokens / completion_tokens)
+  /// as well as Images/Responses API naming conventions (input_tokens / output_tokens).
+  /// If total_tokens is omitted, computes inputTokens + outputTokens dynamically.
+  _OpenAiTokenUsage _extractTokenUsage(Map<String, dynamic> data) {
+    final usage = data['usage'] as Map<String, dynamic>?;
+    final inputTokens = usage?['prompt_tokens'] as int? ??
+        usage?['input_tokens'] as int? ??
+        0;
+    final outputTokens = usage?['completion_tokens'] as int? ??
+        usage?['output_tokens'] as int? ??
+        0;
+    final totalTokens = usage?['total_tokens'] as int? ??
+        (inputTokens + outputTokens);
+
+    return _OpenAiTokenUsage(
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
+      totalTokens: totalTokens,
+    );
+  }
+
+  /// Maps non-HTTP runtime errors (network drops, HTTP timeouts, socket issues) to typed [AiException].
+  ///
+  /// Flow:
+  /// - [SocketException]: Device offline or network routing severed -> 'no_internet_connection'.
+  /// - [TimeoutException]: Request exceeded [AppConstants.aiRequestTimeout] (e.g. 90s) -> transient retryable.
+  /// - [http.ClientException] or other unexpected errors -> generic transient 'error_unexpected_ai'.
   AiException _mapError(Object error, String requestId) {
     if (error is SocketException) {
       return const AiTransientException(
         message: 'no_internet_connection',
+        provider: AiProviderId.openAi,
+      );
+    }
+    if (error is TimeoutException) {
+      return const AiTransientException(
+        message: 'error_unexpected_ai',
         provider: AiProviderId.openAi,
       );
     }
@@ -552,4 +562,17 @@ class OpenAiAdapter extends AiProviderAdapter {
       provider: AiProviderId.openAi,
     );
   }
+}
+
+/// Internal immutable value object holding normalized token usage counters for OpenAI.
+class _OpenAiTokenUsage {
+  final int inputTokens;
+  final int outputTokens;
+  final int totalTokens;
+
+  const _OpenAiTokenUsage({
+    required this.inputTokens,
+    required this.outputTokens,
+    required this.totalTokens,
+  });
 }

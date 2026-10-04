@@ -20,7 +20,7 @@ class UsageEventModel {
   /// Capability used in this request
   final AiCapability capability;
 
-  /// The originating AiRequest.requestId — used for deduplication
+  /// The originating AiRequest.requestId — used for correlation and audit tracing
   final String requestId;
 
   /// Conversation this request belongs to (nullable for standalone requests)

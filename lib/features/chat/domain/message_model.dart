@@ -67,12 +67,6 @@ class MessageModel {
   /// Optional vision detail level for image understanding requests (OpenAI only).
   final VisionDetailLevel? visionDetailLevel;
 
-  /// Optional image MIME type for image generation responses (e.g. 'image/jpeg', 'image/png').
-  final String? mimeType;
-
-  /// Convenience getter for imageCount matching generateImageRequest.
-  int? get imageCount => generateImageRequest;
-
   /// Convenience getter for message text content.
   String get content => lastPrompt;
 
@@ -112,14 +106,13 @@ class MessageModel {
     this.imageQuality,
     this.imageBackground,
     this.visionDetailLevel,
-    this.mimeType,
   });
 
   /// Factory constructor to build a new optimistic User message.
   /// Used to instantly show the user's message in the UI before sending it to the server.
   factory MessageModel.userMessage({
     required String lastPrompt,
-    required AiProviderId validProvider,
+    required AiProviderId provider,
     AiCapability requestCapability = AiCapability.textGeneration,
     List<String>? imagePaths,
     List<PdfAttachmentInfo>? pdfInfo,
@@ -128,7 +121,6 @@ class MessageModel {
     ImageQuality? imageQuality,
     ImageGenerateBackground? imageBackground,
     VisionDetailLevel? visionDetailLevel,
-    String? mimeType,
   }) {
     return MessageModel(
       id: const Uuid().v4(),
@@ -136,7 +128,7 @@ class MessageModel {
       lastPrompt: lastPrompt,
       requestCapability: requestCapability,
       timestamp: DateTime.now(),
-      modelRequest: validProvider,
+      modelRequest: provider,
       status: MessageStatus.sending,
       imageUrls: imagePaths,
       pdfInfo: pdfInfo,
@@ -146,7 +138,6 @@ class MessageModel {
       imageQuality: imageQuality,
       imageBackground: imageBackground,
       visionDetailLevel: visionDetailLevel,
-      mimeType: mimeType,
     );
   }
 
@@ -161,11 +152,9 @@ class MessageModel {
     List<PdfAttachmentInfo>? pdfInfo,
     AiImageSize? imageSize,
     int? generateImageRequest,
-    int? imageCount,
     ImageQuality? imageQuality,
     ImageGenerateBackground? imageBackground,
     VisionDetailLevel? visionDetailLevel,
-    String? mimeType,
   }) {
     return MessageModel(
       id: const Uuid().v4(),
@@ -179,11 +168,10 @@ class MessageModel {
       imageUrls: imageUrls,
       pdfInfo: pdfInfo,
       imageSize: imageSize,
-      generateImageRequest: generateImageRequest ?? imageCount,
+      generateImageRequest: generateImageRequest,
       imageQuality: imageQuality,
       imageBackground: imageBackground,
       visionDetailLevel: visionDetailLevel,
-      mimeType: mimeType,
     );
   }
 
@@ -218,8 +206,7 @@ class MessageModel {
       imageUrls:
           _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]) ??
               _parseImageUrls(data['imageUrls']),
-      pdfInfo:
-          _parsePdfInfo(data) ?? _parsePdfInfo({'pdfInfo': data['pdfInfo']}),
+      pdfInfo: _parsePdfInfo(data),
       imageSize: data[FirebaseCollections.fieldImageSize] is String
           ? AiImageSize.fromValue(
               data[FirebaseCollections.fieldImageSize] as String)
@@ -248,7 +235,6 @@ class MessageModel {
           : (data['visionDetailLevel'] is String
               ? VisionDetailLevel.fromValue(data['visionDetailLevel'] as String)
               : null),
-      mimeType: data['mimeType'] as String?,
     );
   }
 
@@ -264,7 +250,10 @@ class MessageModel {
       FirebaseCollections.fieldMessageContent: lastPrompt,
       FirebaseCollections.fieldMessageContentType: requestCapability.id,
       FirebaseCollections.fieldMessageTimestamp: FieldValue.serverTimestamp(),
-      FirebaseCollections.fieldMessageTokenCount: tokenCount,
+      // Role-based token guard: User messages never generate token metrics and omit this key.
+      // Assistant messages always record tokenCount (including 0 if unparsed) for accurate audit diagnostics.
+      if (role == MessageRole.assistant)
+        FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
       if (modelRequest != null)
         FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
@@ -285,7 +274,6 @@ class MessageModel {
         FirebaseCollections.fieldImageBackground: imageBackground!.name,
       if (visionDetailLevel != null)
         FirebaseCollections.fieldVisionDetailLevel: visionDetailLevel!.name,
-      if (mimeType != null) 'mimeType': mimeType,
     };
   }
 
@@ -299,7 +287,10 @@ class MessageModel {
       FirebaseCollections.fieldMessageContent: lastPrompt,
       FirebaseCollections.fieldMessageContentType: requestCapability.id,
       FirebaseCollections.fieldMessageTimestamp: timestamp.toIso8601String(),
-      FirebaseCollections.fieldMessageTokenCount: tokenCount,
+      // Role-based token guard: User messages omit token metrics.
+      // Assistant messages always record tokenCount (including 0 if unparsed) for accurate audit diagnostics.
+      if (role == MessageRole.assistant)
+        FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
       if (modelRequest != null)
         FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
@@ -320,7 +311,6 @@ class MessageModel {
         FirebaseCollections.fieldImageBackground: imageBackground!.name,
       if (visionDetailLevel != null)
         FirebaseCollections.fieldVisionDetailLevel: visionDetailLevel!.name,
-      if (mimeType != null) 'mimeType': mimeType,
     };
   }
 
@@ -329,28 +319,35 @@ class MessageModel {
   Map<String, dynamic> toCacheMap() {
     return {
       'id': id,
+      FirebaseCollections.fieldMessageID: id,
       FirebaseCollections.fieldMessageRole: role.value,
       FirebaseCollections.fieldMessageContent: lastPrompt,
       FirebaseCollections.fieldMessageContentType: requestCapability.id,
       FirebaseCollections.fieldMessageTimestamp: timestamp.toIso8601String(),
-      FirebaseCollections.fieldMessageTokenCount: tokenCount,
+      // Role-based token guard: User messages omit token metrics.
+      // Assistant messages always record tokenCount (including 0 if unparsed) for accurate audit diagnostics.
+      if (role == MessageRole.assistant)
+        FirebaseCollections.fieldMessageTokenCount: tokenCount,
       FirebaseCollections.fieldMessageStatus: status.value,
       if (modelRequest != null)
         FirebaseCollections.fieldMessageModelUsed: modelRequest!.id,
-      if (imageUrls != null && imageUrls!.isNotEmpty) 'imageUrls': imageUrls,
+      if (imageUrls != null && imageUrls!.isNotEmpty)
+        FirebaseCollections.fieldMessageImageUrl: imageUrls,
       if (pdfInfo != null && pdfInfo!.isNotEmpty)
-        'pdfInfo': pdfInfo!.map((e) => e.toMap()).toList(),
+        FirebaseCollections.fieldPdfInfo:
+            pdfInfo!.map((e) => e.toMap()).toList(),
       if (effectiveImageSizeString != null)
-        'imageSize': effectiveImageSizeString,
-      if (generateImageRequest != null) 'imageCount': generateImageRequest,
+        FirebaseCollections.fieldImageSize: effectiveImageSizeString,
+      if (generateImageRequest != null)
+        FirebaseCollections.fieldImageCount: generateImageRequest,
       if (modelRequest == AiProviderId.gemini)
-        'imageQuality': null
+        FirebaseCollections.fieldImageQuality: null
       else if (imageQuality != null)
-        'imageQuality': imageQuality!.name,
-      if (imageBackground != null) 'imageBackground': imageBackground!.name,
+        FirebaseCollections.fieldImageQuality: imageQuality!.name,
+      if (imageBackground != null)
+        FirebaseCollections.fieldImageBackground: imageBackground!.name,
       if (visionDetailLevel != null)
-        'visionDetailLevel': visionDetailLevel!.name,
-      if (mimeType != null) 'mimeType': mimeType,
+        FirebaseCollections.fieldVisionDetailLevel: visionDetailLevel!.name,
     };
   }
 
@@ -358,7 +355,9 @@ class MessageModel {
   /// Parses the ISO 8601 string back to a [DateTime] object.
   factory MessageModel.fromCacheMap(Map<String, dynamic> data) {
     return MessageModel(
-      id: data['id'] as String? ?? '',
+      id: data[FirebaseCollections.fieldMessageID] as String? ??
+          data['id'] as String? ??
+          '',
       role: MessageRole.fromValue(
         data[FirebaseCollections.fieldMessageRole] as String? ?? 'user',
       ),
@@ -380,156 +379,10 @@ class MessageModel {
       status: MessageStatus.fromValue(
         data[FirebaseCollections.fieldMessageStatus] as String? ?? 'delivered',
       ),
-      imageUrls: _parseImageUrls(data['imageUrls']),
-      pdfInfo: _parsePdfInfo(data),
-      imageSize: data['imageSize'] is String
-          ? AiImageSize.fromValue(data['imageSize'] as String)
-          : null,
-      generateImageRequest: data['imageCount'] as int?,
-      imageQuality: data['imageQuality'] is String
-          ? ImageQuality.fromValue(data['imageQuality'] as String)
-          : null,
-      imageBackground: data['imageBackground'] is String
-          ? ImageGenerateBackground.fromString(
-              data['imageBackground'] as String)
-          : null,
-      visionDetailLevel: data['visionDetailLevel'] is String
-          ? VisionDetailLevel.fromValue(data['visionDetailLevel'] as String)
-          : null,
-      mimeType: data['mimeType'] as String?,
-    );
-  }
-
-  /// Converts the message model to a standard map entry suitable for conveying
-  /// chat history context to standard AI provider APIs.
-  Map<String, String> toHistoryEntry() {
-    return {
-      'role': role.value,
-      'content': lastPrompt,
-    };
-  }
-
-  /// Combines a user prompt and AI response message into a single Firestore document.
-  ///
-  /// Uses [userMessage.id] as the Firestore document ID (the pair ID).
-  ///
-  /// IMPORTANT: Raw image payloads (base64/data-URI) must never be written to
-  /// Firestore — they exceed the 1 MB document limit and cause INVALID_ARGUMENT.
-  /// Before calling this, ensure [aiMessage.imageUrls] contains Cloud Storage URLs.
-  static Map<String, dynamic> pairToFirestore({
-    required MessageModel userMessage,
-    required MessageModel aiMessage,
-  }) {
-    return {
-      FirebaseCollections.fieldPrompt: userMessage.lastPrompt,
-      FirebaseCollections.fieldResponse: aiMessage.lastPrompt,
-      FirebaseCollections.fieldModelUsed: aiMessage.modelRequest?.id,
-      FirebaseCollections.fieldTokenCount: aiMessage.tokenCount,
-      FirebaseCollections.fieldContentType: aiMessage.requestCapability.id,
-      FirebaseCollections.fieldStatus: aiMessage.status.value,
-      FirebaseCollections.fieldTimestamp: FieldValue.serverTimestamp(),
-      if (aiMessage.imageUrls != null && aiMessage.imageUrls!.isNotEmpty)
-        FirebaseCollections.fieldMessageImageUrl: aiMessage.imageUrls,
-      if (aiMessage.pdfInfo != null && aiMessage.pdfInfo!.isNotEmpty)
-        FirebaseCollections.fieldPdfInfo:
-            aiMessage.pdfInfo!.map((e) => e.toMap()).toList(),
-      if (aiMessage.effectiveImageSizeString != null)
-        FirebaseCollections.fieldImageSize: aiMessage.effectiveImageSizeString,
-      if (aiMessage.generateImageRequest != null)
-        FirebaseCollections.fieldImageCount: aiMessage.generateImageRequest
-      else if (userMessage.generateImageRequest != null)
-        FirebaseCollections.fieldImageCount: userMessage.generateImageRequest,
-      if (aiMessage.modelRequest == AiProviderId.gemini)
-        FirebaseCollections.fieldImageQuality: null
-      else if (aiMessage.imageQuality != null)
-        FirebaseCollections.fieldImageQuality: aiMessage.imageQuality!.name
-      else if (userMessage.imageQuality != null)
-        FirebaseCollections.fieldImageQuality: userMessage.imageQuality!.name,
-      if (aiMessage.imageBackground != null)
-        FirebaseCollections.fieldImageBackground:
-            aiMessage.imageBackground!.name
-      else if (userMessage.imageBackground != null)
-        FirebaseCollections.fieldImageBackground:
-            userMessage.imageBackground!.name,
-      if (userMessage.visionDetailLevel != null)
-        FirebaseCollections.fieldVisionDetailLevel:
-            userMessage.visionDetailLevel!.name,
-      if (aiMessage.mimeType != null) 'mimeType': aiMessage.mimeType,
-    };
-  }
-
-  /// Splits a paired Firestore document back into two individual chronological [MessageModel]s
-  /// (first the user message, then the AI response).
-  static List<MessageModel> pairFromFirestore(
-    String docId,
-    Map<String, dynamic> data,
-  ) {
-    final normalizedId = _normalizeStoredMessageId(docId);
-    final timestamp =
-        (data[FirebaseCollections.fieldTimestamp] as Timestamp?)?.toDate() ??
-            DateTime.now();
-
-    final userMsg = MessageModel(
-      id: normalizedId,
-      role: MessageRole.user,
-      lastPrompt: data[FirebaseCollections.fieldPrompt] as String? ??
-          data[FirebaseCollections.fieldMessageContent] as String? ??
-          '',
-      timestamp: timestamp,
-      modelRequest: null,
-      requestCapability: AiCapability.fromValue(
-        data[FirebaseCollections.fieldContentType] as String? ??
-            'text_generation',
-      ),
-      status: MessageStatus.delivered,
       imageUrls:
           _parseImageUrls(data[FirebaseCollections.fieldMessageImageUrl]) ??
               _parseImageUrls(data['imageUrls']),
       pdfInfo: _parsePdfInfo(data),
-      imageSize: data[FirebaseCollections.fieldImageSize] is String
-          ? AiImageSize.fromValue(
-              data[FirebaseCollections.fieldImageSize] as String)
-          : null,
-      generateImageRequest: data[FirebaseCollections.fieldImageCount] as int? ??
-          data['imageCount'] as int?,
-      imageQuality: data[FirebaseCollections.fieldImageQuality] is String
-          ? ImageQuality.fromValue(
-              data[FirebaseCollections.fieldImageQuality] as String)
-          : null,
-      imageBackground: data[FirebaseCollections.fieldImageBackground] is String
-          ? ImageGenerateBackground.fromString(
-              data[FirebaseCollections.fieldImageBackground] as String)
-          : null,
-      visionDetailLevel:
-          data[FirebaseCollections.fieldVisionDetailLevel] is String
-              ? VisionDetailLevel.fromValue(
-                  data[FirebaseCollections.fieldVisionDetailLevel] as String)
-              : null,
-    );
-
-    final aiMsg = MessageModel(
-      id: normalizedId,
-      role: MessageRole.assistant,
-      lastPrompt: data[FirebaseCollections.fieldResponse] as String? ??
-          data[FirebaseCollections.fieldMessageContent] as String? ??
-          '',
-      requestCapability: AiCapability.fromValue(
-        data[FirebaseCollections.fieldContentType] as String? ??
-            'text_generation',
-      ),
-      timestamp: timestamp,
-      modelRequest: data[FirebaseCollections.fieldModelUsed] is String
-          ? AiProviderId.fromId(
-              data[FirebaseCollections.fieldModelUsed] as String)
-          : null,
-      tokenCount: data[FirebaseCollections.fieldTokenCount] as int? ?? 0,
-      status: MessageStatus.fromValue(
-        data[FirebaseCollections.fieldStatus] as String? ?? 'delivered',
-      ),
-      imageUrls: _parseImageUrls(data[FirebaseCollections.fieldImageUrl]) ??
-          _parseImageUrls(data['imageUrls']),
-      pdfInfo:
-          _parsePdfInfo(data) ?? _parsePdfInfo({'pdfInfo': data['pdfInfo']}),
       imageSize: data[FirebaseCollections.fieldImageSize] is String
           ? AiImageSize.fromValue(
               data[FirebaseCollections.fieldImageSize] as String)
@@ -558,10 +411,80 @@ class MessageModel {
           : (data['visionDetailLevel'] is String
               ? VisionDetailLevel.fromValue(data['visionDetailLevel'] as String)
               : null),
-      mimeType: data['mimeType'] as String?,
     );
+  }
 
-    return [userMsg, aiMsg];
+  /// Converts the message model to a standard map entry suitable for conveying
+  /// chat history context to standard AI provider APIs (OpenAI, Gemini, Claude).
+  ///
+  /// Intelligently represents user attachments (images, PDFs) and AI-generated
+  /// media (images, PDFs) so the LLM retains complete context of prior turns
+  /// even when messages contain media instead of plain text.
+  Map<String, String> toHistoryEntry() {
+    String resolvedContent = lastPrompt.trim();
+
+    // 1. Failed messages
+    if (status == MessageStatus.failed) {
+      return {
+        'role': role.value,
+        'content':
+            '[The previous response encountered a temporary error and could not complete.]',
+      };
+    }
+
+    // 2. User messages with attachments
+    if (role == MessageRole.user) {
+      if (pdfInfo != null && pdfInfo!.isNotEmpty) {
+        final names = pdfInfo!
+            .map((p) => p.name)
+            .where((n) => n.isNotEmpty)
+            .join(', ');
+        final label = names.isNotEmpty
+            ? '[Attached PDF: $names]'
+            : '[Attached PDF document]';
+        resolvedContent =
+            resolvedContent.isNotEmpty ? '$label $resolvedContent' : label;
+      } else if (imageUrls != null && imageUrls!.isNotEmpty) {
+        final count = imageUrls!.length;
+        final label =
+            count > 1 ? '[Attached $count images]' : '[Attached image]';
+        resolvedContent =
+            resolvedContent.isNotEmpty ? '$label $resolvedContent' : label;
+      }
+    }
+
+    // 3. Assistant messages with generated media
+    if (role == MessageRole.assistant) {
+      if (requestCapability == AiCapability.pdfGeneration ||
+          (pdfInfo != null && pdfInfo!.isNotEmpty)) {
+        final docName = pdfInfo?.firstOrNull?.name;
+        final label = docName != null && docName.isNotEmpty
+            ? '[Generated PDF document: $docName]'
+            : '[Generated PDF document]';
+        resolvedContent =
+            resolvedContent.isNotEmpty && resolvedContent != label
+                ? '$label $resolvedContent'
+                : label;
+      } else if (requestCapability == AiCapability.imageGeneration ||
+          (imageUrls != null && imageUrls!.isNotEmpty)) {
+        final count = imageUrls?.length ?? 1;
+        final label =
+            count > 1 ? '[Generated $count images]' : '[Generated image]';
+        resolvedContent =
+            resolvedContent.isNotEmpty ? '$resolvedContent $label' : label;
+      }
+    }
+
+    // Fallback if completely empty
+    if (resolvedContent.isEmpty) {
+      resolvedContent =
+          role == MessageRole.user ? '[User message]' : '[Assistant response]';
+    }
+
+    return {
+      'role': role.value,
+      'content': resolvedContent,
+    };
   }
 
   /// Creates a copy of this message model with the given fields replaced.
@@ -579,11 +502,9 @@ class MessageModel {
     bool? isOptimistic,
     Object? imageSize = _unset,
     Object? generateImageRequest = _unset,
-    Object? imageCount = _unset,
     Object? imageQuality = _unset,
     Object? imageBackground = _unset,
     Object? visionDetailLevel = _unset,
-    Object? mimeType = _unset,
   }) {
     return MessageModel(
       id: id ?? this.id,
@@ -607,9 +528,7 @@ class MessageModel {
           ? this.imageSize
           : imageSize as AiImageSize?,
       generateImageRequest: identical(generateImageRequest, _unset)
-          ? (identical(imageCount, _unset)
-              ? this.generateImageRequest
-              : imageCount as int?)
+          ? this.generateImageRequest
           : generateImageRequest as int?,
       imageQuality: identical(imageQuality, _unset)
           ? this.imageQuality
@@ -620,8 +539,6 @@ class MessageModel {
       visionDetailLevel: identical(visionDetailLevel, _unset)
           ? this.visionDetailLevel
           : visionDetailLevel as VisionDetailLevel?,
-      mimeType:
-          identical(mimeType, _unset) ? this.mimeType : mimeType as String?,
     );
   }
 
