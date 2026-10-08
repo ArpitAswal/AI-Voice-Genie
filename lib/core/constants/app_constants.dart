@@ -102,6 +102,28 @@ class AppConstants {
       '7. CITATIONS & SOURCES: When citing sources or web references, use clean readable domain labels (e.g., "- Source: Google Developers (ai.google.dev)" or "- Reference: DeepMind Research"). NEVER output raw search redirect URLs, tracking query strings, or unshortened search engine redirect tokens.\n'
       '8. CLEANLINESS: Strictly NO conversational filler (e.g., "Sure, here is your PDF", "Below is the document", "I hope this helps"). Output ONLY the document content starting directly from the # title.';
 
+  // ── AI Prompt Synthesis Instructions ──────────────────────────────────────
+  static const String aiImagePromptSynthesisSystemInstruction =
+      'You are an expert visual prompt engineer for image generation. '
+      'A user is continuing a conversation to generate an image. Combine the visual context and subjects '
+      'from the previous conversation turns with the user\'s latest request into a single, cohesive, highly descriptive '
+      'prompt for an image generator (such as Imagen or DALL-E).\n\n'
+      'Rules:\n'
+      '- Preserve the subject, art style, environment, and visual details from earlier requests unless the user explicitly modified or replaced them.\n'
+      '- Seamlessly incorporate the user\'s new additions, edits, or changes.\n'
+      '- Output ONLY the synthesized image prompt.\n'
+      '- Do NOT output any explanations, greetings, quotes, prefixes (like "Prompt:"), or markdown formatting.';
+
+  static const String aiTitleSynthesisSystemInstruction =
+      'You are an expert at creating concise, natural conversation titles. '
+      'Generate a short, descriptive 3 to 5 word title for a conversation that starts with the provided user prompt.\n\n'
+      'Rules:\n'
+      '- Accurately capture the core topic or subject.\n'
+      '- Length: 3 to 5 words.\n'
+      '- Title Case format (capitalize major words).\n'
+      '- Do NOT use quotation marks, prefixes (like "Title:"), or trailing punctuation.\n'
+      '- Output ONLY the raw title text.';
+
   // ── OpenAI Model Names ────────────────────────────────────────────────────
   // Verified 2026-09-27: gpt-6-luna (released 2026-09-22, 1.05M context)
   static const String openAiTextModel = 'gpt-6-luna';

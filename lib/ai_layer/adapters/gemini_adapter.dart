@@ -61,22 +61,26 @@ class GeminiAdapter extends AiProviderAdapter {
       ];
 
       final thinkingLevel = request.thinkingLevel?.apiValue ??
-          GeminiThinkingLevel.medium.apiValue;
+          (request.disableSearchGrounding
+              ? GeminiThinkingLevel.low.apiValue
+              : GeminiThinkingLevel.medium.apiValue);
 
       final requestBody = {
-        // System instruction — equivalent to OpenAI's system message
-        'systemInstruction': {
-          'parts': [
-            {
-              'text': AppConstants.aiTextSystemInstruction,
-            }
-          ]
-        },
+        // System instruction — only attach default persona if not a specialized/internal prompt
+        if (!request.disableSearchGrounding)
+          'systemInstruction': {
+            'parts': [
+              {
+                'text': AppConstants.aiTextSystemInstruction,
+              }
+            ]
+          },
         'contents': contents,
         // Google Search Grounding: provides real-time web access and live citations
-        'tools': [
-          {'googleSearch': {}}
-        ],
+        if (!request.disableSearchGrounding)
+          'tools': [
+            {'googleSearch': {}}
+          ],
         'generationConfig': {
           'maxOutputTokens': request.responseLength.geminiMaxTokens,
           // Gemini 3.8 Flash replaces temperature/thinking_budget with thinkingLevel:
@@ -89,12 +93,12 @@ class GeminiAdapter extends AiProviderAdapter {
 
       debugPrint('📤 Gemini Request (Text Generation): ${jsonEncode({
             'model': AppConstants.geminiTextModel,
-            'capability': AiCapability.textGeneration,
+            'capability': request.capability.displayName,
             'message_count': contents.length,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
             'thinkingLevel': thinkingLevel,
+            'grounding': !request.disableSearchGrounding,
             'prompt': request.prompt,
-            'grounding': true,
           })}');
 
       final response = await _postWithFallback(
@@ -129,9 +133,9 @@ class GeminiAdapter extends AiProviderAdapter {
 
       stopwatch.stop();
       return AiResponse.text(
+        requestId: request.requestId,
         modelUsed: AiProviderId.gemini,
         capability: AiCapability.textGeneration,
-        requestId: request.requestId,
         responseTimeMs: stopwatch.elapsedMilliseconds,
         text: text,
         inputTokens: tokens.inputTokens,
@@ -178,8 +182,13 @@ class GeminiAdapter extends AiProviderAdapter {
         },
       };
 
-      debugPrint(
-          '📤 Gemini Request (Image Generation): ${jsonEncode(requestBody)}');
+      debugPrint('📤 Gemini Request (Image Generation): ${jsonEncode({
+            'model': AppConstants.geminiImageGenModel,
+            'capability': request.capability.displayName,
+            'message_count': request.conversationHistory.length + 1,
+            'prompt': request.prompt,
+            'aspectRatio': aspectRatio,
+          })}');
 
       var response = await _post(
         model: AppConstants.geminiImageGenModel,
@@ -211,10 +220,9 @@ class GeminiAdapter extends AiProviderAdapter {
       }
 
       final data = await _parseResponse(response, request.requestId);
-      debugPrint('📥 Gemini Response (Image Generation): ${jsonEncode({
-            'status': response.statusCode,
-            'candidates_count': (data['candidates'] as List?)?.length,
-          })}');
+      debugPrint('📥 Gemini Response (Image Generation): ${jsonEncode(data)}');
+
+      final finishReason = data['candidates']?[0]?['finishReason'] as String?;
 
       // Extract base64 image from Gemini's inline_data format
       final parts = data['candidates']?[0]?['content']?['parts'] as List?;
@@ -227,11 +235,9 @@ class GeminiAdapter extends AiProviderAdapter {
 
       // Find the image part — Gemini may return both text and image parts
       String? base64Image;
-      String? mimeType;
       for (final part in parts) {
         if (part['inlineData'] != null) {
           base64Image = part['inlineData']['data'] as String?;
-          mimeType = part['inlineData']['mimeType'] as String?;
           break;
         }
       }
@@ -243,10 +249,13 @@ class GeminiAdapter extends AiProviderAdapter {
         );
       }
 
-      debugPrint('📥 Gemini: Image received, mimeType=$mimeType, '
-          'base64Length=${base64Image.length}');
+      // debugPrint('📥 Gemini: Image received, mimeType=$mimeType, '
+      //     'base64Length=${base64Image.length}');
 
       final tokens = _extractTokenUsage(data);
+
+      debugPrint(
+          '📊 Gemini Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
 
       stopwatch.stop();
       return AiResponse.image(
@@ -257,6 +266,7 @@ class GeminiAdapter extends AiProviderAdapter {
         inputTokens: tokens.inputTokens,
         outputTokens: tokens.outputTokens,
         tokenCount: tokens.totalTokens,
+        finishReason: finishReason ?? 'STOP',
       );
     } on AiException {
       rethrow;
@@ -321,10 +331,18 @@ class GeminiAdapter extends AiProviderAdapter {
           ]
         },
         'contents': [
+          // Include previous conversation turns for multi-turn visual context
+          ...request.conversationHistory.map((msg) => {
+                'role': msg['role'] == 'assistant' ? 'model' : 'user',
+                'parts': [
+                  {'text': msg['content'] ?? ''},
+                ],
+              }),
+          // Current user turn with attached image(s) and prompt
           {
             'role': 'user',
             'parts': parts,
-          }
+          },
         ],
         'generationConfig': {
           'maxOutputTokens': request.responseLength.geminiMaxTokens,
@@ -336,7 +354,9 @@ class GeminiAdapter extends AiProviderAdapter {
 
       debugPrint('📤 Gemini Request (Image Analysis): ${jsonEncode({
             'model': AppConstants.geminiVisionModel,
+            'request_capability': request.capability.displayName,
             'image_count': request.imageBytes?.length ?? 0,
+            'message_count': request.conversationHistory.length + 1,
             'mimeType': request.imageMimeType,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
             'thinkingLevel': thinkingLevel,
@@ -354,11 +374,13 @@ class GeminiAdapter extends AiProviderAdapter {
       debugPrint('📥 Gemini Response (Image Analysis): ${jsonEncode(data)}');
 
       final text = _extractTextFromResponse(data);
-      final tokens = _extractTokenUsage(data);
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
+      final tokens = _extractTokenUsage(data);
+      debugPrint(
+          '📊 Gemini Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
 
       stopwatch.stop();
-      return AiResponse.analysis(
+      return AiResponse.text(
         modelUsed: AiProviderId.gemini,
         capability: AiCapability.imageUnderstanding,
         requestId: request.requestId,
@@ -434,10 +456,18 @@ class GeminiAdapter extends AiProviderAdapter {
           ]
         },
         'contents': [
+          // Include previous conversation history for multi-turn PDF context
+          ...request.conversationHistory.map((msg) => {
+                'role': msg['role'] == 'assistant' ? 'model' : 'user',
+                'parts': [
+                  {'text': msg['content'] ?? ''},
+                ],
+              }),
+          // Current user turn with attached PDF(s) and prompt
           {
             'role': 'user',
             'parts': parts,
-          }
+          },
         ],
         'generationConfig': {
           'maxOutputTokens': request.responseLength.geminiMaxTokens,
@@ -451,6 +481,7 @@ class GeminiAdapter extends AiProviderAdapter {
             'model': AppConstants.geminiVisionModel,
             'pdf_count': request.pdfBytes?.length ?? 0,
             'pdf_names': request.pdfNames,
+            'message_count': request.conversationHistory.length + 1,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
             'thinkingLevel': thinkingLevel,
             'prompt': request.prompt,
@@ -470,9 +501,11 @@ class GeminiAdapter extends AiProviderAdapter {
       final text = _extractTextFromResponse(data);
       final tokens = _extractTokenUsage(data);
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
+      debugPrint(
+          '📊 Gemini Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
 
       stopwatch.stop();
-      return AiResponse.analysis(
+      return AiResponse.text(
         modelUsed: AiProviderId.gemini,
         capability: AiCapability.pdfParsing,
         requestId: request.requestId,
@@ -525,9 +558,10 @@ class GeminiAdapter extends AiProviderAdapter {
           ]
         },
         'contents': contents,
-        'tools': [
-          {'googleSearch': {}}
-        ],
+        if (!request.disableSearchGrounding)
+          'tools': [
+            {'googleSearch': {}}
+          ],
         'generationConfig': {
           'maxOutputTokens': request.responseLength.geminiMaxTokens,
           'thinkingConfig': {
@@ -538,8 +572,11 @@ class GeminiAdapter extends AiProviderAdapter {
 
       debugPrint('📤 Gemini Request (PDF Generation): ${jsonEncode({
             'model': AppConstants.geminiTextModel,
+            'capability': request.capability.displayName,
+            'message_count': contents.length,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
             'thinkingLevel': thinkingLevel,
+            'grounding': !request.disableSearchGrounding,
             'prompt': request.prompt,
           })}');
 
@@ -551,7 +588,7 @@ class GeminiAdapter extends AiProviderAdapter {
       );
 
       final data = await _parseResponse(response, request.requestId);
-      debugPrint('📥 Gemini Response (PDF Generation): ${jsonEncode(data)}');
+      // debugPrint('📥 Gemini Response (PDF Generation): ${jsonEncode(data)}');
 
       final text = _extractTextFromResponse(data);
       if (text.isEmpty) {
@@ -563,6 +600,8 @@ class GeminiAdapter extends AiProviderAdapter {
 
       final tokens = _extractTokenUsage(data);
       final finishReason = data['candidates']?[0]?['finishReason'] as String?;
+      debugPrint(
+          '📊 Gemini Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
 
       stopwatch.stop();
       return AiResponse.text(

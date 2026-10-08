@@ -49,12 +49,13 @@ class VoiceProvider extends ChangeNotifier {
     VoiceRepository? repository,
     AnalyticsService? analytics,
     StorageService? storage,
+
     /// Returns the current plain-text OpenAI API key, or null if not available.
     /// Evaluated lazily at each [startListening] call so key changes take effect
     /// without restarting the provider.
     String? Function()? openAiKeyGetter,
-  })  : _repository = repository ??
-            VoiceRepositoryImpl(openAiKeyGetter: openAiKeyGetter),
+  })  : _repository =
+            repository ?? VoiceRepositoryImpl(openAiKeyGetter: openAiKeyGetter),
         _analytics = analytics ?? AnalyticsService.instance,
         _storage = storage ?? StorageService() {
     _initialize();
@@ -141,7 +142,9 @@ class VoiceProvider extends ChangeNotifier {
     if (!success) {
       _setState(VoiceRecordingState.unavailable);
       final status = await Permission.microphone.status;
-      onError(status.isGranted ? 'voice_input_failed' : 'microphone_permission_denied');
+      onError(status.isGranted
+          ? 'voice_input_failed'
+          : 'microphone_permission_denied');
       return;
     }
 
@@ -237,6 +240,7 @@ class VoiceProvider extends ChangeNotifier {
 
   /// Stop TTS playback immediately.
   Future<void> stopSpeaking() async {
+    if (!isPlaying && !_repository.isSpeaking) return;
     await _repository.stopSpeaking();
     _activeTtsMessageId = null;
     _setState(VoiceRecordingState.idle);

@@ -44,7 +44,7 @@ enum AiProviderId {
 /// Used by the orchestrator to route requests and detect capability gaps.
 enum AiCapability {
   /// Standard text conversation / prompt-response
-  textGeneration('text_generation', 'Text Chat'),
+  textGeneration('text_generation', 'Text Generation'),
 
   /// Generate an image from a text description
   imageGeneration('image_generation', 'Image Generation'),
@@ -542,6 +542,13 @@ enum ResponseLength {
       orElse: () => ResponseLength.balanced,
     );
   }
+}
+
+/// Extension providing safe access to provider token ceilings on nullable [ResponseLength].
+extension ResponseLengthNullableExtension on ResponseLength? {
+  int get openAiMaxTokens => (this ?? ResponseLength.balanced).openAiMaxTokens;
+  int get geminiMaxTokens => (this ?? ResponseLength.balanced).geminiMaxTokens;
+  int get claudeMaxTokens => (this ?? ResponseLength.balanced).claudeMaxTokens;
 }
 
 // =============================================================================

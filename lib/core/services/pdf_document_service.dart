@@ -119,8 +119,7 @@ class PdfDocumentService {
               decoration: pw.BoxDecoration(
                 color: PdfColors.grey100,
                 borderRadius: pw.BorderRadius.circular(4),
-                border:
-                    pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
               ),
               child: pw.Text(
                 codeLines.join('\n'),
@@ -412,8 +411,7 @@ class PdfDocumentService {
           return '$label ($url)';
         })
         // Strip Unicode box-drawing characters and pseudo-borders (causes ☒ boxes in Helvetica)
-        .replaceAll(
-            RegExp(r'[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]'), '')
+        .replaceAll(RegExp(r'[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]'), '')
         .trim();
   }
 
@@ -473,7 +471,8 @@ class PdfDocumentService {
 
     if (cleanPrompt.isNotEmpty) {
       final wordsList = cleanPrompt.split(RegExp(r'\s+'));
-      final words = (wordsList.length <= 10 ? wordsList : wordsList.take(8)).join(' ');
+      final words =
+          (wordsList.length <= 10 ? wordsList : wordsList.take(8)).join(' ');
       final trimmedWords = words.replaceAll(RegExp(r'[,;:]+$'), '').trim();
       if (trimmedWords.isNotEmpty) {
         return trimmedWords[0].toUpperCase() + trimmedWords.substring(1);
@@ -481,6 +480,52 @@ class PdfDocumentService {
     }
 
     return 'AI_Generated_Document';
+  }
+
+  /// Formats a document title into a concise, filesystem-safe filename (20-35 chars, max 5 words).
+  /// Strips colons/dashes and subtitles to ensure names fit elegantly in mobile cards and snackbars.
+  static String formatFileName(String docTitle) {
+    var title = docTitle.trim();
+
+    // If title has a colon or dash subtitle, use the concise main topic
+    if (title.contains(':')) {
+      final firstPart = title.split(':').first.trim();
+      if (firstPart.split(RegExp(r'\s+')).length >= 2 &&
+          firstPart.length >= 6) {
+        title = firstPart;
+      }
+    } else if (title.contains(' — ') || title.contains(' - ')) {
+      final sep = title.contains(' — ') ? ' — ' : ' - ';
+      final firstPart = title.split(sep).first.trim();
+      if (firstPart.split(RegExp(r'\s+')).length >= 2 &&
+          firstPart.length >= 6) {
+        title = firstPart;
+      }
+    }
+
+    // Sanitize non-alphanumeric characters (keep alphanumeric and hyphens)
+    final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+    final words =
+        sanitized.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+
+    // Accumulate whole words up to 5 words and ~35 chars without chopping words mid-way
+    final selectedWords = <String>[];
+    int currentLength = 0;
+    for (final word in words) {
+      if (selectedWords.length >= 5) break;
+      final int addition =
+          selectedWords.isEmpty ? word.length : word.length + 1;
+      if (currentLength + addition > 36 && selectedWords.isNotEmpty) {
+        break;
+      }
+      selectedWords.add(word);
+      currentLength += addition;
+    }
+
+    if (selectedWords.isEmpty) return 'AI_Document.pdf';
+
+    final joined = selectedWords.join('_');
+    return '$joined.pdf';
   }
 
   /// Saves PDF bytes locally to the app's internal documents directory.
@@ -502,7 +547,8 @@ class PdfDocumentService {
       final file = File(filePath);
       await file.writeAsBytes(bytes, flush: true);
 
-      debugPrint('📄 PdfDocumentService: Cached PDF locally at $filePath (${bytes.length} bytes)');
+      debugPrint(
+          '📄 PdfDocumentService: Cached PDF locally at $filePath (${bytes.length} bytes)');
       return filePath;
     } catch (e) {
       debugPrint('⚠️ PdfDocumentService.savePdfLocally error: $e');
@@ -528,7 +574,8 @@ class PdfDocumentService {
       final docsDir = await getApplicationDocumentsDirectory();
       final cachedFile = File('${docsDir.path}/generated_pdfs/$safeName');
       if (await cachedFile.exists() && await cachedFile.length() > 0) {
-        debugPrint('📄 PdfDocumentService: Found cached PDF at ${cachedFile.path}');
+        debugPrint(
+            '📄 PdfDocumentService: Found cached PDF at ${cachedFile.path}');
         return await cachedFile.readAsBytes();
       }
     } catch (e) {
@@ -563,7 +610,8 @@ class PdfDocumentService {
           final bytes = await ref.getData(25 * 1024 * 1024); // max 25MB
           if (bytes != null && bytes.isNotEmpty) {
             await savePdfLocally(bytes: bytes, fileName: safeName);
-            debugPrint('☁️ PdfDocumentService: Downloaded PDF via FirebaseStorage SDK');
+            debugPrint(
+                '☁️ PdfDocumentService: Downloaded PDF via FirebaseStorage SDK');
             return bytes;
           }
         }
@@ -573,12 +621,10 @@ class PdfDocumentService {
 
       // 3b. Fall back to direct HTTP GET
       try {
-        final response = await http
-            .get(Uri.parse(url))
-            .timeout(const Duration(seconds: 20));
+        final response =
+            await http.get(Uri.parse(url)).timeout(const Duration(seconds: 20));
         if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
-          await savePdfLocally(
-              bytes: response.bodyBytes, fileName: safeName);
+          await savePdfLocally(bytes: response.bodyBytes, fileName: safeName);
           debugPrint('☁️ PdfDocumentService: Downloaded PDF via HTTP GET');
           return response.bodyBytes;
         }
@@ -613,7 +659,8 @@ class PdfDocumentService {
             return true;
           }
         } catch (e) {
-          debugPrint('ℹ️ Native MediaStore channel failed or not yet recompiled: $e');
+          debugPrint(
+              'ℹ️ Native MediaStore channel failed or not yet recompiled: $e');
         }
 
         // 2. Resilient fallback: Save to app-specific external storage downloads folder
@@ -624,7 +671,8 @@ class PdfDocumentService {
             final targetDir = extDirs.first;
             final file = File('${targetDir.path}/$safeName');
             await file.writeAsBytes(bytes, flush: true);
-            debugPrint('📄 PdfDocumentService: Saved to external storage at ${file.path}');
+            debugPrint(
+                '📄 PdfDocumentService: Saved to external storage at ${file.path}');
             return true;
           }
         } catch (e) {
@@ -656,16 +704,19 @@ class PdfDocumentService {
 
       // 1. If cached locally and non-empty, open immediately!
       if (await cachedFile.exists() && await cachedFile.length() > 0) {
-        debugPrint('📄 PdfDocumentService.openPdf: Opening cached file at ${cachedFile.path}');
+        debugPrint(
+            '📄 PdfDocumentService.openPdf: Opening cached file at ${cachedFile.path}');
         return await OpenFilex.open(cachedFile.path, type: 'application/pdf');
       }
 
       // 2. Otherwise resolve bytes and cache them
       final bytes = await resolvePdfBytes(pdfInfo);
       if (bytes != null && bytes.isNotEmpty) {
-        final localPath = await savePdfLocally(bytes: bytes, fileName: safeName);
+        final localPath =
+            await savePdfLocally(bytes: bytes, fileName: safeName);
         if (localPath != null) {
-          debugPrint('📄 PdfDocumentService.openPdf: Opening newly cached file at $localPath');
+          debugPrint(
+              '📄 PdfDocumentService.openPdf: Opening newly cached file at $localPath');
           return await OpenFilex.open(localPath, type: 'application/pdf');
         }
       }

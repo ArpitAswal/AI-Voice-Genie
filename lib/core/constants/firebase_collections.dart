@@ -113,10 +113,6 @@ class FirebaseCollections {
   static const String fieldGender = 'gender';
   static const String fieldCountry = 'country';
   static const String fieldState = 'state';
-  static const String fieldPreferredAiModel = 'preferredAiModel';
-  static const String fieldPreferredProvider = 'preferredProvider';
-  static const String fieldDailyQuotaUsed = 'dailyQuotaUsed';
-  static const String fieldDailyQuotaLimit = 'dailyQuotaLimit';
   static const String fieldNewUser = 'isNewUser';
   static const String fieldTermsAccepted = 'termsAccepted';
   static const String fieldTermsAcceptedAt = 'termsAcceptedAt';
@@ -139,53 +135,50 @@ class FirebaseCollections {
   static const String fieldConversationID = 'conversationID';
   static const String fieldConversationTitle = 'title';
   static const String fieldConversationCreatedAt = 'createdAt';
-  static const String fieldConversationUpdatedAt = 'updatedAt';
   static const String fieldConversationLastMessage = 'lastMessage';
   static const String fieldConversationLastMessageAt = 'lastMessageAt';
   // Value: 'text' | 'image_gen' | 'image_read' | 'pdf_reader'
   static const String fieldConversationCapability = 'capability';
   static const String fieldConversationLastProvider = 'lastProvider';
 
-  // ── Message Pair Document Field Names ─────────────────────────────────────
-  // Each message document stores a prompt + response pair together.
-  //
-  // Document layout:
-  //   { prompt, response, modelUsed, tokenCount, contentType,
-  //     status, timestamp, imageUrl?, pdfName? }
+  // ── Message Document Field Names (Firestore & Hive) ───────────────────────
+  static const String fieldMessageID = 'messageID';
+  static const String fieldRole = 'role';
   static const String fieldPrompt = 'prompt';
   static const String fieldResponse = 'response';
+  static const String fieldRequestCapability = 'request_capability';
+  static const String fieldResponseCapability = 'response_capability';
+  static const String fieldRequestId = 'requestId';
   static const String fieldModelUsed = 'modelUsed';
   static const String fieldTokenCount = 'tokenCount';
-  // Value: 'text' | 'image_url' | 'pdf_summary' | 'voice_transcript'
-  static const String fieldContentType = 'contentType';
+  static const String fieldResponseTimeMs = 'responseTimeMs';
+  static const String fieldFinishReason = 'finishReason';
   // Value: 'delivered' | 'failed'
   static const String fieldStatus = 'status';
   static const String fieldTimestamp = 'timestamp';
   static const String fieldImageUrl = 'imageUrls';
   static const String fieldPdfName = 'pdfName';
   static const String fieldPdfInfo = 'pdfInfo';
-  static const String fieldValidProviders = 'validProviders';
   static const String fieldImageSize = 'imageSize';
   static const String fieldImageCount = 'imageCount';
   static const String fieldImageQuality = 'imageQuality';
   static const String fieldImageBackground = 'imageBackground';
   static const String fieldVisionDetailLevel = 'visionDetailLevel';
+  static const String fieldResponseLength = 'responseLength';
+  static const String fieldThinkingLevel = 'thinkingLevel';
+  static const String fieldMaxOutputTokens = 'maxOutputTokens';
 
-  // ── Legacy Message Field Names (used by Hive cache serialization) ─────────
-  static const String fieldMessageID = 'messageID';
-  static const String fieldMessageRole = 'role';
+  // ── Legacy Aliases (retained for backward-compatible DTO resolution) ───────
+  static const String fieldError = 'error';
+  static const String fieldMessageRole = fieldRole;
   static const String fieldMessageContent = 'content';
   static const String fieldMessageContentType = 'contentType';
-  static const String fieldMessageTimestamp = 'timestamp';
-  static const String fieldMessageModelUsed = 'modelUsed';
-  static const String fieldMessageTokenCount = 'tokenCount';
-  static const String fieldMessageStatus = 'status';
-  static const String fieldMessageImageUrl = 'imageUrls';
-  static const String fieldMessageLocalImageKey = 'localImageKey';
-  static const String fieldMessagePdfName = 'pdfName';
-  static const String fieldMessagePdfPaths = 'pdfPaths';
-  static const String fieldMessagePdfInfo = 'pdfInfo';
-  static const String fieldMessageValidProviders = 'validProviders';
+  static const String fieldMessageTimestamp = fieldTimestamp;
+  static const String fieldMessageModelUsed = fieldModelUsed;
+  static const String fieldMessageTokenCount = fieldTokenCount;
+  static const String fieldMessageStatus = fieldStatus;
+  static const String fieldMessageImageUrl = fieldImageUrl;
+  static const String fieldMessagePdfInfo = fieldPdfInfo;
 
   // ── Analytics Event Names ─────────────────────────────────────────────────
   static const String eventAuthenticationButtonTapped =
@@ -202,10 +195,6 @@ class FirebaseCollections {
   static const String eventFeatureUsed = 'feature_used';
   static const String eventModelAdded = 'ai_model_added';
   static const String eventModelRemoved = 'ai_model_removed';
-  static const String eventModelSwitched = 'model_switched';
-  static const String eventConversationStarted = 'conversation_started';
-  static const String eventVoiceInputUsed = 'voice_input_used';
-  static const String eventVoiceOutputUsed = 'voice_output_used';
   // Fired when the user taps the download button on a generated image.
   // Parameters: provider, result, failure_reason, mime_type, source_type, image_count_in_message
   static const String eventGeneratedImageDownload = 'generated_image_download';
@@ -222,7 +211,6 @@ class FirebaseCollections {
   static const String paramReason = 'reason';
   static const String paramFeature = 'feature';
   static const String paramResponseTimeMs = 'response_time_ms';
-  static const String paramTokenCount = 'token_count';
   static const String paramModelName = 'model_name';
   static const String paramModelFeatures = 'model_features';
   static const String paramUserId = 'user_id';

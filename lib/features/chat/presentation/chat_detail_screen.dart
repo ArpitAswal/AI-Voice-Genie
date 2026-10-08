@@ -40,12 +40,12 @@ import 'widgets/change_title_dialog.dart';
 ///   - Delete conversation from AppBar action
 ///   - Model indicator chip on each AI response
 class ChatDetailScreen extends StatefulWidget {
-  final String conversationId;
+  final String? conversationId;
   final String? initialTitle;
 
   const ChatDetailScreen({
     super.key,
-    required this.conversationId,
+    this.conversationId,
     this.initialTitle,
   });
 
@@ -91,8 +91,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     // is not already loaded into memory for this ID, fetch from local Hive/repository.
     // If coming straight from ChatScreen.startNewConversation, activeConversation is already
     // initialized in memory with optimistic state, so reloading is skipped to prevent UI flicker.
+    final targetId = widget.conversationId;
     if (widget.initialTitle != null ||
-        _chatProvider!.activeConversation?.id != widget.conversationId) {
+        (targetId != null &&
+            targetId.isNotEmpty &&
+            _chatProvider!.activeConversation?.id != targetId)) {
       _loadConversation();
     }
   }
@@ -167,17 +170,24 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final currentGenerating = _chatProvider!.isGenerating;
     final currentLoading = _chatProvider!.isLoadingMessages;
 
-    // Safely check if the conversation was completely deleted remotely
+    // Safely check if an existing opened conversation was deleted remotely
     final uid = context.read<AuthProvider>().currentUser?.uid;
     // Delegate to ChatProvider to check deletion state — the widget must not
     // read from LocalChatStore directly (MVVM: data access via provider only).
-    // Guard: only check if uid is known and we are not in a manual delete flow.
-    if (uid != null && !_isManualDeleting) {
-      final isDeleted = _chatProvider!
-          .isActiveConversationDeleted(uid, widget.conversationId);
+    // Guard: only check for existing opened conversations (widget.conversationId != null)
+    // and when uid is known and we are not in a manual delete flow.
+    final targetId = widget.conversationId;
+    if (targetId != null &&
+        targetId.isNotEmpty &&
+        uid != null &&
+        !_isManualDeleting) {
+      final isDeleted =
+          _chatProvider!.isActiveConversationDeleted(uid, targetId);
       if (isDeleted && !currentLoading && !currentGenerating) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) AppRoutes.pop(context);
+          if (mounted && AppRoutes.canPop(context)) {
+            AppRoutes.pop(context);
+          }
         });
         return;
       }
@@ -241,9 +251,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _loadConversation() {
+    final id = widget.conversationId;
+    if (id == null || id.isEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChatProvider>().loadConversation(
-            conversationId: widget.conversationId,
+            conversationId: id,
           );
     });
   }
@@ -275,13 +287,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     List<ChatAttachment> attachments,
     AiProviderId selectedProvider,
   ) async {
-    // Explicitly pass conversationId so subsequent messages in this screen
-    // are strictly appended to this conversation thread even during navigation transitions.
+    // Explicitly pass conversationId or fallback to activeConversation.id so subsequent
+    // messages in this screen are strictly appended to this conversation thread.
     context.read<ChatProvider>().sendMessage(
           prompt: prompt,
           selectedProvider: selectedProvider,
           attachments: attachments,
-          conversationId: widget.conversationId,
+          conversationId:
+              widget.conversationId ?? _chatProvider?.activeConversation?.id,
         );
   }
 
@@ -322,8 +335,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     LoadingOverlay.show(context, message: context.l10n.deleting);
 
+    final convId =
+        widget.conversationId ?? _chatProvider?.activeConversation?.id;
+    if (convId == null || convId.isEmpty) return;
+
     final success = await context.read<ChatProvider>().deleteConversation(
-          conversationId: widget.conversationId,
+          conversationId: convId,
         );
 
     if (!mounted) return;
@@ -397,7 +414,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   void dispose() {
     _chatProvider?.removeListener(_onChatProviderChange);
     _chatProvider?.closeActiveConversation();
-    _voiceProvider?.stopSpeaking();
+    if (_voiceProvider?.isPlaying == true) {
+      _voiceProvider?.stopSpeaking();
+    }
     _scrollController.dispose();
     super.dispose();
   }
@@ -499,7 +518,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             (chatProvider.isLoadingMoreMessages ? 1 : 0),
                         itemBuilder: (context, index) {
                           // Load more indicator at top
-                          if (index == 0 && chatProvider.isLoadingMoreMessages) {
+                          if (index == 0 &&
+                              chatProvider.isLoadingMoreMessages) {
                             return const Padding(
                               padding: EdgeInsets.all(16),
                               child: Center(
@@ -513,9 +533,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             );
                           }
 
-                          final adjustedIndex = chatProvider.isLoadingMoreMessages
-                              ? index - 1
-                              : index;
+                          final adjustedIndex =
+                              chatProvider.isLoadingMoreMessages
+                                  ? index - 1
+                                  : index;
 
                           // Typing indicator at bottom
                           if (adjustedIndex == messages.length &&
@@ -655,8 +676,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(
-                              alpha: context.isDark ? 0.35 : 0.10),
+                          color: Colors.black
+                              .withValues(alpha: context.isDark ? 0.35 : 0.10),
                           blurRadius: 10,
                           offset: const Offset(0, 3),
                         ),

@@ -81,15 +81,15 @@ class _ChatScreenState extends State<ChatScreen> {
   ///
   /// Flow:
   /// 1. Synchronously starts a new conversation via [ChatProvider.startNewConversation],
-  ///    which generates a conversation ID and immediately dispatches the AI request in the background.
-  /// 2. Immediately transitions to [ChatDetailScreen] with the conversation ID so the user
-  ///    observes the optimistic user message and typing indicator instantly without UI freeze.
+  ///    clearing previous conversation state and dispatching the AI request in the background.
+  /// 2. Immediately transitions to [ChatDetailScreen] without an upfront conversation ID,
+  ///    observing the in-memory optimistic user message and typing indicator instantly without UI freeze.
   Future<void> _handleSend(
     String prompt,
     List<ChatAttachment> attachments,
     AiProviderId selectedProvider,
   ) async {
-    final conversationId = _chatProvider?.startNewConversation(
+    _chatProvider?.startNewConversation(
       prompt: prompt,
       selectedProvider: selectedProvider,
       attachments: attachments,
@@ -100,10 +100,7 @@ class _ChatScreenState extends State<ChatScreen> {
     AppRoutes.navigateAndReplace(
       context,
       AppRoutes.chatDetail,
-      arguments: ChatDetailArguments(
-        conversationId: conversationId ?? '',
-        initialTitle: null,
-      ),
+      arguments: const ChatDetailArguments(),
     );
   }
 
@@ -229,7 +226,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       ChatModelSelectorDropdown(
                         providers: AiProviderId.values,
                         selectedProvider: selectedProvider,
-                        isEnabled: (_chatProvider?.isGenerating == true) ? false : true,
+                        isEnabled: (_chatProvider?.isGenerating == true)
+                            ? false
+                            : true,
                         onChanged: (provider) {
                           FocusManager.instance.primaryFocus?.unfocus();
                           preferences.setPreferredProvider(provider);

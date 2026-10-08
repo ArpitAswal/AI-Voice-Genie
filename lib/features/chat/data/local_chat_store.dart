@@ -8,6 +8,7 @@ import '../domain/local_conversation_record.dart';
 import '../domain/local_message_record.dart';
 import '../domain/conversation_page_cursor.dart';
 import '../domain/message_page_cursor.dart';
+import 'local_message_dao.dart';
 
 /// Local Hive-backed store for conversations and messages.
 ///
@@ -31,6 +32,7 @@ class LocalChatStore {
   // Hive box references — assigned during StorageService.initialize()
   late Box _conversationsBox;
   late Box _messagesBox;
+  late LocalMessageDao _messageDao;
 
   // ── Box Initialization ─────────────────────────────────────────────────────
 
@@ -40,7 +42,11 @@ class LocalChatStore {
   void init(Box conversationsBox, Box messagesBox) {
     _conversationsBox = conversationsBox;
     _messagesBox = messagesBox;
+    _messageDao = LocalMessageDao(messagesBox);
   }
+
+  /// Data Access Object for message database operations.
+  LocalMessageDao get messageDao => _messageDao;
 
   /// Package-visible accessor used by ChatSyncService to check
   /// a single message record during remote snapshot merge without
@@ -68,7 +74,7 @@ class LocalChatStore {
     final key = '${uid}_$conversationId';
     final raw = _conversationsBox.get(key);
     if (raw == null) return null;
-    
+
     // Fallback: If it's already an object in memory from the previous bug, return it directly.
     if (raw is LocalConversationRecord) return raw;
     // Fast path: If it's a Map, decode it.
@@ -76,7 +82,8 @@ class LocalChatStore {
       try {
         return LocalConversationRecord.fromMap(raw);
       } catch (e) {
-        debugPrint('⚠️ LocalChatStore: getConversation corrupt record at $key: $e');
+        debugPrint(
+            '⚠️ LocalChatStore: getConversation corrupt record at $key: $e');
         return null;
       }
     }
@@ -131,13 +138,14 @@ class LocalChatStore {
         .map((key) {
           final raw = _conversationsBox.get(key);
           if (raw == null) return null;
-          
+
           if (raw is LocalConversationRecord) return raw;
           if (raw is Map) {
             try {
               return LocalConversationRecord.fromMap(raw);
             } catch (e) {
-              debugPrint('⚠️ LocalChatStore: corrupt conversation record at $key: $e');
+              debugPrint(
+                  '⚠️ LocalChatStore: corrupt conversation record at $key: $e');
               return null;
             }
           }
@@ -319,155 +327,56 @@ class LocalChatStore {
     debugPrint('🗑️ LocalChatStore: cleared all Hive data for uid=$uid');
   }
 
-  // ── Message Operations ─────────────────────────────────────────────────────
+  // ── Message Operations (delegated to LocalMessageDao) ─────────────────────
 
   /// Persist a single message record to Hive.
-  ///
-  /// Uses the record's [hiveKey] = `{uid}_{conversationId}_{messageId}`.
-  /// Upserts are idempotent — writing the same message twice is safe.
-  Future<void> saveMessage(LocalMessageRecord record) async {
-    await _messagesBox.put(record.hiveKey, record.toMap());
-  }
+  Future<void> saveMessage(LocalMessageRecord record) =>
+      _messageDao.saveMessage(record);
 
   /// Persist multiple message records in a single batch to Hive.
-  ///
-  /// Using putAll emits a single watch event rather than one per message,
-  /// preventing excessive UI rebuilds during Firestore synchronization.
-  Future<void> saveMessagesBatch(List<LocalMessageRecord> records) async {
-    if (records.isEmpty) return;
-    final map = <String, dynamic>{};
-    for (final record in records) {
-      map[record.hiveKey] = record.toMap();
-    }
-    await _messagesBox.putAll(map);
-  }
+  Future<void> saveMessagesBatch(List<LocalMessageRecord> records) =>
+      _messageDao.saveMessagesBatch(records);
 
   /// Hard-delete a specific message from Hive.
   Future<void> hardDeleteMessage(
-      String uid, String conversationId, String messageId) async {
-    final key = '${uid}_${conversationId}_$messageId';
-    await _messagesBox.delete(key);
-  }
+          String uid, String conversationId, String messageId) =>
+      _messageDao.hardDeleteMessage(uid, conversationId, messageId);
 
   /// Stream of all non-deleted messages for a conversation, sorted chronologically.
-  ///
-  /// Emits immediately, then re-emits on any box change scoped to this conversation.
   Stream<List<LocalMessageRecord>> watchMessages(
-      String uid, String conversationId) async* {
-    // Emit current Hive state immediately
-    yield _readMessages(uid, conversationId);
+          String uid, String conversationId) =>
+      _messageDao.watchMessages(uid, conversationId);
 
-    // Re-emit when any message record for this conversation changes
-    final prefix = '${uid}_${conversationId}_';
-    await for (final event in _messagesBox.watch()) {
-      final changedKey = event.key?.toString() ?? '';
-      if (changedKey.isEmpty || changedKey.startsWith(prefix)) {
-        yield _readMessages(uid, conversationId);
-      }
-    }
-  }
-
-  /// Read and sort all non-deleted messages for a conversation from Hive.
-  List<LocalMessageRecord> _readMessages(String uid, String conversationId) {
-    final prefix = '${uid}_${conversationId}_';
-    final records = _messagesBox.keys
-        .where((key) => key.toString().startsWith(prefix))
-        .map((key) {
-          final raw = _messagesBox.get(key);
-          if (raw == null) return null;
-          try {
-            return LocalMessageRecord.fromMap(raw as Map);
-          } catch (e) {
-            debugPrint('⚠️ LocalChatStore: corrupt message record at $key: $e');
-            return null;
-          }
-        })
-        .whereType<LocalMessageRecord>()
-        // Hide messages belonging to soft-deleted conversations
-        .where((r) => !r.isDeleted)
-        .toList();
-
-    // Sort chronologically: oldest message first
-    records.sort((a, b) {
-      final timeCompare = a.timestamp.compareTo(b.timestamp);
-      if (timeCompare != 0) return timeCompare;
-      // Tie-break: user message before AI message at same timestamp
-      if (a.role != b.role) {
-        return a.role == MessageRole.user ? -1 : 1;
-      }
-      return a.messageId.compareTo(b.messageId);
-    });
-
-    return records;
-  }
-
-  /// Read the latest page of messages (newest first in terms of query, but returned oldest-first).
-  /// For the latest page, we actually want the newest N messages.
+  /// Read the latest page of messages.
   List<LocalMessageRecord> getLatestMessagePage({
     required String uid,
     required String conversationId,
     required int limit,
-  }) {
-    final allMessages = _readMessages(uid, conversationId);
-
-    // We want the *last* N items of the chronologically sorted list
-    // (meaning the newest ones).
-    if (allMessages.length <= limit) return allMessages;
-
-    return allMessages.skip(allMessages.length - limit).toList();
-  }
+  }) =>
+      _messageDao.getLatestPage(
+        uid: uid,
+        conversationId: conversationId,
+        limit: limit,
+      );
 
   /// Read an older page of messages before a given cursor.
-  /// Returned oldest-first.
   List<LocalMessageRecord> getOlderMessagePage({
     required String uid,
     required String conversationId,
     required MessagePageCursor before,
     required int limit,
-  }) {
-    final allMessages = _readMessages(uid, conversationId);
-
-    final endIndex = allMessages.indexWhere((m) {
-      return m.timestamp == before.timestamp && m.messageId == before.messageId;
-    });
-
-    if (endIndex <= 0) return []; // None older
-
-    // We want the `limit` items immediately *before* endIndex
-    final startIndex = (endIndex - limit < 0) ? 0 : endIndex - limit;
-
-    return allMessages.sublist(startIndex, endIndex);
-  }
+  }) =>
+      _messageDao.getOlderPage(
+        uid: uid,
+        conversationId: conversationId,
+        before: before,
+        limit: limit,
+      );
 
   /// Soft-delete all messages belonging to a conversation.
-  ///
-  /// Called internally during [softDeleteConversation].
   Future<void> _softDeleteMessagesForConversation(
-      String uid, String conversationId) async {
-    final prefix = '${uid}_${conversationId}_';
-    final keys = _messagesBox.keys
-        .where((k) => k.toString().startsWith(prefix))
-        .toList();
-
-    for (final key in keys) {
-      final raw = _messagesBox.get(key);
-      if (raw == null) continue;
-      try {
-        final record = LocalMessageRecord.fromMap(raw as Map);
-        await _messagesBox.put(
-          key,
-          record
-              .copyWith(
-                isDeleted: true,
-                syncStatus: SyncStatus.pendingDelete,
-              )
-              .toMap(),
-        );
-      } catch (_) {
-        await _messagesBox.delete(key);
-      }
-    }
-  }
+          String uid, String conversationId) =>
+      _messageDao.softDeleteMessagesForConversation(uid, conversationId);
 
   /// Update the syncStatus of a conversation record to [SyncStatus.synced].
   ///
@@ -480,41 +389,19 @@ class LocalChatStore {
     final record = LocalConversationRecord.fromMap(raw as Map);
     await _conversationsBox.put(
         key,
-        record.copyWith(
-          syncStatus: SyncStatus.synced,
-          lastSyncedAt: DateTime.now(),
-          localUpdatedAt: DateTime.now(),
-        ).toMap());
+        record
+            .copyWith(
+              syncStatus: SyncStatus.synced,
+              lastSyncedAt: DateTime.now(),
+              localUpdatedAt: DateTime.now(),
+            )
+            .toMap());
   }
 
   /// Update the syncStatus of multiple message records to [SyncStatus.synced].
-  ///
-  /// Called by ChatSyncService after a successful Firestore write confirms
-  /// that the local records have been durably persisted remotely.
   Future<void> markMessagesSynced(
-      String uid, String conversationId, List<String> messageIds) async {
-    final now = DateTime.now();
-    final map = <String, dynamic>{};
-
-    for (final msgId in messageIds) {
-      if (msgId.isEmpty) continue;
-      final key = '${uid}_${conversationId}_$msgId';
-      final raw = _messagesBox.get(key);
-      if (raw != null) {
-        final record = LocalMessageRecord.fromMap(raw as Map);
-        map[key] = record
-            .copyWith(
-              syncStatus: SyncStatus.synced,
-              remoteUpdatedAt: now,
-            )
-            .toMap();
-      }
-    }
-
-    if (map.isNotEmpty) {
-      await _messagesBox.putAll(map);
-    }
-  }
+          String uid, String conversationId, List<String> messageIds) =>
+      _messageDao.markMessagesSynced(uid, conversationId, messageIds);
 
   /// Mark a conversation's sync as failed after retries are exhausted
   /// for a non-retryable error.

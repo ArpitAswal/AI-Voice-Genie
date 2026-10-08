@@ -157,6 +157,11 @@ class ClaudeAdapter extends AiProviderAdapter {
         'max_tokens': request.responseLength.claudeMaxTokens,
         'system': AppConstants.aiVisionSystemInstruction,
         'messages': [
+          // Include previous conversation history for multi-turn visual context
+          ...request.conversationHistory.map((msg) => {
+                'role': msg['role'],
+                'content': msg['content'] ?? '',
+              }),
           {
             'role': 'user',
             'content': contentParts,
@@ -235,6 +240,11 @@ class ClaudeAdapter extends AiProviderAdapter {
         'max_tokens': request.responseLength.claudeMaxTokens,
         'system': AppConstants.aiPdfSystemInstruction,
         'messages': [
+          // Include previous conversation history for multi-turn PDF context
+          ...request.conversationHistory.map((msg) => {
+                'role': msg['role'],
+                'content': msg['content'] ?? '',
+              }),
           {'role': 'user', 'content': contentParts},
         ],
       };

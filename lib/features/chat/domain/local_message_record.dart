@@ -1,4 +1,5 @@
 import '../../../core/enums/app_enums.dart';
+import '../data/message_dto.dart';
 import 'message_model.dart';
 
 /// Local Hive record for a single chat message.
@@ -10,36 +11,87 @@ import 'message_model.dart';
 /// Hive box: `chat_messages_box`
 /// Key: `{uid}_{conversationId}_{messageId}`
 class LocalMessageRecord {
+  /// The user ID owning this conversation message.
   final String uid;
+
+  /// The conversation ID to which this message belongs.
   final String conversationId;
+
+  /// Unique identifier of the message turn (UUID v4).
   final String messageId;
+
+  /// Sender role: [MessageRole.user] for user prompts, [MessageRole.assistant] for AI responses.
   final MessageRole role;
+
+  /// Primary text content (user prompt, assistant response, or localized error text).
   final String content;
+
+  /// The active AI capability modality (textGeneration, imageGeneration, pdfGeneration, etc.).
   final AiCapability contentType;
+
+  /// The timestamp indicating when the message was originally created locally.
   final DateTime timestamp;
+
+  /// The AI provider targeted or used for this message (Gemini, OpenAI, Claude).
   final AiProviderId? modelRequest;
+
+  /// Total tokens consumed (prompt + completion tokens, assistant responses only).
   final int tokenCount;
+
+  /// Delivery lifecycle status: sending, delivered, failed, or partial.
   final MessageStatus status;
 
+  /// Latency in milliseconds from request dispatch to final response completion (assistant only).
+  final int? responseTimeMs;
+
+  /// Provider stop reason indicating why generation halted (e.g., 'STOP', 'length', 'safety').
+  final String? finishReason;
+
+  /// The originating request ID correlating this response turn to the prompt turn that created it.
+  final String? requestId;
+
   // ── Optional content fields ────────────────────────────────────────────────
+
+  /// Cloud Storage URLs or local image file paths attached to this message.
   final List<String>? imageUrls;
+
+  /// Structured PDF attachments metadata (local file path, document name, size, Cloud Storage URL).
   final List<PdfAttachmentInfo>? pdfInfo;
+
+  /// Requested image aspect ratio / resolution (for [AiCapability.imageGeneration]).
   final AiImageSize? imageSize;
+
+  /// Number of images requested in an image generation prompt.
   final int? imageCount;
+
+  /// Quality tier for generated images (e.g. [ImageQuality.standard] vs [ImageQuality.hd]).
   final ImageQuality? imageQuality;
+
+  /// Requested background aesthetic for generated images (transparent, white, auto).
   final ImageGenerateBackground? imageBackground;
+
+  /// Fidelity detail level for vision understanding requests ([VisionDetailLevel.low], [VisionDetailLevel.high]).
   final VisionDetailLevel? visionDetailLevel;
+
+  /// User's preferred AI response length tier (short, balanced, detailed, maximum).
+  final ResponseLength? responseLength;
+
+  /// User's preferred reasoning thinking depth for Gemini models (low, medium, high).
+  final GeminiThinkingLevel? thinkingLevel;
+
+  /// Explicit maximum output tokens calculated for the selected provider.
+  final int? maxOutputTokens;
 
   // ── Local-only sync metadata ──────────────────────────────────────────────
 
-  /// true when the message belongs to a conversation that was locally deleted.
-  /// Filtered out by LocalChatStore before exposing to the UI.
+  /// True when the message belongs to a conversation that was locally deleted.
+  /// Filtered out before exposing to the UI.
   final bool isDeleted;
 
-  /// Current sync state — reflects whether this message reached Firestore.
+  /// Current sync state — reflects whether this message reached Firestore ([SyncStatus.synced], etc.).
   final SyncStatus syncStatus;
 
-  /// When this local record was last written.
+  /// When this local record was last written to Hive.
   final DateTime localUpdatedAt;
 
   /// The Firestore `updatedAt` from the last successful remote merge.
@@ -57,6 +109,9 @@ class LocalMessageRecord {
     this.modelRequest,
     this.tokenCount = 0,
     this.status = MessageStatus.delivered,
+    this.responseTimeMs,
+    this.finishReason,
+    this.requestId,
     this.imageUrls,
     this.pdfInfo,
     this.imageSize,
@@ -64,120 +119,22 @@ class LocalMessageRecord {
     this.imageQuality,
     this.imageBackground,
     this.visionDetailLevel,
+    this.responseLength,
+    this.thinkingLevel,
+    this.maxOutputTokens,
     this.isDeleted = false,
     this.syncStatus = SyncStatus.pendingCreate,
     this.remoteUpdatedAt,
   });
 
-  // ── Hive serialization ────────────────────────────────────────────────────
+  // ── Hive serialization via MessageDto ─────────────────────────────────────
 
-  Map<String, dynamic> toMap() {
-    return {
-      'uid': uid,
-      'conversationId': conversationId,
-      'messageId': messageId,
-      'role': role.value,
-      'content': content,
-      'contentType': contentType.id,
-      'timestamp': timestamp.toIso8601String(),
-      'modelRequest': modelRequest?.id,
-      'tokenCount': tokenCount,
-      'status': status.value,
-      'imageUrls': imageUrls,
-      // PdfAttachmentInfo serialized as a list of maps for Hive compatibility
-      'pdfInfo': pdfInfo
-          ?.map((p) => {
-                'path': p.path,
-                'name': p.name,
-                'fileSizeBytes': p.fileSizeBytes,
-                if (p.url != null) 'url': p.url,
-              })
-          .toList(),
-      'imageSize': imageSize?.apiValue,
-      'imageCount': imageCount,
-      'imageQuality': imageQuality?.name,
-      'imageBackground': imageBackground?.name,
-      'visionDetailLevel': visionDetailLevel?.apiValue,
-      'isDeleted': isDeleted,
-      'syncStatus': syncStatus.value,
-      'localUpdatedAt': localUpdatedAt.toIso8601String(),
-      'remoteUpdatedAt': remoteUpdatedAt?.toIso8601String(),
-    };
-  }
+  /// Serializes this record to Hive using identical Firestore fields & conditions.
+  Map<String, dynamic> toMap() => MessageDto.fromLocalRecord(this).toHiveMap();
 
-  factory LocalMessageRecord.fromMap(Map<dynamic, dynamic> map) {
-    // Restore pdfInfo list from stored maps, guarding against null safely
-    final rawPdf = map['pdfInfo'];
-    List<PdfAttachmentInfo>? pdfInfoList;
-    if (rawPdf is List && rawPdf.isNotEmpty) {
-      pdfInfoList = rawPdf
-          .whereType<Map>()
-          .map((p) => PdfAttachmentInfo(
-                path: p['path'] as String? ?? '',
-                name: p['name'] as String? ?? '',
-                fileSizeBytes: p['fileSizeBytes'] as int? ?? 0,
-                url: p['url'] as String?,
-              ))
-          .toList();
-    }
-
-    // Restore imageUrls list, guarding against non-list stored value
-    final rawUrls = map['imageUrls'];
-    List<String>? imageUrlsList;
-    if (rawUrls is List && rawUrls.isNotEmpty) {
-      imageUrlsList = rawUrls.whereType<String>().toList();
-    }
-
-    return LocalMessageRecord(
-      uid: map['uid'] as String? ?? '',
-      conversationId: map['conversationId'] as String? ?? '',
-      messageId: map['messageId'] as String? ?? '',
-      role: MessageRole.fromValue(map['role'] as String? ?? 'user'),
-      content: map['content'] as String? ?? '',
-      contentType: AiCapability.fromId(
-        map['contentType'] as String? ?? 'text_generation',
-      ),
-      timestamp: map['timestamp'] != null
-          ? DateTime.tryParse(map['timestamp'] as String) ?? DateTime.now()
-          : DateTime.now(),
-      modelRequest: map['modelRequest'] is String
-          ? AiProviderId.fromId(map['modelRequest'] as String)
-          : null,
-      tokenCount: map['tokenCount'] as int? ?? 0,
-      status: MessageStatus.fromValue(map['status'] as String? ?? 'delivered'),
-      imageUrls: imageUrlsList,
-      pdfInfo: pdfInfoList,
-      imageSize: map['imageSize'] != null
-          ? AiImageSize.values.firstWhere(
-              (s) => s.apiValue == map['imageSize'],
-              orElse: () => AiImageSize.square,
-            )
-          : null,
-      imageCount: map['imageCount'] as int?,
-      imageQuality: map['imageQuality'] != null
-          ? ImageQuality.values.firstWhere(
-              (q) => q.name == map['imageQuality'],
-              orElse: () => ImageQuality.low,
-            )
-          : null,
-      imageBackground: map['imageBackground'] != null
-          ? ImageGenerateBackground.fromString(map['imageBackground'] as String)
-          : null,
-      visionDetailLevel: map['visionDetailLevel'] != null
-          ? VisionDetailLevel.fromValue(map['visionDetailLevel'] as String)
-          : null,
-      isDeleted: map['isDeleted'] as bool? ?? false,
-      syncStatus: SyncStatus.fromValue(
-        map['syncStatus'] as String? ?? SyncStatus.pendingCreate.value,
-      ),
-      localUpdatedAt: map['localUpdatedAt'] != null
-          ? DateTime.tryParse(map['localUpdatedAt'] as String) ?? DateTime.now()
-          : DateTime.now(),
-      remoteUpdatedAt: map['remoteUpdatedAt'] != null
-          ? DateTime.tryParse(map['remoteUpdatedAt'] as String)
-          : null,
-    );
-  }
+  /// Deserializes a [LocalMessageRecord] from Hive using resilient [MessageDto] fallbacks.
+  factory LocalMessageRecord.fromMap(Map<dynamic, dynamic> map) =>
+      MessageDto.fromMap(map).toLocalRecord();
 
   // ── Bridge: convert to/from MessageModel ──────────────────────────────────
 
@@ -190,49 +147,16 @@ class LocalMessageRecord {
     required String conversationId,
     SyncStatus syncStatus = SyncStatus.pendingCreate,
   }) {
-    return LocalMessageRecord(
+    return MessageDto.fromDomain(
+      message,
       uid: uid,
       conversationId: conversationId,
-      messageId: message.id,
-      role: message.role,
-      content: message.lastPrompt,
-      contentType: message.requestCapability,
-      timestamp: message.timestamp,
-      modelRequest: message.modelRequest,
-      tokenCount: message.tokenCount,
-      status: message.status,
-      imageUrls: message.imageUrls,
-      pdfInfo: message.pdfInfo,
-      imageSize: message.imageSize,
-      imageCount: message.generateImageRequest,
-      imageQuality: message.imageQuality,
-      imageBackground: message.imageBackground,
-      visionDetailLevel: message.visionDetailLevel,
-      localUpdatedAt: DateTime.now(),
       syncStatus: syncStatus,
-    );
+    ).toLocalRecord();
   }
 
   /// Convert back to MessageModel for use in ChatProvider / UI.
-  MessageModel toMessageModel() {
-    return MessageModel(
-      id: messageId,
-      role: role,
-      lastPrompt: content,
-      requestCapability: contentType,
-      timestamp: timestamp,
-      modelRequest: modelRequest,
-      tokenCount: tokenCount,
-      status: status,
-      imageUrls: imageUrls,
-      pdfInfo: pdfInfo,
-      imageSize: imageSize,
-      generateImageRequest: imageCount,
-      imageQuality: imageQuality,
-      imageBackground: imageBackground,
-      visionDetailLevel: visionDetailLevel,
-    );
-  }
+  MessageModel toMessageModel() => MessageDto.fromLocalRecord(this).toDomain();
 
   /// Hive box key for this record: `{uid}_{conversationId}_{messageId}`.
   String get hiveKey => '${uid}_${conversationId}_$messageId';
@@ -250,6 +174,9 @@ class LocalMessageRecord {
     AiProviderId? modelRequest,
     int? tokenCount,
     MessageStatus? status,
+    int? responseTimeMs,
+    String? finishReason,
+    String? requestId,
     List<String>? imageUrls,
     List<PdfAttachmentInfo>? pdfInfo,
     AiImageSize? imageSize,
@@ -257,6 +184,9 @@ class LocalMessageRecord {
     ImageQuality? imageQuality,
     ImageGenerateBackground? imageBackground,
     VisionDetailLevel? visionDetailLevel,
+    ResponseLength? responseLength,
+    GeminiThinkingLevel? thinkingLevel,
+    int? maxOutputTokens,
     bool? isDeleted,
     SyncStatus? syncStatus,
     DateTime? localUpdatedAt,
@@ -273,6 +203,9 @@ class LocalMessageRecord {
       modelRequest: modelRequest ?? this.modelRequest,
       tokenCount: tokenCount ?? this.tokenCount,
       status: status ?? this.status,
+      responseTimeMs: responseTimeMs ?? this.responseTimeMs,
+      finishReason: finishReason ?? this.finishReason,
+      requestId: requestId ?? this.requestId,
       imageUrls: imageUrls ?? this.imageUrls,
       pdfInfo: pdfInfo ?? this.pdfInfo,
       imageSize: imageSize ?? this.imageSize,
@@ -280,6 +213,9 @@ class LocalMessageRecord {
       imageQuality: imageQuality ?? this.imageQuality,
       imageBackground: imageBackground ?? this.imageBackground,
       visionDetailLevel: visionDetailLevel ?? this.visionDetailLevel,
+      responseLength: responseLength ?? this.responseLength,
+      thinkingLevel: thinkingLevel ?? this.thinkingLevel,
+      maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
       isDeleted: isDeleted ?? this.isDeleted,
       syncStatus: syncStatus ?? this.syncStatus,
       localUpdatedAt: localUpdatedAt ?? this.localUpdatedAt,

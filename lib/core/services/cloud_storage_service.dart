@@ -50,15 +50,10 @@ class CloudStorageService {
     try {
       if (base64String.isEmpty) return null;
 
-      final cleanedBase64 = base64String.contains(',')
-          ? base64String.split(',').last
-          : base64String;
-
-      final normalized = cleanedBase64.replaceAll(RegExp(r'\s+'), '');
-      final bytes = base64Decode(base64.normalize(normalized));
+      final bytes = await compute(_decodeBase64Background, base64String);
 
       final effectiveMimeType = mimeType ??
-          (normalized.startsWith('/9j/') ? 'image/jpeg' : 'image/png');
+          (base64String.contains('/9j/') ? 'image/jpeg' : 'image/png');
       final isJpeg =
           effectiveMimeType == 'image/jpeg' || effectiveMimeType == 'image/jpg';
       final ext = isJpeg ? 'jpg' : 'png';
@@ -304,4 +299,13 @@ class CloudStorageService {
     if (lower.endsWith('.gif')) return 'image/gif';
     return 'image/jpeg';
   }
+}
+
+/// Top-level isolate worker for decoding multi-megabyte AI generated base64 strings
+/// off the main UI isolate to prevent frame drops.
+Uint8List _decodeBase64Background(String base64String) {
+  final cleanedBase64 =
+      base64String.contains(',') ? base64String.split(',').last : base64String;
+  final normalized = cleanedBase64.replaceAll(RegExp(r'\s+'), '');
+  return base64Decode(base64.normalize(normalized));
 }

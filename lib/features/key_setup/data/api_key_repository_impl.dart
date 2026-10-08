@@ -27,11 +27,37 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
   final StorageService _storage;
   final http.Client _httpClient;
 
-  /// In-memory cache for API keys loaded during the current session.
-  /// Minimizes Firestore reads during AI orchestration and fallbacks.
-  final Map<AiProviderId, ApiKeyModel> _memoryCache = {};
+  /// Process-wide in-memory cache for API keys loaded during the current session.
+  /// Shared across all repository instances (e.g. ApiKeyProvider and AiOrchestrator)
+  /// to eliminate redundant Firestore reads.
+  static final Map<AiProviderId, ApiKeyModel> _memoryCache = {};
+  static String? _cachedUid;
 
-  ApiKeyRepositoryImpl({
+  /// Clear the in-memory cache (e.g., on user logout).
+  static void clearMemoryCache() {
+    _memoryCache.clear();
+    _cachedUid = null;
+  }
+
+  static final ApiKeyRepositoryImpl _instance =
+      ApiKeyRepositoryImpl._internal();
+
+  factory ApiKeyRepositoryImpl({
+    FirebaseFirestore? firestore,
+    StorageService? storage,
+    http.Client? httpClient,
+  }) {
+    if (firestore == null && storage == null && httpClient == null) {
+      return _instance;
+    }
+    return ApiKeyRepositoryImpl._internal(
+      firestore: firestore,
+      storage: storage,
+      httpClient: httpClient,
+    );
+  }
+
+  ApiKeyRepositoryImpl._internal({
     FirebaseFirestore? firestore,
     StorageService? storage,
     http.Client? httpClient,
@@ -184,6 +210,12 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
     required String uid,
     AiProviderId? providerId,
   }) async {
+    // If the authenticated user changed, invalidate previous user's cached keys
+    if (_cachedUid != null && _cachedUid != uid) {
+      _memoryCache.clear();
+    }
+    _cachedUid = uid;
+
     // Step 1: Memory cache short-circuit.
     // If the caller requested an individual provider whose key is already cached,
     // return immediately without initiating a Firestore roundtrip.

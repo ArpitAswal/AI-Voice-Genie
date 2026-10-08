@@ -1044,6 +1044,13 @@ class AppLocalizations {
     return _strings[locale.languageCode]?[key] ?? key;
   }
 
+  /// Static translation lookup that works without a BuildContext.
+  /// Used by background services, data mappers, and domain models to resolve
+  /// localized error values for storage in Firestore.
+  static String lookupMessage(String key, [String languageCode = 'en']) {
+    return _strings[languageCode]?[key] ?? _strings['en']?[key] ?? key;
+  }
+
   // ==========================================================================
   // NAMED GETTERS — for the most commonly used strings
   // ==========================================================================

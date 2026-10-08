@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:uuid/uuid.dart';
-
 import '../../core/enums/app_enums.dart';
 
 /// Unified request object passed to AiOrchestrator.execute().
@@ -62,7 +60,7 @@ class AiRequest {
   final List<String>? pdfNames;
 
   /// The user's preferred response length/max tokens.
-  final ResponseLength responseLength;
+  final ResponseLength? responseLength;
 
   /// The user's preferred thinking / reasoning level for Gemini 3.8 Flash.
   final GeminiThinkingLevel? thinkingLevel;
@@ -70,28 +68,29 @@ class AiRequest {
   /// The user's preferred aspect ratio for Gemini image generation (1:1, 16:9, 9:16).
   final GeminiAspectRatio? geminiAspectRatio;
 
+  /// When true, disables Google Search Grounding for internal helper tasks
+  /// (such as title generation or image prompt synthesis) to reduce latency and quota consumption.
+  final bool disableSearchGrounding;
+
   // ── Request Metadata ───────────────────────────────────────────────────────
 
   /// Unique request ID — used for correlation across logging, analytics, and usage tracking
   final String requestId;
 
-  /// Timestamp when the request was created
-  final DateTime createdAt;
-
   /// Creates a unified [AiRequest] instance.
   ///
   /// Flow:
-  /// - [requestId] defaults to a newly generated UUID v4, which coordinates tracking
-  ///   across optimistic UI rendering, provider API calls, analytics events, and outbox synchronization.
-  /// - [createdAt] captures the instant the request was originated in the presentation layer.
+  /// - [requestId] coordinates tracking across optimistic UI rendering, provider API calls,
+  ///   analytics events, and outbox synchronization.
   AiRequest({
     required this.capability,
     required this.prompt,
+    String? requestId,
     this.conversationHistory = const [],
     this.imageBytes,
     this.imageMimeType,
     this.visionDetailLevel,
-    this.responseLength = ResponseLength.balanced,
+    this.responseLength,
     this.thinkingLevel,
     this.geminiAspectRatio,
     this.imageSize,
@@ -100,10 +99,8 @@ class AiRequest {
     this.imageBackground,
     this.pdfBytes,
     this.pdfNames,
-    String? requestId,
-    DateTime? createdAt,
-  })  : requestId = requestId ?? const Uuid().v4(),
-        createdAt = createdAt ?? DateTime.now();
+    this.disableSearchGrounding = false,
+  }) : requestId = requestId ?? '';
 
   /// Estimated token count of the prompt + history.
   ///

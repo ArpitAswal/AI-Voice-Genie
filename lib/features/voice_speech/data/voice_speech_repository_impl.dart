@@ -265,7 +265,9 @@ class VoiceRepositoryImpl implements VoiceRepository {
     if (openAiKey == null || openAiKey.isEmpty) {
       debugPrint('⚠️ Whisper: OpenAI key became unavailable after recording');
       _activeOnError?.call(VoiceErrorCodes.listenFailed);
-      try { File(path).deleteSync(); } catch (_) {}
+      try {
+        File(path).deleteSync();
+      } catch (_) {}
       return;
     }
 
@@ -277,16 +279,17 @@ class VoiceRepositoryImpl implements VoiceRepository {
       );
       final finalText =
           SpeechGrammarFormatter.format(transcript, isFinal: true);
-      debugPrint('🎙️ Whisper: final transcript="${finalText.length > 80
-          ? "${finalText.substring(0, 80)}…"
-          : finalText}"');
+      debugPrint(
+          '🎙️ Whisper: final transcript="${finalText.length > 80 ? "${finalText.substring(0, 80)}…" : finalText}"');
       _activeOnFinalResult?.call(finalText);
     } catch (e) {
       debugPrint('❌ Whisper transcription error: $e');
       _activeOnError?.call(VoiceErrorCodes.listenFailed);
     } finally {
       // Clean up temp audio file to avoid storage accumulation
-      try { File(path).deleteSync(); } catch (_) {}
+      try {
+        File(path).deleteSync();
+      } catch (_) {}
     }
   }
 
@@ -493,7 +496,10 @@ class VoiceRepositoryImpl implements VoiceRepository {
           _activeOnError?.call(error.errorMsg);
           return;
         }
-        if (_hasSilenceTimedOut()) { _finishListening(); return; }
+        if (_hasSilenceTimedOut()) {
+          _finishListening();
+          return;
+        }
         _restartAttemptCount++;
         final isBusy = msg.contains('busy');
         final isClient = msg.contains('client');
@@ -513,10 +519,10 @@ class VoiceRepositoryImpl implements VoiceRepository {
         debugPrint('🎤 STT Engine Status: $status');
         if (status == 'done' || status == 'notListening') {
           if (_isContinuousListening) {
-          if (_hasSilenceTimedOut()) {
-            _finishListening();
-            return;
-          }
+            if (_hasSilenceTimedOut()) {
+              _finishListening();
+              return;
+            }
             _scheduleEngineRestart();
           } else {
             _onEngineStop?.call();
@@ -584,6 +590,7 @@ class VoiceRepositoryImpl implements VoiceRepository {
 
   @override
   Future<void> stopSpeaking() async {
+    if (!_isSpeaking) return;
     try {
       await _tts.stop();
       _isSpeaking = false;

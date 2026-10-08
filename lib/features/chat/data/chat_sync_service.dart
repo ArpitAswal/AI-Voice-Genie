@@ -286,13 +286,29 @@ class ChatSyncService {
     final userMsgData = Map<String, dynamic>.from(rawUser);
     final aiMsgData = Map<String, dynamic>.from(rawAi);
 
-    // Replace the ISO string timestamp (from toCacheMap) with the Firestore server timestamp
+    // Convert client ISO string timestamps to Firestore Timestamps so authentic
+    // prompt creation and AI completion times are preserved in Firestore
+    final rawUserTs = userMsgData[FirebaseCollections.fieldMessageTimestamp];
+    final userDateTime = rawUserTs is String
+        ? DateTime.tryParse(rawUserTs)
+        : (rawUserTs is DateTime ? rawUserTs : null);
     userMsgData[FirebaseCollections.fieldMessageTimestamp] =
-        FieldValue.serverTimestamp();
-    aiMsgData[FirebaseCollections.fieldMessageTimestamp] =
-        FieldValue.serverTimestamp();
+        userDateTime != null
+            ? Timestamp.fromDate(userDateTime)
+            : FieldValue.serverTimestamp();
+
+    final rawAiTs = aiMsgData[FirebaseCollections.fieldMessageTimestamp];
+    final aiDateTime = rawAiTs is String
+        ? DateTime.tryParse(rawAiTs)
+        : (rawAiTs is DateTime ? rawAiTs : null);
+    aiMsgData[FirebaseCollections.fieldMessageTimestamp] = aiDateTime != null
+        ? Timestamp.fromDate(aiDateTime)
+        : FieldValue.serverTimestamp();
+
     convData[FirebaseCollections.fieldConversationLastMessageAt] =
-        FieldValue.serverTimestamp();
+        aiDateTime != null
+            ? Timestamp.fromDate(aiDateTime)
+            : FieldValue.serverTimestamp();
 
     final userMessageId = payload['userMessageId'] as String? ?? '';
     final aiMessageId = payload['aiMessageId'] as String? ?? '';

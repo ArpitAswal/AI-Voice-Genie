@@ -156,9 +156,11 @@ class AppRoutes {
     );
   }
 
-  /// Pop the current route.
+  /// Pop the current route safely if there is a route on the stack.
   static void pop<T>(BuildContext context, [T? result]) {
-    Navigator.of(context).pop<T>(result);
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop<T>(result);
+    }
   }
 
   /// Pop back to the very first route.
@@ -246,8 +248,8 @@ class AppRoutes {
               TransitionType.fade,
               const Duration(milliseconds: 700));
         } else {
-          return _buildRoute(const ChatDetailScreen(conversationId: ''),
-              settings, TransitionType.fade, const Duration(milliseconds: 700));
+          return _buildRoute(const ChatDetailScreen(), settings,
+              TransitionType.fade, const Duration(milliseconds: 700));
         }
 
       // ── API Key Management ─────────────────────────────────────────────────
@@ -279,7 +281,8 @@ class AppRoutes {
         );
 
       case privacy || terms:
-        Map<String, dynamic>? value = arguments is Map<String,dynamic> ? arguments : null;
+        Map<String, dynamic>? value =
+            arguments is Map<String, dynamic> ? arguments : null;
         return _buildRoute(
           LegalScreen(title: value?['title'], mdFileName: value?['mdFileName']),
           settings,
@@ -401,13 +404,13 @@ abstract class RouteArguments {
   const RouteArguments();
 }
 
-/// Arguments for ChatDetailScreen — open a specific conversation.
+/// Arguments for ChatDetailScreen — open a specific conversation or view active new chat.
 class ChatDetailArguments extends RouteArguments {
-  final String conversationId;
+  final String? conversationId;
   final String? initialTitle;
 
   const ChatDetailArguments({
-    required this.conversationId,
+    this.conversationId,
     this.initialTitle,
   });
 }

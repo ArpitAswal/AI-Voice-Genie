@@ -150,7 +150,8 @@ class OpenAiAdapter extends AiProviderAdapter {
       final data = await _parseResponse(response, request.requestId);
 
       final List<String> imagesBase64 = (data['data'] as List<dynamic>? ?? [])
-          .map((e) => (e is Map<String, dynamic>) ? e['b64_json'] as String? : null)
+          .map((e) =>
+              (e is Map<String, dynamic>) ? e['b64_json'] as String? : null)
           .whereType<String>()
           .where((s) => s.isNotEmpty)
           .toList();
@@ -239,6 +240,8 @@ class OpenAiAdapter extends AiProviderAdapter {
             'role': 'system',
             'content': AppConstants.aiVisionSystemInstruction,
           },
+          // Include previous conversation history for multi-turn visual discussions
+          ...request.conversationHistory,
           {
             'role': 'user',
             'content': contentParts,
@@ -331,6 +334,8 @@ class OpenAiAdapter extends AiProviderAdapter {
         'max_output_tokens': request.responseLength.openAiMaxTokens,
         'temperature': 0.3,
         'input': [
+          // Include previous conversation history for multi-turn PDF context
+          ...request.conversationHistory,
           {
             'role': 'user',
             'content': contentParts,
@@ -516,14 +521,13 @@ class OpenAiAdapter extends AiProviderAdapter {
   /// If total_tokens is omitted, computes inputTokens + outputTokens dynamically.
   _OpenAiTokenUsage _extractTokenUsage(Map<String, dynamic> data) {
     final usage = data['usage'] as Map<String, dynamic>?;
-    final inputTokens = usage?['prompt_tokens'] as int? ??
-        usage?['input_tokens'] as int? ??
-        0;
+    final inputTokens =
+        usage?['prompt_tokens'] as int? ?? usage?['input_tokens'] as int? ?? 0;
     final outputTokens = usage?['completion_tokens'] as int? ??
         usage?['output_tokens'] as int? ??
         0;
-    final totalTokens = usage?['total_tokens'] as int? ??
-        (inputTokens + outputTokens);
+    final totalTokens =
+        usage?['total_tokens'] as int? ?? (inputTokens + outputTokens);
 
     return _OpenAiTokenUsage(
       inputTokens: inputTokens,

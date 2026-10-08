@@ -140,7 +140,7 @@ class MessageBubble extends StatelessWidget {
           // Placing it here keeps the action row compact and accessible.
           ttsButton: _canSpeakMessage
               ? TtsPlaybackButton(
-                  messageId: message.id,
+                  messageId: message.messageId,
                   messageContent: message.lastPrompt,
                   isTablet: isTablet,
                 )
@@ -233,7 +233,7 @@ class _MessageBubbleContent extends StatelessWidget {
 
       if (!isUser) {
         textWidget = Selector<ChatProvider, bool>(
-          selector: (_, p) => p.shouldAnimateMessage(message.id),
+          selector: (_, p) => p.shouldAnimateMessage(message.messageId),
           builder: (context, shouldAnimate, _) {
             return TypewriterText(
               text: text,
@@ -245,11 +245,11 @@ class _MessageBubbleContent extends StatelessWidget {
                 if (prefs.autoTextToSpeech) {
                   context
                       .read<VoiceProvider>()
-                      .speak(text, messageId: message.id);
+                      .speak(text, messageId: message.messageId);
                 }
               },
               onComplete: () {
-                context.read<ChatProvider>().markMessageAnimated(message.id);
+                context.read<ChatProvider>().markMessageAnimated(message.messageId);
                 onTypewriterTick?.call();
               },
             );
@@ -268,7 +268,7 @@ class _MessageBubbleContent extends StatelessWidget {
         _ChatImage(
           images: message.imageUrls!,
           size: message.imageSize ?? AiImageSize.square,
-          messageId: message.id,
+          messageId: message.messageId,
           provider:
               message.modelRequest?.id ?? (isUser ? 'user_upload' : 'unknown'),
         ),
