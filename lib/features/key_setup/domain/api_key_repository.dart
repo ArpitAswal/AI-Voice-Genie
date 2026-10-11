@@ -24,43 +24,52 @@ abstract class ApiKeyRepository {
   /// Save a validated API key to Firestore.
   ///
   /// Overwrites any existing key for this provider.
+  /// Resolves authenticated user ID if [uid] is omitted.
   /// Should only be called AFTER validateKey() returns true.
   Future<void> saveKey({
-    required String uid,
+    String? uid,
     required AiProviderId providerId,
     required String apiKey,
   });
 
   /// Load API keys for a user from Firestore.
   ///
+  /// Resolves authenticated user ID if [uid] is omitted.
   /// If [providerId] is provided, only loads that specific provider.
   /// If [providerId] is null, loads all available providers.
   /// Returns a map of providerId → ApiKeyModel.
   /// Throws [ApiKeyException] if fetching from Firestore fails.
   Future<Map<AiProviderId, ApiKeyModel>> loadKeys({
-    required String uid,
+    String? uid,
     AiProviderId? providerId,
   });
 
   /// Listen to all existing API keys for a user in real-time.
   ///
+  /// Resolves authenticated user ID if [uid] is omitted.
   /// Returns a stream of providerId → ApiKeyModel map.
-  Stream<Map<AiProviderId, ApiKeyModel>> watchKeys(String uid);
+  Stream<Map<AiProviderId, ApiKeyModel>> watchKeys([String? uid]);
 
   /// Delete the API key for a specific provider from Firestore.
+  ///
+  /// Resolves authenticated user ID if [uid] is omitted.
   Future<void> deleteKey({
-    required String uid,
+    String? uid,
     required AiProviderId providerId,
   });
 
   /// Mark key setup as complete on the user document.
   ///
-  /// Called when user taps "Continue" with ≥1 valid key.
-  /// Sets keySetupDone=true and preferredProvider on the user doc.
-  Future<void> completeKeySetup({
-    required String uid,
-    required AiProviderId preferredProvider,
-  });
+  /// Resolves authenticated user ID if [uid] is omitted.
+  /// Sets keySetupDone=true on the user doc and in Hive.
+  Future<void> completeKeySetup([String? uid]);
+
+  /// Reset key setup status to incomplete on the user document.
+  ///
+  /// Resolves authenticated user ID if [uid] is omitted.
+  /// Sets keySetupDone=false in Firestore and updates Hive storage.
+  /// Called when all API keys have been removed.
+  Future<void> resetKeySetupStatus([String? uid]);
 }
 
 // =============================================================================

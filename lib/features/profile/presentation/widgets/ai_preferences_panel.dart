@@ -33,6 +33,7 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
                   providers: AiProviderId.values,
                   selectedProvider: preferences.preferredProvider,
                   isEnabled: true,
+                  showStatusIndicators: false,
                   onChanged: (provider) {
                     preferences.setPreferredProvider(provider);
                   },

@@ -118,8 +118,10 @@ class _AuthScreenState extends State<AuthScreen> {
       context.showError('something_went_wrong');
       return;
     } else {
-      context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
-      context.read<UsageProvider>().loadForMonth(user.uid);
+      if (user.keySetupDone) {
+        context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
+        context.read<UsageProvider>().loadForMonth(user.uid);
+      }
     }
 
     if (!user.onboardingDone) {

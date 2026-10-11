@@ -10,6 +10,7 @@ class ChatActionButton extends StatelessWidget {
   final String? tooltip;
   final bool isLoading;
   final Color? color;
+  final Color? backgroundColor;
   final List<BoxShadow>? boxShadow;
 
   const ChatActionButton({
@@ -19,6 +20,7 @@ class ChatActionButton extends StatelessWidget {
     this.tooltip,
     this.isLoading = false,
     this.color,
+    this.backgroundColor,
     this.boxShadow,
   });
 
@@ -31,7 +33,8 @@ class ChatActionButton extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: context.primaryColor.withValues(alpha: 0.18),
+        color: backgroundColor ??
+            (color ?? context.primaryColor).withValues(alpha: 0.18),
         boxShadow: boxShadow,
       ),
       child: isLoading
@@ -39,7 +42,7 @@ class ChatActionButton extends StatelessWidget {
               padding: const EdgeInsets.all(10),
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: context.primaryColor.withValues(alpha: 0.18),
+                color: color ?? context.colorScheme.primary,
               ),
             )
           : Icon(

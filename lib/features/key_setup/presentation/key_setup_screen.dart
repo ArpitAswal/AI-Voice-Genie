@@ -15,9 +15,7 @@ import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/app_validators.dart';
-import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
-import '../../auth/presentation/auth_provider.dart';
 
 /// API key setup screen shown once after first sign-in.
 ///
@@ -47,6 +45,32 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
   void initState() {
     super.initState();
     switchScreenShotState(true);
+
+    // Self-healing check: ensure keys are loaded into memory if not already present.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final keyProvider = context.read<ApiKeyProvider>();
+      final success = await keyProvider.loadExistingKeysIfNeeded();
+      if (!mounted) return;
+      if (!success && keyProvider.loadError != null) {
+        _showLoadErrorSnackbar(keyProvider.loadError!);
+      }
+    });
+  }
+
+  void _showLoadErrorSnackbar(String errorCode) {
+    context.showError(
+      context.l10n.translate(errorCode),
+      actionLabel: context.l10n.retry,
+      onAction: () async {
+        final keyProvider = context.read<ApiKeyProvider>();
+        final success = await keyProvider.loadExistingKeys();
+        if (!mounted) return;
+        if (!success && keyProvider.loadError != null) {
+          _showLoadErrorSnackbar(keyProvider.loadError!);
+        }
+      },
+    );
   }
 
   @override
@@ -63,27 +87,17 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
       // Re-enable screenshots & screen recording
       await noScreenshot.screenshotOn();
     }
-    // Toggle between enabled / disabled
-    // await noScreenshot.toggleScreenshot();
   }
 
   Future<void> _handleContinue() async {
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
+    final keyProvider = context.read<ApiKeyProvider>();
 
-    LoadingOverlay.show(context, message: context.l10n.pleaseWait);
-
-    final success = await context.read<ApiKeyProvider>().completeSetup(uid);
-
-    LoadingOverlay.hide();
-
-    if (!mounted) return;
-
-    if (success) {
-      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.tabBar);
-    } else {
-      context.showError('something_went_wrong');
+    if (keyProvider.hasAtLeastOneValidKey) {
+      // Ensure completion in background if not already completed
+      keyProvider.completeSetup();
     }
+    // Instant smooth navigation without blocking on full-screen spinner
+    AppRoutes.navigateAndRemoveUntil(context, AppRoutes.tabBar);
   }
 
   @override
@@ -136,8 +150,8 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
                     SizedBox(height: isTablet ? 36 : 24),
                     _ContinueButton(
                       isTablet: isTablet,
-                      isEnabled: keyProvider.hasAtLeastOneValidKey,
                       isLoading: keyProvider.isCompletingSetup,
+                      hasKeys: keyProvider.hasAtLeastOneValidKey,
                       onTap: _handleContinue,
                     )
                   ],
@@ -220,36 +234,46 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
     super.dispose();
   }
 
+  /// Validate and save key handler.
+  ///
+  /// Flow:
+  /// 1. Clears any existing error on the card.
+  /// 2. Executes form validation (length and provider mismatch checks).
+  /// 3. Trims key input to prevent whitespace/newline corruption.
+  /// 4. Dispatches validation and save to ApiKeyProvider.
+  /// 5. On validation success: clears _keyController to eliminate sensitive plaintext from memory
+  ///    and auto-sets preferred provider if this is the user's first valid key.
   Future<void> _handleValidate() async {
-    // Clear provider error on retry
-    context.read<ApiKeyProvider>().clearError(widget.provider);
+    final apiKeyProvider = context.read<ApiKeyProvider>();
+    // Synchronous guard against rapid double-taps
+    if (apiKeyProvider.statusFor(widget.provider) == ApiKeyStatus.validating) {
+      return;
+    }
 
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
-
-    final apiKeyProvider = context.read<ApiKeyProvider>();
+    final cleanKey = _keyController.text.trim();
     await apiKeyProvider.validateAndSaveKey(
-      uid: uid,
       providerId: widget.provider,
-      apiKey: _keyController.text,
+      apiKey: cleanKey,
     );
 
-    // Auto-set as default preferred provider if this is the very first key added
+    // If key became valid:
     if (mounted &&
-        apiKeyProvider.statusFor(widget.provider) == ApiKeyStatus.valid &&
-        apiKeyProvider.validProviders.length == 1) {
-      context
-          .read<AiPreferencesProvider>()
-          .setPreferredProvider(widget.provider);
+        apiKeyProvider.statusFor(widget.provider) == ApiKeyStatus.valid) {
+      // Clear controller to wipe sensitive plaintext from memory
+      _keyController.clear();
+
+      // Auto-set as default preferred provider if this is the very first key added
+      if (apiKeyProvider.validProviders.length == 1) {
+        context
+            .read<AiPreferencesProvider>()
+            .setPreferredProvider(widget.provider);
+      }
     }
   }
 
-  Future<void> _handleDelete(String provider) async {
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
-
+  Future<void> _handleDelete() async {
     final isConfirm = await showDialog<bool>(
         context: context,
         builder: (context) => AppAlertDialog(
@@ -275,18 +299,10 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
 
     if (isConfirm != true || !mounted) return;
 
-    LoadingOverlay.show(context, message: context.l10n.deleting);
     _keyController.clear();
-
-    await context.read<ApiKeyProvider>().deleteKey(
-          uid: uid,
-          providerId: widget.provider,
-        );
-    LoadingOverlay.hide();
-
-    if (!mounted) return;
-    MessageUtils.showSuccess(
-        context, "$provider ${context.l10n.keyRemoveSuccess}");
+    context.read<ApiKeyProvider>().deleteKey(providerId: widget.provider);
+    MessageUtils.showSuccess(context,
+        "${widget.provider.displayName} ${context.l10n.keyRemoveSuccess}");
   }
 
   Future<void> _handlePaste() async {
@@ -302,15 +318,17 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<ApiKeyProvider, (ApiKeyStatus, String?)>(
+    return Selector<ApiKeyProvider, (ApiKeyStatus, String?, bool)>(
       // Only rebuild this card when its own provider's state changes
       selector: (_, provider) => (
         provider.statusFor(widget.provider),
         provider.errorFor(widget.provider),
+        provider.isCloudSyncFailed(widget.provider),
       ),
       builder: (context, state, _) {
         final status = state.$1;
         final error = state.$2;
+        final isSyncFailed = state.$3;
         final isValidating = status == ApiKeyStatus.validating;
         final isValid = status == ApiKeyStatus.valid;
 
@@ -352,7 +370,11 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                             color: widget.provider.brandColor(context)),
                       ),
                     ),
-                    _StatusChip(status: status, isTablet: widget.isTablet),
+                    _StatusChip(
+                      status: status,
+                      isTablet: widget.isTablet,
+                      isSyncFailed: isSyncFailed,
+                    ),
                   ],
                 ),
 
@@ -406,6 +428,7 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                         return Validators.validateApiKey(
                           value,
                           providerName: widget.provider.displayName,
+                          providerId: widget.provider,
                           context: context,
                         );
                       },
@@ -514,19 +537,8 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                               maxLines: 2,
                             ),
                           ),
-                          // Delete button — only shown when key is valid
-                          // GestureDetector(
-                          //   onTap: () =>
-                          //       _handleDelete(widget.provider.displayName),
-                          //   child: const ImageView(
-                          //     image: ImageViewData.asset(AppAssets.deleteIcon),
-                          //     width: 18,
-                          //     height: 18,
-                          //   ),
-                          // ),
                           GestureDetector(
-                            onTap: () =>
-                                _handleDelete(widget.provider.displayName),
+                            onTap: _handleDelete,
                             child: Container(
                               padding: EdgeInsets.symmetric(
                                 horizontal: context.isTablet ? 10 : 8,
@@ -549,6 +561,70 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
                       ),
                     ),
                   ),
+                  if (isSyncFailed) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (context.isDark
+                                ? AppColors.darkWarning
+                                : AppColors.lightWarning)
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: (context.isDark
+                                  ? AppColors.darkWarning
+                                  : AppColors.lightWarning)
+                              .withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.cloud_off_rounded,
+                            size: 16,
+                            color: context.isDark
+                                ? AppColors.darkWarning
+                                : AppColors.lightWarning,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Cloud sync failed. Active on this device only.',
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: context.isDark
+                                    ? AppColors.darkWarning
+                                    : AppColors.lightWarning,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => context
+                                .read<ApiKeyProvider>()
+                                .retryCloudSync(widget.provider),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              child: Text(
+                                'Retry',
+                                style: context.textTheme.labelSmall?.copyWith(
+                                  color: context.isDark
+                                      ? AppColors.darkWarning
+                                      : AppColors.lightWarning,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -644,11 +720,46 @@ class _ProviderLogo extends StatelessWidget {
 class _StatusChip extends StatelessWidget {
   final ApiKeyStatus status;
   final bool isTablet;
+  final bool isSyncFailed;
 
-  const _StatusChip({required this.status, required this.isTablet});
+  const _StatusChip({
+    required this.status,
+    required this.isTablet,
+    this.isSyncFailed = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (status == ApiKeyStatus.valid && isSyncFailed) {
+      final color =
+          context.isDark ? AppColors.darkWarning : AppColors.lightWarning;
+      return Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isTablet ? 10 : 8,
+          vertical: isTablet ? 5 : 4,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded,
+                color: color, size: isTablet ? 14 : 12),
+            const SizedBox(width: 4),
+            Text(
+              'Sync Failed',
+              style: context.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final (label, color, icon) = switch (status) {
       ApiKeyStatus.valid => (
           context.l10n.keyValid,
@@ -731,33 +842,22 @@ class _SecurityNote extends StatelessWidget {
 
 class _ContinueButton extends StatelessWidget {
   final bool isTablet;
-  final bool isEnabled;
   final bool isLoading;
+  final bool hasKeys;
   final VoidCallback onTap;
 
   const _ContinueButton({
     required this.isTablet,
-    required this.isEnabled,
     required this.isLoading,
+    required this.hasKeys,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return context.themedElevatedButton(
-      onPressed: isLoading
-          ? null
-          : () {
-              if (isEnabled) {
-                onTap();
-              } else {
-                MessageUtils.showWarning(
-                  context,
-                  context.l10n.noModelKey,
-                );
-              }
-            },
-      label: context.l10n.done,
+      onPressed: isLoading ? null : onTap,
+      label: hasKeys ? context.l10n.done : context.l10n.skip,
     );
   }
 }

@@ -5,22 +5,19 @@ import '../../../core/security/encryption_service.dart';
 /// Immutable domain entity representing a stored AI provider API key.
 ///
 /// Stored in Firestore at:
-///   AI_Voice_Genie/users/{uid}/apiKeys/{providerId}
+///   AIVoiceGenie/UsersAPIKeys/{uid}/{providerId}
 ///
-/// The [apiKey] field contains the raw key string.
-/// Firestore security rules must restrict access to the owning uid only.
+/// The [apiKey] field contains the raw key string at runtime.
+/// When stored at rest in Cloud Firestore, it is encrypted via AES-256-CBC.
 class ApiKeyModel {
-  /// Which AI provider this key belongs to
+  /// Which AI provider this key belongs to (e.g. 'openai', 'gemini', 'claude')
   final String aiProviderId;
 
   /// AI model features supported by this key
   final String aiProviderModelFeatures;
 
-  /// The raw API key string — stored in Firestore, read at runtime
+  /// The raw (decrypted) API key string — decrypted on load, encrypted on save
   final String apiKey;
-
-  /// Whether this key passed live validation
-  final bool isValid;
 
   /// When this key was first added
   final DateTime? keyAddedAt;
@@ -31,7 +28,6 @@ class ApiKeyModel {
   const ApiKeyModel({
     required this.aiProviderId,
     required this.apiKey,
-    required this.isValid,
     required this.aiProviderModelFeatures,
     this.keyAddedAt,
     this.lastValidated,
@@ -39,6 +35,8 @@ class ApiKeyModel {
 
   // ── Factory: from Firestore ───────────────────────────────────────────────
 
+  /// Deserializes a Firestore document map into an ApiKeyModel instance.
+  /// Automatically decrypts the AES-256-CBC ciphertext into plaintext for in-memory use.
   factory ApiKeyModel.fromFirestore(Map<String, dynamic> data) {
     return ApiKeyModel(
       aiProviderId: data[FirebaseCollections.fieldProviderId] as String? ?? '',
@@ -46,7 +44,6 @@ class ApiKeyModel {
           data[FirebaseCollections.fieldProviderModelFeatures] as String? ?? '',
       apiKey: EncryptionService.decrypt(
           data[FirebaseCollections.fieldApiKey] as String? ?? ''),
-      isValid: data[FirebaseCollections.fieldKeyIsValid] as bool? ?? false,
       keyAddedAt:
           (data[FirebaseCollections.fieldKeyAddedAt] as Timestamp?)?.toDate(),
       lastValidated:
@@ -57,13 +54,14 @@ class ApiKeyModel {
 
   // ── Serialization ─────────────────────────────────────────────────────────
 
-  /// Serialize to Firestore map for saving a new or updated key.
+  /// Serializes this model into a Firestore map for saving.
+  /// Automatically encrypts the raw API key with AES-256-CBC before transmission.
   Map<String, dynamic> toFirestore() {
     return {
       FirebaseCollections.fieldProviderId: aiProviderId,
       FirebaseCollections.fieldProviderModelFeatures: aiProviderModelFeatures,
       FirebaseCollections.fieldApiKey: EncryptionService.encrypt(apiKey),
-      FirebaseCollections.fieldKeyIsValid: isValid,
+      FirebaseCollections.fieldKeyIsValid: true,
       FirebaseCollections.fieldKeyLastValidated: FieldValue.serverTimestamp(),
     };
   }
@@ -74,7 +72,6 @@ class ApiKeyModel {
     String? providerId,
     String? providerFeatures,
     String? apiKey,
-    bool? isValid,
     DateTime? keyAddedAt,
     DateTime? lastValidated,
   }) {
@@ -82,7 +79,6 @@ class ApiKeyModel {
       aiProviderId: providerId ?? aiProviderId,
       aiProviderModelFeatures: providerFeatures ?? aiProviderModelFeatures,
       apiKey: apiKey ?? this.apiKey,
-      isValid: isValid ?? this.isValid,
       keyAddedAt: keyAddedAt ?? this.keyAddedAt,
       lastValidated: lastValidated ?? this.lastValidated,
     );
@@ -99,5 +95,5 @@ class ApiKeyModel {
   int get hashCode => aiProviderId.hashCode;
 
   @override
-  String toString() => 'ApiKeyModel(provider: $aiProviderId, valid: $isValid)';
+  String toString() => 'ApiKeyModel(provider: $aiProviderId)';
 }

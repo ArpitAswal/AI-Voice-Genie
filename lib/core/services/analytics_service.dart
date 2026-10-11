@@ -135,7 +135,6 @@ class AnalyticsService {
     await _safeLog(FirebaseCollections.eventModelRemoved, {
       FirebaseCollections.paramUserId: uid,
       FirebaseCollections.paramModelUsed: provider.id,
-      FirebaseCollections.paramModelName: provider.displayName,
       FirebaseCollections.paramModelFeatures: provider.features,
     });
   }

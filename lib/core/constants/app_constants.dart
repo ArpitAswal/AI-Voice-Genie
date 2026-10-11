@@ -40,7 +40,7 @@ class AppConstants {
 
   // ── Network ───────────────────────────────────────────────────────────────
   // AI API calls can take longer — generous timeout for image generation
-  static const Duration aiRequestTimeout = Duration(seconds: 90);
+  static const Duration aiRequestTimeout = Duration(seconds: 60);
 
   // ── Notifications ─────────────────────────────────────────────────────────
   static const String notificationChannelId = 'ai_voice_genie_channel';

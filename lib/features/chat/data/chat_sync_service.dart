@@ -16,6 +16,8 @@ import '../domain/local_message_record.dart';
 import '../domain/message_model.dart';
 import 'chat_outbox_store.dart';
 import 'local_chat_store.dart';
+import '../../key_setup/data/api_key_repository_impl.dart';
+import '../../key_setup/presentation/api_key_provider.dart';
 
 /// Background coordinator that keeps Hive and Firestore in sync.
 ///
@@ -230,6 +232,12 @@ class ChatSyncService {
           await _localStore.hardDeleteConversation(
               task.uid, task.conversationId);
           await _outboxStore.markSucceeded(task.operationId);
+
+        case OutboxTaskType.saveApiKey:
+          await _executeSaveApiKey(task);
+
+        case OutboxTaskType.deleteApiKey:
+          await _executeDeleteApiKey(task);
       }
     } on FirebaseException catch (e) {
       // Classify the error to determine retry behavior
@@ -240,11 +248,16 @@ class ChatSyncService {
         isRetryable: isRetryable,
       );
 
-      // For non-retryable errors on upsert tasks, mark the local conversation
-      // as syncFailed so the UI can show a subtle warning indicator
+      // For non-retryable errors, mark local models as syncFailed so the UI can show warning indicators
       if (!isRetryable && task.type == OutboxTaskType.upsertMessagePair) {
         await _localStore.markConversationSyncFailed(
             task.uid, task.conversationId);
+      } else if (!isRetryable && task.type == OutboxTaskType.saveApiKey) {
+        final providerIdStr = task.payload['providerId'] as String?;
+        if (providerIdStr != null) {
+          ApiKeyProvider.instance
+              ?.markCloudSyncFailed(AiProviderId.fromId(providerIdStr));
+        }
       }
     } catch (e) {
       // Unexpected errors — treat as retryable by default
@@ -378,6 +391,44 @@ class ChatSyncService {
       title: newTitle,
     );
     await _outboxStore.markSucceeded(task.operationId);
+  }
+
+  /// Persist an API key to Firestore via ApiKeyRepositoryImpl.
+  Future<void> _executeSaveApiKey(ChatOutboxTask task) async {
+    final providerIdStr = task.payload['providerId'] as String?;
+    final apiKey = task.payload['apiKey'] as String?;
+    if (providerIdStr == null || apiKey == null) {
+      await _outboxStore.markFailed(task.operationId, 'Corrupt API key payload',
+          isRetryable: false);
+      return;
+    }
+    final provider = AiProviderId.fromId(providerIdStr);
+    await ApiKeyRepositoryImpl().saveKey(
+      uid: task.uid,
+      providerId: provider,
+      apiKey: apiKey,
+    );
+    ApiKeyProvider.instance?.clearCloudSyncFailed(provider);
+    await _outboxStore.markSucceeded(task.operationId);
+    debugPrint(
+        '✅ ChatSyncService: synced API key [$providerIdStr] to Firestore');
+  }
+
+  /// Delete an API key document from Firestore via ApiKeyRepositoryImpl.
+  Future<void> _executeDeleteApiKey(ChatOutboxTask task) async {
+    final providerIdStr = task.payload['providerId'] as String?;
+    if (providerIdStr == null) {
+      await _outboxStore.markFailed(task.operationId, 'Corrupt API key payload',
+          isRetryable: false);
+      return;
+    }
+    final provider = AiProviderId.fromId(providerIdStr);
+    await ApiKeyRepositoryImpl().deleteKey(
+      uid: task.uid,
+      providerId: provider,
+    );
+    await _outboxStore.markSucceeded(task.operationId);
+    debugPrint('✅ ChatSyncService: deleted API key [$providerIdStr] remotely');
   }
 
   // ── Remote Stream Merge ────────────────────────────────────────────────────
@@ -594,12 +645,11 @@ class ChatSyncService {
 
   /// Determine whether a Firestore error code should be retried.
   ///
-  /// Retryable: network issues, server unavailable, rate limits
-  /// Non-retryable: permission errors, auth failures, bad request payloads
+  /// Retryable: network issues, server unavailable, rate limits, token finish / unauthenticated
+  /// Non-retryable: permission errors, bad request payloads
   bool _isRetryableFirestoreError(String? code) {
     const nonRetryable = {
       'permission-denied',
-      'unauthenticated',
       'invalid-argument',
       'not-found', // Trying to update a doc that never existed
     };

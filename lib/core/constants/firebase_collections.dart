@@ -77,6 +77,10 @@ class FirebaseCollections {
   static String apiKeyDoc(String uid, String providerId) =>
       '$root/$apiKeys/$uid/$providerId';
 
+  /// Collection path for all API keys of a user:
+  /// AIVoiceGenie/UsersAPIKeys/{uid}
+  static String apiKeysCollection(String uid) => '$root/$apiKeys/$uid';
+
   /// Collection path for all conversations of a user:
   /// AI_Voice_Genie/AI_Conversations/{uid}
   static String conversationsCollection(String uid) =>

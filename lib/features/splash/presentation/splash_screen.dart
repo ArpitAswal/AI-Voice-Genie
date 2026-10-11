@@ -97,8 +97,10 @@ class _SplashScreenState extends State<SplashScreen> {
       _navigateUnauthenticated();
       return;
     } else {
-      context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
-      context.read<UsageProvider>().loadForMonth(user.uid);
+      if (user.keySetupDone) {
+        context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
+        context.read<UsageProvider>().loadForMonth(user.uid);
+      }
     }
 
     if (!user.onboardingDone) {

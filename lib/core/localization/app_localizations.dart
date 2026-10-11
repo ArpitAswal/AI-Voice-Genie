@@ -1068,6 +1068,7 @@ class AppLocalizations {
   String get delete => translate('delete');
   String get pleaseWait => translate('please_wait');
   String get somethingWentWrong => translate('something_went_wrong');
+  String get retry => translate('retry');
   String get offlineDeleteQueued => translate('offline_delete_queued');
   String get noInternet => translate('no_internet_connection');
   String get signInWithGoogle => translate('sign_in_with_google');

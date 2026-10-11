@@ -13,6 +13,8 @@ import '../../../core/services/analytics_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../features/chat/data/chat_sync_service.dart';
+import '../../key_setup/data/api_key_repository_impl.dart';
+import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/auth_repository.dart';
 import '../domain/user_model.dart';
 import '../data/auth_repository_impl.dart';
@@ -217,8 +219,10 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
           await StorageService().clearChatBoxes(signingOutUid);
         } catch (_) {}
       }
+      // Invalidate API key cache and subscriptions so subsequent sessions start completely clean
       try {
-        await StorageService().clearUserData();
+        ApiKeyRepositoryImpl.clearMemoryCache();
+        ApiKeyProvider.instance?.reset();
       } catch (_) {}
 
       _currentUser = null;
@@ -277,8 +281,10 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
           await StorageService().clearChatBoxes(deletingUid);
         } catch (_) {}
       }
+      // Invalidate API key cache and subscriptions on account deletion
       try {
-        await StorageService().clearUserData();
+        ApiKeyRepositoryImpl.clearMemoryCache();
+        ApiKeyProvider.instance?.reset();
       } catch (_) {}
 
       _currentUser = null;

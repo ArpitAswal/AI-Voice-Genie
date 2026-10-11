@@ -37,8 +37,11 @@ class ProfileAiIntelligenceSection extends StatelessWidget {
               children: [
                 ProfileSectionTitle(label: context.l10n.aiIntelligence),
                 ElevatedButton.icon(
-                  onPressed: () =>
-                      AppRoutes.navigateTo(context, AppRoutes.apiKeyManagement),
+                  onPressed: () => AppRoutes.navigateTo(
+                    context,
+                    AppRoutes.keySetup,
+                    arguments: const KeySetupArguments(isInitialSetup: false),
+                  ),
                   style: context.theme.elevatedButtonTheme.style?.copyWith(
                       padding: const WidgetStatePropertyAll(
                           EdgeInsets.symmetric(
@@ -530,8 +533,11 @@ class _InactiveModelChip extends StatelessWidget {
       onTap: () {
         AppRoutes.navigateTo(
           context,
-          AppRoutes.apiKeyManagement,
-          arguments: provider,
+          AppRoutes.keySetup,
+          arguments: KeySetupArguments(
+            isInitialSetup: false,
+            initialFocusProvider: provider,
+          ),
         );
       },
       child: Container(

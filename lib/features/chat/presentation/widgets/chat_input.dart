@@ -9,6 +9,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/router/app_routes.dart';
 import '../../../../core/utils/app_validators.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/preferences/ai_preferences_provider.dart';
@@ -184,23 +185,16 @@ class _ChatInputBarState extends State<ChatInputBar> {
         return;
       }
 
-      // Verify API key is configured before clearing input
+      // Guard: do not proceed if key is missing or limit is exceeded
       final provider = context.read<AiPreferencesProvider>().preferredProvider;
       final apiKeyProvider = context.read<ApiKeyProvider>();
       if (!apiKeyProvider.validProviders.contains(provider)) {
-        MessageUtils.showErrorToast(context, context.l10n.noKeyForModel);
         return;
       }
 
-      // Verify usage budget limits
       final usageProvider = context.read<UsageProvider>();
       final summary = usageProvider.summaryFor(provider);
-
       if (summary != null && summary.isExceeded()) {
-        MessageUtils.showErrorToast(
-          context,
-          context.l10n.chatProviderLimitReached(provider.displayName),
-        );
         return;
       }
 
@@ -536,6 +530,12 @@ class _ChatInputBarState extends State<ChatInputBar> {
     final isGenerating =
         context.select<ChatProvider, bool>((p) => p.isGenerating);
     final isTablet = context.isTablet;
+    final provider = context.watch<AiPreferencesProvider>().preferredProvider;
+    final apiKeyProvider = context.watch<ApiKeyProvider>();
+    final usageProvider = context.watch<UsageProvider>();
+    final hasKey = apiKeyProvider.validProviders.contains(provider);
+    final isExceeded =
+        usageProvider.summaryFor(provider)?.isExceeded() ?? false;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -599,17 +599,46 @@ class _ChatInputBarState extends State<ChatInputBar> {
               ),
             ),
             // Shows VoiceInputButton when empty or while actively listening,
-            // and SendButton once text/attachments are ready and listening has stopped.
+            // Add Key action if no key is configured for the model,
+            // Disabled send button if usage limit is reached,
+            // or SendButton once text/attachments are ready.
             const SizedBox(width: 4),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: (_hasText && !isListening)
-                  ? ChatActionButton(
-                      key: const ValueKey('send'),
-                      icon: Icons.send_rounded,
-                      onTap: isGenerating ? null : _handleSend,
-                      isLoading: isGenerating,
-                    )
+              child: (_canSend && !isListening)
+                  ? (!hasKey
+                      ? ChatActionButton(
+                          key: ValueKey('add_key_${provider.id}'),
+                          icon: Icons.key_rounded,
+                          color: AppColors.lightWarning,
+                          tooltip: '${l10n.noKeyForModel} — ${l10n.addKey}',
+                          onTap: () {
+                            AppRoutes.navigateTo(
+                              context,
+                              AppRoutes.keySetup,
+                              arguments: KeySetupArguments(
+                                isInitialSetup: false,
+                                initialFocusProvider: provider,
+                              ),
+                            );
+                          },
+                        )
+                      : isExceeded
+                          ? ChatActionButton(
+                              key: const ValueKey('send_disabled'),
+                              icon: Icons.send_rounded,
+                              color: context.theme.disabledColor,
+                              tooltip: l10n.chatProviderLimitReached(
+                                  provider.displayName),
+                              onTap: null,
+                            )
+                          : ChatActionButton(
+                              key: const ValueKey('send'),
+                              icon: Icons.send_rounded,
+                              onTap: isGenerating ? null : _handleSend,
+                              isLoading: isGenerating,
+                              tooltip: l10n.send,
+                            ))
                   : VoiceInputButton(
                       key: _voiceMicKey,
                       isTablet: isTablet,
