@@ -214,10 +214,8 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
 // MESSAGE MANAGER (singleton – channel-based dedup & priority)
 // =============================================================================
 
-/// Height of one message card + gap between stacked messages.
-const double _kMessageHeight = 56;
-const double _kStackGap = 8;
-const double _kStackOffset = _kMessageHeight + _kStackGap;
+/// Vertical stack offset between concurrent messages (card height 56 + gap 8).
+const double _kStackOffset = 64.0;
 
 /// Holds a reference to a live overlay so we can dismiss / replace it.
 class _LiveMessage {

@@ -40,7 +40,8 @@ class ApiKeyProvider extends ChangeNotifier {
 
   final ApiKeyRepository _repository;
   final AnalyticsService _analytics;
-  final FirebaseAuth _auth;
+  final FirebaseAuth? _customAuth;
+  FirebaseAuth get _auth => _customAuth ?? FirebaseAuth.instance;
 
   ApiKeyProvider({
     ApiKeyRepository? repository,
@@ -48,7 +49,7 @@ class ApiKeyProvider extends ChangeNotifier {
     FirebaseAuth? auth,
   })  : _repository = repository ?? ApiKeyRepositoryImpl(),
         _analytics = analytics ?? AnalyticsService.instance,
-        _auth = auth ?? FirebaseAuth.instance {
+        _customAuth = auth {
     _instance = this;
   }
 
@@ -125,6 +126,9 @@ class ApiKeyProvider extends ChangeNotifier {
     // Show first 4 and last 4 characters separated by masking bullets
     return '${key.substring(0, 4)}••••••••••${key.substring(key.length - 4)}';
   }
+
+  /// Returns the stored [ApiKeyModel] for [provider], or null if not stored.
+  ApiKeyModel? apiKeyFor(AiProviderId provider) => _storedKeys[provider];
 
   /// Returns the raw (decrypted) API key for [provider], or null if not stored.
   ///
@@ -417,8 +421,6 @@ class ApiKeyProvider extends ChangeNotifier {
         try {
           await _repository.deleteKey(
               uid: effectiveUid, providerId: providerId);
-          debugPrint(
-              '🛑 Permanent Delete Key [${providerId.id}] for user $effectiveUid');
         } catch (e, st) {
           if (isTransientSyncError(e)) {
             debugPrint(

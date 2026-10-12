@@ -33,6 +33,13 @@ class ApiKeyModel {
     this.lastValidated,
   });
 
+  /// Non-secret last 6 characters of the API key used for display & rotation detection.
+  String get keyHint =>
+      apiKey.length >= 6 ? apiKey.substring(apiKey.length - 6) : apiKey;
+
+  /// True if the key is non-empty.
+  bool get isValid => apiKey.trim().isNotEmpty;
+
   // ── Factory: from Firestore ───────────────────────────────────────────────
 
   /// Deserializes a Firestore document map into an ApiKeyModel instance.

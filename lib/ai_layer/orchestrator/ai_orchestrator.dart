@@ -449,6 +449,7 @@ Title:''';
             uid: currentUid,
             request: request,
             response: response,
+            apiKey: apiKey,
           );
         });
         return response;
@@ -481,23 +482,30 @@ Title:''';
 
   /// Records usage data to Firestore after every successful AI request.
   ///
+  /// Derives a [keyHint] — the last 6 characters of the active [apiKey] — to
+  /// enable key-rotation detection in [UsageFirestoreDao]. When the hint stored
+  /// in `usageSummaries` differs from the incoming hint, the DAO atomically
+  /// resets budget counters so the new key's Google billing account starts
+  /// tracking from zero, while preserving the user's budget cap preference.
+  ///
   /// This is a fire-and-forget call — any failure is silently logged and
   /// never propagates back to the AI response caller.
   void _saveUsageEvent({
     required String uid,
     required AiRequest request,
     required AiResponse response,
+    required String apiKey,
   }) async {
     try {
-      final summary =
-          await _usageRepo.getSummary(uid: uid, provider: response.modelUsed);
-      if (summary == null || !summary.enabled) {
-        return;
-      }
       final now = DateTime.now();
       final monthKey = UsageEventModel.monthKeyFrom(now);
       final capability = request.capability;
 
+      // Derive non-secret key fingerprint: last 6 characters of the raw API key.
+      // 6 chars of a 39–51 char key cannot be reversed or used to reconstruct the original.
+      final keyHint = apiKey.length >= 6 ? apiKey.substring(apiKey.length - 6) : null;
+
+      // Attachment count determination based on capability requested
       final imageCount = (capability == AiCapability.imageGeneration)
           ? (request.imageCount ?? 1)
           : 0;
@@ -505,6 +513,7 @@ Title:''';
           ? (request.pdfBytes?.length ?? 0)
           : 0;
 
+      // Calculate financial expenditure based on pricing table and token metrics
       final estimatedCost = UsageCostEstimator.estimate(
         provider: response.modelUsed,
         capability: capability,
@@ -514,13 +523,19 @@ Title:''';
         imageQuality: request.imageQuality ?? ImageQuality.low,
       );
 
+      // Event document ID: uses request.requestId (UUID v4) directly for 1:1 message
+      // correlation and write idempotency, avoiding redundant timestamp string concatenation.
+      final eventId = request.requestId.isNotEmpty
+          ? request.requestId
+          : '${response.modelUsed.id}_${now.millisecondsSinceEpoch}';
+
       final event = UsageEventModel(
-        id: '${request.requestId}_${now.millisecondsSinceEpoch}',
+        id: eventId,
         provider: response.modelUsed,
         model:
             UsagePricingTable.modelName(response.modelUsed, request.capability),
         capability: capability,
-        requestId: request.requestId,
+        requestId: request.requestId.isNotEmpty ? request.requestId : eventId,
         inputTokens: response.inputTokens,
         outputTokens: response.outputTokens,
         totalTokens: response.tokenCount,
@@ -529,9 +544,14 @@ Title:''';
         estimatedCostUsd: estimatedCost,
         createdAt: now,
         monthKey: monthKey,
+        // Key fingerprint forwarded to DAO for rotation detection in usageSummaries.
+        // NOT written into the usageEvents document — only used to compare with the
+        // stored keyHint in the provider's summary document.
+        keyHint: keyHint,
       );
 
-      // Intentionally unawaited — usage must never block the chat UI
+      // Persists the granular usage event and increments (or resets) the provider's
+      // summary counters atomically via Firestore batch without blocking chat UI.
       _usageRepo.saveEvent(uid: uid, event: event);
     } catch (e) {
       debugPrint('⚠️ Usage event construction failed (non-fatal): $e');

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../ai_layer/registry/provider_registry.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/localization/app_localizations.dart';
@@ -83,7 +82,8 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
               ],
 
               // ── Gemini Thinking Level ──────────────────────────────────────
-              if (profile.supports(AiPreferenceControl.geminiThinkingLevel)) ...[
+              if (profile
+                  .supports(AiPreferenceControl.geminiThinkingLevel)) ...[
                 _PreferenceRow(
                   title: context.l10n.geminiThinkingLevel,
                   description: context.l10n.geminiThinkingLevelHint,
@@ -207,7 +207,19 @@ class ProfileAiPreferencesPanel extends StatelessWidget {
               // ── Gemini Key Note / Information Banner ───────────────────────
               if (preferences.preferredProvider == AiProviderId.gemini) ...[
                 const SizedBox(height: 4),
-                const _GeminiInfoBanner(),
+                _InfoBanner(
+                  title: context.l10n.geminiInfoTitle,
+                  description: context.l10n.geminiInfoDesc,
+                ),
+              ],
+
+              // ── Claude Key Note / Information Banner ───────────────────────
+              if (preferences.preferredProvider == AiProviderId.claude) ...[
+                const SizedBox(height: 4),
+                _InfoBanner(
+                  title: context.l10n.claudeInfoTitle,
+                  description: context.l10n.claudeInfoDesc,
+                ),
               ],
             ],
           );
@@ -248,8 +260,15 @@ class _PreferenceRow extends StatelessWidget {
   }
 }
 
-class _GeminiInfoBanner extends StatelessWidget {
-  const _GeminiInfoBanner();
+/// Informational banner displaying capability notes for selected AI providers.
+class _InfoBanner extends StatelessWidget {
+  final String title;
+  final String description;
+
+  const _InfoBanner({
+    required this.title,
+    required this.description,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +296,7 @@ class _GeminiInfoBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.l10n.geminiInfoTitle,
+                  title,
                   style: context.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.primaryColor,
@@ -285,11 +304,8 @@ class _GeminiInfoBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  context.l10n.geminiInfoDesc,
+                  description,
                   style: context.textTheme.bodySmall?.copyWith(
-                    color: context.isDark
-                        ? AppColors.darkTextSecondary
-                        : AppColors.lightTextSecondary,
                     height: 1.35,
                   ),
                 ),

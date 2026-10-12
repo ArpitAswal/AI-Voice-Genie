@@ -10,6 +10,7 @@ import '../../../../core/constants/firebase_collections.dart';
 import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/error/effect_bus.dart';
+import '../../../../core/security/encryption_service.dart';
 import '../../../../core/services/storage_service.dart';
 import '../domain/api_key_model.dart';
 import '../domain/api_key_repository.dart';
@@ -55,6 +56,10 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
   static final Map<AiProviderId, ApiKeyModel> _memoryCache = {};
   static String? _cachedUid;
   static bool _isAllKeysLoaded = false;
+
+  /// Get cached active key for a provider.
+  static ApiKeyModel? getCachedKey(AiProviderId provider) =>
+      _memoryCache[provider];
 
   /// Clear the in-memory cache (e.g., on user logout).
   static void clearMemoryCache() {
@@ -274,6 +279,16 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
 
       debugPrint('✅ Key saved [${providerId.id}] for user $effectiveUid');
 
+      // Key-specific Usage Summary Document setup:
+      // Creates a dedicated document in usageSummaries (e.g. usageSummaries/gemini_<keyHint>)
+      // Saves the encrypted key and keyHint, starts fresh spend ($0.00) for this new key,
+      // and carries over any existing monthly budget cap configured for this provider.
+      await _syncKeyUsageSummaryDoc(
+        uid: effectiveUid,
+        providerId: providerId,
+        apiKey: sanitizedKey,
+      );
+
       // Symmetrically mark key setup as complete in Firestore & Hive in background
       EffectBus.instance.safeEffect(() => completeKeySetup(effectiveUid));
     } on FirebaseException catch (e) {
@@ -290,6 +305,60 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
         ApiKeyErrorCodes.saveFailed,
         technicalMessage: 'Unexpected save error: $e',
       );
+    }
+  }
+
+  /// Syncs or creates a key-specific usage summary document at
+  /// `UserModel/usageSummaries/{providerId}_{keyHint}`.
+  ///
+  /// Guarantees:
+  /// 1. Saves the AES-256 encrypted API key and non-secret keyHint directly into the summary document.
+  /// 2. If the document is newly created (a fresh or different key), initializes spend to $0.00
+  ///    so the new key's credits start tracking cleanly from zero.
+  /// 3. Inherits any existing monthly budget spending cap preference set for this provider.
+  /// 4. Preserves historical usage data if the key document already exists.
+  Future<void> _syncKeyUsageSummaryDoc({
+    required String uid,
+    required AiProviderId providerId,
+    required String apiKey,
+  }) async {
+    try {
+      final keyHint =
+          apiKey.length >= 6 ? apiKey.substring(apiKey.length - 6) : apiKey;
+      final docId = '${providerId.id}_$keyHint';
+      final summaryDocRef =
+          _firestore.doc(FirebaseCollections.usageSummaryDoc(uid, docId));
+
+      final existingDoc = await summaryDocRef.get();
+      final encryptedKey = EncryptionService.encrypt(apiKey);
+
+      if (!existingDoc.exists) {
+        // Fresh key document starts clean without inheriting other keys' budgets
+        await summaryDocRef.set({
+          FirebaseCollections.summaryFieldKeyHint: keyHint,
+          FirebaseCollections.fieldApiKey: encryptedKey,
+          'monthlyData': {},
+          FirebaseCollections.usageFieldLifetimeTotalTokens: 0,
+          FirebaseCollections.usageFieldUpdatedAt: FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        debugPrint(
+          '📊 ApiKeyRepositoryImpl: Created key usage summary doc [$docId] with clean state & encrypted key',
+        );
+      } else {
+        // Ensure encrypted key and keyHint are synced if missing
+        await summaryDocRef.set({
+          FirebaseCollections.summaryFieldKeyHint: keyHint,
+          FirebaseCollections.fieldApiKey: encryptedKey,
+          FirebaseCollections.usageFieldUpdatedAt: FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        debugPrint(
+          '📊 ApiKeyRepositoryImpl: Synced existing key usage summary doc [$docId]',
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ Non-fatal _syncKeyUsageSummaryDoc error: $e');
     }
   }
 
@@ -475,8 +544,6 @@ class ApiKeyRepositoryImpl implements ApiKeyRepository {
       await _firestore.doc(FirebaseCollections.userDoc(effectiveUid)).set({
         FirebaseCollections.fieldKeySetupDone: true,
       }, SetOptions(merge: true));
-
-      debugPrint('✅ Key setup complete for $effectiveUid');
     } on FirebaseException catch (e) {
       final code =
           (e.code == 'unavailable' || e.code == 'network-request-failed')

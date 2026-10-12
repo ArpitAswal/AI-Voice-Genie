@@ -380,8 +380,11 @@ class _ProviderKeyCardState extends State<_ProviderKeyCard> {
 
                 SizedBox(height: widget.isTablet ? 14 : 10),
 
+                // ── Model-to-Purpose Mapping ──────────────────────────────
+                // Transparently details which concrete model (e.g. gpt-6-luna, whisper-1)
+                // is executed for each capability when using this provider's API key.
                 Text(
-                  widget.provider.technicalSpecs(context.l10n),
+                  widget.provider.modelPurposes(context.l10n),
                   style: context.textTheme.bodySmall,
                 ),
 

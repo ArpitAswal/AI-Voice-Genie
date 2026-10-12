@@ -20,9 +20,10 @@ class StorageKeys {
   static const String termsVersionAccepted = 'termsVersionAccepted';
 
   // ── App Settings ──────────────────────────────────────────────────────────
+  // Current UI theme setting (system / light / dark)
   static const String themeMode = 'themeMode';
+  // Selected app interface language code (e.g., 'en', 'hi')
   static const String locale = 'locale';
-  static const String notificationsEnabled = 'notificationsEnabled';
 
   // ── AI Model Preferences ──────────────────────────────────────────────────
   // The user's currently selected/preferred AI provider ID
@@ -69,12 +70,4 @@ class StorageKeys {
   static const String ttsSpeed = 'ttsSpeed';
   // Whether AI responses should be automatically read aloud
   static const String autoTextToSpeech = 'autoTextToSpeech';
-
-  // ── Notifications ─────────────────────────────────────────────────────────
-  static const String fcmToken = 'fcmToken';
-  static const String lastNotificationDate = 'lastNotificationDate';
-
-  // ── Analytics ─────────────────────────────────────────────────────────────
-  // Tracks which session analytics have been sent (prevents duplicate events)
-  static const String lastAnalyticsDate = 'lastAnalyticsDate';
 }

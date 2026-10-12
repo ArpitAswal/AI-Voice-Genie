@@ -177,30 +177,47 @@ class AppLocalizations {
       'add_key_for_model': 'Add Key',
       'api_keys_secure_note':
           'Your API keys are stored securely. Only you have the authority to access and manage your personal keys.',
+      // ── Home Screen: Marketing Value Proposition ─────────────────────────
+      'openai_marketing_pitch':
+          'Create studio-quality images, transcribe crystal-clear voice notes, and craft creative content.',
+      'gemini_marketing_pitch':
+          'Lightning-fast answers, instant image creation, and effortless large-file analysis powered by Google.',
+      'claude_marketing_pitch':
+          'Tackle complex coding, solve difficult logic problems, and digest dense documents with expert precision.',
       'gpt_model_message':
-          'Master of conversational flow and complex text generation.',
+          'Create studio-quality images, transcribe crystal-clear voice notes, and craft creative content.',
       'gemini_model_message':
-          'Multimodal powerhouse for advanced image and data synthesis.',
+          'Lightning-fast answers, instant image creation, and effortless large-file analysis powered by Google.',
       'claude_model_message':
-          'Expert analytical reasoning and long-form PDF understanding.',
+          'Tackle complex coding, solve difficult logic problems, and digest dense documents with expert precision.',
+
+      // ── Profile Tab (AI Intelligence): Active Capabilities ────────────────
       'openai_capabilities_info':
-          '• Image Generation (GPT-Image-2.5 Flare)\n• Text, Vision & PDF Analysis (GPT-6 Luna)\n• High-Precision Voice Transcription (Whisper)',
+          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• High-Accuracy Voice Transcription',
       'gemini_capabilities_info':
-          '• Image Generation (Gemini 3.1 Flash-Lite Image)\n• Fast Multimodal Reasoning (Gemini 3.5 Flash-Lite)',
+          '• Fast Multimodal Chat & Search\n• Visual Image Generation\n• Inline PDF & Document Parsing',
       'claude_capabilities_info':
-          '• Advanced Reasoning & Coding (Claude Haiku 4.5)\n• Deep PDF & Vision Analysis (Claude Haiku 4.5)',
+          '• Advanced Code & Logical Reasoning\n• Deep Document & Vision Analysis\n• Voice & Image Gen not supported',
+
+      // ── Key Setup Screen: Model-to-Purpose Mapping ─────────────────────────
+      'openai_model_purposes':
+          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation\n• whisper-1: Audio & Voice Transcription',
+      'gemini_model_purposes':
+          '• gemini-3.5-flash-lite: Text, Vision & PDF Analysis\n• gemini-3.1-flash-lite-image: Image Generation',
+      'claude_model_purposes':
+          '• claude-haiku-4-5-20251001: Coding, Analytical Chat, PDFs & Vision',
       'openai_tech_specs':
-          '• Active Models: gpt-6-luna, gpt-image-2.5-flare, whisper-1\n• Unlocks 1.05M context window, high-precision voice transcription, and image generation.',
+          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation\n• whisper-1: Audio & Voice Transcription',
       'gemini_tech_specs':
-          '• Active Models: gemini-3.5-flash-lite, gemini-3.1-flash-lite-image\n• Unlocks 1M context window with Google\'s native multimodal engine.',
+          '• gemini-3.5-flash-lite: Text, Vision & PDF Analysis\n• gemini-3.1-flash-lite-image: Image Generation',
       'claude_tech_specs':
-          '• Active Model: claude-haiku-4-5-20251001\n• Unlocks 200k context window with Anthropic\'s fast reasoning engine.',
+          '• claude-haiku-4-5-20251001: Coding, Analytical Chat, PDFs & Vision',
       'openai_pricing_info':
-          '• Primary Model: gpt-6-luna\n• Image Gen: gpt-image-2.5-flare\n• Voice Transcription: whisper-1 (High Accuracy, \$0.006 / min)',
+          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• High-Accuracy Voice Transcription',
       'gemini_pricing_info':
-          '• Primary Model: gemini-3.5-flash-lite\n• Image Gen: gemini-3.1-flash-lite-image',
+          '• Fast Multimodal Chat & Search\n• Visual Image Generation\n• Inline PDF & Document Parsing',
       'claude_pricing_info':
-          '• Primary Model: claude-haiku-4-5-20251001\n• Vision & PDF Analysis included',
+          '• Advanced Code & Logical Reasoning\n• Deep Document & Vision Analysis\n• Voice & Image Gen not supported',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'Not supported',
@@ -261,7 +278,10 @@ class AppLocalizations {
           'Choose output shape: Square (1:1), Landscape (16:9), or Portrait (9:16).',
       'gemini_info_title': 'Key Note: Gemini Image Generation',
       'gemini_info_desc':
-          'Google Gemini 3.1 Flash-Lite automatically generates all images in native 1K resolution with full photorealistic quality, automatic lighting, and opaque backgrounds. Advanced options like quality levels, transparency, or multi-image counts are managed internally by Google’s model and cannot be customized manually.',
+          'Gemini automatically generates 1K images natively. Advanced options (quality, background, count) are managed internally by Google.',
+      'claude_info_title': 'Key Note: Claude Image Generation',
+      'claude_info_desc':
+          'Image generation is not supported by Anthropic Claude. Claude specializes in advanced reasoning, coding, and document analysis.',
       'vision_image_count': 'Vision Image Count',
       'vision_image_count_hint':
           'Set the default limit for multi-modal image attachments.',
@@ -679,29 +699,47 @@ class AppLocalizations {
       'add_key_for_model': 'Key जोड़ें',
       'api_keys_secure_note':
           'आपकी API की (key) सुरक्षित है। केवल कंपनी को ही आपकी व्यक्तिगत की (key) सहेजने का अधिकार है।',
-      'gpt_model_message': 'संवादात्मक प्रवाह और जटिल पाठ निर्माण में निपुण।',
+      // ── Home Screen: Marketing Value Proposition (Hindi) ───────────────────
+      'openai_marketing_pitch':
+          'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्पष्ट वॉयस नोट्स ट्रांसक्राइब करें और रचनात्मक सामग्री तैयार करें।',
+      'gemini_marketing_pitch':
+          'Google द्वारा संचालित त्वरित उत्तर, तुरंत चित्र निर्माण और बड़ी फाइलों का आसान विश्लेषण।',
+      'claude_marketing_pitch':
+          'जटिल कोडिंग करें, कठिन तार्किक समस्याओं को हल करें और बड़े दस्तावेजों को विशेषज्ञ सटीकता से समझें।',
+      'gpt_model_message':
+          'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्पष्ट वॉयस नोट्स ट्रांसक्राइब करें और रचनात्मक सामग्री तैयार करें।',
       'gemini_model_message':
-          'उन्नत छवि और डेटा संश्लेषण के लिए मल्टीमॉडल पावरहाउस।',
+          'Google द्वारा संचालित त्वरित उत्तर, तुरंत चित्र निर्माण और बड़ी फाइलों का आसान विश्लेषण।',
       'claude_model_message':
-          'उत्कृष्ट विश्लेषणात्मक तर्क क्षमता और पीडीएफ फॉर्मेट को समझने की क्षमता।',
+          'जटिल कोडिंग करें, कठिन तार्किक समस्याओं को हल करें और बड़े दस्तावेजों को विशेषज्ञ सटीकता से समझें।',
+
+      // ── Profile Tab (AI Intelligence): Active Capabilities (Hindi) ─────────
       'openai_capabilities_info':
-          '• चित्र निर्माण (GPT-Image-2.5 Flare)\n• पाठ, दृष्टि और पीडीएफ विश्लेषण (GPT-6 Luna)\n• उच्च-सटीक वॉयस ट्रांसक्रिप्शन (Whisper)',
+          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• उच्च-सटीक वॉयस ट्रांसक्रिप्शन',
       'gemini_capabilities_info':
-          '• चित्र निर्माण (Gemini 3.1 Flash-Lite Image)\n• तीव्र मल्टीमॉडल तर्क (Gemini 3.5 Flash-Lite)',
+          '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• इनलाइन पीडीएफ और दस्तावेज विश्लेषण',
       'claude_capabilities_info':
-          '• उन्नत तर्क और कोडिंग (Claude Haiku 4.5)\n• गहन पीडीएफ और दृष्टि समझ (Claude Haiku 4.5)',
+          '• उन्नत कोडिंग और तार्किक तर्क\n• गहन दस्तावेज और दृष्टि समझ\n• वॉयस और चित्र निर्माण समर्थित नहीं',
+
+      // ── Key Setup Screen: Model-to-Purpose Mapping (Hindi) ───────────────────
+      'openai_model_purposes':
+          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण\n• whisper-1: ऑडियो और वॉयस ट्रांसक्रिप्शन',
+      'gemini_model_purposes':
+          '• gemini-3.5-flash-lite: पाठ, दृष्टि और पीडीएफ विश्लेषण\n• gemini-3.1-flash-lite-image: चित्र निर्माण',
+      'claude_model_purposes':
+          '• claude-haiku-4-5-20251001: कोडिंग, विश्लेषणात्मक चैट, पीडीएफ और दृष्टि',
       'openai_tech_specs':
-          '• सक्रिय मॉडल: gpt-6-luna, gpt-image-2.5-flare, whisper-1\n• 1.05M कॉन्टेक्स्ट विंडो, उच्च-सटीक वॉयस ट्रांसक्रिप्शन और चित्र निर्माण को अनलॉक करता है।',
+          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण\n• whisper-1: ऑडियो और वॉयस ट्रांसक्रिप्शन',
       'gemini_tech_specs':
-          '• सक्रिय मॉडल: gemini-3.5-flash-lite, gemini-3.1-flash-lite-image\n• Google के नेटिव मल्टीमॉडल इंजन के साथ 1M कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
+          '• gemini-3.5-flash-lite: पाठ, दृष्टि और पीडीएफ विश्लेषण\n• gemini-3.1-flash-lite-image: चित्र निर्माण',
       'claude_tech_specs':
-          '• सक्रिय मॉडल: claude-haiku-4-5-20251001\n• Anthropic के तेज़ तर्क इंजन के साथ 200k कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
+          '• claude-haiku-4-5-20251001: कोडिंग, विश्लेषणात्मक चैट, पीडीएफ और दृष्टि',
       'openai_pricing_info':
-          '• प्राथमिक मॉडल: gpt-6-luna\n• चित्र निर्माण: gpt-image-2.5-flare\n• वॉयस ट्रांसक्रिप्शन: whisper-1 (उच्च सटीकता, \$0.006 / मिनट)',
+          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• उच्च-सटीक वॉयस ट्रांसक्रिप्शन',
       'gemini_pricing_info':
-          '• प्राथमिक मॉडल: gemini-3.5-flash-lite\n• चित्र निर्माण: gemini-3.1-flash-lite-image',
+          '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• इनलाइन पीडीएफ और दस्तावेज विश्लेषण',
       'claude_pricing_info':
-          '• प्राथमिक मॉडल: claude-haiku-4-5-20251001\n• दृष्टि और पीडीएफ विश्लेषण शामिल',
+          '• उन्नत कोडिंग और तार्किक तर्क\n• गहन दस्तावेज और दृष्टि समझ\n• वॉयस और चित्र निर्माण समर्थित नहीं',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'समर्थित नहीं',
@@ -760,7 +798,10 @@ class AppLocalizations {
           'इमेज का आकार चुनें: चौकोर (1:1), लैंडस्केप (16:9), या पोर्ट्रेट (9:16)।',
       'gemini_info_title': 'विशेष नोट: Gemini इमेज जनरेशन',
       'gemini_info_desc':
-          'Google Gemini 3.1 Flash-Lite सभी इमेज को 1K रिज़ॉल्यूशन और उत्कृष्ट क्वालिटी के साथ स्वतः जनरेट करता है। क्वालिटी स्तर, बैकग्राउंड प्रभाव या मल्टी-इमेज जैसे विकल्प Google के मॉडल द्वारा स्वयं प्रबंधित होते हैं।',
+          'Gemini 1K रिज़ॉल्यूशन में इमेज स्वतः जनरेट करता है। क्वालिटी, बैकग्राउंड और संख्या Google द्वारा आंतरिक रूप से प्रबंधित होते हैं।',
+      'claude_info_title': 'विशेष नोट: Claude इमेज जनरेशन',
+      'claude_info_desc':
+          'Anthropic Claude में इमेज जनरेशन समर्थित नहीं है। Claude उन्नत तर्क, कोडिंग और दस्तावेज़ विश्लेषण में सक्षम है।',
       'vision_image_count': 'विज़न इमेज संख्या',
       'vision_image_count_hint':
           'बहु-मोडल इमेज अटैचमेंट की डिफ़ॉल्ट सीमा तय करें।',
@@ -1146,12 +1187,23 @@ class AppLocalizations {
   String get uploadPdf => translate('upload_pdf');
   String get hereIsYourPdf => translate('here_is_your_pdf');
   String get intelligentModels => translate('intelligent_models');
+  // Home Screen marketing pitch getters
+  String get openAiMarketingPitch => translate('openai_marketing_pitch');
+  String get geminiMarketingPitch => translate('gemini_marketing_pitch');
+  String get claudeMarketingPitch => translate('claude_marketing_pitch');
   String get chatGPTModelMessage => translate('gpt_model_message');
   String get geminiModelMessage => translate('gemini_model_message');
   String get claudeModelMessage => translate('claude_model_message');
+
+  // Profile Tab active capabilities getters
   String get openAiCapabilitiesInfo => translate('openai_capabilities_info');
   String get geminiCapabilitiesInfo => translate('gemini_capabilities_info');
   String get claudeCapabilitiesInfo => translate('claude_capabilities_info');
+
+  // Key Setup Screen model-to-purpose getters
+  String get openAiModelPurposes => translate('openai_model_purposes');
+  String get geminiModelPurposes => translate('gemini_model_purposes');
+  String get claudeModelPurposes => translate('claude_model_purposes');
   String get openAiTechSpecs => translate('openai_tech_specs');
   String get geminiTechSpecs => translate('gemini_tech_specs');
   String get claudeTechSpecs => translate('claude_tech_specs');
@@ -1325,6 +1377,8 @@ class AppLocalizations {
   String get geminiAspectRatioHint => translate('gemini_aspect_ratio_hint');
   String get geminiInfoTitle => translate('gemini_info_title');
   String get geminiInfoDesc => translate('gemini_info_desc');
+  String get claudeInfoTitle => translate('claude_info_title');
+  String get claudeInfoDesc => translate('claude_info_desc');
   String get visionImageCount => translate('vision_image_count');
   String get visionImageCountHint => translate('vision_image_count_hint');
   String get visionPdfCount => translate('vision_pdf_count');

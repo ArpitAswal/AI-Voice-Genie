@@ -171,7 +171,6 @@ class ClaudeAdapter extends AiProviderAdapter {
 
       debugPrint('📤 Claude Request (Image Analysis): ${jsonEncode({
             'model': AppConstants.claudeVisionModel,
-            'system': AppConstants.aiVisionSystemInstruction,
             'prompt': request.prompt,
             'image_count': request.imageBytes?.length ?? 0,
             'max_tokens': request.responseLength.claudeMaxTokens,
@@ -251,7 +250,6 @@ class ClaudeAdapter extends AiProviderAdapter {
 
       debugPrint('📤 Claude Request (PDF Parsing): ${jsonEncode({
             'model': AppConstants.claudeVisionModel,
-            'system': AppConstants.aiPdfSystemInstruction,
             'prompt': request.prompt,
             'pdf_count': request.pdfBytes?.length ?? 0,
             'max_tokens': request.responseLength.claudeMaxTokens,

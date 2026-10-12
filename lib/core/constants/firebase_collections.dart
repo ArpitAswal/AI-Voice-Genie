@@ -215,7 +215,6 @@ class FirebaseCollections {
   static const String paramReason = 'reason';
   static const String paramFeature = 'feature';
   static const String paramResponseTimeMs = 'response_time_ms';
-  static const String paramModelName = 'model_name';
   static const String paramModelFeatures = 'model_features';
   static const String paramUserId = 'user_id';
   static const String paramUserEmail = 'user_email';
@@ -267,6 +266,7 @@ class FirebaseCollections {
   static const String usageFieldInputTokens = 'inputTokens';
   static const String usageFieldOutputTokens = 'outputTokens';
   static const String usageFieldTotalTokens = 'totalTokens';
+  static const String usageFieldLifetimeTotalTokens = 'lifetimeTotalTokens';
   static const String usageFieldImageCount = 'imageCount';
   static const String usageFieldPdfCount = 'pdfCount';
   static const String usageFieldEstimatedCostUsd = 'estimatedCostUsd';
@@ -278,9 +278,14 @@ class FirebaseCollections {
   static const String summaryFieldRequestCount = 'requestCount';
   static const String summaryFieldEstimatedCostUsd = 'estimatedCostUsd';
 
+  /// Last 6 characters of the API key that built this summary document.
+  /// Used to detect key rotation: when the active key's hint differs from this
+  /// stored value, the summary counters are reset so the new key starts with
+  /// fresh budget telemetry that reflects the new Google billing account.
+  static const String summaryFieldKeyHint = 'keyHint';
+
   // ── Budget Field Names ───────────────────────────────────────────────────
   static const String budgetFieldMonthlyBudgetUsd = 'monthlyBudgetUsd';
-  static const String budgetFieldEnabled = 'enabled';
   static const String budgetFieldAlreadyUsedUsd = 'alreadyUsedUsd';
 
   // ── Cloud Storage Path Builders & Constants ───────────────────────────────

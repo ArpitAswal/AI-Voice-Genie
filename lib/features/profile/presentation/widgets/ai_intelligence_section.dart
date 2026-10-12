@@ -164,13 +164,15 @@ class _ModelIntelligenceCard extends StatelessWidget {
                 const SizedBox(height: 14),
               ],
 
-              // ── Capabilities ──────────────────────────────────────────────
+              // ── Active Provider Capabilities ─────────────────────────────
+              // Displays bullet points of concrete capabilities (e.g. Chat, Vision, Code, PDFs)
+              // that this specific provider can perform for the user.
               Text(
-                provider.pricingAndEfficiency(context.l10n),
+                provider.capabilitiesInfo(context.l10n),
                 style: context.textTheme.bodySmall?.copyWith(
                   height: 1.5,
                   color: color,
-                  fontWeight: FontWeight.w500
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -218,7 +220,11 @@ class _SpendBadge extends StatelessWidget {
                 ? context.l10n.usageBudgetExceeded
                 : '$percentage% ${context.l10n.usageBudgetRemaining}',
             style: context.textTheme.labelSmall?.copyWith(
-              color: isExceeded ? (context.isDark ? AppColors.darkError : AppColors.lightError) : color,
+              color: isExceeded
+                  ? (context.isDark
+                      ? AppColors.darkError
+                      : AppColors.lightError)
+                  : color,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -388,7 +394,11 @@ class _BudgetProgressBar extends StatelessWidget {
               '\$${spent.toStringAsFixed(2)} ${context.l10n.usageOf} $formattedBudget',
               style: context.textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: isExceeded ? (context.isDark ? AppColors.darkError : AppColors.lightError) : null,
+                color: isExceeded
+                    ? (context.isDark
+                        ? AppColors.darkError
+                        : AppColors.lightError)
+                    : null,
               ),
             ),
           ],
@@ -399,7 +409,9 @@ class _BudgetProgressBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: fraction,
             minHeight: 10,
-            color: isExceeded ? (context.isDark ? AppColors.darkError : AppColors.lightError) : color,
+            color: isExceeded
+                ? (context.isDark ? AppColors.darkError : AppColors.lightError)
+                : color,
             backgroundColor: Colors.grey.shade200,
           ),
         ),

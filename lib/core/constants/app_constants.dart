@@ -18,10 +18,6 @@ class AppConstants {
   static const String copyrightOwner = 'AI Voice Genie';
 
   // Fill these before publishing the app on Google Play.
-  static const String privacyPolicyUrl =
-      'https://github.com/ArpitAswal/AI-Voice-Genie/blob/main/assets/legal/privacy_policy.md';
-  static const String termsOfServiceUrl =
-      'https://github.com/ArpitAswal/AI-Voice-Genie/blob/main/assets/legal/terms_of_service.md';
   static const String supportEmail = 'arpitaswal995@gmail.com';
   static const String helpCenterUrl = '';
 
@@ -34,26 +30,13 @@ class AppConstants {
   static const String emailPattern = r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$';
 
   // ── Animation Durations ───────────────────────────────────────────────────
+  // UI transition and micro-interaction animation timing
   static const Duration shortDuration = Duration(milliseconds: 200);
   static const Duration mediumDuration = Duration(milliseconds: 400);
-  static const Duration longDuration = Duration(milliseconds: 700);
 
   // ── Network ───────────────────────────────────────────────────────────────
-  // AI API calls can take longer — generous timeout for image generation
+  // AI API calls can take longer — generous timeout for image generation and reasoning
   static const Duration aiRequestTimeout = Duration(seconds: 60);
-
-  // ── Notifications ─────────────────────────────────────────────────────────
-  static const String notificationChannelId = 'ai_voice_genie_channel';
-  static const String notificationChannelName = 'AI Voice Genie Notifications';
-  static const String notificationChannelDescription =
-      'Reminders and updates from AI Voice Genie';
-
-  // ── Hive Box Names ─────────────────────────────────────────────────────────
-  // Each box holds one category of data for clean separation
-  static const String userBox = 'user_box';
-  static const String settingsBox = 'settings_box';
-  static const String conversationCacheBox = 'conversation_cache_box';
-  static const String messageCacheBox = 'message_cache_box';
 
   // ── Pagination ────────────────────────────────────────────────────────────
   // Number of conversations fetched per page in history screen
@@ -69,25 +52,42 @@ class AppConstants {
   static const String geminiDisplayName = 'Gemini';
   static const String claudeDisplayName = 'Claude';
 
-  // ── AI Model Capabilities (features offered by each adapter) ──────────────
-  // PDF reading uses locally extracted PDF text, not native file/URL upload.
-  static const String openAICapabilities =
-      '• Image Generation (GPT-Image-2.5 Flare)\n• Text, Vision & PDF Analysis (GPT-6 Luna)\n• High-Precision Voice (Whisper)';
-  static const String geminiAICapabilities =
-      '• Image Generation (Gemini 3.1 Flash-Lite Image)\n• Fast Multimodal Reasoning (Gemini 3.5 Flash-Lite)';
-  static const String claudeAICapabilities =
-      '• Advanced Reasoning & Coding (Claude Haiku 4.5)\n• Deep PDF & Vision Analysis (Claude Haiku 4.5)';
-
   // ── AI Standard System Instructions ───────────────────────────────────────
+  /// System instruction for general text generation and conversation.
+  /// Enforces direct, authoritative, structured responses without conversational filler.
   static const String aiTextSystemInstruction =
-      'You are AI Voice Genie, a helpful, accurate, and intelligent AI assistant. '
-      'Provide clear, concise, and well-structured answers using Markdown formatting (headings, bold, lists, and code blocks) where appropriate.';
+      'You are AI Voice Genie, an advanced, authoritative AI assistant. '
+      'Deliver clear, accurate, and actionable answers tailored directly to the user\'s prompt.\n\n'
+      'Directives:\n'
+      '- Structure responses cleanly using Markdown (headings, bullet points, concise tables, syntax-highlighted code blocks).\n'
+      '- Be direct and concise for straightforward questions; provide thorough technical depth when requested.\n'
+      '- Eliminate conversational fluff, repetitive pleasantries, and meta-commentary (e.g., avoid "Sure, I can help with that", "As an AI").\n'
+      '- Maintain strict factual accuracy and objective reasoning at all times.';
+
+  /// System instruction for multimodal image analysis and OCR.
+  /// Enforces accurate visual observation, textual transcription, and objective inspection.
   static const String aiVisionSystemInstruction =
-      'You are AI Voice Genie, an expert visual analyst assistant. '
-      'Analyze the provided image(s) accurately and thoroughly. Answer the user\'s questions clearly, identify key details, objects, text (OCR), and visual patterns, and format your findings using Markdown.';
+      'You are AI Voice Genie, an expert multimodal visual intelligence analyst. '
+      'Analyze provided images with high precision, objectivity, and granular attention to detail.\n\n'
+      'Directives:\n'
+      '- Accurately transcribe visible text (OCR), preserving original layout, numbers, and spelling.\n'
+      '- Methodically identify objects, charts, diagrams, UI elements, visual anomalies, and spatial relationships.\n'
+      '- Answer user questions directly based strictly on visible evidence; never fabricate unseen details.\n'
+      '- Structure observations with clean Markdown headings, bullet points, and key callouts without conversational filler.';
+
+  /// System instruction for analyzing PDF and document attachments.
+  /// Enforces strict grounding, source attribution, and zero hallucination.
   static const String aiPdfSystemInstruction =
-      'You are AI Voice Genie, an expert document analysis assistant. '
-      'Carefully examine the provided PDF document(s). Extract key facts, summarize information accurately without hallucinating, answer the user\'s questions based on the document contents, and structure your response using Markdown.';
+      'You are AI Voice Genie, an expert document intelligence and research analyst. '
+      'Examine provided PDF document contents with strict factual fidelity.\n\n'
+      'Directives:\n'
+      '- Ground all answers strictly within the provided document text, data tables, and exhibits.\n'
+      '- Extract key findings, metrics, dates, and terms accurately with zero hallucination.\n'
+      '- If information is missing, ambiguous, or not present in the document, explicitly state that it is not provided.\n'
+      '- Structure responses using clear Markdown outlines, bulleted summaries, comparative tables, and section citations.';
+
+  /// System instruction for publication-ready document compiling and PDF export.
+  /// Enforces strict heading hierarchies, GitHub Markdown tables, and zero filler text.
   static const String aiPdfGenerationSystemInstruction =
       'You are AI Voice Genie, an elite publication and executive document compiler. '
       'When asked to generate or create a document, PDF, report, invoice, resume, comparison, or whitepaper, '
@@ -103,26 +103,27 @@ class AppConstants {
       '8. CLEANLINESS: Strictly NO conversational filler (e.g., "Sure, here is your PDF", "Below is the document", "I hope this helps"). Output ONLY the document content starting directly from the # title.';
 
   // ── AI Prompt Synthesis Instructions ──────────────────────────────────────
+  /// System instruction for synthesizing context-aware image generation prompts.
+  /// Translates multi-turn conversation into a standalone, vivid visual generation prompt.
   static const String aiImagePromptSynthesisSystemInstruction =
-      'You are an expert visual prompt engineer for image generation. '
-      'A user is continuing a conversation to generate an image. Combine the visual context and subjects '
-      'from the previous conversation turns with the user\'s latest request into a single, cohesive, highly descriptive '
-      'prompt for an image generator (such as Imagen or DALL-E).\n\n'
-      'Rules:\n'
-      '- Preserve the subject, art style, environment, and visual details from earlier requests unless the user explicitly modified or replaced them.\n'
-      '- Seamlessly incorporate the user\'s new additions, edits, or changes.\n'
-      '- Output ONLY the synthesized image prompt.\n'
-      '- Do NOT output any explanations, greetings, quotes, prefixes (like "Prompt:"), or markdown formatting.';
+      'You are an expert visual prompt engineer for generative image models. '
+      'Synthesize conversational context and the user\'s latest message into a single, cohesive, highly descriptive prompt for an image generator.\n\n'
+      'Directives:\n'
+      '- Retain core subject matter, artistic medium, lighting, camera angle, and color palette from earlier turns unless explicitly modified.\n'
+      '- Seamlessly incorporate new user edits, additions, and style preferences.\n'
+      '- Output ONLY the synthesized image prompt string.\n'
+      '- Strictly omit prefixes (e.g., "Prompt:"), conversational filler, greetings, quotation marks, and markdown formatting.';
 
+  /// System instruction for generating concise conversation thread titles.
+  /// Produces a crisp, 3-5 word Title Case headline capturing the core topic.
   static const String aiTitleSynthesisSystemInstruction =
-      'You are an expert at creating concise, natural conversation titles. '
-      'Generate a short, descriptive 3 to 5 word title for a conversation that starts with the provided user prompt.\n\n'
-      'Rules:\n'
+      'You are an expert summarizer specialized in title synthesis. '
+      'Generate a crisp, descriptive conversation title from the initial user prompt.\n\n'
+      'Directives:\n'
+      '- Length: Strictly 3 to 5 words in Title Case.\n'
       '- Accurately capture the core topic or subject.\n'
-      '- Length: 3 to 5 words.\n'
-      '- Title Case format (capitalize major words).\n'
-      '- Do NOT use quotation marks, prefixes (like "Title:"), or trailing punctuation.\n'
-      '- Output ONLY the raw title text.';
+      '- Output ONLY the raw title text.\n'
+      '- Strictly omit quotation marks, trailing punctuation, markdown, and prefixes (e.g., "Title:").';
 
   // ── OpenAI Model Names ────────────────────────────────────────────────────
   // Verified 2026-09-27: gpt-6-luna (released 2026-09-22, 1.05M context)
@@ -194,8 +195,6 @@ class AppConstants {
   static const int maxPdfSizeBytes = 10 * 1024 * 1024;
   // Maximum combined PDF payload size for AI inline request (15MB -> ~20MB base64)
   static const int maxPdfCombinedSizeBytes = 15 * 1024 * 1024;
-  // Maximum characters extracted from PDF sent to AI (cost optimization)
-  static const int maxPdfCharactersForAi = 20000;
 
   // ── Image Handling ────────────────────────────────────────────────────────
   // Maximum single image size for vision requests (compressed before sending)

@@ -83,9 +83,6 @@ class AppRoutes {
   /// About app
   static const String about = '/about';
 
-  /// Exception / 404
-  static const String exception = '/exception';
-
   /// Privacy Policy
   static const String privacy = '/about/privacy-policy';
 
