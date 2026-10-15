@@ -14,10 +14,15 @@ import '../domain/usage_summary_model.dart';
 /// Loads the unified profiles (summaries + budget settings) for all providers.
 /// Must be provided at the profile screen level.
 class UsageProvider extends ChangeNotifier {
+  static UsageProvider? _instance;
+  static UsageProvider? get instance => _instance;
+
   final UsageRepository _repo;
 
   UsageProvider({UsageRepository? repo})
-      : _repo = repo ?? UsageRepositoryImpl();
+      : _repo = repo ?? UsageRepositoryImpl() {
+    _instance = this;
+  }
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -100,7 +105,8 @@ class UsageProvider extends ChangeNotifier {
   /// Load all summaries.
   ///
   /// Safe to call multiple times — skips redundant setup if already watching for the same uid.
-  Future<void> loadForMonth(String uid, {String? monthKey, bool force = false}) async {
+  Future<void> loadForMonth(String uid,
+      {String? monthKey, bool force = false}) async {
     if (!force && _activeUid == uid && _summarySub != null) return;
     _activeUid = uid;
     _isLoading = true;

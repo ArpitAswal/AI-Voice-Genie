@@ -89,7 +89,17 @@ class AppLocalizations {
       'signing_in': 'Signing you in...',
       'signing_out': "Signing you out...",
       'sign_in_failed': 'Sign in failed. Please try again.',
+      'user_disabled': 'This account has been disabled.',
+      'invalid_credential': 'Invalid credentials. Please try again.',
+      'user_not_found': 'Account not found.',
+      'account_exists_different_credential':
+          'Account exists with another sign-in method.',
+      'too_many_requests': 'Too many attempts. Please try again later.',
+      'operation_not_allowed': 'Sign-in method is not enabled.',
+      'apple_not_available': 'Apple Sign-In is not available on this device.',
       'sign_out_success': 'Signed out successfully.',
+      'sign_out_failed': 'Sign out failed. Please try again.',
+      'delete_account_failed': 'Failed to delete account. Please try again.',
 
       // ── Onboarding ─────────────────────────────────────────────────────────
       'onboarding_title_1': 'Generate Text & Answer Questions',
@@ -610,7 +620,17 @@ class AppLocalizations {
       'signing_in': 'साइन इन हो रहा है...',
       'signing_out': "साइन आउट हो रहा है...",
       'sign_in_failed': 'साइन इन विफल। कृपया पुनः प्रयास करें।',
+      'user_disabled': 'यह खाता अक्षम कर दिया गया है।',
+      'invalid_credential': 'अमान्य क्रेडेंशियल। कृपया पुनः प्रयास करें।',
+      'user_not_found': 'खाता नहीं मिला।',
+      'account_exists_different_credential':
+          'खाता किसी अन्य साइन-इन विधि से मौजूद है।',
+      'too_many_requests': 'बहुत सारे प्रयास। कृपया बाद में प्रयास करें।',
+      'operation_not_allowed': 'साइन-इन विधि सक्षम नहीं है।',
+      'apple_not_available': 'इस डिवाइस पर एप्पल साइन-इन उपलब्ध नहीं है।',
       'sign_out_success': 'सफलतापूर्वक साइन आउट हो गए।',
+      'sign_out_failed': 'साइन आउट विफल। कृपया पुनः प्रयास करें।',
+      'delete_account_failed': 'खाता हटाने में विफल। कृपया पुनः प्रयास करें।',
 
       // ── Onboarding ─────────────────────────────────────────────────────────
       'onboarding_title_1': 'पाठ उत्पन्न करें और प्रश्नों के उत्तर दें',
@@ -1114,6 +1134,15 @@ class AppLocalizations {
   String get noInternet => translate('no_internet_connection');
   String get signInWithGoogle => translate('sign_in_with_google');
   String get signInWithApple => translate('sign_in_with_apple');
+  String get signInFailed => translate('sign_in_failed');
+  String get userDisabled => translate('user_disabled');
+  String get invalidCredential => translate('invalid_credential');
+  String get userNotFound => translate('user_not_found');
+  String get accountExistsDifferentCredential =>
+      translate('account_exists_different_credential');
+  String get tooManyRequests => translate('too_many_requests');
+  String get operationNotAllowed => translate('operation_not_allowed');
+  String get appleNotAvailable => translate('apple_not_available');
   String get signOut => translate('sign_out');
   String get settings => translate('settings');
   String get newConversation => translate('new_conversation');
@@ -1305,6 +1334,8 @@ class AppLocalizations {
   String get requiresRecentLogin => translate('requires_recent_login');
   String get signOutConfirm => translate('sign_out_confirm');
   String get signOutSuccess => translate('sign_out_success');
+  String get signOutFailed => translate('sign_out_failed');
+  String get deleteAccountFailed => translate('delete_account_failed');
   String get signingOut => translate('signing_out');
   String get aboutApp => translate('about_app');
   String get appVersion => translate('app_version');

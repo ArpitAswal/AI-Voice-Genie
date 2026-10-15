@@ -5,35 +5,63 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../auth/domain/auth_repository.dart';
 import '../../auth/presentation/auth_provider.dart';
 
 enum ProfileLinkResult { opened, missing, failed }
 
 class ProfileViewModel extends ChangeNotifier {
-  bool _isSigningOut = false;
   bool _isSavingProfile = false;
+  String? _errorMessage;
   String _versionLabel = AppConstants.appVersion;
 
-  bool get isSigningOut => _isSigningOut;
   bool get isSavingProfile => _isSavingProfile;
+  String? get errorMessage => _errorMessage;
   String get versionLabel => _versionLabel;
 
+  void clearErrorMessage() {
+    if (_errorMessage != null) {
+      _errorMessage = null;
+      notifyListeners();
+    }
+  }
+
   Future<bool> signOut(AuthProvider authProvider) async {
-    _setSigningOut(true);
+    _errorMessage = null;
     try {
-      await authProvider.signOut();
+      final success = await authProvider.signOut();
+      if (!success) {
+        _errorMessage = authProvider.authError ?? 'sign_out_failed';
+        return false;
+      }
       return true;
-    } finally {
-      _setSigningOut(false);
+    } on AuthException catch (e) {
+      _errorMessage = e.code;
+      return false;
+    } catch (e) {
+      _errorMessage = 'sign_out_failed';
+      return false;
     }
   }
 
   Future<bool> deleteAccount(AuthProvider authProvider) async {
-    _setSigningOut(true);
+    _errorMessage = null;
     try {
-      return await authProvider.deleteAccount();
-    } finally {
-      _setSigningOut(false);
+      final success = await authProvider.deleteAccount();
+      if (!success) {
+        _errorMessage = authProvider.authError ?? 'delete_account_failed';
+        notifyListeners();
+        return false;
+      }
+      return true;
+    } on AuthException catch (e) {
+      _errorMessage = e.code;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'delete_account_failed';
+      notifyListeners();
+      return false;
     }
   }
 
@@ -41,6 +69,7 @@ class ProfileViewModel extends ChangeNotifier {
     required AuthProvider authProvider,
     required String displayName,
     required String photoUrl,
+    required String email,
     DateTime? dateOfBirth,
     int? age,
     String? gender,
@@ -49,10 +78,12 @@ class ProfileViewModel extends ChangeNotifier {
     File? photoFile,
   }) async {
     _setSavingProfile(true);
+    _errorMessage = null;
     try {
-      return authProvider.updateProfile(
+      final success = await authProvider.updateProfile(
         displayName: displayName,
         photoUrl: photoUrl,
+        email: email,
         dateOfBirth: dateOfBirth,
         age: age,
         gender: gender,
@@ -60,6 +91,19 @@ class ProfileViewModel extends ChangeNotifier {
         state: state,
         photoFile: photoFile,
       );
+      if (!success) {
+        _errorMessage = authProvider.authError ?? 'profile_update_failed';
+        notifyListeners();
+      }
+      return success;
+    } on AuthException catch (e) {
+      _errorMessage = e.code;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'profile_update_failed';
+      notifyListeners();
+      return false;
     } finally {
       _setSavingProfile(false);
     }
@@ -102,12 +146,6 @@ class ProfileViewModel extends ChangeNotifier {
     );
     final opened = await launchUrl(uri);
     return opened ? ProfileLinkResult.opened : ProfileLinkResult.failed;
-  }
-
-  void _setSigningOut(bool value) {
-    if (_isSigningOut == value) return;
-    _isSigningOut = value;
-    notifyListeners();
   }
 
   void _setSavingProfile(bool value) {

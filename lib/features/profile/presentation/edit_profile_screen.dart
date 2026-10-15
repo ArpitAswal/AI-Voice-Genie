@@ -8,6 +8,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/utils/app_validators.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../core/utils/widget_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
@@ -107,8 +108,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     final success = await viewModel.updateProfile(
       authProvider: context.read<AuthProvider>(),
-      displayName: _nameController.text,
+      displayName: _nameController.text.trim(),
       photoUrl: context.read<AuthProvider>().currentUser?.photoUrl ?? "",
+      email: _emailController.text.trim(),
       dateOfBirth: _selectedDob,
       age: int.tryParse(_ageController.text),
       gender: _selectedGender,
@@ -128,7 +130,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       MessageUtils.showSuccess(context, context.l10n.profileUpdated);
       AppRoutes.pop(context);
     } else {
-      context.showError(context.l10n.profileUpdateFailed);
+      final errorKey = viewModel.errorMessage ??
+          context.read<AuthProvider>().authError ??
+          'profile_update_failed';
+      context.showError(context.l10n.translate(errorKey));
+      viewModel.clearErrorMessage();
+      context.read<AuthProvider>().clearAuthError();
     }
   }
 
@@ -276,16 +283,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           hint: context.l10n.fakeName,
                           prefixIcon: Icons.person_4,
                           textCapitalization: TextCapitalization.words,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return context.l10n.fieldRequired;
-                            }
-                            return null;
-                          },
+                          validator: (value) =>
+                              Validators.validateRequired(value, context: context),
                         ),
                         const SizedBox(height: 20),
 
-                        // Email (Required / Read only)
+                        // Email (Required)
                         _buildFieldLabel(
                           context.l10n.emailAddress,
                           isRequired: true,
@@ -294,6 +297,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           controller: _emailController,
                           hint: context.l10n.fakeEmail,
                           prefixIcon: Icons.email_rounded,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) =>
+                              Validators.validateEmail(value, context: context),
                         ),
                         const SizedBox(height: 20),
 

@@ -18,12 +18,8 @@ abstract class AuthRepository {
   /// Throws [AuthException] on any other failure.
   Future<UserModel?> signInWithGoogle();
 
-  /// Sign in using Apple Sign-In (iOS only).
-  ///
-  /// Returns null if the user cancels the Apple authentication sheet.
-  /// Throws [AuthException] on any other failure.
-  /// Must never be called on Android — guard with Platform.isIOS before calling.
-  Future<UserModel?> signInWithApple();
+  // Apple Sign-In is temporarily disabled (pending Apple Developer account setup)
+  // Future<UserModel?> signInWithApple();
 
   /// Retrieve the currently signed-in user.
   ///
@@ -50,11 +46,8 @@ abstract class AuthRepository {
   /// Deletes the user's account and associated data from Firestore and Auth provider.
   Future<bool> deleteAccount();
 
-  /// Whether Apple Sign-In is available on this device.
-  ///
-  /// Returns true only on iOS. Always false on Android.
-  /// Use this in UI to conditionally render the Apple Sign-In button.
-  bool get isAppleSignInAvailable;
+  // Apple Sign-In availability getter — disabled pending Apple Developer account
+  // bool get isAppleSignInAvailable;
 
   /// Updating the field in the firestore
   ///
@@ -67,6 +60,7 @@ abstract class AuthRepository {
     UserModel currentUser, {
     required String displayName,
     required String photoUrl,
+    required String email,
     DateTime? dateOfBirth,
     int? age,
     String? gender,
@@ -109,23 +103,45 @@ class AuthErrorCodes {
   /// No internet connection available
   static const String noInternet = 'no_internet_connection';
 
-  /// Generic sign-in failure (wrong credentials, service error)
+  /// Generic sign-in failure
   static const String signInFailed = 'sign_in_failed';
 
   /// Firebase credential was invalid or expired
-  static const String invalidCredential = 'sign_in_failed';
+  static const String invalidCredential = 'invalid_credential';
 
   /// User's account has been disabled in Firebase console
-  static const String userDisabled = 'sign_in_failed';
+  static const String userDisabled = 'user_disabled';
+
+  /// User account not found
+  static const String userNotFound = 'user_not_found';
+
+  /// Account exists with a different sign-in provider
+  static const String accountExistsDifferentCredential =
+      'account_exists_different_credential';
+
+  /// Too many attempts from this device/IP
+  static const String tooManyRequests = 'too_many_requests';
+
+  /// Sign-in provider is not enabled in Firebase
+  static const String operationNotAllowed = 'operation_not_allowed';
 
   /// Apple Sign-In not available on this device/OS version
-  static const String appleNotAvailable = 'sign_in_failed';
+  static const String appleNotAvailable = 'apple_not_available';
 
   /// Firestore user document write failed
   static const String firestoreWriteFailed = 'something_went_wrong';
 
   /// Sensitive operation requires recent authentication
   static const String requiresRecentLogin = 'requires_recent_login';
+
+  /// Active session has expired or been terminated remotely
+  static const String sessionExpired = 'session_expired';
+
+  /// Sign-out operation failed
+  static const String signOutFailed = 'sign_out_failed';
+
+  /// Account deletion operation failed
+  static const String deleteAccountFailed = 'delete_account_failed';
 
   /// Unknown / unexpected error
   static const String unknown = 'something_went_wrong';

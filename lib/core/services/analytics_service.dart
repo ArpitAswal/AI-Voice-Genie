@@ -145,9 +145,10 @@ class AnalyticsService {
   ///
   /// This tracks button preference independently of whether auth succeeds.
   /// Even a cancelled sign-in is counted — tells us which provider users try.
-  Future<void> authenticationButtonTapped(SocialAuthProvider provider) async {
+  Future<void> authenticationButtonTapped(SocialAuthProvider provider, String userId) async {
     await _safeLog(FirebaseCollections.eventAuthenticationButtonTapped, {
       FirebaseCollections.paramAuthProvider: provider.id,
+      FirebaseCollections.paramUserId : userId
     });
   }
 
@@ -170,16 +171,20 @@ class AnalyticsService {
   }
 
   /// Log when the user signs out
-  Future<void> logUserSignedOut(String uid) async {
+  Future<void> logUserSignedOut(UserModel user) async {
     await _safeLog(FirebaseCollections.eventUserSignedOut, {
-      FirebaseCollections.paramUserId: uid,
+      FirebaseCollections.paramUserId: user.uid,
+      FirebaseCollections.paramAuthProvider: user.authProvider.id,
+      FirebaseCollections.paramUserEmail: user.email
     });
   }
 
   /// Log when the user deletes their account
-  Future<void> logAccountDeleted(String uid) async {
+  Future<void> logAccountDeleted(UserModel user) async {
     await _safeLog(FirebaseCollections.eventAccountDeleted, {
-      FirebaseCollections.paramUserId: uid,
+      FirebaseCollections.paramUserId: user.uid,
+      FirebaseCollections.paramAuthProvider: user.authProvider.id,
+      FirebaseCollections.paramUserEmail: user.email
     });
   }
 

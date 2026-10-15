@@ -4,6 +4,7 @@ import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../localization/app_localizations.dart';
+import '../router/app_routes.dart';
 
 // =============================================================================
 // ENUMS & CONFIG
@@ -509,7 +510,10 @@ class MessageUtils {
     MessageConfig config,
     _Channel channel,
   ) {
-    final overlay = Overlay.maybeOf(context);
+    // Look up the overlay from the given context, or fall back to the global
+    // navigator key's overlay for out-of-context notifications (e.g. session expired).
+    final overlay = Overlay.maybeOf(context) ??
+        AppRoutes.navigatorKey.currentState?.overlay;
     if (overlay == null || !overlay.mounted) return;
 
     final loc = AppLocalizations.of(context);

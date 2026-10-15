@@ -59,7 +59,7 @@ class StorageKeys {
 
   // ── Active Conversation Cache ──────────────────────────────────────────────
   // ID of the last open conversation (to restore on app resume)
-  static const String lastOpenConversationId = 'lastOpenConversationId';
+  // static const String lastOpenConversationId = 'lastOpenConversationId';
 
   // ── Voice Settings ────────────────────────────────────────────────────────
   // Whether to use device-native TTS or AI-powered TTS (if key available)

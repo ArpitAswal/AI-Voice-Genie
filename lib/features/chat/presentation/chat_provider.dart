@@ -51,6 +51,9 @@ import '../domain/message_page_cursor.dart';
 /// );
 /// ```
 class ChatProvider extends ChangeNotifier {
+  static ChatProvider? _instance;
+  static ChatProvider? get instance => _instance;
+
   final ChatRepository _repository;
   final AiOrchestrator _orchestrator;
   final AiPreferencesService _preferences;
@@ -61,7 +64,9 @@ class ChatProvider extends ChangeNotifier {
     AiPreferencesService? preferences,
   })  : _repository = repository ?? ChatRepositoryImpl(),
         _orchestrator = orchestrator ?? AiOrchestrator.instance,
-        _preferences = preferences ?? AiPreferencesService.instance;
+        _preferences = preferences ?? AiPreferencesService.instance {
+    _instance = this;
+  }
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -948,6 +953,20 @@ class ChatProvider extends ChangeNotifier {
     _messagesSubscription = null;
     _conversationSubscription?.cancel();
     _conversationSubscription = null;
+    notifyListeners();
+  }
+
+  /// Completely resets all chat state on user sign-out or account deletion.
+  void resetSession() {
+    clearConversation();
+    _visibleConversations = [];
+    _animatedMessageIds.clear();
+    _searchQuery = null;
+    _conversationCursor = null;
+    _messageCursor = null;
+    _hasMoreConversations = true;
+    _hasMoreMessages = true;
+    _conversationHistoryVersion = 0;
     notifyListeners();
   }
 

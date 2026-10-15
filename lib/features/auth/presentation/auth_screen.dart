@@ -1,4 +1,4 @@
-import 'dart:io';
+// import 'dart:io';
 
 import 'package:ai_voice_genie/core/enums/app_enums.dart';
 import 'package:ai_voice_genie/features/auth/presentation/auth_buttons.dart';
@@ -38,6 +38,22 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Check if session was terminated remotely or expired, and alert user upon landing on login screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.consumeSessionExpired()) {
+        Future.delayed(const Duration(milliseconds: 350), () {
+          if (!mounted) return;
+          context.showWarning(context.l10n.sessionExpired);
+        });
+      }
+    });
+  }
+
   // ── Sign-In Handlers ───────────────────────────────────────────────────────
 
   Future<void> _handleGoogleSignIn() async {
@@ -46,11 +62,13 @@ class _AuthScreenState extends State<AuthScreen> {
     // Show loading before async gap — context is valid here
     context.showLoading(message: context.l10n.signingIn);
 
-    await authProvider.signInWithGoogle();
-
-    // Hide loading — always safe, even if sign-in failed
-    if (mounted) {
-      context.hideLoading();
+    try {
+      await authProvider.signInWithGoogle();
+    } finally {
+      // Hide loading — guaranteed to run even if an exception occurs
+      if (mounted) {
+        context.hideLoading();
+      }
     }
 
     // Show error if one was set — check mounted before using context
@@ -62,40 +80,40 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
 
-    // Otherwise show the error message
+    // Otherwise show the localized error message
     _consumeError(authProvider);
   }
 
-  Future<void> _handleAppleSignIn() async {
-    final authProvider = context.read<AuthProvider>();
-
-    context.showLoading(message: context.l10n.signingIn);
-
-    await authProvider.signInWithApple();
-
-    // Hide loading — always safe, even if sign-in failed
-    if (mounted) {
-      context.hideLoading();
-    }
-
-    if (!mounted) return;
-
-    if (authProvider.authState == AuthState.authenticated) {
-      _navigateAfterAuth(authProvider);
-      return;
-    }
-
-    _consumeError(authProvider);
-  }
+  // Apple Sign-In is temporarily disabled pending Apple Developer account setup
+  // Future<void> _handleAppleSignIn() async {
+  //   final authProvider = context.read<AuthProvider>();
+  //   context.showLoading(message: context.l10n.signingIn);
+  //   try {
+  //     await authProvider.signInWithApple();
+  //   } finally {
+  //     if (mounted) {
+  //       context.hideLoading();
+  //     }
+  //   }
+  //   if (!mounted) return;
+  //   if (authProvider.authState == AuthState.authenticated) {
+  //     _navigateAfterAuth(authProvider);
+  //     return;
+  //   }
+  //   _consumeError(authProvider);
+  // }
 
   /// Check if AuthProvider has an error, show it, then clear it.
   /// Show and clear any auth error set by AuthProvider.
   ///
   /// Not called on cancellation — cancelled sign-in sets no error.
+  /// Check if AuthProvider has an error, show localized message, then clear it.
+  /// Not called on cancellation — cancelled sign-in sets no error.
   void _consumeError(AuthProvider authProvider) {
     final error = authProvider.authError;
     if (error != null && error.isNotEmpty) {
-      context.showError(error);
+      // Look up localized text for the auth error code
+      context.showError(context.l10n.translate(error));
       authProvider.clearAuthError();
     }
   }
@@ -114,8 +132,8 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (user == null) {
       // Safety guard — authenticated state with no user model is unexpected
-      // Stay on LoginScreen and show a generic error
-      context.showError('something_went_wrong');
+      // Stay on LoginScreen and show localized generic error
+      context.showError(context.l10n.somethingWentWrong);
       return;
     } else {
       if (user.keySetupDone) {
@@ -196,15 +214,15 @@ class _AuthScreenState extends State<AuthScreen> {
                           label: l10n.signInWithGoogle,
                           authType: SocialAuthProvider.google),
 
-                      // Apple Sign-In — iOS only
-                      if (Platform.isIOS) ...[
-                        SizedBox(height: isTablet ? 16 : 12),
-                        AuthButtons(
-                            isTablet: isTablet,
-                            onTap: _handleAppleSignIn,
-                            label: l10n.signInWithApple,
-                            authType: SocialAuthProvider.apple),
-                      ],
+                      // Apple Sign-In is temporarily disabled pending Apple Developer account setup
+                      // if (Platform.isIOS) ...[
+                      //   SizedBox(height: isTablet ? 16 : 12),
+                      //   AuthButtons(
+                      //       isTablet: isTablet,
+                      //       onTap: _handleAppleSignIn,
+                      //       label: l10n.signInWithApple,
+                      //       authType: SocialAuthProvider.apple),
+                      // ],
 
                       SizedBox(height: isTablet ? 16 : 12),
 
@@ -212,10 +230,8 @@ class _AuthScreenState extends State<AuthScreen> {
                       _buildPrivacyNote(context),
 
                       SizedBox(
-                          height: (context.screenHeight *
-                              (Platform.isIOS
-                                  ? (isTablet ? 0.02 : 0.01)
-                                  : (isTablet ? 0.2 : 0.06))))
+                          height:
+                              (context.screenHeight * (isTablet ? 0.2 : 0.06)))
                     ],
                   ),
                 ),

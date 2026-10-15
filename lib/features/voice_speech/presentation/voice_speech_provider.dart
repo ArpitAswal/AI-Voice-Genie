@@ -41,6 +41,9 @@ import '../domain/voice_speech_repository.dart';
 /// await voiceProvider.speak(aiResponseText);
 /// ```
 class VoiceProvider extends ChangeNotifier {
+  static VoiceProvider? _instance;
+  static VoiceProvider? get instance => _instance;
+
   final VoiceRepository _repository;
   final AnalyticsService _analytics;
   final StorageService _storage;
@@ -58,6 +61,7 @@ class VoiceProvider extends ChangeNotifier {
             repository ?? VoiceRepositoryImpl(openAiKeyGetter: openAiKeyGetter),
         _analytics = analytics ?? AnalyticsService.instance,
         _storage = storage ?? StorageService() {
+    _instance = this;
     _initialize();
   }
 
@@ -255,10 +259,27 @@ class VoiceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Stops any in-flight TTS playback or microphone recording immediately.
+  /// Called on user sign out or account deletion.
+  Future<void> reset() async {
+    try {
+      if (isPlaying) await stopSpeaking();
+      if (isListening || isProcessing) await stopListening();
+    } catch (e) {
+      debugPrint('⚠️ VoiceProvider reset error: $e');
+    }
+    _activeTtsMessageId = null;
+    _partialTranscript = '';
+    _setState(_isSttAvailable
+        ? VoiceRecordingState.idle
+        : VoiceRecordingState.unavailable);
+  }
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   @override
   void dispose() {
+    if (_instance == this) _instance = null;
     _repository.dispose();
     super.dispose();
   }

@@ -139,6 +139,7 @@ class StorageService {
     // Clear user-specific AI preferences and session settings from settings box
     // so they do not bleed over if a different user logs in.
     final keysToRemove = [
+      StorageKeys.isLoggedIn,
       StorageKeys.preferredProviderId,
       StorageKeys.preferredImageQuality,
       StorageKeys.preferredImageSize,
@@ -149,9 +150,9 @@ class StorageService {
       StorageKeys.preferredResponseLength,
       StorageKeys.preferredGeminiThinkingLevel,
       StorageKeys.preferredGeminiAspectRatio,
-      StorageKeys.lastOpenConversationId,
-      StorageKeys.useAiTts,
-      StorageKeys.useAiStt,
+      // StorageKeys.lastOpenConversationId,
+      // StorageKeys.useAiTts,
+      // StorageKeys.useAiStt,
       StorageKeys.ttsSpeed,
     ];
 
