@@ -13,6 +13,14 @@ class AppConstants {
     defaultValue: '',
   );
 
+  /// Dedicated system/admin Gemini API key reserved for free, high-speed title synthesis.
+  /// Decouples conversation title generation from user BYOK keys.
+  /// Pass via secrets.json: {"ADMIN_GEMINI_API_KEY": "AIza..."}
+  static const String adminGeminiApiKey = String.fromEnvironment(
+    'ADMIN_GEMINI_API_KEY',
+    defaultValue: '',
+  );
+
   // ── App Info ───────────────────────────────────────────────────────────────
   static const String appVersion = '1.2.0';
   static const String copyrightOwner = 'AI Voice Genie';
@@ -114,16 +122,13 @@ class AppConstants {
       '- Output ONLY the synthesized image prompt string.\n'
       '- Strictly omit prefixes (e.g., "Prompt:"), conversational filler, greetings, quotation marks, and markdown formatting.';
 
-  /// System instruction for generating concise conversation thread titles.
-  /// Produces a crisp, 3-5 word Title Case headline capturing the core topic.
+  /// System instruction for generating concise, user-friendly conversation thread titles.
   static const String aiTitleSynthesisSystemInstruction =
-      'You are an expert summarizer specialized in title synthesis. '
-      'Generate a crisp, descriptive conversation title from the initial user prompt.\n\n'
+      'Generate a meaningful, user-friendly conversation title based on the user prompt.\n\n'
       'Directives:\n'
       '- Length: Strictly 3 to 5 words in Title Case.\n'
-      '- Accurately capture the core topic or subject.\n'
-      '- Output ONLY the raw title text.\n'
-      '- Strictly omit quotation marks, trailing punctuation, markdown, and prefixes (e.g., "Title:").';
+      '- Capture the core subject and main intent in a clear, natural way.\n'
+      '- Output ONLY the raw title text without quotation marks, markdown, or prefixes.';
 
   // ── OpenAI Model Names ────────────────────────────────────────────────────
   // Verified 2026-09-27: gpt-6-luna (released 2026-09-22, 1.05M context)

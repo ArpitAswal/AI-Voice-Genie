@@ -80,8 +80,12 @@ class CloudStorageService {
         },
       );
 
-      final uploadTask = await ref.putData(bytes, metadata);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      final uploadTask = await ref
+          .putData(bytes, metadata)
+          .timeout(const Duration(seconds: 15));
+      final downloadUrl = await uploadTask.ref
+          .getDownloadURL()
+          .timeout(const Duration(seconds: 10));
 
       debugPrint('☁️ CloudStorage: Uploaded generated image -> $path');
       return downloadUrl;
@@ -130,8 +134,12 @@ class CloudStorageService {
         },
       );
 
-      final uploadTask = await ref.putData(bytes, metadata);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      final uploadTask = await ref
+          .putData(bytes, metadata)
+          .timeout(const Duration(seconds: 15));
+      final downloadUrl = await uploadTask.ref
+          .getDownloadURL()
+          .timeout(const Duration(seconds: 10));
 
       debugPrint('☁️ CloudStorage: Uploaded generated PDF -> $path');
       return downloadUrl;
@@ -178,8 +186,12 @@ class CloudStorageService {
         },
       );
 
-      final uploadTask = await ref.putData(bytes, metadata);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      final uploadTask = await ref
+          .putData(bytes, metadata)
+          .timeout(const Duration(seconds: 15));
+      final downloadUrl = await uploadTask.ref
+          .getDownloadURL()
+          .timeout(const Duration(seconds: 10));
 
       debugPrint('☁️ CloudStorage: Uploaded image -> $path');
       return downloadUrl;
@@ -225,8 +237,12 @@ class CloudStorageService {
         },
       );
 
-      final uploadTask = await ref.putData(bytes, metadata);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      final uploadTask = await ref
+          .putData(bytes, metadata)
+          .timeout(const Duration(seconds: 15));
+      final downloadUrl = await uploadTask.ref
+          .getDownloadURL()
+          .timeout(const Duration(seconds: 10));
 
       debugPrint('☁️ CloudStorage: Uploaded PDF -> $path');
       return downloadUrl;

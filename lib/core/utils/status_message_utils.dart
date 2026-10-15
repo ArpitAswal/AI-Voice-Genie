@@ -47,6 +47,9 @@ class MessageConfig {
   }
 
   /// Higher number = higher priority.
+  /// 3: Error (highest - critical failure)
+  /// 2: Warning (medium - caution / quota)
+  /// 1: Success (lowest - informational / completion)
   int get _priority {
     switch (type) {
       case MessageType.error:
@@ -72,25 +75,25 @@ class _AnimatedMessageOverlay extends StatefulWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final VoidCallback onDismissed;
+  final void Function(_AnimatedMessageOverlayState state)? onStateAttached;
 
   /// Extra vertical offset so two messages at the same edge don't overlap.
   final double stackOffset;
 
   const _AnimatedMessageOverlay({
-    super.key,
     required this.slot,
     required this.type,
     required this.displayMessage,
     required this.displayDuration,
     required this.onDismissed,
+    this.onStateAttached,
     this.actionLabel,
     this.onAction,
     this.stackOffset = 0,
   });
 
   @override
-  State<_AnimatedMessageOverlay> createState() =>
-      _AnimatedMessageOverlayState();
+  State<_AnimatedMessageOverlay> createState() => _AnimatedMessageOverlayState();
 }
 
 class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
@@ -98,6 +101,7 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
   late final AnimationController _controller;
   late final Animation<Offset> _slideAnimation;
   Timer? _autoDismissTimer;
+  bool _isDismissing = false;
 
   @override
   void initState() {
@@ -105,7 +109,7 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 280),
     );
 
     // Bottom slot → slide from below; Top slot → slide from above.
@@ -118,16 +122,33 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _controller.forward();
+    _startTimer();
+
+    widget.onStateAttached?.call(this);
+  }
+
+  void _startTimer() {
+    _autoDismissTimer?.cancel();
     _autoDismissTimer = Timer(widget.displayDuration, dismiss);
+  }
+
+  /// Resets the auto-dismiss timer when an identical message is re-triggered.
+  void resetTimer() {
+    if (_isDismissing) return;
+    _startTimer();
   }
 
   /// Triggers exit animation, then calls [onDismissed].
   void dismiss() {
+    if (_isDismissing) return;
+    _isDismissing = true;
     _autoDismissTimer?.cancel();
+
     if (!mounted) {
       widget.onDismissed();
       return;
     }
+
     _controller.reverse().then((_) {
       if (mounted) widget.onDismissed();
     });
@@ -142,7 +163,7 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final colors = _getColors(widget.type, context);
+    final backgroundColor = _getBackgroundColor(widget.type, context.isDark);
     final topPadding = MediaQuery.of(context).padding.top;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
@@ -160,23 +181,25 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
         child: Material(
           color: Colors.transparent,
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onVerticalDragEnd: (_) => dismiss(),
+            onHorizontalDragEnd: (_) => dismiss(),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: colors['background'],
+                color: backgroundColor,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withValues(alpha: 0.22),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  Icon(_getIcon(widget.type), color: colors['icon'], size: 24),
+                  Icon(_getIcon(widget.type), color: Colors.white, size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -218,17 +241,36 @@ class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>
 /// Vertical stack offset between concurrent messages (card height 56 + gap 8).
 const double _kStackOffset = 64.0;
 
-/// Holds a reference to a live overlay so we can dismiss / replace it.
+/// Holds a reference to a live overlay so we can synchronously check and manage it.
 class _LiveMessage {
   final OverlayEntry entry;
-  final _AnimatedMessageOverlayState state;
   final MessageConfig config;
+  final String displayMessage;
   final _Slot slot;
+  _AnimatedMessageOverlayState? _state;
+  bool _dismissRequested = false;
 
-  _LiveMessage(this.entry, this.state, this.config, this.slot);
+  _LiveMessage({
+    required this.entry,
+    required this.config,
+    required this.displayMessage,
+    required this.slot,
+  });
+
+  void attachState(_AnimatedMessageOverlayState state) {
+    _state = state;
+    if (_dismissRequested) {
+      state.dismiss();
+    }
+  }
 
   void dismiss() {
-    state.dismiss();
+    _dismissRequested = true;
+    _state?.dismiss();
+  }
+
+  void extendDuration() {
+    _state?.resetTimer();
   }
 }
 
@@ -261,18 +303,26 @@ class _MessageManager {
     final current = _channelMessage(channel);
 
     if (current != null) {
-      // ── Same channel already has a message ──
+      // 1. Content deduplication: If exact same message and type is already showing, extend visibility
+      if (current.config.type == config.type &&
+          current.displayMessage == displayMessage &&
+          current.config.actionLabel == config.actionLabel) {
+        current.extendDuration();
+        return;
+      }
+
+      // 2. Priority check within the same channel:
+      // Higher or equal priority wins (same type → last-wins replacement, or higher severity preempts)
       if (config._priority >= current.config._priority) {
-        // Incoming wins (same type → last-wins dedup, or higher priority).
         _dismissChannel(channel);
       } else {
         // Current has higher priority (e.g. error is showing, warning arrives).
-        // Drop the incoming message — the user should see the error.
+        // Drop the incoming message — the user should see the critical error.
         return;
       }
     }
 
-    // Check whether the OTHER channel already occupies the same slot.
+    // 3. Stacking offset check against the other channel:
     final otherChannel =
         channel == _Channel.snackbar ? _Channel.toast : _Channel.snackbar;
     final otherMsg = _channelMessage(otherChannel);
@@ -319,12 +369,11 @@ class _MessageManager {
     _Channel channel, {
     double stackOffset = 0,
   }) {
-    late OverlayEntry entry;
-    final key = GlobalKey<_AnimatedMessageOverlayState>();
+    late final OverlayEntry entry;
+    late final _LiveMessage liveMessage;
 
     entry = OverlayEntry(
       builder: (_) => _AnimatedMessageOverlay(
-        key: key,
         slot: slot,
         type: config.type,
         displayMessage: displayMessage,
@@ -332,8 +381,15 @@ class _MessageManager {
         actionLabel: config.actionLabel,
         onAction: config.onAction,
         stackOffset: stackOffset,
+        onStateAttached: (state) {
+          liveMessage.attachState(state);
+        },
         onDismissed: () {
-          if (entry.mounted) entry.remove();
+          if (entry.mounted) {
+            try {
+              entry.remove();
+            } catch (_) {}
+          }
           if (_channelMessage(channel)?.entry == entry) {
             _setChannel(channel, null);
           }
@@ -341,14 +397,16 @@ class _MessageManager {
       ),
     );
 
-    overlay.insert(entry);
+    // Register live message synchronously to eliminate frame race conditions
+    liveMessage = _LiveMessage(
+      entry: entry,
+      config: config,
+      displayMessage: displayMessage,
+      slot: slot,
+    );
+    _setChannel(channel, liveMessage);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = key.currentState;
-      if (state != null) {
-        _setChannel(channel, _LiveMessage(entry, state, config, slot));
-      }
-    });
+    overlay.insert(entry);
   }
 }
 
@@ -532,27 +590,15 @@ class MessageUtils {
 // HELPER FUNCTIONS
 // =============================================================================
 
-/// Get colours for a message type.
-Map<String, Color> _getColors(MessageType type, BuildContext context) {
+/// Get background color for a message type without dynamic map allocations.
+Color _getBackgroundColor(MessageType type, bool isDark) {
   switch (type) {
     case MessageType.success:
-      return {
-        'background':
-            (context.isDark) ? AppColors.darkSuccess : AppColors.lightSuccess,
-        'icon': Colors.white
-      };
+      return isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
     case MessageType.error:
-      return {
-        'background':
-            (context.isDark) ? AppColors.darkError : AppColors.lightError,
-        'icon': Colors.white
-      };
+      return isDark ? AppColors.darkError : AppColors.lightError;
     case MessageType.warning:
-      return {
-        'background':
-            (context.isDark) ? AppColors.darkWarning : AppColors.lightWarning,
-        'icon': Colors.white
-      };
+      return isDark ? AppColors.darkWarning : AppColors.lightWarning;
   }
 }
 

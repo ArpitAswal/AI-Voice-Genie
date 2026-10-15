@@ -283,7 +283,12 @@ Synthesized prompt:''';
 
   /// Synthesizes a natural, concise 3-5 word conversation title using an LLM.
   ///
-  /// Replaces naive local regex truncation to provide human-like, accurate titles.
+  /// Multi-tier waterfall strategy:
+  /// 1. Dedicated Admin Gemini Key (from compile-time secrets.json / environment):
+  ///    Provides free, high-speed title generation for all users without consuming user BYOK quotas.
+  /// 2. User's BYOK Gemini key (if configured in user settings).
+  /// 3. User's active conversation provider (e.g. OpenAI or Claude).
+  ///
   /// Fails silently by returning null so callers retain their initial fallback title.
   Future<String?> generateConversationTitle({
     required String prompt,
@@ -292,26 +297,71 @@ Synthesized prompt:''';
     final trimmed = prompt.trim();
     if (trimmed.isEmpty) return null;
 
-    if (!_registry.supports(provider, AiCapability.textGeneration)) {
-      return null;
+    // 1. Highest priority: Dedicated Admin Gemini Key (from secrets.json / environment)
+    if (AppConstants.adminGeminiApiKey.trim().isNotEmpty) {
+      final title = await _synthesizeWithAdapter(
+        provider: AiProviderId.gemini,
+        apiKey: AppConstants.adminGeminiApiKey.trim(),
+        prompt: trimmed,
+      );
+      if (title != null && title.isNotEmpty) return title;
     }
+
+    // 2. Second priority: User's BYOK Gemini key if available
+    try {
+      final geminiKey = await _getOrValidateApiKey(AiProviderId.gemini);
+      if (geminiKey.isNotEmpty) {
+        final title = await _synthesizeWithAdapter(
+          provider: AiProviderId.gemini,
+          apiKey: geminiKey,
+          prompt: trimmed,
+        );
+        if (title != null && title.isNotEmpty) return title;
+      }
+    } catch (_) {
+      // User has no Gemini key configured; proceed to active provider
+    }
+
+    // 3. Third priority: User's active conversation provider (e.g. OpenAI / Claude)
+    if (provider != AiProviderId.gemini) {
+      try {
+        final activeKey = await _getOrValidateApiKey(provider);
+        if (activeKey.isNotEmpty) {
+          final title = await _synthesizeWithAdapter(
+            provider: provider,
+            apiKey: activeKey,
+            prompt: trimmed,
+          );
+          if (title != null && title.isNotEmpty) return title;
+        }
+      } catch (e) {
+        debugPrint(
+            '⚠️ AiOrchestrator: Active provider title synthesis failed: $e');
+      }
+    }
+
+    return null;
+  }
+
+  /// Helper to execute title synthesis on a specific provider and adapter with fast 5s timeout and failover.
+  Future<String?> _synthesizeWithAdapter({
+    required AiProviderId provider,
+    required String apiKey,
+    required String prompt,
+  }) async {
+    if (!_registry.supports(provider, AiCapability.textGeneration)) return null;
 
     final adapter = _adapters[provider];
     if (adapter == null) return null;
 
-    String apiKey;
-    try {
-      apiKey = await _getOrValidateApiKey(provider);
-    } catch (e) {
-      debugPrint('⚠️ AiOrchestrator: Key check failed for title synthesis: $e');
-      return null;
-    }
+    final trimmedPrompt = prompt.trim();
+    if (trimmedPrompt.isEmpty) return null;
 
     final titleInstruction =
         '''${AppConstants.aiTitleSynthesisSystemInstruction}
 
 User prompt:
-$trimmed
+$trimmedPrompt
 
 Title:''';
 
@@ -323,48 +373,36 @@ Title:''';
       thinkingLevel: GeminiThinkingLevel.low,
     );
 
-    for (int attempt = 1; attempt <= 2; attempt++) {
-      try {
-        final response = await adapter
-            .generateText(
-              request: request,
-              apiKey: apiKey,
-            )
-            .timeout(const Duration(seconds: 15));
-        final text = response.text?.trim();
-        if (text != null && text.isNotEmpty) {
-          final cleaned = text
-              .replaceAll(RegExp(r'^["\s]+|["\s.]+$'), '')
-              .replaceAll(
-                  RegExp(r'^(Title|Subject|Topic):\s*', caseSensitive: false),
-                  '')
-              .trim();
-          if (cleaned.isNotEmpty) {
-            return cleaned.length > 50
-                ? cleaned.substring(0, 50).trim()
-                : cleaned;
-          }
+    try {
+      final response = await adapter
+          .generateText(
+            request: request,
+            apiKey: apiKey,
+          )
+          .timeout(const Duration(seconds: 10));
+      final text = response.text?.trim();
+      if (text != null && text.isNotEmpty) {
+        final cleaned = text
+            .replaceAll(RegExp(r'^["\s]+|["\s.]+$'), '')
+            .replaceAll(
+                RegExp(r'^(Title|Subject|Topic):\s*', caseSensitive: false),
+                '')
+            .trim();
+        if (cleaned.isNotEmpty) {
+          return cleaned.length > 50
+              ? cleaned.substring(0, 50).trim()
+              : cleaned;
         }
-        break;
-      } on TimeoutException catch (e) {
-        debugPrint(
-            '⚠️ AiOrchestrator: Title synthesis timeout (attempt $attempt/2): $e');
-        if (attempt < 2) {
-          await Future.delayed(const Duration(milliseconds: 500));
-          continue;
-        }
-      } on AiTransientException catch (e) {
-        debugPrint(
-            '⚠️ AiOrchestrator: Title synthesis transient error (attempt $attempt/2): $e');
-        if (attempt < 2) {
-          await Future.delayed(const Duration(milliseconds: 500));
-          continue;
-        }
-      } catch (e) {
-        debugPrint(
-            '⚠️ AiOrchestrator: Title synthesis skipped (non-fatal): $e');
-        break;
       }
+    } on TimeoutException catch (e) {
+      debugPrint(
+          '⚠️ AiOrchestrator: Title synthesis timeout on ${provider.displayName}: $e');
+    } on AiTransientException catch (e) {
+      debugPrint(
+          '⚠️ AiOrchestrator: Title synthesis transient error on ${provider.displayName}: $e');
+    } catch (e) {
+      debugPrint(
+          '⚠️ AiOrchestrator: Title synthesis failed on ${provider.displayName}: $e');
     }
     return null;
   }

@@ -22,10 +22,24 @@ class PdfDocumentService {
     required String title,
     required String markdownContent,
   }) async {
+    pw.ThemeData? theme;
+    try {
+      final fontData = await rootBundle.load('assets/fonts/Poppins-Regular.ttf');
+      final boldData = await rootBundle.load('assets/fonts/Poppins-Bold.ttf');
+      final regularFont = pw.Font.ttf(fontData);
+      final boldFont = pw.Font.ttf(boldData);
+      theme = pw.ThemeData.withFont(base: regularFont, bold: boldFont);
+    } catch (_) {
+      // Fallback in headless unit test runner where rootBundle is uninitialized
+    }
+
+    final sanitizedTitle = _cleanMarkdownFormatting(title);
+
     final pdf = pw.Document(
-      title: title,
+      title: sanitizedTitle,
       author: 'AI Voice Genie',
       creator: 'AI Voice Genie Mobile',
+      theme: theme,
     );
 
     final cleanLines = markdownContent.split('\n');
@@ -39,7 +53,7 @@ class PdfDocumentService {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text(
-              title,
+              sanitizedTitle,
               style: const pw.TextStyle(
                 fontSize: 22,
                 fontWeight: pw.FontWeight.bold,
@@ -98,11 +112,7 @@ class PdfDocumentService {
             !cleanLines[i].trim().startsWith('```') &&
             !cleanLines[i].trim().startsWith('~~~')) {
           final rawCodeLine = cleanLines[i];
-          // Strip box-drawing lines that Helvetica cannot render
-          final stripped = rawCodeLine
-              .replaceAll(
-                  RegExp(r'[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]'), '')
-              .trim();
+          final stripped = sanitizeTypography(rawCodeLine).trim();
           if (stripped.isNotEmpty) {
             codeLines.add(stripped);
           }
@@ -392,9 +402,35 @@ class PdfDocumentService {
     );
   }
 
+  /// Normalizes Unicode typographic characters (curly quotes, em/en-dashes, ellipses, non-breaking spaces)
+  /// into standard ASCII equivalents so all PDF engines and Type-1 fonts render them cleanly without ☒ boxes.
+  static String sanitizeTypography(String raw) {
+    return raw
+        // Curly single quotes, apostrophes, primes
+        .replaceAll(RegExp(r'[\u2018\u2019\u201A\u201B\u2032\u2035\u00B4]'), "'")
+        // Curly double quotes, low-9 quotes, guillemets, double primes
+        .replaceAll(RegExp(r'[\u201C\u201D\u201E\u201F\u00AB\u00BB\u2033]'), '"')
+        // Em dash, horizontal bar -> standard spaced dash
+        .replaceAll(RegExp(r'[\u2014\u2015]'), ' - ')
+        // En dash, figure dash, minus sign -> standard hyphen
+        .replaceAll(RegExp(r'[\u2012\u2013\u2212]'), '-')
+        // Ellipsis
+        .replaceAll('\u2026', '...')
+        // Bullets
+        .replaceAll(RegExp(r'[\u2022\u25E6\u2023]'), '*')
+        .replaceAll('\u2043', '-')
+        // Non-breaking spaces and variable spaces
+        .replaceAll(RegExp(r'[\u00A0\u2000-\u200A\u202F]'), ' ')
+        // Zero-width characters & BOM
+        .replaceAll(RegExp(r'[\u200B-\u200D\uFEFF]'), '')
+        // Box-drawing characters & geometric glyphs
+        .replaceAll(RegExp(r'[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]'), '');
+  }
+
   /// Strips formatting markers (bold **, italic *, code `) and sanitizes URLs & glyphs for PDF rendering
   static String _cleanMarkdownFormatting(String raw) {
-    return raw
+    final sanitized = sanitizeTypography(raw);
+    return sanitized
         // Fix Dart replaceAll backreference bug by using replaceAllMapped
         .replaceAllMapped(RegExp(r'\*\*(.*?)\*\*'), (m) => m[1] ?? '')
         .replaceAllMapped(RegExp(r'\*(.*?)\*'), (m) => m[1] ?? '')
@@ -410,8 +446,6 @@ class PdfDocumentService {
           }
           return '$label ($url)';
         })
-        // Strip Unicode box-drawing characters and pseudo-borders (causes ☒ boxes in Helvetica)
-        .replaceAll(RegExp(r'[\u2500-\u257F\u2580-\u259F\u25A0-\u25FF]'), '')
         .trim();
   }
 

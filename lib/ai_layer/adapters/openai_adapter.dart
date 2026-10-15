@@ -43,32 +43,39 @@ class OpenAiAdapter extends AiProviderAdapter {
     try {
       // Build messages array with conversation history for context continuity
       final messages = [
-        // System prompt — sets the assistant's behavior
-        {
-          'role': 'system',
-          'content': AppConstants.aiTextSystemInstruction,
-        },
+        // System prompt — only attach default persona if not a specialized/internal prompt
+        if (!request.disableSearchGrounding)
+          {
+            'role': 'system',
+            'content': AppConstants.aiTextSystemInstruction,
+          },
         // Include previous conversation messages for context
         ...request.conversationHistory,
         // The current user prompt
         {'role': 'user', 'content': request.prompt},
       ];
 
-      final requestBody = {
+      final requestBody = <String, dynamic>{
         'model': AppConstants.openAiTextModel,
         'max_completion_tokens': request.responseLength.openAiMaxTokens,
-        'temperature': 0.7,
         'messages': messages,
+        // Web Search Grounding: provides real-time web access and live citations
+        if (!request.disableSearchGrounding) 'web_search_options': {},
       };
 
-      debugPrint(
-          '📤 OpenAI Request (Text Generation): ${jsonEncode(requestBody)}');
+      debugPrint('📤 OpenAI Request (Text Generation): ${jsonEncode({
+            'model': AppConstants.openAiTextModel,
+            'capability': request.capability.displayName,
+            'message_count': messages.length,
+            'max_completion_tokens': request.responseLength.openAiMaxTokens,
+            'grounding': !request.disableSearchGrounding,
+            'prompt': request.prompt,
+          })}');
 
-      final response = await _post(
-        endpoint: '/chat/completions',
+      final response = await _postWithFallback(
         apiKey: apiKey,
         body: requestBody,
-      ).timeout(AppConstants.aiRequestTimeout);
+      );
 
       final data = await _parseResponse(response, request.requestId);
 
@@ -80,7 +87,15 @@ class OpenAiAdapter extends AiProviderAdapter {
         );
       }
 
-      final text = choices[0]['message']?['content'] as String? ?? '';
+      final messageContent = choices[0]['message']?['content'];
+      String text = '';
+      if (messageContent is String) {
+        text = messageContent;
+      } else if (messageContent is List) {
+        text = messageContent
+            .map((part) => part is Map ? (part['text'] ?? '') : part.toString())
+            .join('');
+      }
       final finishReason = choices[0]['finish_reason'] as String?;
 
       if (text.isEmpty) {
@@ -100,6 +115,8 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       stopwatch.stop();
       debugPrint('📥 OpenAI Response (Text Generation): ${jsonEncode(data)}');
+      debugPrint(
+          '📊 OpenAI Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.text(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.textGeneration,
@@ -138,8 +155,17 @@ class OpenAiAdapter extends AiProviderAdapter {
             (request.imageBackground ?? ImageGenerateBackground.auto).apiValue,
         'prompt': request.prompt,
       };
-      debugPrint(
-          '📤 OpenAI Request (Image Generation): ${jsonEncode(requestBody)}');
+      debugPrint('📤 OpenAI Request (Image Generation): ${jsonEncode({
+            'model': AppConstants.openAiImageGenModel,
+            'capability': request.capability.displayName,
+            'size': request.imageSize?.apiValue ?? AiImageSize.square.apiValue,
+            'quality': request.imageQuality?.name ?? ImageQuality.low.name,
+            'n': request.imageCount ?? 1,
+            'background':
+                (request.imageBackground ?? ImageGenerateBackground.auto)
+                    .apiValue,
+            'prompt': request.prompt,
+          })}');
 
       final response = await _post(
         endpoint: '/images/generations',
@@ -180,6 +206,8 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       debugPrint(
           '📥 OpenAI Response (Image Generation): ${jsonEncode(logData)}');
+      debugPrint(
+          '📊 OpenAI Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.image(
         modelUsed: AiProviderId.openAi,
         requestId: request.requestId,
@@ -234,7 +262,6 @@ class OpenAiAdapter extends AiProviderAdapter {
         // gpt-6-luna natively supports multi-image vision
         'model': AppConstants.openAiVisionModel,
         'max_completion_tokens': request.responseLength.openAiMaxTokens,
-        'temperature': 0.4,
         'messages': [
           {
             'role': 'system',
@@ -249,8 +276,15 @@ class OpenAiAdapter extends AiProviderAdapter {
         ],
       };
 
-      debugPrint(
-          '📤 OpenAI Request (Image Analysis): ${jsonEncode(requestBody)}');
+      debugPrint('📤 OpenAI Request (Image Analysis): ${jsonEncode({
+            'model': AppConstants.openAiVisionModel,
+            'capability': request.capability.displayName,
+            'image_count': request.imageBytes?.length ?? 0,
+            'detail': request.visionDetailLevel?.apiValue ??
+                VisionDetailLevel.auto.apiValue,
+            'message_count': request.conversationHistory.length + 1,
+            'prompt': request.prompt,
+          })}');
 
       // Use /v1/chat/completions — the standard, well-documented vision endpoint
       final response = await _post(
@@ -276,6 +310,8 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       stopwatch.stop();
       debugPrint('📥 OpenAI Response (Image Analysis): ${jsonEncode(data)}');
+      debugPrint(
+          '📊 OpenAI Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.analysis(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.imageUnderstanding,
@@ -332,7 +368,6 @@ class OpenAiAdapter extends AiProviderAdapter {
         'model': AppConstants.openAiVisionModel,
         'instructions': AppConstants.aiPdfSystemInstruction,
         'max_output_tokens': request.responseLength.openAiMaxTokens,
-        'temperature': 0.3,
         'input': [
           // Include previous conversation history for multi-turn PDF context
           ...request.conversationHistory,
@@ -343,7 +378,12 @@ class OpenAiAdapter extends AiProviderAdapter {
         ],
       };
 
-      debugPrint('📤 OpenAI Request (PDF Parsing): ${jsonEncode(requestBody)}');
+      debugPrint('📤 OpenAI Request (PDF Parsing): ${jsonEncode({
+            'model': AppConstants.openAiVisionModel,
+            'capability': request.capability.displayName,
+            'pdf_count': request.pdfBytes?.length ?? 1,
+            'prompt': request.prompt,
+          })}');
 
       // POST to /v1/responses — the Responses API endpoint
       final response = await _post(
@@ -379,6 +419,8 @@ class OpenAiAdapter extends AiProviderAdapter {
 
       stopwatch.stop();
       debugPrint('📥 OpenAI Response (PDF Parsing): ${jsonEncode(data)}');
+      debugPrint(
+          '📊 OpenAI Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.analysis(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.pdfParsing,
@@ -450,6 +492,8 @@ class OpenAiAdapter extends AiProviderAdapter {
       final finishReason = data['choices']?[0]?['finish_reason'] as String?;
 
       stopwatch.stop();
+      debugPrint(
+          '📊 OpenAI Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.text(
         modelUsed: AiProviderId.openAi,
         capability: AiCapability.pdfGeneration,
@@ -469,6 +513,92 @@ class OpenAiAdapter extends AiProviderAdapter {
   }
 
   // ── Private Helpers ────────────────────────────────────────────────────────
+
+  /// Sends a POST request for text generation with intelligent parameter fallbacks.
+  ///
+  /// Flow:
+  /// 1. Attempts request with 'web_search_options' for real-time web search grounding.
+  /// 2. If rejected with 400 (parameter unsupported), retries with 'tools: [{"type": "web_search"}]'.
+  /// 3. If tools web search is also rejected by the API tier or model, retries clean without web search
+  ///    so the chat interaction never fails or crashes for the user.
+  Future<http.Response> _postWithFallback({
+    required String apiKey,
+    required Map<String, dynamic> body,
+  }) async {
+    Map<String, dynamic> currentBody = Map<String, dynamic>.from(body);
+
+    http.Response response = await _post(
+      endpoint: '/chat/completions',
+      apiKey: apiKey,
+      body: currentBody,
+    ).timeout(AppConstants.aiRequestTimeout);
+
+    // Parameter Fallback 1: Retry with 'tools: [{"type": "web_search"}]' if 'web_search_options' is rejected
+    if (response.statusCode == 400 &&
+        currentBody.containsKey('web_search_options')) {
+      final bodyLower = response.body.toLowerCase();
+      if (bodyLower.contains('web_search') ||
+          bodyLower.contains('search') ||
+          bodyLower.contains('unknown parameter') ||
+          bodyLower.contains('unrecognized') ||
+          bodyLower.contains('invalid') ||
+          bodyLower.contains('tool')) {
+        debugPrint(
+            '⚠️ OpenAI: web_search_options rejected by endpoint, retrying with tools web_search');
+        currentBody = Map<String, dynamic>.from(currentBody)
+          ..remove('web_search_options')
+          ..['tools'] = [
+            {'type': 'web_search'}
+          ];
+
+        response = await _post(
+          endpoint: '/chat/completions',
+          apiKey: apiKey,
+          body: currentBody,
+        ).timeout(AppConstants.aiRequestTimeout);
+
+        // Parameter Fallback 2: Retry without web search tools if also rejected by key tier or model
+        if (response.statusCode == 400 && currentBody.containsKey('tools')) {
+          final secondBodyLower = response.body.toLowerCase();
+          if (secondBodyLower.contains('tool') ||
+              secondBodyLower.contains('search') ||
+              secondBodyLower.contains('web_search') ||
+              secondBodyLower.contains('unknown parameter') ||
+              secondBodyLower.contains('unrecognized') ||
+              secondBodyLower.contains('invalid')) {
+            debugPrint(
+                '⚠️ OpenAI: web search tools unsupported on this key tier/model, retrying without web search');
+            currentBody = Map<String, dynamic>.from(currentBody)
+              ..remove('tools');
+            response = await _post(
+              endpoint: '/chat/completions',
+              apiKey: apiKey,
+              body: currentBody,
+            ).timeout(AppConstants.aiRequestTimeout);
+          }
+        }
+      }
+    } else if (response.statusCode == 400 && currentBody.containsKey('tools')) {
+      final bodyLower = response.body.toLowerCase();
+      if (bodyLower.contains('tool') ||
+          bodyLower.contains('search') ||
+          bodyLower.contains('web_search') ||
+          bodyLower.contains('unknown parameter') ||
+          bodyLower.contains('unrecognized') ||
+          bodyLower.contains('invalid')) {
+        debugPrint(
+            '⚠️ OpenAI: web search tools unsupported on this key tier/model, retrying without web search');
+        currentBody = Map<String, dynamic>.from(currentBody)..remove('tools');
+        response = await _post(
+          endpoint: '/chat/completions',
+          apiKey: apiKey,
+          body: currentBody,
+        ).timeout(AppConstants.aiRequestTimeout);
+      }
+    }
+
+    return response;
+  }
 
   /// Make an authenticated POST request to the OpenAI API.
   Future<http.Response> _post({

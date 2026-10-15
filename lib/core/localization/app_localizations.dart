@@ -79,6 +79,7 @@ class AppLocalizations {
       'generate_code': 'Generate Code',
       'analyze_image': 'Analyze Image',
       'pdf_summarize': 'Summarize PDF',
+      'generate_pdf': 'Generate PDF',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'Continue with Google',
@@ -169,13 +170,15 @@ class AppLocalizations {
       'prompt_too_long': 'Message is too long (max 10,000 characters)',
       'response_failed': 'Failed to get a response. Please try again.',
       'prompt_template_summarize_pdf':
-          'Summarize this attached PDF document. Break it down into key highlights, main takeaways, and any actionable items.',
+          'Summarize the key findings, executive takeaways, and main conclusions from this document into bullet points.',
       'prompt_template_generate_code':
-          'Write a clean, optimized function in [Language] to handle [Problem/Goal]. Please include brief comments explaining the logic.',
+          'Write a Python script to parse a CSV file, compute summary statistics, and generate a clean visual chart.',
       'prompt_template_analyze_image':
-          'Analyze this image and describe what is happening in detail. [Optional: Extract any visible text or UI elements].',
+          'Analyze this image in detail and describe the visual scene, key elements, and any visible text or data.',
       'prompt_template_create_image':
-          'Generate a high-quality, realistic image of [Describe your scene, style, lighting, and details here].',
+          'A serene Japanese Zen garden with cherry blossoms, a stone lantern, and a peaceful koi pond in soft morning light, 8k photographic style.',
+      'prompt_template_generate_pdf':
+          'Generate a professional PDF report on the fundamentals of Artificial Intelligence, including an executive summary, core milestones, and future trends.',
       'conversation_name_update': 'Conversation name changed',
 
       // ── AI Model Selection ─────────────────────────────────────────────────
@@ -189,13 +192,13 @@ class AppLocalizations {
           'Your API keys are stored securely. Only you have the authority to access and manage your personal keys.',
       // ── Home Screen: Marketing Value Proposition ─────────────────────────
       'openai_marketing_pitch':
-          'Create studio-quality images, transcribe crystal-clear voice notes, and craft creative content.',
+          'Create studio-quality images, generate smart PDF documents, and craft creative content.',
       'gemini_marketing_pitch':
           'Lightning-fast answers, instant image creation, and effortless large-file analysis powered by Google.',
       'claude_marketing_pitch':
           'Tackle complex coding, solve difficult logic problems, and digest dense documents with expert precision.',
       'gpt_model_message':
-          'Create studio-quality images, transcribe crystal-clear voice notes, and craft creative content.',
+          'Create studio-quality images, generate smart PDF documents, and craft creative content.',
       'gemini_model_message':
           'Lightning-fast answers, instant image creation, and effortless large-file analysis powered by Google.',
       'claude_model_message':
@@ -203,7 +206,7 @@ class AppLocalizations {
 
       // ── Profile Tab (AI Intelligence): Active Capabilities ────────────────
       'openai_capabilities_info':
-          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• High-Accuracy Voice Transcription',
+          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• PDF & Document Intelligence',
       'gemini_capabilities_info':
           '• Fast Multimodal Chat & Search\n• Visual Image Generation\n• Inline PDF & Document Parsing',
       'claude_capabilities_info':
@@ -211,19 +214,19 @@ class AppLocalizations {
 
       // ── Key Setup Screen: Model-to-Purpose Mapping ─────────────────────────
       'openai_model_purposes':
-          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation\n• whisper-1: Audio & Voice Transcription',
+          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation',
       'gemini_model_purposes':
           '• gemini-3.5-flash-lite: Text, Vision & PDF Analysis\n• gemini-3.1-flash-lite-image: Image Generation',
       'claude_model_purposes':
           '• claude-haiku-4-5-20251001: Coding, Analytical Chat, PDFs & Vision',
       'openai_tech_specs':
-          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation\n• whisper-1: Audio & Voice Transcription',
+          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation',
       'gemini_tech_specs':
           '• gemini-3.5-flash-lite: Text, Vision & PDF Analysis\n• gemini-3.1-flash-lite-image: Image Generation',
       'claude_tech_specs':
           '• claude-haiku-4-5-20251001: Coding, Analytical Chat, PDFs & Vision',
       'openai_pricing_info':
-          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• High-Accuracy Voice Transcription',
+          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• PDF & Document Intelligence',
       'gemini_pricing_info':
           '• Fast Multimodal Chat & Search\n• Visual Image Generation\n• Inline PDF & Document Parsing',
       'claude_pricing_info':
@@ -298,8 +301,9 @@ class AppLocalizations {
       'vision_pdf_count': 'Vision PDF Count',
       'vision_pdf_count_hint':
           'Set the default limit for multi-modal PDF attachments.',
-      'vision_detail_level': 'Vision Detail Level',
-      'vision_detail_level_hint': 'Set detail level for vision requests.',
+      'vision_detail_level': 'Image Analysis Detail',
+      'vision_detail_level_hint':
+          'Resolution (Auto, Low, High) used when analyzing uploaded images.',
 
       // ── PDF Reader ─────────────────────────────────────────────────────────
       'pdf_reader': 'PDF Reader',
@@ -609,7 +613,8 @@ class AppLocalizations {
       'create_image': 'चित्र बनाएं',
       'generate_code': 'कोड जनरेट करें',
       'analyze_image': 'चित्र का विश्लेषण करें',
-      'pdf_summarize': 'पीडीएफ का सारांश प्रस्तुत करेंं',
+      'pdf_summarize': 'पीडीएफ का सारांश प्रस्तुत करें',
+      'generate_pdf': 'पीडीएफ बनाएं',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'गूगल के साथ जारी रखें',
@@ -701,13 +706,15 @@ class AppLocalizations {
       'prompt_too_long': 'संदेश बहुत लंबा है (अधिकतम 10,000 अक्षर)',
       'response_failed': 'जवाब नहीं मिला। पुनः प्रयास करें।',
       'prompt_template_summarize_pdf':
-          'इस संलग्न PDF दस्तावेज़ का सारांश दें। इसे मुख्य हाइलाइट्स, मुख्य निष्कर्षों और कार्य योग्य बिंदुओं में बांटें।',
+          'इस दस्तावेज़ से मुख्य निष्कर्ष, कार्यकारी सारांश और महत्वपूर्ण बिंदु बुलेट पॉइंट्स में प्रस्तुत करें।',
       'prompt_template_generate_code':
-          '[Language] में [Problem/Goal] को संभालने के लिए एक साफ़, ऑप्टिमाइज़्ड फ़ंक्शन लिखें। कृपया लॉजिक समझाने वाली छोटी टिप्पणियां शामिल करें।',
+          'एक पायथन स्क्रिप्ट लिखें जो CSV फ़ाइल को पढ़े, आंकड़ों का विश्लेषण करे और एक साफ़ चार्ट तैयार करे।',
       'prompt_template_analyze_image':
-          'इस चित्र का विश्लेषण करें और विस्तार से बताएं कि इसमें क्या हो रहा है। [वैकल्पिक: दिखने वाला टेक्स्ट या UI एलिमेंट निकालें].',
+          'इस चित्र का विस्तार से विश्लेषण करें और दृश्य, मुख्य तत्वों तथा दिखने वाले किसी भी टेक्स्ट या डेटा की व्याख्या करें।',
       'prompt_template_create_image':
-          '[Describe your scene, style, lighting, and details here] की एक उच्च-गुणवत्ता, वास्तविक दिखने वाली छवि जनरेट करें।',
+          'सुबह की सौम्य रोशनी में खिले चेरी ब्लॉसम, पत्थर के लालटेन और शांत कोई मछली के तालाब वाला सुरम्य जापानी ज़ेन गार्डन, 8k फ़ोटोग्राफ़िक शैली।',
+      'prompt_template_generate_pdf':
+          'आर्टिफिशियल इंटेलिजेंस के सिद्धांतों पर एक पेशेवर पीडीएफ रिपोर्ट तैयार करें, जिसमें कार्यकारी सारांश, प्रमुख चरण और भविष्य के रुझान शामिल हों।',
       'conversation_name_update': 'बातचीत का नाम बदल दिया गया',
 
       // ── AI Model Selection ─────────────────────────────────────────────────
@@ -721,13 +728,13 @@ class AppLocalizations {
           'आपकी API की (key) सुरक्षित है। केवल कंपनी को ही आपकी व्यक्तिगत की (key) सहेजने का अधिकार है।',
       // ── Home Screen: Marketing Value Proposition (Hindi) ───────────────────
       'openai_marketing_pitch':
-          'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्पष्ट वॉयस नोट्स ट्रांसक्राइब करें और रचनात्मक सामग्री तैयार करें।',
+          'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्मार्ट दस्तावेज़ तैयार करें और रचनात्मक सामग्री बनाएं।',
       'gemini_marketing_pitch':
           'Google द्वारा संचालित त्वरित उत्तर, तुरंत चित्र निर्माण और बड़ी फाइलों का आसान विश्लेषण।',
       'claude_marketing_pitch':
           'जटिल कोडिंग करें, कठिन तार्किक समस्याओं को हल करें और बड़े दस्तावेजों को विशेषज्ञ सटीकता से समझें।',
       'gpt_model_message':
-          'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्पष्ट वॉयस नोट्स ट्रांसक्राइब करें और रचनात्मक सामग्री तैयार करें।',
+          'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्मार्ट दस्तावेज़ तैयार करें और रचनात्मक सामग्री बनाएं।',
       'gemini_model_message':
           'Google द्वारा संचालित त्वरित उत्तर, तुरंत चित्र निर्माण और बड़ी फाइलों का आसान विश्लेषण।',
       'claude_model_message':
@@ -735,7 +742,7 @@ class AppLocalizations {
 
       // ── Profile Tab (AI Intelligence): Active Capabilities (Hindi) ─────────
       'openai_capabilities_info':
-          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• उच्च-सटीक वॉयस ट्रांसक्रिप्शन',
+          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• पीडीएफ और दस्तावेज़ विश्लेषण',
       'gemini_capabilities_info':
           '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• इनलाइन पीडीएफ और दस्तावेज विश्लेषण',
       'claude_capabilities_info':
@@ -743,19 +750,19 @@ class AppLocalizations {
 
       // ── Key Setup Screen: Model-to-Purpose Mapping (Hindi) ───────────────────
       'openai_model_purposes':
-          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण\n• whisper-1: ऑडियो और वॉयस ट्रांसक्रिप्शन',
+          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण',
       'gemini_model_purposes':
           '• gemini-3.5-flash-lite: पाठ, दृष्टि और पीडीएफ विश्लेषण\n• gemini-3.1-flash-lite-image: चित्र निर्माण',
       'claude_model_purposes':
           '• claude-haiku-4-5-20251001: कोडिंग, विश्लेषणात्मक चैट, पीडीएफ और दृष्टि',
       'openai_tech_specs':
-          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण\n• whisper-1: ऑडियो और वॉयस ट्रांसक्रिप्शन',
+          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण',
       'gemini_tech_specs':
           '• gemini-3.5-flash-lite: पाठ, दृष्टि और पीडीएफ विश्लेषण\n• gemini-3.1-flash-lite-image: चित्र निर्माण',
       'claude_tech_specs':
           '• claude-haiku-4-5-20251001: कोडिंग, विश्लेषणात्मक चैट, पीडीएफ और दृष्टि',
       'openai_pricing_info':
-          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• उच्च-सटीक वॉयस ट्रांसक्रिप्शन',
+          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• पीडीएफ और दस्तावेज़ विश्लेषण',
       'gemini_pricing_info':
           '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• इनलाइन पीडीएफ और दस्तावेज विश्लेषण',
       'claude_pricing_info':
@@ -828,8 +835,9 @@ class AppLocalizations {
       'vision_pdf_count': 'विज़न PDF संख्या',
       'vision_pdf_count_hint':
           'बहु-मोडल PDF अटैचमेंट की डिफ़ॉल्ट सीमा तय करें।',
-      'vision_detail_level': 'विज़न विवरण स्तर',
-      'vision_detail_level_hint': 'विज़न अनुरोधों के लिए विवरण स्तर तय करें।',
+      'vision_detail_level': 'इमेज विश्लेषण विवरण',
+      'vision_detail_level_hint':
+          'अपलोड की गई छवियों के विश्लेषण के लिए रेज़ोल्यूशन (ऑटो, कम, उच्च)।',
 
       // ── PDF Reader ─────────────────────────────────────────────────────────
       'pdf_reader': 'PDF रीडर',
@@ -1246,6 +1254,8 @@ class AppLocalizations {
   String get analyzeImage => translate('analyze_image');
   String get summarizePdf => translate('pdf_summarize');
   String get summarizePdfPrompt => translate('prompt_template_summarize_pdf');
+  String get generatePdf => translate('generate_pdf');
+  String get generatePdfPrompt => translate('prompt_template_generate_pdf');
   String get generateCodePrompt => translate('prompt_template_generate_code');
   String get analyzeImagePrompt => translate('prompt_template_analyze_image');
   String get createImagePrompt => translate('prompt_template_create_image');

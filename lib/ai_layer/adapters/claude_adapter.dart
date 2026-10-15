@@ -62,8 +62,13 @@ class ClaudeAdapter extends AiProviderAdapter {
         'messages': messages,
       };
 
-      debugPrint(
-          '📤 Claude Request (Text Generation): ${jsonEncode(requestBody)}');
+      debugPrint('📤 Claude Request (Text Generation): ${jsonEncode({
+            'model': AppConstants.claudeTextModel,
+            'capability': request.capability.displayName,
+            'message_count': messages.length,
+            'max_tokens': request.responseLength.claudeMaxTokens,
+            'prompt': request.prompt,
+          })}');
 
       final response = await _post(
         apiKey: apiKey,
@@ -78,6 +83,8 @@ class ClaudeAdapter extends AiProviderAdapter {
       final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
+      debugPrint(
+          '📊 Claude Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.text(
         modelUsed: AiProviderId.claude,
         capability: AiCapability.textGeneration,
@@ -189,6 +196,8 @@ class ClaudeAdapter extends AiProviderAdapter {
       final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
+      debugPrint(
+          '📊 Claude Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.text(
         modelUsed: AiProviderId.claude,
         capability: AiCapability.imageUnderstanding,
@@ -269,6 +278,8 @@ class ClaudeAdapter extends AiProviderAdapter {
       final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
+      debugPrint(
+          '📊 Claude Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.text(
         modelUsed: AiProviderId.claude,
         capability: AiCapability.pdfParsing,
@@ -339,6 +350,8 @@ class ClaudeAdapter extends AiProviderAdapter {
       final finishReason = data['stop_reason'] as String?;
 
       stopwatch.stop();
+      debugPrint(
+          '📊 Claude Tokens: input=${tokens.inputTokens}, output=${tokens.outputTokens}, total=${tokens.totalTokens}');
       return AiResponse.text(
         modelUsed: AiProviderId.claude,
         capability: AiCapability.pdfGeneration,

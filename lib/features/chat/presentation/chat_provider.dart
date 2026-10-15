@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -152,6 +153,14 @@ class ChatProvider extends ChangeNotifier {
     required String conversationId,
   }) async {
     final resolvedUid = _resolveUid(uid);
+
+    // Guard: If this conversation is currently generating on screen, do not wipe in-flight messages or reset state
+    if (_activeConversation?.id == conversationId && _isGenerating) {
+      debugPrint(
+          '🛡️ ChatProvider.loadConversation skipped: $conversationId is actively generating');
+      return;
+    }
+
     _isLoadingMessages = true;
     _isGenerating = false;
     _errorMessage = null;
@@ -206,11 +215,14 @@ class ChatProvider extends ChangeNotifier {
     _conversationSubscription = LocalChatStore.instance
         .watchConversation(uid, conversationId)
         .listen((record) {
-      if (record == null || record.isDeleted) {
-        // Conversation was hard-deleted or soft-deleted remotely.
-        // We set _activeConversation to a deleted state, or we just rely on UI checking
-        // Actually, if we just call notifyListeners(), ChatDetailScreen will see the update
-        // and its getConversation check will trigger the pop!
+      if (record == null) {
+        // If the conversation was just initiated in memory and is currently persisting in background,
+        // ignore the transient null state so we don't trigger empty UI rebuilds.
+        if (_activeConversation?.id == conversationId) {
+          return;
+        }
+        notifyListeners();
+      } else if (record.isDeleted) {
         notifyListeners();
       } else {
         _activeConversation = record.toConversationModel();
@@ -233,6 +245,12 @@ class ChatProvider extends ChangeNotifier {
     _messagesSubscription = stream.listen(
       (messages) {
         if (!_isGenerating) {
+          // Guard: Do not wipe in-memory messages with an empty list if there are currently messages in memory.
+          // This transient empty state occurs while background media persistence is writing the initial records to Hive.
+          if (messages.isEmpty && _messages.isNotEmpty) {
+            return;
+          }
+
           final currentIds = _messages.map((m) => m.messageId).toList();
           final newIds = messages.map((m) => m.messageId).toList();
           final bool listChanged = !listEquals(currentIds, newIds);
@@ -451,7 +469,8 @@ class ChatProvider extends ChangeNotifier {
       if (isNewConversation) {
         _activeConversation = ConversationModel(
           id: targetConversationId,
-          title: '',
+          title:
+              '', // Kept empty initially to display Shimmer loading skeleton in AppBar
           lastMessage: trimmedPrompt.isNotEmpty
               ? trimmedPrompt
               : (attachments.isNotEmpty
@@ -554,39 +573,24 @@ class ChatProvider extends ChangeNotifier {
       }
       notifyListeners();
 
-      // Step 6: Dispatch request to AI layer in parallel with smart title synthesis.
-      // Uses Dart 3 Record (.wait) to execute both Futures concurrently on the event loop
-      // without adding latency or blocking the UI thread.
-      final Future<String?> titleFuture =
-          isNewConversation && effectivePrompt.isNotEmpty
-              ? _orchestrator
-                  .generateConversationTitle(
-                  prompt: effectivePrompt,
-                  provider: selectedProvider,
-                )
-                  .catchError((e) {
-                  debugPrint('⚠️ Title generation skipped (non-fatal): $e');
-                  return null;
-                })
-              : Future<String?>.value(null);
+      // Step 6: Dispatch AI title synthesis asynchronously in the background.
+      // This is non-blocking and completely unawaited so the primary AI response
+      // is rendered the exact moment the model finishes, without waiting for title generation.
+      if (isNewConversation && effectivePrompt.isNotEmpty) {
+        unawaited(_generateAndApplySmartTitle(
+          conversationId: targetConversationId,
+          prompt: effectivePrompt,
+          attachments: attachments,
+          provider: selectedProvider,
+          uid: resolvedUid,
+        ));
+      }
 
-      final Future<AiResponse> responseFuture = _orchestrator.execute(
+      // Step 7: Dispatch request to AI layer directly.
+      final AiResponse aiResponse = await _orchestrator.execute(
         request: aiRequest,
         selectedProvider: selectedProvider,
       );
-
-      final (String? smartTitle, AiResponse aiResponse) = await (
-        titleFuture,
-        responseFuture,
-      ).wait;
-
-      // Update active conversation title: prefer smartTitle, otherwise use clean local fallback title
-      if (isNewConversation && _activeConversation != null) {
-        final finalTitle = (smartTitle != null && smartTitle.trim().isNotEmpty)
-            ? smartTitle.trim()
-            : deriveFallbackTitle(effectivePrompt, attachments);
-        _activeConversation = _activeConversation!.copyWith(title: finalTitle);
-      }
 
       // Step 7: Post-render background compilation for specialized media (PDF documents).
       // If the response is a generated PDF document, compile the Markdown to binary PDF locally
@@ -853,6 +857,16 @@ class ChatProvider extends ChangeNotifier {
       // active session so the user never experiences image reloading, shimmer flashes, or UI flicker.
       // Permanent Cloud Storage download URLs are committed to Hive & Firestore for subsequent sessions
       // and multi-device synchronization.
+
+      // Adopt the freshest synthesized smart title from memory if available
+      // (synthesized while media uploads were processing), ensuring we persist the highest-quality title.
+      if (_activeConversation?.id == conversationId &&
+          _activeConversation!.title.trim().isNotEmpty) {
+        conversationToPersist = conversationToPersist.copyWith(
+          title: _activeConversation!.title.trim(),
+        );
+      }
+
       await _repository.createOrAppendMessagePair(
         uid: uid,
         conversation: conversationToPersist,
@@ -936,6 +950,63 @@ class ChatProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('⚠️ ChatProvider.updateConversationTitle error: $e');
       rethrow; // Rethrow to let the UI catch and show error toast
+    }
+  }
+
+  /// Asynchronously synthesizes an AI title for a newly created conversation in the background
+  /// without delaying or blocking the primary AI response rendering.
+  Future<void> _generateAndApplySmartTitle({
+    required String conversationId,
+    required String prompt,
+    required List<ChatAttachment> attachments,
+    required AiProviderId provider,
+    required String uid,
+  }) async {
+    String? cleanTitle;
+    try {
+      final smartTitle = await _orchestrator.generateConversationTitle(
+        prompt: prompt,
+        provider: provider,
+      );
+      if (smartTitle != null && smartTitle.trim().isNotEmpty) {
+        cleanTitle = smartTitle.trim();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Background title generation failed (non-fatal): $e');
+    }
+
+    // If AI synthesis returned null or failed, gracefully fall back to local heuristic title
+    cleanTitle ??= deriveFallbackTitle(prompt, attachments);
+
+    // Update in-memory active conversation to stop the AppBar Shimmer and render the title
+    if (_activeConversation?.id == conversationId) {
+      _activeConversation = _activeConversation!.copyWith(title: cleanTitle);
+      notifyListeners();
+    }
+
+    // Persist the resolved title to Hive and Firestore.
+    // If the conversation was just created and media uploads are currently in progress,
+    // the local record in Hive may take a few seconds to commit. We retry briefly to ensure
+    // the synthesized smart title is permanently committed to Hive and synced across devices.
+    try {
+      for (int retry = 0; retry < 24; retry++) {
+        final existingRecord =
+            LocalChatStore.instance.getConversation(uid, conversationId);
+        if (existingRecord != null) {
+          if (existingRecord.title != cleanTitle) {
+            await _repository.updateConversationTitle(
+              uid: uid,
+              conversationId: conversationId,
+              newTitle: cleanTitle,
+            );
+            _markConversationHistoryDirty();
+          }
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    } catch (e) {
+      debugPrint('⚠️ Background title persistence failed: $e');
     }
   }
 
@@ -1159,10 +1230,24 @@ class ChatProvider extends ChangeNotifier {
       return 'Conversation';
     }
 
-    // Strip conversational greetings, polite requests, and commands iteratively
-    String cleaned = trimmed;
+    // 1. Strip bracketed / parenthetical system options & UI hints (e.g. [Optional: ...])
+    String cleaned = trimmed.replaceAll(
+      RegExp(r'\[.*?\]|\(.*?\)', dotAll: true),
+      ' ',
+    ).trim();
+
+    // 2. Strip conversational greetings, polite requests, commands, and compound meta-verbs iteratively
     final prefixPattern = RegExp(
-      r'^(hey\s+gemini|hey\s+chatgpt|hey\s+claude|hello|hi|please|kindly|can\s+you|could\s+you|help\s+me\s+to|i\s+want\s+to|i\s+need\s+to|generate\s+(an?|the)?|create\s+(an?|the)?|make\s+(an?|the)?|write\s+(an?|the)?|build\s+(an?|the)?|summarize\s+(an?|the)?|analyze\s+(an?|the)?|explain\s+(an?|the)?|small|short|detailed|new|content|document|file|pdf|image|images|picture|photo|summary|of|the|an?|about|regarding|which\s+has\s+(the\s+)?(data\s+of|info\s+about)?|about\s+how\s+much\s+it)\b[,.\s]*',
+      r'^(hey\s+gemini|hey\s+chatgpt|hey\s+claude|hey\s+\w+|hello|hi|please|kindly|can\s+you|could\s+you|'
+      r'help\s+me\s+to|help\s+me|i\s+want\s+to|i\s+need\s+to|'
+      r'generate\s+(an?|the)?|create\s+(an?|the)?|make\s+(an?|the)?|write\s+(an?|the)?|build\s+(an?|the)?|'
+      r'summarize\s+(an?|the)?|analyze\s+(an?|the)?|explain\s+(an?|the)?|describe\s+(an?|the)?|'
+      r'tell\s+me\s+(about\s+)?|give\s+me\s+(a\s+)?|show\s+me\s+(a\s+)?|'
+      r'analyze\s+(this|the|an?)\s+(image|photo|picture|doc|document|pdf|file)?\s*(and|to)?\s*(describe|explain|tell\s+me)?\s*(to\s+me|me)?|'
+      r'describe\s+(this|the|an?)\s+(image|photo|picture|doc|document|pdf|file)?\s*(and|to)?\s*(explain|tell\s+me)?\s*(to\s+me|me)?|'
+      r'small|short|detailed|new|content|document|file|pdf|image|images|picture|photo|summary|of|the|an?|about|regarding|'
+      r'this\s+(image|photo|picture|doc|document|pdf|file)\s*(and|to)?\s*(describe|explain|tell\s+me)?\s*(to\s+me|me)?|'
+      r'which\s+has\s+(the\s+)?(data\s+of|info\s+about)?|about\s+how\s+much\s+it|this|that|these|those|me|and|to)\b[,.\s:]*',
       caseSensitive: false,
     );
 
@@ -1173,14 +1258,25 @@ class ChatProvider extends ChangeNotifier {
     } while (cleaned.isNotEmpty && cleaned != previous);
 
     if (cleaned.isEmpty) {
+      if (attachments != null && attachments.isNotEmpty) {
+        if (attachments.any((a) => a.isPdf)) return 'PDF Document';
+        if (attachments.any((a) => a.isImage)) return 'Image Conversation';
+      }
       cleaned = trimmed;
     }
 
     // 4. Take the first 5 words
-    final words = cleaned
+    final rawWords = cleaned
         .split(RegExp(r'\s+'))
         .where((w) => w.isNotEmpty)
         .take(5)
+        .toList();
+    if (rawWords.isEmpty) return 'Conversation';
+
+    // Strip trailing periods/commas from individual words while preserving question marks
+    final words = rawWords
+        .map((w) => w.replaceAll(RegExp(r'[.,;:]+$'), ''))
+        .where((w) => w.isNotEmpty)
         .toList();
     if (words.isEmpty) return 'Conversation';
 
@@ -1326,10 +1422,13 @@ class ChatProvider extends ChangeNotifier {
     _historySubscription?.cancel();
     _historySubscription =
         LocalChatStore.instance.conversationsBox.watch().listen((_) {
-      // Refresh visible window from Hive when something changes locally
-      final currentLimit = _visibleConversations.isEmpty
-          ? AppConstants.conversationPageSize
-          : _visibleConversations.length;
+      // Refresh visible window from Hive when something changes locally.
+      // Ensure the visible window is never truncated below AppConstants.conversationPageSize
+      // when new items arrive from local changes or remote cross-device sync.
+      final currentLimit = math.max(
+        _visibleConversations.length + 1,
+        AppConstants.conversationPageSize,
+      );
 
       var localRecords = LocalChatStore.instance.getConversations(uid);
 
@@ -1354,10 +1453,12 @@ class ChatProvider extends ChangeNotifier {
   // These methods expose repository calls through ChatProvider so that
   // presentation widgets never touch the repository or data stores directly.
 
-  /// Soft-deletes all conversations locally (instant UI clear), then queues
-  /// Firestore deletes in the background. Delegates to [_repository].
-  Future<void> deleteAllConversations(String uid) =>
-      _repository.deleteAllConversationsLocalFirst(uid);
+  Future<void> deleteAllConversations(String uid) async {
+    clearConversation();
+    _markConversationHistoryDirty();
+    await _repository.deleteAllConversationsLocalFirst(uid);
+    notifyListeners();
+  }
 
   /// Returns true if the given conversation has been soft-deleted in the local Hive store.
   /// Used by [ChatDetailScreen] to detect remote deletions without accessing [LocalChatStore] directly.

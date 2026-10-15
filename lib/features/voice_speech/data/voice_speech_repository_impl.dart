@@ -98,10 +98,7 @@ class VoiceRepositoryImpl implements VoiceRepository {
   // ── VoiceRepository: isUsingWhisper ───────────────────────────────────────
 
   @override
-  bool get isUsingWhisper {
-    final key = _openAiKeyGetter?.call();
-    return key != null && key.isNotEmpty;
-  }
+  bool get isUsingWhisper => false;
 
   // ── TTS Configuration ──────────────────────────────────────────────────────
 
@@ -326,14 +323,14 @@ class VoiceRepositoryImpl implements VoiceRepository {
             _latestCombinedTranscript = formatted;
           }
         },
-        pauseFor: AppConstants.silenceTimeout,
-        listenFor: AppConstants.maxRecordingSeconds,
         listenOptions: stt.SpeechListenOptions(
           partialResults: true,
           listenMode: stt.ListenMode.dictation,
           onDevice: false,
+          pauseFor: AppConstants.silenceTimeout,
+          listenFor: AppConstants.maxRecordingSeconds,
+          localeId: _systemLocale?.localeId,
         ),
-        localeId: _systemLocale?.localeId,
       );
       debugPrint('🎤 STT: listen session active');
     } finally {

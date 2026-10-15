@@ -122,6 +122,12 @@ class _ChatScreenState extends State<ChatScreen> {
     await _chatInputController.pickPdfWithPrompt(l10n.summarizePdfPrompt);
   }
 
+  void _handleGeneratePdf() {
+    _hideSuggestions();
+    final l10n = AppLocalizations.of(context)!;
+    _chatInputController.setPrompt(l10n.generatePdfPrompt);
+  }
+
   Future<void> _handleAnalyzeImage() async {
     _hideSuggestions();
     final l10n = AppLocalizations.of(context)!;
@@ -183,6 +189,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         isTablet: isTablet,
                         showSuggestions: _showSuggestions,
                         onSummarizePdf: _handleSummarizePdf,
+                        onGeneratePdf: _handleGeneratePdf,
                         onGenerateCode: _handleGenerateCode,
                         onAnalyzeImage: _handleAnalyzeImage,
                         onCreateImage: _handleCreateImage,
@@ -280,6 +287,7 @@ class _WelcomeContent extends StatelessWidget {
   final bool isTablet;
   final bool showSuggestions;
   final VoidCallback onSummarizePdf;
+  final VoidCallback onGeneratePdf;
   final VoidCallback onGenerateCode;
   final VoidCallback onAnalyzeImage;
   final VoidCallback onCreateImage;
@@ -288,6 +296,7 @@ class _WelcomeContent extends StatelessWidget {
     required this.isTablet,
     required this.showSuggestions,
     required this.onSummarizePdf,
+    required this.onGeneratePdf,
     required this.onGenerateCode,
     required this.onAnalyzeImage,
     required this.onCreateImage,
@@ -347,9 +356,14 @@ class _WelcomeContent extends StatelessWidget {
                       isTablet: isTablet,
                       actions: [
                         _SuggestionAction(
-                          icon: FontAwesomeIcons.filePdf,
+                          icon: FontAwesomeIcons.fileLines,
                           label: l10n.summarizePdf,
                           onTap: onSummarizePdf,
+                        ),
+                        _SuggestionAction(
+                          icon: FontAwesomeIcons.filePdf,
+                          label: l10n.generatePdf,
+                          onTap: onGeneratePdf,
                         ),
                         _SuggestionAction(
                           icon: FontAwesomeIcons.laptopCode,
@@ -404,29 +418,29 @@ class _SuggestionGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final crossAxisCount = isTablet ? 4 : 2;
     final maxWidth = isTablet ? 760.0 : 420.0;
+    final itemWidth = isTablet
+        ? (maxWidth - (3 * 12)) / 4
+        : (maxWidth - 12) / 2;
+    final itemHeight = isTablet ? 48.0 : 44.0;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: actions.length,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: isTablet ? 2.4 : 3.2,
-        ),
-        itemBuilder: (context, index) {
-          final action = actions[index];
-          return _SuggestionActionCard(
-            icon: action.icon,
-            label: action.label,
-            onTap: action.onTap,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
+        children: actions.map((action) {
+          return SizedBox(
+            width: itemWidth,
+            height: itemHeight,
+            child: _SuggestionActionCard(
+              icon: action.icon,
+              label: action.label,
+              onTap: action.onTap,
+            ),
           );
-        },
+        }).toList(),
       ),
     );
   }

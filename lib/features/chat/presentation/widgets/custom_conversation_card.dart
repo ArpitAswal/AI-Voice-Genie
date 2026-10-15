@@ -25,11 +25,20 @@ class CustomConversationCard extends StatelessWidget {
       conversation.lastProvider?.displayName ?? '',
     );
 
-    // Time formatting
-    final date =
-        conversation.lastMessageAt ?? conversation.createdAt ?? DateTime.now();
-
-    final formatDate = DateFormat('yyyy-MM-dd, HH:mm a').format(date);
+    // Time formatting with local timezone
+    final localDate = (conversation.lastMessageAt ??
+            conversation.createdAt ??
+            DateTime.now())
+        .toLocal();
+    final now = DateTime.now();
+    final isToday = localDate.year == now.year &&
+        localDate.month == now.month &&
+        localDate.day == now.day;
+    final timeStr = DateFormat('hh:mm a').format(localDate);
+    final tz = localDate.timeZoneName;
+    final formatDate = isToday
+        ? '$timeStr $tz'
+        : '${DateFormat('yyyy-MM-dd').format(localDate)}, $timeStr $tz';
 
     return InkWell(
       onTap: onTap,

@@ -91,8 +91,19 @@ class GeminiAdapter extends AiProviderAdapter {
         },
       };
 
+      final bool isLightweightInternal =
+          request.disableSearchGrounding &&
+          request.responseLength == ResponseLength.short;
+
+      final primary = isLightweightInternal
+          ? AppConstants.geminiFlashLiteModel
+          : AppConstants.geminiTextModel;
+      final fallback = isLightweightInternal
+          ? AppConstants.geminiTextModel
+          : AppConstants.geminiFlashLiteModel;
+
       debugPrint('📤 Gemini Request (Text Generation): ${jsonEncode({
-            'model': AppConstants.geminiTextModel,
+            'model': primary,
             'capability': request.capability.displayName,
             'message_count': contents.length,
             'maxOutputTokens': request.responseLength.geminiMaxTokens,
@@ -102,8 +113,8 @@ class GeminiAdapter extends AiProviderAdapter {
           })}');
 
       final response = await _postWithFallback(
-        primaryModel: AppConstants.geminiTextModel,
-        fallbackModel: AppConstants.geminiFlashLiteModel,
+        primaryModel: primary,
+        fallbackModel: fallback,
         apiKey: apiKey,
         body: requestBody,
       );
@@ -700,12 +711,17 @@ class GeminiAdapter extends AiProviderAdapter {
       body: body,
     ).timeout(AppConstants.aiRequestTimeout);
 
-    if (response.statusCode == 404 &&
+    final shouldFallback = (response.statusCode == 404 ||
+            response.statusCode == 503 ||
+            response.statusCode == 429 ||
+            response.statusCode >= 500) &&
         fallbackModel != null &&
         fallbackModel.isNotEmpty &&
-        fallbackModel != primaryModel) {
+        fallbackModel != primaryModel;
+
+    if (shouldFallback) {
       debugPrint(
-          '⚠️ Gemini: Primary model $primaryModel returned 404. Falling back to $fallbackModel.');
+          '⚠️ Gemini: Primary model $primaryModel returned ${response.statusCode}. Falling back to $fallbackModel.');
       return await _post(
         model: fallbackModel,
         apiKey: apiKey,

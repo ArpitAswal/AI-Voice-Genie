@@ -321,10 +321,10 @@ class FirebaseCollections {
       '${storageConversationDir(uid, conversationId)}/$storageGenerated/$fileName';
 
   /// Path to an AI-generated PDF document:
-  /// users/{uid}/conversations/{conversationId}/generated_pdfs/{fileName}
+  /// users/{uid}/conversations/{conversationId}/pdfs/{fileName}
   static String storageGeneratedPdfPath(
           String uid, String conversationId, String fileName) =>
-      '${storageConversationDir(uid, conversationId)}/generated_pdfs/$fileName';
+      '${storageConversationDir(uid, conversationId)}/$storagePdfs/$fileName';
 
   // ── Cloud Storage Custom Metadata Keys ────────────────────────────────────
   static const String storageMetaUploadedBy = 'uploadedBy';

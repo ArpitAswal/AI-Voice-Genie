@@ -5,7 +5,7 @@ enum AiProviderId {
   openAi(
     'openai',
     'ChatGPT',
-    '• Image Generation (GPT-Image-2.5 Flare)\n• Text, Vision & PDF Analysis (GPT-6 Luna)\n• High-Precision Voice (Whisper)',
+    '• Image Generation (GPT-Image-2.5 Flare)\n• Text, Vision & PDF Analysis (GPT-6 Luna)\n• PDF Generation (GPT-6 Luna)',
   ),
   gemini(
     'gemini',
