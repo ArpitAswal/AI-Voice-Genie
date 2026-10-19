@@ -1,4 +1,4 @@
-package com.example.voice_genie
+package com.voicegenie.app
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,7 +15,7 @@ class MainActivity: FlutterActivity() {
         // legacy filesystem path on Android 9 and below.
         val channel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "com.example.voice_genie/image_save"
+            "com.voicegenie.app/image_save"
         )
         ImageSavePlugin.register(applicationContext, channel)
     }

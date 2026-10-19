@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../domain/chat_outbox_task.dart';
+import '../../../core/enums/app_enums.dart';
+import '../../key_setup/domain/api_key_model.dart';
 
 /// Durable outbox store for queued Firestore operations.
 ///
@@ -223,6 +225,48 @@ class ChatOutboxStore {
         await _outboxBox.delete(key);
       }
     }
+  }
+
+  /// Returns pending API keys saved in outbox that haven't been committed to Firestore yet.
+  Map<AiProviderId, ApiKeyModel> getPendingSavedApiKeys(String uid) {
+    final result = <AiProviderId, ApiKeyModel>{};
+    for (final raw in _outboxBox.values.whereType<Map>()) {
+      try {
+        final task = ChatOutboxTask.fromMap(raw);
+        if (task.uid == uid &&
+            task.type == OutboxTaskType.saveApiKey &&
+            task.status != OutboxTaskStatus.dead) {
+          final providerIdStr = task.payload['providerId'] as String?;
+          final apiKey = task.payload['apiKey'] as String?;
+          if (providerIdStr != null && apiKey != null) {
+            final provider = AiProviderId.fromId(providerIdStr);
+            result[provider] = ApiKeyModel(
+              aiProviderId: provider.id,
+              aiProviderModelFeatures: provider.features,
+              apiKey: apiKey,
+            );
+          }
+        }
+      } catch (_) {}
+    }
+    return result;
+  }
+
+  /// Checks if an API key has a pending outbox operation (save or delete).
+  bool hasPendingApiKeyOperation(String uid, AiProviderId provider) {
+    for (final raw in _outboxBox.values.whereType<Map>()) {
+      try {
+        final task = ChatOutboxTask.fromMap(raw);
+        if (task.uid == uid &&
+            (task.type == OutboxTaskType.saveApiKey ||
+                task.type == OutboxTaskType.deleteApiKey) &&
+            task.status != OutboxTaskStatus.dead) {
+          final providerIdStr = task.payload['providerId'] as String?;
+          if (providerIdStr == provider.id) return true;
+        }
+      } catch (_) {}
+    }
+    return false;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

@@ -1,91 +1,42 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../../core/constants/firebase_collections.dart';
 import '../../../core/enums/app_enums.dart';
-
 import '../domain/usage_event_model.dart';
-import '../domain/usage_summary_model.dart';
 import '../domain/usage_repository.dart';
+import '../domain/usage_summary_model.dart';
+import 'usage_dto.dart';
+import 'usage_firestore_dao.dart';
 
-/// Firestore implementation of [UsageRepository].
+/// Concrete implementation of [UsageRepository] adhering to DAO & DTO architectural pattern.
 ///
-/// Design decisions:
-/// - [saveEvent] writes the event document and atomically increments the summary
-///   in parallel to minimise latency.
-/// - Summary uses [SetOptions(merge: true)] with [FieldValue.increment] so that
-///   concurrent writes from multiple devices never cause data races.
-/// - Uses Firestore dot-notation (e.g., `monthlyData.2026-07.requestCount`)
-///   to increment fields inside the nested map without overwriting it.
+/// Responsibilities:
+/// 1. Acts as the domain bridge between presentation/orchestration layers and Firestore storage.
+/// 2. Delegates low-level atomic batch writes and Firestore streams to [UsageFirestoreDao].
+/// 3. Normalizes domain entities through [UsageEventDto] and [UsageSummaryDto].
+/// 4. Ensures AI request execution is never interrupted or blocked by telemetry logging failures.
 class UsageRepositoryImpl implements UsageRepository {
-  final FirebaseFirestore _db;
+  final UsageFirestoreDao _dao;
 
-  UsageRepositoryImpl({FirebaseFirestore? db})
-      : _db = db ?? FirebaseFirestore.instance;
+  UsageRepositoryImpl({UsageFirestoreDao? dao, FirebaseFirestore? db})
+      : _dao = dao ?? UsageFirestoreDao(firestore: db);
 
-  // ── Event Write ─────────────────────────────────────────────────────────────
+  // ── Event Persistence ──────────────────────────────────────────────────────
 
   @override
   Future<void> saveEvent({
     required String uid,
     required UsageEventModel event,
   }) async {
-    final eventPath = FirebaseCollections.usageEventsCollection(uid);
-    final summaryPath =
-        FirebaseCollections.usageSummaryDoc(uid, event.provider.id);
-
-    debugPrint('📊 UsageRepository: Attempting batch write...');
-    debugPrint('   - Event Path: $eventPath/${event.id}');
-    debugPrint('   - Summary Path: $summaryPath');
-
     try {
-      final batch = _db.batch();
+      // 1. Transform Domain Entity into DTO (sparse fields, omitting redundant internal ID)
+      final dto = UsageEventDto.fromDomain(event);
 
-      // 1. Write the individual event document
-      final eventRef = _db.collection(eventPath).doc(event.id);
-      batch.set(eventRef, event.toFirestore());
-
-      // 2. Merge-increment the unified summary
-      final summaryRef = _db.doc(summaryPath);
-
-      final incrementMap = {
-        FirebaseCollections.usageFieldProvider: event.provider.id,
-        'monthlyData': {
-          event.monthKey: {
-            FirebaseCollections.summaryFieldRequestCount:
-                FieldValue.increment(1),
-            FirebaseCollections.usageFieldInputTokens:
-                FieldValue.increment(event.inputTokens),
-            FirebaseCollections.usageFieldOutputTokens:
-                FieldValue.increment(event.outputTokens),
-            FirebaseCollections.usageFieldTotalTokens:
-                FieldValue.increment(event.totalTokens),
-            FirebaseCollections.usageFieldImageCount:
-                FieldValue.increment(event.imageCount),
-            FirebaseCollections.usageFieldPdfCount:
-                FieldValue.increment(event.pdfCount),
-            FirebaseCollections.summaryFieldEstimatedCostUsd:
-                FieldValue.increment(event.estimatedCostUsd),
-          }
-        },
-        FirebaseCollections.usageFieldUpdatedAt: FieldValue.serverTimestamp(),
-        FirebaseCollections.usageFieldTotalTokens:
-            FieldValue.increment(event.totalTokens),
-      };
-
-      batch.set(
-        summaryRef,
-        incrementMap,
-        SetOptions(merge: true),
-      );
-
-      await batch.commit();
-      debugPrint('📊 UsageRepository: Batch write completed successfully!');
-      debugPrint(
-          '   - Saved: ${event.provider.id} | ${event.totalTokens} tokens | \$${event.estimatedCostUsd.toStringAsFixed(4)}');
+      // 2. Delegate atomic write to DAO (persists event + increments summary in one batch)
+      await _dao.recordUsageEventBatch(uid: uid, eventDto: dto);
     } catch (e) {
-      // Never fail the AI flow due to usage tracking errors
-      debugPrint('❌ UsageRepository: Batch write failed (non-fatal): $e');
+      // Telemetry failures must never crash or block chat generation (agent rule: graceful degradation)
+      debugPrint('❌ UsageRepositoryImpl.saveEvent failed (non-fatal): $e');
     }
   }
 
@@ -94,60 +45,29 @@ class UsageRepositoryImpl implements UsageRepository {
     required String uid,
     required UsageEventModel event,
   }) async {
-    try {
-      final summaryRef = _db.doc(
-        FirebaseCollections.usageSummaryDoc(uid, event.provider.id),
-      );
-
-      final incrementMap = {
-        FirebaseCollections.usageFieldProvider: event.provider.id,
-        'monthlyData': {
-          event.monthKey: {
-            FirebaseCollections.summaryFieldRequestCount:
-                FieldValue.increment(1),
-            FirebaseCollections.usageFieldInputTokens:
-                FieldValue.increment(event.inputTokens),
-            FirebaseCollections.usageFieldOutputTokens:
-                FieldValue.increment(event.outputTokens),
-            FirebaseCollections.usageFieldTotalTokens:
-                FieldValue.increment(event.totalTokens),
-            FirebaseCollections.usageFieldImageCount:
-                FieldValue.increment(event.imageCount),
-            FirebaseCollections.usageFieldPdfCount:
-                FieldValue.increment(event.pdfCount),
-            FirebaseCollections.summaryFieldEstimatedCostUsd:
-                FieldValue.increment(event.estimatedCostUsd),
-          }
-        },
-        FirebaseCollections.usageFieldUpdatedAt: FieldValue.serverTimestamp(),
-        FirebaseCollections.usageFieldTotalTokens:
-            FieldValue.increment(event.totalTokens),
-      };
-
-      await summaryRef.set(
-        incrementMap,
-        SetOptions(merge: true),
-      );
-    } catch (e) {
-      debugPrint('⚠️ Usage summary update failed (non-fatal): $e');
-    }
+    // Handled atomically within saveEvent; kept for interface completeness and isolated tests
+    await saveEvent(uid: uid, event: event);
   }
 
-  // ── Read ─────────────────────────────────────────────────────────────────────
+  // ── Summary Reads & Streams ────────────────────────────────────────────────
 
   @override
   Future<UsageSummaryModel?> getSummary({
     required String uid,
     required AiProviderId provider,
+    String? docId,
+    String? keyHint,
   }) async {
     try {
-      final snap = await _db
-          .doc(FirebaseCollections.usageSummaryDoc(uid, provider.id))
-          .get();
-      if (!snap.exists || snap.data() == null) return null;
-      return UsageSummaryModel.fromFirestore(snap.data()!);
+      final dto = await _dao.getSummaryDoc(
+        uid: uid,
+        providerId: provider.id,
+        docId: docId,
+        keyHint: keyHint,
+      );
+      return dto?.toDomain();
     } catch (e) {
-      debugPrint('⚠️ getSummary failed: $e');
+      debugPrint('⚠️ UsageRepositoryImpl.getSummary failed for [${provider.id}]: $e');
       return null;
     }
   }
@@ -157,15 +77,10 @@ class UsageRepositoryImpl implements UsageRepository {
     required String uid,
   }) async {
     try {
-      final snap = await _db
-          .collection(FirebaseCollections.usageSummariesCollection(uid))
-          .get();
-
-      return snap.docs
-          .map((d) => UsageSummaryModel.fromFirestore(d.data()))
-          .toList();
+      final dtos = await _dao.getAllSummariesCollection(uid: uid);
+      return dtos.map((dto) => dto.toDomain()).toList();
     } catch (e) {
-      debugPrint('⚠️ getAllSummaries failed: $e');
+      debugPrint('⚠️ UsageRepositoryImpl.getAllSummaries failed: $e');
       return [];
     }
   }
@@ -174,15 +89,12 @@ class UsageRepositoryImpl implements UsageRepository {
   Stream<List<UsageSummaryModel>> watchAllSummaries({
     required String uid,
   }) {
-    return _db
-        .collection(FirebaseCollections.usageSummariesCollection(uid))
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => UsageSummaryModel.fromFirestore(d.data()))
-            .toList());
+    return _dao
+        .watchSummariesCollection(uid: uid)
+        .map((dtos) => dtos.map((dto) => dto.toDomain()).toList());
   }
 
-  // ── Global Budget Settings ────────────────────────────────────────────────
+  // ── Budget Configuration ───────────────────────────────────────────────────
 
   @override
   Future<void> updateGlobalSettings({
@@ -190,24 +102,10 @@ class UsageRepositoryImpl implements UsageRepository {
     required UsageSummaryModel model,
   }) async {
     try {
-      final summaryRef = _db.doc(
-        FirebaseCollections.usageSummaryDoc(uid, model.provider.id),
-      );
-
-      final updateMap = {
-        FirebaseCollections.usageFieldProvider: model.provider.id,
-        FirebaseCollections.budgetFieldEnabled: model.enabled,
-        FirebaseCollections.budgetFieldMonthlyBudgetUsd: model.totalBudgetUsd,
-        FirebaseCollections.budgetFieldAlreadyUsedUsd: model.alreadyUsedUsd,
-        FirebaseCollections.usageFieldUpdatedAt: FieldValue.serverTimestamp(),
-      };
-
-      await summaryRef.set(
-        updateMap,
-        SetOptions(merge: true),
-      );
+      final dto = UsageSummaryDto.fromDomain(model);
+      await _dao.saveBudgetSettings(uid: uid, summaryDto: dto);
     } catch (e) {
-      debugPrint('⚠️ updateGlobalSettings failed: $e');
+      debugPrint('⚠️ UsageRepositoryImpl.updateGlobalSettings failed: $e');
       rethrow;
     }
   }
@@ -216,51 +114,29 @@ class UsageRepositoryImpl implements UsageRepository {
   Future<void> disableBudget({
     required String uid,
     required AiProviderId provider,
+    String? docId,
   }) async {
     try {
-      final summaryRef = _db.doc(
-        FirebaseCollections.usageSummaryDoc(uid, provider.id),
+      await _dao.disableBudgetDoc(
+        uid: uid,
+        providerId: provider.id,
+        docId: docId,
       );
-
-      await summaryRef.set({
-        FirebaseCollections.budgetFieldEnabled: false,
-        FirebaseCollections.budgetFieldMonthlyBudgetUsd: null,
-        FirebaseCollections.usageFieldUpdatedAt: FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('⚠️ disableBudget failed: $e');
+      debugPrint('⚠️ UsageRepositoryImpl.disableBudget failed: $e');
       rethrow;
     }
   }
 
+  // ── Account Cleanup ────────────────────────────────────────────────────────
+
   @override
   Future<void> deleteAllUsageData({required String uid}) async {
-    final collections = [
-      FirebaseCollections.usageEventsCollection(uid),
-      FirebaseCollections.usageSummariesCollection(uid),
-      FirebaseCollections.usageBudgetsCollection(uid),
-    ];
-
-    for (final colPath in collections) {
-      try {
-        while (true) {
-          final snapshot = await _db.collection(colPath).limit(400).get();
-          if (snapshot.docs.isEmpty) break;
-
-          final batch = _db.batch();
-          for (final doc in snapshot.docs) {
-            batch.delete(doc.reference);
-          }
-          await batch.commit();
-          debugPrint(
-              '🗑️ Deleted chunk of ${snapshot.docs.length} docs from $colPath');
-
-          if (snapshot.docs.length < 400) break;
-        }
-      } catch (e) {
-        debugPrint('⚠️ Error deleting usage subcollection $colPath: $e');
-      }
+    try {
+      await _dao.deleteAllUsageData(uid: uid);
+    } catch (e) {
+      debugPrint('⚠️ UsageRepositoryImpl.deleteAllUsageData failed: $e');
+      rethrow;
     }
   }
 }
-

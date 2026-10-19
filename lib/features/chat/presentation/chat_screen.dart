@@ -17,6 +17,7 @@ import '../../../core/preferences/ai_preferences_provider.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
+import '../../usage/presentation/usage_provider.dart';
 import '../domain/chat_attachment.dart';
 import 'chat_provider.dart';
 
@@ -50,13 +51,21 @@ class _ChatScreenState extends State<ChatScreen> {
   /// Guards against calling startVoiceInput more than once per screen lifecycle.
   bool _didAutoStartVoice = false;
 
+  ChatProvider? _chatProvider;
+
   @override
   void initState() {
     super.initState();
     // Clear any previous conversation state when starting fresh
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<ChatProvider>().clearConversation();
+      _chatProvider = context.read<ChatProvider>();
+      _chatProvider?.clearConversation();
+
+      final uid = context.read<AuthProvider>().currentUser?.uid;
+      if (uid != null) {
+        context.read<UsageProvider>().loadForMonth(uid);
+      }
 
       // Auto-start voice input when opened from the Home voice button.
       // We guard with _didAutoStartVoice to ensure this fires at most once
@@ -68,27 +77,19 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  /// Handles dispatching a new prompt from the root chat screen.
+  ///
+  /// Flow:
+  /// 1. Synchronously starts a new conversation via [ChatProvider.startNewConversation],
+  ///    clearing previous conversation state and dispatching the AI request in the background.
+  /// 2. Immediately transitions to [ChatDetailScreen] without an upfront conversation ID,
+  ///    observing the in-memory optimistic user message and typing indicator instantly without UI freeze.
   Future<void> _handleSend(
-      String prompt, List<ChatAttachment> attachments) async {
-    _hideSuggestions();
-    final uid = context.read<AuthProvider>().currentUser?.uid;
-    if (uid == null) return;
-
-    final apiKeyProvider = context.read<ApiKeyProvider>();
-    final selectedProvider =
-        context.read<AiPreferencesProvider>().preferredProvider;
-    if (!apiKeyProvider.validProviders.contains(selectedProvider)) {
-      MessageUtils.showErrorToast(context, context.l10n.noKeyForModel);
-      return;
-    }
-
-    final chatProvider = context.read<ChatProvider>();
-
-    // Start sending message without awaiting its completion.
-    // This allows synchronous state setup inside ChatProvider to complete,
-    // and then execution yields back to navigate immediately.
-    chatProvider.sendMessage(
-      uid: uid,
+    String prompt,
+    List<ChatAttachment> attachments,
+    AiProviderId selectedProvider,
+  ) async {
+    _chatProvider?.startNewConversation(
       prompt: prompt,
       selectedProvider: selectedProvider,
       attachments: attachments,
@@ -96,12 +97,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (!mounted) return;
 
-    final conversationID = chatProvider.activeConversation?.id;
     AppRoutes.navigateAndReplace(
       context,
       AppRoutes.chatDetail,
-      arguments: ChatDetailArguments(
-          conversationId: conversationID ?? '', initialTitle: null),
+      arguments: const ChatDetailArguments(),
     );
   }
 
@@ -118,15 +117,31 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _handleSummarizePdf() async {
+    final l10n = AppLocalizations.of(context)!;
+    final success =
+        await _chatInputController.pickPdfWithPrompt(l10n.summarizePdfPrompt);
+    if (success) {
+      _hideSuggestions();
+    } else {
+      _showSuggestionsState();
+    }
+  }
+
+  void _handleGeneratePdf() {
     _hideSuggestions();
     final l10n = AppLocalizations.of(context)!;
-    await _chatInputController.pickPdfWithPrompt(l10n.summarizePdfPrompt);
+    _chatInputController.setPrompt(l10n.generatePdfPrompt);
   }
 
   Future<void> _handleAnalyzeImage() async {
-    _hideSuggestions();
     final l10n = AppLocalizations.of(context)!;
-    await _chatInputController.pickImageWithPrompt(l10n.analyzeImagePrompt);
+    final success =
+        await _chatInputController.pickImageWithPrompt(l10n.analyzeImagePrompt);
+    if (success) {
+      _hideSuggestions();
+    } else {
+      _showSuggestionsState();
+    }
   }
 
   void _handleGenerateCode() {
@@ -184,6 +199,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         isTablet: isTablet,
                         showSuggestions: _showSuggestions,
                         onSummarizePdf: _handleSummarizePdf,
+                        onGeneratePdf: _handleGeneratePdf,
                         onGenerateCode: _handleGenerateCode,
                         onAnalyzeImage: _handleAnalyzeImage,
                         onCreateImage: _handleCreateImage,
@@ -196,11 +212,10 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
 
           // ── Input Bar with Background Container ────────────────────────
-          Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
+          Consumer2<ApiKeyProvider, AiPreferencesProvider>(
             builder: (
               _,
               apiKeyProvider,
-              chatProvider,
               preferences,
               __,
             ) {
@@ -228,18 +243,36 @@ class _ChatScreenState extends State<ChatScreen> {
                       ChatModelSelectorDropdown(
                         providers: AiProviderId.values,
                         selectedProvider: selectedProvider,
-                        isEnabled: !chatProvider.isGenerating,
+                        isEnabled: (_chatProvider?.isGenerating == true)
+                            ? false
+                            : true,
                         onChanged: (provider) {
                           FocusManager.instance.primaryFocus?.unfocus();
                           preferences.setPreferredProvider(provider);
+
+                          if (!apiKeyProvider.validProviders
+                              .contains(provider)) {
+                            MessageUtils.showErrorToast(
+                              context,
+                              context.l10n.noKeyForModel,
+                            );
+                          } else {
+                            final usageProvider = context.read<UsageProvider>();
+                            final summary = usageProvider.summaryFor(provider);
+                            if (summary != null && summary.isExceeded()) {
+                              MessageUtils.showErrorToast(
+                                context,
+                                context.l10n.chatProviderLimitReached(
+                                    provider.displayName),
+                              );
+                            }
+                          }
                         },
                       ),
                       const SizedBox(height: 4.0),
                       // The Input Component itself
                       Flexible(
                         child: ChatInputBar(
-                          isGenerating: chatProvider.isGenerating,
-                          isTablet: isTablet,
                           controller: _chatInputController,
                           onUserInteracted: _hideSuggestions,
                           onSend: _handleSend,
@@ -264,6 +297,7 @@ class _WelcomeContent extends StatelessWidget {
   final bool isTablet;
   final bool showSuggestions;
   final VoidCallback onSummarizePdf;
+  final VoidCallback onGeneratePdf;
   final VoidCallback onGenerateCode;
   final VoidCallback onAnalyzeImage;
   final VoidCallback onCreateImage;
@@ -272,6 +306,7 @@ class _WelcomeContent extends StatelessWidget {
     required this.isTablet,
     required this.showSuggestions,
     required this.onSummarizePdf,
+    required this.onGeneratePdf,
     required this.onGenerateCode,
     required this.onAnalyzeImage,
     required this.onCreateImage,
@@ -319,7 +354,6 @@ class _WelcomeContent extends StatelessWidget {
             opacity: animation,
             child: SizeTransition(
               sizeFactor: animation,
-              axisAlignment: -1,
               child: child,
             ),
           ),
@@ -332,9 +366,14 @@ class _WelcomeContent extends StatelessWidget {
                       isTablet: isTablet,
                       actions: [
                         _SuggestionAction(
-                          icon: FontAwesomeIcons.filePdf,
+                          icon: FontAwesomeIcons.fileLines,
                           label: l10n.summarizePdf,
                           onTap: onSummarizePdf,
+                        ),
+                        _SuggestionAction(
+                          icon: FontAwesomeIcons.filePdf,
+                          label: l10n.generatePdf,
+                          onTap: onGeneratePdf,
                         ),
                         _SuggestionAction(
                           icon: FontAwesomeIcons.laptopCode,
@@ -389,29 +428,28 @@ class _SuggestionGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final crossAxisCount = isTablet ? 4 : 2;
     final maxWidth = isTablet ? 760.0 : 420.0;
+    final itemWidth =
+        isTablet ? (maxWidth - (3 * 12)) / 4 : (maxWidth - 12) / 2;
+    final itemHeight = isTablet ? 48.0 : 44.0;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: actions.length,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: isTablet ? 2.4 : 3.2,
-        ),
-        itemBuilder: (context, index) {
-          final action = actions[index];
-          return _SuggestionActionCard(
-            icon: action.icon,
-            label: action.label,
-            onTap: action.onTap,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
+        children: actions.map((action) {
+          return SizedBox(
+            width: itemWidth,
+            height: itemHeight,
+            child: _SuggestionActionCard(
+              icon: action.icon,
+              label: action.label,
+              onTap: action.onTap,
+            ),
           );
-        },
+        }).toList(),
       ),
     );
   }

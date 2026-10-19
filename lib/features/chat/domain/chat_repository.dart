@@ -17,7 +17,7 @@ abstract class ChatRepository {
 
   /// Save a prompt + response pair as a single Firestore document.
   ///
-  /// The [userMessage.id] is used as the Firestore document ID.
+  /// The [userMessage.responseId] is used as the Firestore document ID.
   /// Both the prompt and AI response are stored in one document.
   Future<void> saveMessagePair({
     required String uid,

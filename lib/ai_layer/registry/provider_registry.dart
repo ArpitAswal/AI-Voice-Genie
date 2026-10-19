@@ -55,6 +55,7 @@ class ProviderRegistry {
         AiCapability.imageGeneration,
         AiCapability.imageUnderstanding,
         AiCapability.pdfParsing,
+        AiCapability.pdfGeneration,
       },
       priority: 1,
       contextWindowTokens: AppConstants.openAiContextTokenLimit,
@@ -66,6 +67,7 @@ class ProviderRegistry {
         AiCapability.imageGeneration,
         AiCapability.imageUnderstanding,
         AiCapability.pdfParsing,
+        AiCapability.pdfGeneration,
       },
       priority: 2,
       contextWindowTokens: AppConstants.geminiContextTokenLimit,
@@ -78,6 +80,7 @@ class ProviderRegistry {
         AiCapability.textGeneration,
         AiCapability.imageUnderstanding,
         AiCapability.pdfParsing,
+        AiCapability.pdfGeneration,
       },
       priority: 3,
       contextWindowTokens: AppConstants.claudeContextTokenLimit,
@@ -109,18 +112,19 @@ class ProviderRegistry {
     ),
     AiProviderId.gemini: const AiModelCapabilityProfile(
       providerId: AiProviderId.gemini,
-      // Gemini has image gen, but the REST API does not currently support
-      // configuring aspect ratio or image size, so we hide them.
+      // Gemini 3.8 Flash supports thinkingLevel; Gemini 3.1 Flash-Lite Image supports aspectRatio.
       visiblePreferenceControls: {
         AiPreferenceControl.preferredProvider,
         AiPreferenceControl.responseLength,
+        AiPreferenceControl.geminiThinkingLevel,
+        AiPreferenceControl.geminiAspectRatio,
         AiPreferenceControl.visionImageCount,
         AiPreferenceControl.visionPdfCount,
       },
-      maxImageCount: 1, // Gemini does not guarantee multi-image output
+      maxImageCount: 1, // Gemini generates 1 image per request
       maxVisionImageCount: 4,
       maxVisionPdfCount: 4,
-      usesGeminiImageFormat: false,
+      usesGeminiImageFormat: true,
     ),
     AiProviderId.claude: const AiModelCapabilityProfile(
       providerId: AiProviderId.claude,
@@ -197,7 +201,9 @@ class ProviderRegistry {
       required ImageQuality rawImageQuality,
       required ImageGenerateBackground rawImageBackground,
       required int rawImageCount,
-      required VisionDetailLevel rawVisionDetailLevel}) {
+      required VisionDetailLevel rawVisionDetailLevel,
+      GeminiThinkingLevel? rawGeminiThinkingLevel,
+      GeminiAspectRatio? rawGeminiAspectRatio}) {
     final profile = profileFor(providerId);
     final dropped = <AiPreferenceControl>[];
 
@@ -210,8 +216,33 @@ class ProviderRegistry {
       dropped.add(AiPreferenceControl.responseLength);
     }
 
+    // ── Gemini Thinking Level ─────────────────────────────────────────────────
+    final supportsThinking = capability == AiCapability.textGeneration ||
+        capability == AiCapability.pdfParsing ||
+        capability == AiCapability.pdfGeneration ||
+        capability == AiCapability.imageUnderstanding;
+    final GeminiThinkingLevel? effectiveGeminiThinkingLevel =
+        (supportsThinking &&
+                profile.supports(AiPreferenceControl.geminiThinkingLevel))
+            ? (rawGeminiThinkingLevel ?? GeminiThinkingLevel.medium)
+            : null;
+    if (supportsThinking &&
+        !profile.supports(AiPreferenceControl.geminiThinkingLevel)) {
+      dropped.add(AiPreferenceControl.geminiThinkingLevel);
+    }
+
     // For non-image-generation capabilities, always drop image-gen fields
     final isImageGen = capability == AiCapability.imageGeneration;
+
+    // ── Gemini Image Aspect Ratio ─────────────────────────────────────────────
+    final GeminiAspectRatio? effectiveGeminiAspectRatio =
+        (isImageGen && profile.supports(AiPreferenceControl.geminiAspectRatio))
+            ? (rawGeminiAspectRatio ?? GeminiAspectRatio.square)
+            : null;
+    if (isImageGen &&
+        !profile.supports(AiPreferenceControl.geminiAspectRatio)) {
+      dropped.add(AiPreferenceControl.geminiAspectRatio);
+    }
 
     // ── OpenAI Image Size ─────────────────────────────────────────────────────
     final AiImageSize? effectiveImageSize =
@@ -265,6 +296,8 @@ class ProviderRegistry {
       imageQuality: effectiveImageQuality,
       imageBackground: effectiveImageBackground,
       imageCount: effectiveImageCount,
+      geminiAspectRatio: effectiveGeminiAspectRatio,
+      geminiThinkingLevel: effectiveGeminiThinkingLevel,
       visionDetailLevel: effectiveVisionDetail,
       droppedControls: dropped,
     );

@@ -37,83 +37,73 @@ extension StringExtension on String {
     return '${substring(0, 4)}...${substring(length - 4)}';
   }
 
-  /// Strips conversational greetings and AI names from the beginning of a prompt.
-  /// Example: "Hey Genie, how are you?" -> "how are you?"
-  String stripGreetings() {
-    if (trim().isEmpty) return this;
-
-    final regex = RegExp(
-      r'^(good\s+morning|good\s+afternoon|good\s+evening|good\s+night|hello|hey|hi|greetings)[\s]*(genie|chatgpt|claude|ai|bot|assistant)?[\s,!.?]*',
-      caseSensitive: false,
-    );
-
-    return replaceFirst(regex, '').trim();
-  }
-
-  ///automatic conversation title generation,
-  ///similar to what systems like ChatGPT or Anthropic's Claude do.
+  /// Strips conversational greetings, AI name references, and pleasantries
+  /// from the beginning of a user prompt.
   ///
-  /// Generates the final, permanent title from the user's prompt text.
-  /// Called once when the user sends the first message — never changed again.
-  String generateConversationTitle() {
-    if (trim().isEmpty) return "Untitled Conversation";
+  /// Examples:
+  /// - "Hey Gemini, Good evening, how well are you? Generate an image of..."
+  ///   -> "Generate an image of..."
+  /// - "Hello Genie, how are you? Can you summarize this?"
+  ///   -> "Can you summarize this?"
+  /// - "Good morning AI! What is quantum computing?"
+  ///   -> "What is quantum computing?"
+  String stripGreetings() {
+    var text = trim();
+    if (text.isEmpty) return text;
 
-    String text = trim();
-
-    // 1. Remove leading introductory fluff in a loop
-    //    Handles stacked phrases like "Hey Genie, can you please tell me about..."
-    final fluffRegex = RegExp(
-      r'^(hey[\w\s,!?]*|hi[\w\s,!?]*|hello[\w\s,!?]*|please|can you|could you|'
-      r'i want to|i need( to)?|help me( with)?|tell me( about)?|'
-      r'what (is|are|was|were|do|does|did|can|could|would|should|have|has) (you|i|we)?[\s\w]*?(about|on|of|regarding)?|'
-      r'do you know( about| of)?|do you have|'
-      r'how (do|does|can|would|should|to) (i|we|you)?[\s\w]*?|'
-      r'give me|show me|write me|write|create|explain|describe|summarize|'
-      r'list|find|search for|look up|make me|make a|generate)\s+',
+    // Matches conversational greetings with optional audience ("there", "everyone")
+    // and optional AI/assistant names.
+    final greetingRegex = RegExp(
+      r'^(good\s+(morning|afternoon|evening|night|day)|hello|hey|hi|howdy|greetings|yo|hola|welcome|dear)\b(\s+(there|everyone|all|folks))?(\s+(gemini|genie|voice\s*genie|ai\s*voice\s*genie|chatgpt|gpt[-\s\w]*|claude|deepseek|groq|llama|meta|copilot|siri|assistant|ai|bot|friend|buddy))?[\s,!.?:;~-]*',
       caseSensitive: false,
     );
 
-    String previousText = "";
-    while (text != previousText) {
-      previousText = text;
-      text = text.replaceFirst(fluffRegex, '').trim();
+    // Matches standalone AI names/mentions at the beginning (e.g. "Gemini, ...", "Genie: ...")
+    final aiNameRegex = RegExp(
+      r'^(gemini|genie|voice\s*genie|ai\s*voice\s*genie|chatgpt|gpt[-\s\w]*|claude|deepseek|groq|llama|meta|copilot|siri|assistant|ai|bot|friend|buddy)[\s,!.?:;~-]*',
+      caseSensitive: false,
+    );
+
+    // Matches pleasantries, chit-chat, and well-wishes at the beginning
+    final pleasantryRegex = RegExp(
+      r"^(how\s+(are\s+you(\s+doing)?(\s+today)?|well\s+are\s+you|are\s+things|is\s+it\s+going|have\s+you\s+been|do\s+you\s+do|r\s+u)|how'?s\s+(it\s+going|everything|life)|what'?s\s+up|hope\s+(you('re|\s+are)\s+(doing\s+well|well|good|fine|having\s+a\s+good\s+day)|all\s+is\s+well|this\s+finds\s+you\s+well)|(nice|good|great)\s+to\s+(meet|see)\s+you)[\s,!.?:;~-]*",
+      caseSensitive: false,
+    );
+
+    bool changed = true;
+    while (changed && text.isNotEmpty) {
+      changed = false;
+      if (greetingRegex.hasMatch(text)) {
+        final newText = text.replaceFirst(greetingRegex, '').trim();
+        if (newText != text) {
+          text = newText;
+          changed = true;
+          continue;
+        }
+      }
+      if (aiNameRegex.hasMatch(text)) {
+        final newText = text.replaceFirst(aiNameRegex, '').trim();
+        if (newText != text) {
+          text = newText;
+          changed = true;
+          continue;
+        }
+      }
+      if (pleasantryRegex.hasMatch(text)) {
+        final newText = text.replaceFirst(pleasantryRegex, '').trim();
+        if (newText != text) {
+          text = newText;
+          changed = true;
+          continue;
+        }
+      }
     }
 
-    if (text.isEmpty) return "Untitled Conversation";
-
-    // 2. Strip leading articles/connectors ("the stars" → "stars")
-    text = text
-        .replaceFirst(
-            RegExp(r'^(the|a|an|about|regarding|on|some)\s+',
-                caseSensitive: false),
-            '')
-        .trim();
-
-    if (text.isEmpty) return "Untitled Conversation";
-
-    // 3. Take the first sentence fragment (up to first ?,!,. or newline)
-    final sentenceEnd = RegExp(r'[.?!\n]');
-    final match = sentenceEnd.firstMatch(text);
-    if (match != null && match.start > 4) {
-      text = text.substring(0, match.start).trim();
+    if (text.isNotEmpty) {
+      text = text[0].toUpperCase() + text.substring(1);
     }
 
-    // 4. Take first 5 words max
-    final words = text.split(RegExp(r'\s+'));
-    final selected = words.take(5).toList();
-
-    // 5. Rejoin and clean up trailing punctuation
-    String rawTitle =
-        selected.join(" ").replaceAll(RegExp(r'[^\w\s]+$'), '').trim();
-
-    if (rawTitle.isEmpty) return "Untitled Conversation";
-
-    // 6. Sentence Case — capitalize just the very first letter of the title
-    if (rawTitle.isNotEmpty) {
-      return rawTitle[0].toUpperCase() + rawTitle.substring(1).toLowerCase();
-    }
-
-    return "Untitled Conversation";
+    return text;
   }
 }
 

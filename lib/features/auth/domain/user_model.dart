@@ -1,180 +1,102 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../core/constants/firebase_collections.dart';
 import '../../../core/enums/app_enums.dart';
+import '../data/user_dto.dart';
 
-/// Normalized user entity for AI Voice Genie.
+/// Normalized domain user entity for AI Voice Genie.
 ///
-/// Both Google and Apple Sign-In produce this same model.
+/// Both Google and Apple Sign-In produce this same entity.
 /// Immutable — use copyWith() to produce updated versions.
 ///
-/// Field guarantees:
-///   uid          → always non-empty (Firebase UID)
-///   email        → non-empty for Google; may be '' for Apple returning users
-///   displayName  → non-empty for Google; may be 'User' fallback for Apple
-///   photoUrl     → non-empty for Google; always '' for Apple
-///   authProvider → always set — tracks which provider was used
+/// Only [uid] is required. All other fields have sensible default values or
+/// are nullable, so callers can instantiate minimal or partial user models
+/// without repetitive boilerplate.
 class UserModel {
-  /// Firebase UID — primary identifier across the entire app
+  /// Firebase UID — primary identifier across the entire app (Required).
   final String uid;
 
-  /// User's email address.
-  /// Google: always present.
-  /// Apple first sign-in: present if user chose to share.
-  /// Apple returning: empty string — read from Firestore instead.
-  final String email;
-
-  /// Display name shown in profile UI.
-  /// Google: full name from Google account.
-  /// Apple: given name from first sign-in, or 'User' fallback.
-  final String displayName;
-
-  /// Profile photo URL.
-  /// Google: Google account photo URL.
-  /// Apple: always empty string — Apple does not provide photos.
-  final String photoUrl;
-
-  /// Which social provider was used to authenticate.
+  /// Which social provider was used to authenticate (Required, e.g. Google or Apple).
   final SocialAuthProvider authProvider;
 
-  /// Whether this is the user's first-ever sign-in (new Firestore document).
-  /// Used to decide: logUserRegistered() vs logUserSignedIn()
-  /// and to route to OnboardingScreen vs TabBarScreen.
+  /// User's email address (Optional, defaults to empty string).
+  final String email;
+
+  /// Display name shown in profile UI (Optional, defaults to empty string).
+  final String displayName;
+
+  /// Profile photo URL (Optional, defaults to empty string).
+  final String photoUrl;
+
+  /// Whether this is the user's first-ever sign-in (Optional, defaults to false).
   final bool isNewUser;
 
-  /// Whether the user has completed the onboarding flow.
-  /// Read from Firestore — defaults to false for new users.
+  /// Whether the user has completed the onboarding flow (Optional, defaults to false).
   final bool onboardingDone;
 
-  /// Whether the user has completed the AI key setup flow.
-  /// Read from Firestore — defaults to false for new users.
+  /// Whether the user has completed the AI key setup flow (Optional, defaults to false).
   final bool keySetupDone;
 
-  /// Whether the user accepted the Terms of Service and Privacy Policy.
+  /// Whether the user accepted the Terms of Service (Optional, defaults to false).
   final bool termsAccepted;
 
-  /// The timestamp when the user accepted the terms.
+  /// The timestamp when the user accepted the terms (Nullable, defaults to null).
   final DateTime? termsAcceptedAt;
 
-  /// The version string of the legal terms accepted by this user (e.g., '2026-07-v1').
+  /// The version string of the legal terms accepted (Nullable, defaults to null, e.g. '2026-07-v1').
   final String? termsVersionAccepted;
 
-  /// Date of birth (optional).
+  /// Date of birth (Nullable profile field).
   final DateTime? dateOfBirth;
 
-  /// Age (optional numeric input).
+  /// Age (Nullable numeric profile field).
   final int? age;
 
-  /// Gender (optional).
+  /// Gender (Nullable profile field).
   final String? gender;
 
-  /// Country (optional).
+  /// Country (Nullable profile field).
   final String? country;
 
-  /// State/Province (optional).
+  /// State/Province (Nullable profile field).
   final String? state;
 
-  /// The time this user was first created.
+  /// The time this user was first created (Nullable).
   final DateTime? createdAt;
 
-  /// The time this user last logged in.
+  /// The time this user last logged in (Nullable).
   final DateTime? lastLoginAt;
 
-  /// The time this user last updated.
+  /// The time this user profile was last updated (Nullable).
   final DateTime? lastUpdatedAt;
 
-  const UserModel(
-      {required this.uid,
-      required this.email,
-      required this.displayName,
-      required this.photoUrl,
-      required this.authProvider,
-      this.isNewUser = false,
-      this.onboardingDone = false,
-      this.keySetupDone = false,
-      this.termsAccepted = false,
-      this.termsAcceptedAt,
-      this.termsVersionAccepted,
-      this.dateOfBirth,
-      this.age,
-      this.gender,
-      this.country,
-      this.state,
-      this.createdAt,
-      this.lastLoginAt,
-      this.lastUpdatedAt});
+  const UserModel({
+    required this.uid,
+    required this.authProvider,
+    this.email = '',
+    this.displayName = '',
+    this.photoUrl = '',
+    this.isNewUser = false,
+    this.onboardingDone = false,
+    this.keySetupDone = false,
+    this.termsAccepted = false,
+    this.termsAcceptedAt,
+    this.termsVersionAccepted,
+    this.dateOfBirth,
+    this.age,
+    this.gender,
+    this.country,
+    this.state,
+    this.createdAt,
+    this.lastLoginAt,
+    this.lastUpdatedAt,
+  });
 
-  // ── Factory: from Firestore document ─────────────────────────────────────
+  // ── DTO Serialization Bridges ─────────────────────────────────────────────
 
-  /// Construct a UserModel from an existing Firestore document map.
-  ///
-  /// Used when reading a returning user's document.
-  factory UserModel.fromFirestore(Map<String, dynamic> data) {
-    return UserModel(
-      uid: data['uid'] as String? ?? '',
-      email: data['email'] as String? ?? '',
-      displayName: data['displayName'] as String? ?? 'User',
-      photoUrl: data['photoUrl'] as String? ?? '',
-      authProvider: SocialAuthProvider.fromId(
-        data['authProvider'] as String? ?? 'google',
-      ),
-      isNewUser: false,
-      onboardingDone: data['onboardingDone'] as bool? ?? false,
-      keySetupDone: data['keySetupDone'] as bool? ?? false,
-      termsAccepted:
-          data[FirebaseCollections.fieldTermsAccepted] as bool? ?? false,
-      termsAcceptedAt: data[FirebaseCollections.fieldTermsAcceptedAt] != null
-          ? (data[FirebaseCollections.fieldTermsAcceptedAt] as Timestamp)
-              .toDate()
-          : null,
-      termsVersionAccepted:
-          data[FirebaseCollections.fieldTermsVersionAccepted] as String?,
-      dateOfBirth: data['dateOfBirth'] != null
-          ? (data['dateOfBirth'] as Timestamp).toDate()
-          : null,
-      age: data['age'] as int?,
-      gender: data[FirebaseCollections.fieldGender] as String?,
-      country: data[FirebaseCollections.fieldCountry] as String?,
-      state: data[FirebaseCollections.fieldState] as String?,
-      createdAt: data[FirebaseCollections.fieldCreatedAt] != null
-          ? (data[FirebaseCollections.fieldCreatedAt] as Timestamp).toDate()
-          : null,
-      lastLoginAt: data[FirebaseCollections.fieldLastLoginAt] != null
-          ? (data[FirebaseCollections.fieldLastLoginAt] as Timestamp).toDate()
-          : null,
-      lastUpdatedAt: data[FirebaseCollections.fieldLastUpdatedAt] != null
-          ? (data[FirebaseCollections.fieldLastUpdatedAt] as Timestamp).toDate()
-          : null,
-    );
-  }
+  /// Construct a UserModel from a Firestore document map via [UserDto].
+  factory UserModel.fromFirestore(Map<String, dynamic> data) =>
+      UserDto.fromFirestore(data);
 
-  // ── Serialization ─────────────────────────────────────────────────────────
-
-  /// Serialize to a map for Firestore document creation (new user only).
-  ///
-  /// Does NOT include createdAt/lastLoginAt — those are set with
-  /// FieldValue.serverTimestamp() directly in the repository.
-  Map<String, dynamic> toFirestoreNewUser() {
-    return {
-      'uid': uid,
-      'email': email,
-      'displayName': displayName,
-      'photoUrl': photoUrl,
-      'authProvider': authProvider.id,
-      'onboardingDone': false,
-      'keySetupDone': false,
-      FirebaseCollections.fieldTermsAccepted: termsAccepted,
-      FirebaseCollections.fieldTermsAcceptedAt: FieldValue.serverTimestamp(),
-      FirebaseCollections.fieldTermsVersionAccepted: termsVersionAccepted,
-      'dateOfBirth': null,
-      'age': null,
-      FirebaseCollections.fieldGender: null,
-      FirebaseCollections.fieldCountry: null,
-      FirebaseCollections.fieldState: null,
-      FirebaseCollections.fieldCreatedAt: FieldValue.serverTimestamp(),
-      FirebaseCollections.fieldLastLoginAt: FieldValue.serverTimestamp(),
-      FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
-    };
-  }
+  /// Serialize to a minimal new-user Firestore map via [UserDto].
+  Map<String, dynamic> toFirestoreNewUser() => UserDto.toNewUserMap(this);
 
   // ── copyWith ──────────────────────────────────────────────────────────────
 
@@ -201,28 +123,29 @@ class UserModel {
     DateTime? lastUpdatedAt,
   }) {
     return UserModel(
-        uid: uid ?? this.uid,
-        email: email ?? this.email,
-        displayName: displayName ?? this.displayName,
-        photoUrl: photoUrl ?? this.photoUrl,
-        authProvider: authProvider ?? this.authProvider,
-        isNewUser: isNewUser ?? this.isNewUser,
-        onboardingDone: onboardingDone ?? this.onboardingDone,
-        keySetupDone: keySetupDone ?? this.keySetupDone,
-        termsAccepted: termsAccepted ?? this.termsAccepted,
-        termsAcceptedAt: termsAcceptedAt ?? this.termsAcceptedAt,
-        termsVersionAccepted: termsVersionAccepted ?? this.termsVersionAccepted,
-        dateOfBirth: dateOfBirth ?? this.dateOfBirth,
-        age: age ?? this.age,
-        gender: gender ?? this.gender,
-        country: country ?? this.country,
-        state: state ?? this.state,
-        createdAt: createdAt ?? this.createdAt,
-        lastLoginAt: lastLoginAt ?? this.lastLoginAt,
-        lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt);
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      photoUrl: photoUrl ?? this.photoUrl,
+      authProvider: authProvider ?? this.authProvider,
+      isNewUser: isNewUser ?? this.isNewUser,
+      onboardingDone: onboardingDone ?? this.onboardingDone,
+      keySetupDone: keySetupDone ?? this.keySetupDone,
+      termsAccepted: termsAccepted ?? this.termsAccepted,
+      termsAcceptedAt: termsAcceptedAt ?? this.termsAcceptedAt,
+      termsVersionAccepted: termsVersionAccepted ?? this.termsVersionAccepted,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      age: age ?? this.age,
+      gender: gender ?? this.gender,
+      country: country ?? this.country,
+      state: state ?? this.state,
+      createdAt: createdAt ?? this.createdAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+    );
   }
 
-  // ── Equality ──────────────────────────────────────────────────────────────
+  // ── Equality & String ─────────────────────────────────────────────────────
 
   @override
   bool operator ==(Object other) =>
@@ -235,6 +158,7 @@ class UserModel {
   int get hashCode => uid.hashCode;
 
   @override
-  String toString() => 'UserModel(uid: $uid, email: $email, '
-      'displayName: $displayName, provider: ${authProvider.id}, termsAccepted: $termsAccepted)';
+  String toString() =>
+      'UserModel(uid: $uid, email: $email, displayName: $displayName, '
+      'provider: ${authProvider.id}, termsAccepted: $termsAccepted)';
 }

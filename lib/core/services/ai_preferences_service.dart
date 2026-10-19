@@ -81,11 +81,27 @@ class AiPreferencesService {
         : ResponseLength.fromName(name);
   }
 
+  GeminiThinkingLevel preferredGeminiThinkingLevel(AiProviderId provider) {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredGeminiThinkingLevel, provider.id);
+    final saved = _storage.getString(key);
+    return GeminiThinkingLevel.fromString(saved);
+  }
+
+  GeminiAspectRatio preferredGeminiAspectRatio(AiProviderId provider) {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredGeminiAspectRatio, provider.id);
+    final saved = _storage.getString(key);
+    return saved == null
+        ? GeminiAspectRatio.square
+        : GeminiAspectRatio.fromValue(saved);
+  }
+
   int preferredImageCount(AiProviderId provider) {
     final key = StorageKeys.providerPrefKey(
         StorageKeys.preferredImageCount, provider.id);
     final count = _storage.getInt(key, defaultValue: 1);
-    return count.clamp(1, 10).toInt();
+    return count.clamp(1, 4).toInt();
   }
 
   Future<void> setPreferredProvider(AiProviderId provider) async {
@@ -149,6 +165,20 @@ class AiPreferencesService {
     final key = StorageKeys.providerPrefKey(
         StorageKeys.preferredResponseLength, provider.id);
     await _storage.setString(key, length.name);
+  }
+
+  Future<void> setPreferredGeminiThinkingLevel(
+      AiProviderId provider, GeminiThinkingLevel level) async {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredGeminiThinkingLevel, provider.id);
+    await _storage.setString(key, level.apiValue);
+  }
+
+  Future<void> setPreferredGeminiAspectRatio(
+      AiProviderId provider, GeminiAspectRatio ratio) async {
+    final key = StorageKeys.providerPrefKey(
+        StorageKeys.preferredGeminiAspectRatio, provider.id);
+    await _storage.setString(key, ratio.apiValue);
   }
 
   Future<void> setPreferredImageCount(AiProviderId provider, int count) async {

@@ -45,7 +45,7 @@ class ChatRepositoryImpl implements ChatRepository {
   ChatRepositoryImpl({
     FirebaseFirestore? firestore,
     StorageService? storage,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+  })  : _firestore = firestore ?? FirebaseCollections.firestore,
         _storage = storage ?? StorageService();
 
   // ── Message Operations ────────────────────────────────────────────────────
@@ -63,9 +63,9 @@ class ChatRepositoryImpl implements ChatRepository {
       final batch = _firestore.batch();
 
       // Determine the effective last message and its timestamp based on AI vs User content
-      final hasAiContent = aiMessage.content.trim().isNotEmpty;
+      final hasAiContent = aiMessage.lastPrompt.trim().isNotEmpty;
       final effectiveLastMessage =
-          hasAiContent ? aiMessage.content : userMessage.content;
+          hasAiContent ? aiMessage.lastPrompt : userMessage.lastPrompt;
       final effectiveLastMessageAt =
           hasAiContent ? aiMessage.timestamp : userMessage.timestamp;
 
@@ -107,11 +107,11 @@ class ChatRepositoryImpl implements ChatRepository {
       // Always: write user message + AI message together
       final userRef = _firestore.doc(
         FirebaseCollections.messageDoc(
-            uid, conversationId, "UserRef-${userMessage.id}"),
+            uid, conversationId, "UserRef-${userMessage.messageId}"),
       );
       final aiRef = _firestore.doc(
         FirebaseCollections.messageDoc(
-            uid, conversationId, "AIRef-${aiMessage.id}"),
+            uid, conversationId, "AIRef-${aiMessage.messageId}"),
       );
 
       batch.set(userRef, userMessage.toFirestore());
@@ -161,23 +161,25 @@ class ChatRepositoryImpl implements ChatRepository {
       }
 
       final cachedById = {
-        for (final message in cachedMessages) message.id: message,
+        for (final message in cachedMessages) message.messageId: message,
       };
-      final freshIds = freshMessages.map((message) => message.id).toSet();
+      final freshIds =
+          freshMessages.map((message) => message.messageId).toSet();
 
       final mergedMessages = freshMessages.map((message) {
-        final cached = cachedById[message.id];
+        final cached = cachedById[message.messageId];
         if (cached == null) return message;
 
         return message.copyWith(
-            content:
-                message.content.isNotEmpty ? message.content : cached.content,
+            prompt: message.lastPrompt.isNotEmpty
+                ? message.lastPrompt
+                : cached.lastPrompt,
             imageUrls: message.imageUrls ?? cached.imageUrls,
             pdfInfo: message.pdfInfo ?? cached.pdfInfo);
       }).toList();
 
       final missingCachedMessages = cachedMessages
-          .where((message) => !freshIds.contains(message.id))
+          .where((message) => !freshIds.contains(message.messageId))
           .toList();
 
       return _sortChronologically([
@@ -277,11 +279,24 @@ class ChatRepositoryImpl implements ChatRepository {
     required String newTitle,
   }) async {
     try {
+      // 1. Update local cache (Hive) immediately so the conversation drawer / list updates
+      final existingRecord =
+          LocalChatStore.instance.getConversation(uid, conversationId);
+      if (existingRecord != null) {
+        await LocalChatStore.instance.saveConversation(
+          existingRecord.copyWith(
+            title: newTitle,
+            localUpdatedAt: DateTime.now(),
+          ),
+        );
+      }
+
+      // 2. Update remote Firestore document (set with merge to prevent not-found race conditions)
       await _firestore
           .doc(FirebaseCollections.conversationDoc(uid, conversationId))
-          .update({
+          .set({
         FirebaseCollections.fieldConversationTitle: newTitle,
-      });
+      }, SetOptions(merge: true));
     } on FirebaseException catch (e) {
       throw ChatException(
         ChatErrorCodes.saveFailed,
@@ -426,7 +441,7 @@ class ChatRepositoryImpl implements ChatRepository {
         if (b.role == MessageRole.user) return 1;
       }
 
-      return a.id.compareTo(b.id);
+      return a.messageId.compareTo(b.messageId);
     });
     return sorted;
   }
@@ -468,9 +483,18 @@ class ChatRepositoryImpl implements ChatRepository {
 
     // ── Step 1: Write conversation metadata to Hive ───────────────────────────
     // This is the local-first write. The UI stream updates immediately.
-    String effectiveLastMessage = userMessage.content.trim();
+    // The conversation preview must always reflect the latest message (the AI response).
+    String effectiveLastMessage = conversation.lastMessage.trim();
     if (effectiveLastMessage.isEmpty) {
-      if (userMessage.imageUrls?.isNotEmpty == true) {
+      if (aiMessage.lastPrompt.trim().isNotEmpty) {
+        effectiveLastMessage = aiMessage.lastPrompt.trim();
+      } else if (aiMessage.imageUrls?.isNotEmpty == true) {
+        effectiveLastMessage = 'Image';
+      } else if (aiMessage.pdfInfo?.isNotEmpty == true) {
+        effectiveLastMessage = 'PDF Document';
+      } else if (userMessage.lastPrompt.trim().isNotEmpty) {
+        effectiveLastMessage = userMessage.lastPrompt.trim();
+      } else if (userMessage.imageUrls?.isNotEmpty == true) {
         effectiveLastMessage = 'Image(s)';
       } else if (userMessage.pdfInfo?.isNotEmpty == true) {
         effectiveLastMessage = 'PDF Document';
@@ -501,23 +525,23 @@ class ChatRepositoryImpl implements ChatRepository {
     );
     await LocalChatStore.instance.saveConversation(convRecord);
 
-    // ── Step 2: Write both messages individually to Hive ─────────────────────
-    await LocalChatStore.instance.saveMessage(
+    // ── Step 2: Write both messages in a single batch to Hive ─────────────────
+    // Using batch write ensures a single atomic Hive transaction and single stream emission,
+    // preventing any intermediate UI state or flicker while saving both messages.
+    await LocalChatStore.instance.saveMessagesBatch([
       LocalMessageRecord.fromMessageModel(
         userMessage,
         uid: uid,
         conversationId: conversationId,
         syncStatus: SyncStatus.pendingCreate,
       ),
-    );
-    await LocalChatStore.instance.saveMessage(
       LocalMessageRecord.fromMessageModel(
         aiMessage,
         uid: uid,
         conversationId: conversationId,
         syncStatus: SyncStatus.pendingCreate,
       ),
-    );
+    ]);
 
     // ── Step 3: Enqueue outbox task for background Firestore sync ─────────────
     // Build the full Firestore payload now so the sync worker has everything
@@ -530,20 +554,20 @@ class ChatRepositoryImpl implements ChatRepository {
 
     // Deterministic idempotency key prevents duplicate Firestore writes on retry
     final idempotencyKey =
-        'upsertMessagePair:$uid:$conversationId:${userMessage.id}';
+        'upsertMessagePair:$uid:$conversationId:${userMessage.messageId}';
 
     await ChatOutboxStore.instance.enqueue(
       ChatOutboxTask(
         uid: uid,
         type: OutboxTaskType.upsertMessagePair,
         conversationId: conversationId,
-        messageIds: [userMessage.id, aiMessage.id],
+        messageIds: [userMessage.messageId, aiMessage.messageId],
         payload: {
           'conversation': updatedConv.toFirestore(),
           'userMessage': userMessage.toSyncPayload(),
           'aiMessage': aiMessage.toSyncPayload(),
-          'userMessageId': userMessage.id,
-          'aiMessageId': aiMessage.id,
+          'userMessageId': userMessage.messageId,
+          'aiMessageId': aiMessage.messageId,
           'isFirstMessage': isFirstMessage,
         },
         idempotencyKey: idempotencyKey,
@@ -725,7 +749,7 @@ class ChatRepositoryImpl implements ChatRepository {
         ? null
         : MessagePageCursor(
             timestamp: messages.first.timestamp,
-            messageId: messages.first.id,
+            messageId: messages.first.messageId,
           );
 
     _hydrateLatestMessagePage(uid, conversationId, limit);
@@ -771,7 +795,7 @@ class ChatRepositoryImpl implements ChatRepository {
         ? null
         : MessagePageCursor(
             timestamp: messages.first.timestamp,
-            messageId: messages.first.id,
+            messageId: messages.first.messageId,
           );
 
     if (messages.length < limit) {

@@ -11,7 +11,7 @@ import '../../../../core/widgets/app_alert_dialog.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../usage/presentation/usage_provider.dart';
-import '../domain/profile_view_model.dart';
+import 'profile_view_model.dart';
 import 'widgets/ai_intelligence_section.dart';
 import 'widgets/ai_preferences_panel.dart';
 import 'widgets/profile_common_widgets.dart';
@@ -84,12 +84,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (shouldLogout != true || !mounted) return;
 
     LoadingOverlay.show(context, message: context.l10n.signingOut);
-    await viewModel.signOut(context.read<AuthProvider>());
-    LoadingOverlay.hide();
+    bool success = false;
+    try {
+      success = await viewModel.signOut(context.read<AuthProvider>());
+    } finally {
+      LoadingOverlay.hide();
+    }
 
     if (!mounted) return;
-    MessageUtils.showSuccess(context, context.l10n.signOutSuccess);
-    AppRoutes.navigateAndRemoveUntil(context, AppRoutes.login);
+    if (success) {
+      MessageUtils.showSuccess(context, context.l10n.signOutSuccess);
+      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.login);
+    } else {
+      final errorKey = viewModel.errorMessage ?? 'sign_out_failed';
+      MessageUtils.showError(context, context.l10n.translate(errorKey));
+      viewModel.clearErrorMessage();
+    }
   }
 
   Future<void> _handleDeleteAccount(ProfileViewModel viewModel) async {
@@ -126,11 +136,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // AuthProvider and ProfileViewModel guarantee catching any exception and returning a boolean,
     // ensuring LoadingOverlay.hide() always runs without freezing the UI.
     LoadingOverlay.show(context, message: context.l10n.deletingAccount);
-    final success = await viewModel.deleteAccount(context.read<AuthProvider>());
-    LoadingOverlay.hide();
+    bool success = false;
+    try {
+      success = await viewModel.deleteAccount(context.read<AuthProvider>());
+    } finally {
+      LoadingOverlay.hide();
+    }
 
     if (!mounted) return;
     if (success) {
+      context.read<UsageProvider>().clear();
       // Only navigate away if the account was successfully wiped and deleted.
       MessageUtils.showSuccess(context, context.l10n.accountDeleted);
       AppRoutes.navigateAndRemoveUntil(context, AppRoutes.login);
@@ -138,8 +153,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // If deletion failed (e.g. requires-recent-login or offline), stay on the Profile screen
       // and display a specific localized error toast so the user knows why the account was NOT deleted.
       final authProvider = context.read<AuthProvider>();
-      final errorKey = authProvider.authError ?? 'something_went_wrong';
+      final errorKey = viewModel.errorMessage ??
+          authProvider.authError ??
+          'delete_account_failed';
       MessageUtils.showError(context, context.l10n.translate(errorKey));
+      viewModel.clearErrorMessage();
       authProvider.clearAuthError();
     }
   }
@@ -169,10 +187,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         style: Theme.of(context).textTheme.displayMedium,
                       ),
                       GestureDetector(
-                          onTap: () => AppRoutes.navigateTo(
-                              context, AppRoutes.profileEdit),
-                        child: FaIcon(FontAwesomeIcons.penToSquare,
-                        size: context.textTheme.titleLarge?.fontSize,),
+                        onTap: () => AppRoutes.navigateTo(
+                            context, AppRoutes.profileEdit),
+                        child: FaIcon(
+                          FontAwesomeIcons.penToSquare,
+                          size: context.textTheme.titleLarge?.fontSize,
+                        ),
                       ),
                     ],
                   ),

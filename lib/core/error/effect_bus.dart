@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+
 class EffectBus {
   /// Singleton instance used globally.
   static final instance = EffectBus._();
@@ -10,9 +12,15 @@ class EffectBus {
   final _controller = StreamController<EffectFailure>.broadcast();
 
   /// Emit an error event into the stream.
-  /// Any GlobalEffectListener will receive it.
+  /// Any GlobalEffectListener will receive it, and it will be recorded
+  /// as a non-fatal error in Firebase Crashlytics for production monitoring.
   void emit(Object error, StackTrace st) {
     _controller.add(EffectFailure(error, st));
+    try {
+      FirebaseCrashlytics.instance.recordError(error, st, fatal: false);
+    } catch (_) {
+      // Handled gracefully in unit testing environments or offline before Firebase initializes
+    }
   }
 
   /// Public stream exposed for listening.

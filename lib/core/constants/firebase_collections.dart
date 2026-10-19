@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 /// Firestore collection and field name constants for AI Voice Genie.
 ///
 /// Every Firestore path must reference constants from here.
@@ -17,6 +20,22 @@
 ///       {uid}/
 ///         {providerId}                           ← API key (document)
 class FirebaseCollections {
+  // ── Database ID ────────────────────────────────────────────────────────────
+  // Explicitly points to the named 'default' database in Firebase Console
+  // (avoids connecting to the nonexistent '(default)' database).
+  static const String databaseId = 'default';
+
+  static FirebaseFirestore get firestore {
+    try {
+      return FirebaseFirestore.instanceFor(
+        app: Firebase.app(),
+        databaseId: databaseId,
+      );
+    } catch (_) {
+      return FirebaseFirestore.instance;
+    }
+  }
+
   // ── Root Collection ───────────────────────────────────────────────────────
   // MUST be the app name — defined once here, never hardcoded elsewhere
   static const String root = 'AIVoiceGenie';
@@ -27,6 +46,7 @@ class FirebaseCollections {
   static const String conversations = 'Conversations';
   static const String messages = 'ModelMessages';
   static const String apiKeys = 'UsersAPIKeys';
+  static const String registeredAccounts = 'RegisteredAccounts';
 
   // ── Firestore Path Builders ───────────────────────────────────────────────
   // Use these everywhere instead of manually constructing paths.
@@ -39,6 +59,16 @@ class FirebaseCollections {
   //   AI_Voice_Genie (collection) → Users_API_Keys (doc) → {uid} (collection) → {providerId} (doc)
   //   AI_Voice_Genie (collection) → AI_Conversations (doc) → {uid} (collection) → {conversationId} (doc)
   //     → messages (collection) → {messageId} (doc)
+  static const String accountInfo = 'AccountInfo';
+
+  /// Path: AIVoiceGenie/RegisteredAccounts/{emailHash}/AccountInfo
+  ///
+  /// Permanent ledger of hashed email identities to track first-time vs returning
+  /// registrations across account deletion lifecycles without storing PII.
+  /// Strictly adheres to Firestore 4-segment alternating collection/doc path rules:
+  ///   AIVoiceGenie (col) -> RegisteredAccounts (doc) -> {emailHash} (col) -> AccountInfo (doc)
+  static String registeredAccountDoc(String emailHash) =>
+      '$root/$registeredAccounts/$emailHash/$accountInfo';
 
   /// Path: AIVoiceGenie/AllUsers/{uid}
   static String userDoc(String uid) => '$root/$users/$uid/$userModel';
@@ -46,6 +76,10 @@ class FirebaseCollections {
   /// Path: AIVoiceGenie/UsersAPIKeys/{uid}/{providerId}
   static String apiKeyDoc(String uid, String providerId) =>
       '$root/$apiKeys/$uid/$providerId';
+
+  /// Collection path for all API keys of a user:
+  /// AIVoiceGenie/UsersAPIKeys/{uid}
+  static String apiKeysCollection(String uid) => '$root/$apiKeys/$uid';
 
   /// Collection path for all conversations of a user:
   /// AI_Voice_Genie/AI_Conversations/{uid}
@@ -67,6 +101,7 @@ class FirebaseCollections {
       '$root/$conversations/$uid/$conversationId/$messages/$messageId';
 
   // ── User Document Field Names ─────────────────────────────────────────────
+  static const String fieldUid = 'uid';
   static const String fieldDisplayName = 'displayName';
   static const String fieldEmail = 'email';
   static const String fieldPhotoUrl = 'photoUrl';
@@ -82,14 +117,15 @@ class FirebaseCollections {
   static const String fieldGender = 'gender';
   static const String fieldCountry = 'country';
   static const String fieldState = 'state';
-  static const String fieldPreferredAiModel = 'preferredAiModel';
-  static const String fieldPreferredProvider = 'preferredProvider';
-  static const String fieldDailyQuotaUsed = 'dailyQuotaUsed';
-  static const String fieldDailyQuotaLimit = 'dailyQuotaLimit';
   static const String fieldNewUser = 'isNewUser';
   static const String fieldTermsAccepted = 'termsAccepted';
   static const String fieldTermsAcceptedAt = 'termsAcceptedAt';
   static const String fieldTermsVersionAccepted = 'termsVersionAccepted';
+
+  // ── Registered Accounts Document Field Names ──────────────────────────────
+  static const String fieldRegisteredAt = 'registeredAt';
+  static const String fieldRegisteredProvider = 'provider';
+  static const String fieldRegisteredUid = 'uid';
 
   // ── API Key Document Field Names ──────────────────────────────────────────
   static const String fieldApiKey = 'apiKey';
@@ -103,101 +139,88 @@ class FirebaseCollections {
   static const String fieldConversationID = 'conversationID';
   static const String fieldConversationTitle = 'title';
   static const String fieldConversationCreatedAt = 'createdAt';
-  static const String fieldConversationUpdatedAt = 'updatedAt';
   static const String fieldConversationLastMessage = 'lastMessage';
   static const String fieldConversationLastMessageAt = 'lastMessageAt';
   // Value: 'text' | 'image_gen' | 'image_read' | 'pdf_reader'
   static const String fieldConversationCapability = 'capability';
   static const String fieldConversationLastProvider = 'lastProvider';
 
-  // ── Message Pair Document Field Names ─────────────────────────────────────
-  // Each message document stores a prompt + response pair together.
-  //
-  // Document layout:
-  //   { prompt, response, modelUsed, tokenCount, contentType,
-  //     status, timestamp, imageUrl?, pdfName? }
+  // ── Message Document Field Names (Firestore & Hive) ───────────────────────
+  static const String fieldMessageID = 'messageID';
+  static const String fieldRole = 'role';
   static const String fieldPrompt = 'prompt';
   static const String fieldResponse = 'response';
+  static const String fieldRequestCapability = 'request_capability';
+  static const String fieldResponseCapability = 'response_capability';
+  static const String fieldRequestId = 'requestId';
   static const String fieldModelUsed = 'modelUsed';
   static const String fieldTokenCount = 'tokenCount';
-  // Value: 'text' | 'image_url' | 'pdf_summary' | 'voice_transcript'
-  static const String fieldContentType = 'contentType';
+  static const String fieldResponseTimeMs = 'responseTimeMs';
+  static const String fieldFinishReason = 'finishReason';
   // Value: 'delivered' | 'failed'
   static const String fieldStatus = 'status';
   static const String fieldTimestamp = 'timestamp';
   static const String fieldImageUrl = 'imageUrls';
   static const String fieldPdfName = 'pdfName';
   static const String fieldPdfInfo = 'pdfInfo';
-  static const String fieldValidProviders = 'validProviders';
   static const String fieldImageSize = 'imageSize';
   static const String fieldImageCount = 'imageCount';
   static const String fieldImageQuality = 'imageQuality';
+  static const String fieldImageBackground = 'imageBackground';
+  static const String fieldVisionDetailLevel = 'visionDetailLevel';
+  static const String fieldResponseLength = 'responseLength';
+  static const String fieldThinkingLevel = 'thinkingLevel';
+  static const String fieldMaxOutputTokens = 'maxOutputTokens';
 
-  // ── Legacy Message Field Names (used by Hive cache serialization) ─────────
-  static const String fieldMessageID = 'messageID';
-  static const String fieldMessageRole = 'role';
+  // ── Legacy Aliases (retained for backward-compatible DTO resolution) ───────
+  static const String fieldError = 'error';
+  static const String fieldMessageRole = fieldRole;
   static const String fieldMessageContent = 'content';
   static const String fieldMessageContentType = 'contentType';
-  static const String fieldMessageTimestamp = 'timestamp';
-  static const String fieldMessageModelUsed = 'modelUsed';
-  static const String fieldMessageTokenCount = 'tokenCount';
-  static const String fieldMessageStatus = 'status';
-  static const String fieldMessageImageUrl = 'imageUrls';
-  static const String fieldMessageLocalImageKey = 'localImageKey';
-  static const String fieldMessagePdfName = 'pdfName';
-  static const String fieldMessagePdfPaths = 'pdfPaths';
-  static const String fieldMessagePdfInfo = 'pdfInfo';
-  static const String fieldMessageValidProviders = 'validProviders';
+  static const String fieldMessageTimestamp = fieldTimestamp;
+  static const String fieldMessageModelUsed = fieldModelUsed;
+  static const String fieldMessageTokenCount = fieldTokenCount;
+  static const String fieldMessageStatus = fieldStatus;
+  static const String fieldMessageImageUrl = fieldImageUrl;
+  static const String fieldMessagePdfInfo = fieldPdfInfo;
 
   // ── Analytics Event Names ─────────────────────────────────────────────────
-  static const String eventAuthenticationButtonTapped =
-      'authentication_button_tapped';
+  static const String eventAuthenticateUser = 'authenticate_user';
   static const String eventUserSignedIn = 'user_signed_in';
   static const String eventUserRegistered = 'user_registered';
+  static const String eventUserAuthFailed = 'user_auth_failed';
   static const String eventUserSignedOut = 'user_signed_out';
   static const String eventAccountDeleted = 'account_deleted';
   static const String eventAiRequestInitiated = 'ai_request_initiated';
   static const String eventAiRequestSuccess = 'ai_request_success';
   static const String eventAiRequestFailed = 'ai_request_failed';
-  static const String eventAiFallbackTriggered = 'ai_fallback_triggered';
   static const String eventAiCapabilityGap = 'ai_capability_gap';
   static const String eventFeatureUsed = 'feature_used';
   static const String eventModelAdded = 'ai_model_added';
   static const String eventModelRemoved = 'ai_model_removed';
-  static const String eventModelSwitched = 'model_switched';
-  static const String eventConversationStarted = 'conversation_started';
-  static const String eventVoiceInputUsed = 'voice_input_used';
-  static const String eventVoiceOutputUsed = 'voice_output_used';
-  // Fired when the user taps the download button on a generated image.
-  // Parameters: provider, result, failure_reason, mime_type, source_type, image_count_in_message
+  // Fired when the user taps download on an AI-generated image.
   static const String eventGeneratedImageDownload = 'generated_image_download';
+  // Fired when the user taps download on an AI-compiled PDF document.
+  static const String eventGeneratedPdfDownload = 'generated_pdf_download';
 
   // ── Analytics Parameter Names ─────────────────────────────────────────────
   static const String paramAuthProvider = 'auth_provider';
-  static const String paramModelAttempted = 'model_attempted';
+  static const String paramAuthErrorCode = 'error_code';
   static const String paramModelUsed = 'model_used';
   static const String paramCapability = 'request_capability';
   static const String paramFailureType = 'failure_type';
   static const String paramFailureReason = 'failure_reason';
-  static const String paramFromModel = 'from_model';
-  static const String paramToModel = 'to_model';
-  static const String paramReason = 'reason';
   static const String paramFeature = 'feature';
   static const String paramResponseTimeMs = 'response_time_ms';
-  static const String paramTokenCount = 'token_count';
-  static const String paramModelName = 'model_name';
-  static const String paramModelFeatures = 'model_features';
   static const String paramUserId = 'user_id';
   static const String paramUserEmail = 'user_email';
 
   /// Shared request ID linking initiated/success/failure events to the usage event.
   static const String paramRequestId = 'request_id';
-  // Image download event parameters (safe — no URL or prompt text)
+  // Download event parameters (safe — no URL, prompt text, or PII)
   static const String paramDownloadResult = 'result';
   static const String paramDownloadFailureReason = 'failure_reason';
-  static const String paramDownloadMimeType = 'mime_type';
-  static const String paramDownloadSourceType = 'source_type';
-  static const String paramImageCountInMessage = 'image_count_in_message';
+  static const String paramFileSizeBytes = 'file_size_bytes';
 
   // ── Usage Tracking Collection Names ───────────────────────────────────────
   static const String usageEvents = 'usageEvents';
@@ -237,6 +260,7 @@ class FirebaseCollections {
   static const String usageFieldInputTokens = 'inputTokens';
   static const String usageFieldOutputTokens = 'outputTokens';
   static const String usageFieldTotalTokens = 'totalTokens';
+  static const String usageFieldLifetimeTotalTokens = 'lifetimeTotalTokens';
   static const String usageFieldImageCount = 'imageCount';
   static const String usageFieldPdfCount = 'pdfCount';
   static const String usageFieldEstimatedCostUsd = 'estimatedCostUsd';
@@ -248,8 +272,61 @@ class FirebaseCollections {
   static const String summaryFieldRequestCount = 'requestCount';
   static const String summaryFieldEstimatedCostUsd = 'estimatedCostUsd';
 
+  /// Last 6 characters of the API key that built this summary document.
+  /// Used to detect key rotation: when the active key's hint differs from this
+  /// stored value, the summary counters are reset so the new key starts with
+  /// fresh budget telemetry that reflects the new Google billing account.
+  static const String summaryFieldKeyHint = 'keyHint';
+
   // ── Budget Field Names ───────────────────────────────────────────────────
   static const String budgetFieldMonthlyBudgetUsd = 'monthlyBudgetUsd';
-  static const String budgetFieldEnabled = 'enabled';
   static const String budgetFieldAlreadyUsedUsd = 'alreadyUsedUsd';
+
+  // ── Cloud Storage Path Builders & Constants ───────────────────────────────
+  // Scoped strictly under users/{uid}/conversations/{conversationId}/ to unify
+  // all media attachments and AI outputs per conversation.
+  static const String storageUsers = 'users';
+  static const String storageConversations = 'conversations';
+  static const String storageImages = 'images';
+  static const String storagePdfs = 'pdfs';
+  static const String storageGenerated = 'generated';
+
+  /// Path to a conversation's root storage directory:
+  /// users/{uid}/conversations/{conversationId}
+  static String storageConversationDir(String uid, String conversationId) =>
+      '$storageUsers/$uid/$storageConversations/$conversationId';
+
+  /// Path to a user-uploaded image:
+  /// users/{uid}/conversations/{conversationId}/images/{fileName}
+  static String storageImagePath(
+          String uid, String conversationId, String fileName) =>
+      '${storageConversationDir(uid, conversationId)}/$storageImages/$fileName';
+
+  /// Path to a user-uploaded PDF:
+  /// users/{uid}/conversations/{conversationId}/pdfs/{fileName}
+  static String storagePdfPath(
+          String uid, String conversationId, String fileName) =>
+      '${storageConversationDir(uid, conversationId)}/$storagePdfs/$fileName';
+
+  /// Path to an AI-generated image:
+  /// users/{uid}/conversations/{conversationId}/generated/{fileName}
+  static String storageGeneratedImagePath(
+          String uid, String conversationId, String fileName) =>
+      '${storageConversationDir(uid, conversationId)}/$storageGenerated/$fileName';
+
+  /// Path to an AI-generated PDF document:
+  /// users/{uid}/conversations/{conversationId}/pdfs/{fileName}
+  static String storageGeneratedPdfPath(
+          String uid, String conversationId, String fileName) =>
+      '${storageConversationDir(uid, conversationId)}/$storagePdfs/$fileName';
+
+  // ── Cloud Storage Custom Metadata Keys ────────────────────────────────────
+  static const String storageMetaUploadedBy = 'uploadedBy';
+  static const String storageMetaGeneratedBy = 'generatedBy';
+  static const String storageMetaConversationId = 'conversationId';
+  static const String storageMetaOriginalName = 'originalName';
+  static const String storageMetaUploadedAt = 'uploadedAt';
+  static const String storageMetaGeneratedAt = 'generatedAt';
+  static const String storageMetaType = 'type';
+  static const String storageMetaTypeAiGenerated = 'ai_generated';
 }

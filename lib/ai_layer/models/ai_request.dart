@@ -8,56 +8,14 @@ import '../../core/enums/app_enums.dart';
 /// can handle the request, then passes the full object to the
 /// selected adapter.
 ///
-/// Only [capability], [uid], and [prompt] are always required.
+/// Only [capability] and [prompt] are always required.
 /// Other fields are capability-specific — the adapter reads only
 /// what it needs and ignores the rest.
-///
-/// Usage:
-/// ```dart
-/// // Text chat
-/// final request = AiRequest(
-///   capability: AiCapability.textGeneration,
-///   uid: authProvider.currentUser!.uid,
-///   prompt: 'Explain quantum computing',
-///   conversationHistory: previousMessages,
-/// );
-///
-/// // Image generation
-/// final request = AiRequest(
-///   capability: AiCapability.imageGeneration,
-///   uid: uid,
-///   prompt: 'A red fox sitting in a snowy forest',
-///   imageSize: AiImageSize.square,
-///   imageQuality: ImageQuality.Low,
-///   imageCount: 1,
-/// );
-///
-/// // Image understanding
-/// final request = AiRequest(
-///   capability: AiCapability.imageUnderstanding,
-///   uid: uid,
-///   prompt: 'What is in this image?',
-///   imageBytes: jpegBytes,
-///   imageMimeType: 'image/jpeg',
-/// );
-///
-/// // PDF parsing
-/// final request = AiRequest(
-///   capability: AiCapability.pdfParsing,
-///   uid: uid,
-///   prompt: 'Summarise this document',
-///   pdfBytes: ['base64...'],
-///   pdfNames: ['report.pdf'],
-/// );
-/// ```
 class AiRequest {
   // ── Always Required ────────────────────────────────────────────────────────
 
   /// The AI capability being requested — drives provider selection
   final AiCapability capability;
-
-  /// Firebase UID of the requesting user — used to look up their API key
-  final String uid;
 
   /// The user's prompt or question
   final String prompt;
@@ -70,18 +28,14 @@ class AiRequest {
 
   // ── Image Understanding (Vision) ─────────────────────────────────────────
 
-  /// Raw image bytes — used for single-image imageUnderstanding capability.
-  /// Deprecated in favour of [visionAttachments] for multi-image support;
-  /// kept for backward compatibility with Gemini / Claude single-image flow.
+  /// Raw image bytes — used for imageUnderstanding capability.
   final List<Uint8List>? imageBytes;
 
   /// MIME type of the image — e.g. 'image/jpeg', 'image/png'.
-  /// Used when [imageBytes] is set (single-image legacy path).
   final String? imageMimeType;
 
-  /// Detail level for image vision requests — maps to OpenAI's `detail` field.
-  /// Gemini and Claude ignore this parameter (they do not expose a detail flag).
-  final VisionDetailLevel visionDetailLevel;
+  /// Detail level for image vision requests (OpenAI only).
+  final VisionDetailLevel? visionDetailLevel;
 
   // ── Image Generation ───────────────────────────────────────────────────────
 
@@ -106,35 +60,47 @@ class AiRequest {
   final List<String>? pdfNames;
 
   /// The user's preferred response length/max tokens.
-  final ResponseLength responseLength;
+  final ResponseLength? responseLength;
+
+  /// The user's preferred thinking / reasoning level for Gemini 3.8 Flash.
+  final GeminiThinkingLevel? thinkingLevel;
+
+  /// The user's preferred aspect ratio for Gemini image generation (1:1, 16:9, 9:16).
+  final GeminiAspectRatio? geminiAspectRatio;
+
+  /// When true, disables Google Search Grounding for internal helper tasks
+  /// (such as title generation or image prompt synthesis) to reduce latency and quota consumption.
+  final bool disableSearchGrounding;
 
   // ── Request Metadata ───────────────────────────────────────────────────────
 
-  /// Unique request ID — used for deduplication and logging
+  /// Unique request ID — used for correlation across logging, analytics, and usage tracking
   final String requestId;
 
-  /// Timestamp when the request was created
-  final DateTime createdAt;
-
+  /// Creates a unified [AiRequest] instance.
+  ///
+  /// Flow:
+  /// - [requestId] coordinates tracking across optimistic UI rendering, provider API calls,
+  ///   analytics events, and outbox synchronization.
   AiRequest({
     required this.capability,
-    required this.uid,
     required this.prompt,
+    String? requestId,
     this.conversationHistory = const [],
     this.imageBytes,
     this.imageMimeType,
-    this.visionDetailLevel = VisionDetailLevel.auto,
-    this.responseLength = ResponseLength.balanced,
-    this.imageSize = AiImageSize.square,
-    this.imageQuality = ImageQuality.low,
-    this.imageCount = 1,
-    this.imageBackground = ImageGenerateBackground.auto,
+    this.visionDetailLevel,
+    this.responseLength,
+    this.thinkingLevel,
+    this.geminiAspectRatio,
+    this.imageSize,
+    this.imageQuality,
+    this.imageCount,
+    this.imageBackground,
     this.pdfBytes,
     this.pdfNames,
-    String? requestId,
-    DateTime? createdAt,
-  })  : requestId = requestId ?? _generateId(),
-        createdAt = createdAt ?? DateTime.now();
+    this.disableSearchGrounding = false,
+  }) : requestId = requestId ?? '';
 
   /// Estimated token count of the prompt + history.
   ///
@@ -149,10 +115,7 @@ class AiRequest {
     return (charCount / 4).ceil();
   }
 
-  static String _generateId() =>
-      DateTime.now().millisecondsSinceEpoch.toString();
-
   @override
-  String toString() => 'AiRequest(capability: ${capability.id}, uid: $uid, '
+  String toString() => 'AiRequest(capability: ${capability.id}, '
       'requestId: $requestId, estimatedTokens: $estimatedTokenCount)';
 }

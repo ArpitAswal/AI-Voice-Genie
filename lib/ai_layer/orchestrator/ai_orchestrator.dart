@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../core/constants/app_constants.dart';
@@ -5,6 +7,7 @@ import '../../core/enums/app_enums.dart';
 import '../../core/error/ai_exception.dart';
 import '../../core/error/effect_bus.dart';
 import '../../core/services/analytics_service.dart';
+import '../../features/key_setup/domain/api_key_model.dart';
 import '../../features/key_setup/domain/api_key_repository.dart';
 import '../../features/key_setup/data/api_key_repository_impl.dart';
 import '../../features/usage/data/usage_cost_estimator.dart';
@@ -39,7 +42,6 @@ import '../registry/provider_registry.dart';
 /// final response = await AiOrchestrator.instance.execute(
 ///   request: AiRequest(
 ///     capability: AiCapability.textGeneration,
-///     uid: authProvider.currentUser!.uid,
 ///     prompt: userMessage,
 ///     conversationHistory: history,
 ///   ),
@@ -50,7 +52,26 @@ class AiOrchestrator {
   // Singleton — one orchestrator for the entire app
   static final AiOrchestrator instance = AiOrchestrator._();
 
-  AiOrchestrator._();
+  /// Cached UID of the active authenticated user.
+  /// Initialized once on startup and updated via authStateChanges so it is not
+  /// rechecked on every execute call.
+  static String currentUid = '';
+
+  AiOrchestrator._() {
+    _initAuth();
+  }
+
+  void _initAuth() {
+    try {
+      currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      FirebaseAuth.instance.authStateChanges().listen((user) {
+        currentUid = user?.uid ?? '';
+      });
+    } catch (e) {
+      // Gracefully handled for headless unit testing environments
+      debugPrint('ℹ️ AiOrchestrator: Auth listener skipped ($e)');
+    }
+  }
 
   // ── Dependencies ───────────────────────────────────────────────────────────
 
@@ -80,12 +101,26 @@ class AiOrchestrator {
     required AiRequest request,
     required AiProviderId selectedProvider,
   }) async {
-    debugPrint(
-      '🎯 Orchestrator: ${selectedProvider.displayName}, ${request.capability.id}, '
-      '[requestId: ${request.requestId}]',
-    );
+    // Step 1: Capability Guard.
+    // Fail fast if the selected provider cannot perform this capability
+    // (e.g. Claude does not support image generation). Prevents unnecessary API calls.
+    if (!_registry.supports(selectedProvider, request.capability)) {
+      debugPrint(
+        '⚠️ Orchestrator: ${selectedProvider.id} does not support '
+        '${request.capability.id}',
+      );
 
+      throw AiCapabilityGapException(
+        message: 'error_selected_model_capability_gap',
+        provider: selectedProvider,
+        missingCapability: request.capability,
+      );
+    }
+
+    // Step 2: Asynchronously track initiation for valid executable requests.
+    // Wrapped in safeEffect so analytics failures never disrupt the AI flow.
     _effectBus.safeEffect(() async {
+      debugPrint('✅ The Analytics request has been initiated.');
       await _analytics.logAiRequestInitiated(
         modelAttempted: selectedProvider,
         capability: request.capability,
@@ -93,66 +128,339 @@ class AiOrchestrator {
       );
     });
 
-    // Step 1: Ensure: Fail fast if the selected provider cannot do this task.
-    if (!_registry.supports(selectedProvider, request.capability)) {
-      final error = AiCapabilityGapException(
-        message: 'error_selected_model_capability_gap',
-        provider: selectedProvider,
-        missingCapability: request.capability,
-      );
-
-      await _analytics.logAiCapabilityGap(
-        modelSelected: selectedProvider,
-        capabilityAttempted: request.capability,
-      );
-
-      debugPrint(
-        '⚠️ Orchestrator: ${selectedProvider.id} does not support '
-        '${request.capability.id}',
-      );
-
-      throw error;
-    }
-
-    // Step 3: Execute only the selected provider.
+    // Step 3: Execute single-provider workflow with automatic transient retry.
     try {
-      return await _executeWithRetry(
+      final response = await _executeWithRetry(
         request: request,
         providerId: selectedProvider,
       );
+
+      // Track successful completion with response latency
+      _effectBus.safeEffect(() async {
+        debugPrint('✅ The Analytics request has been completed.');
+        await _analytics.logAiRequestSuccess(
+          modelUsed: selectedProvider,
+          capability: request.capability,
+          responseTimeMs: response.responseTimeMs,
+          requestId: request.requestId,
+        );
+      });
+
+      return response;
     } on AiException catch (e) {
-      await _analytics.logAiRequestFailed(
+      // Step 3a: Track AI failure event in analytics
+      _effectBus.safeEffect(() async {
+        debugPrint('⚠️The Analytics request has failed.');
+        await _analytics.logAiRequestFailed(
           modelAttempted: selectedProvider,
           capability: request.capability,
           failureType: e.failureType,
           failureReason: e.message,
-          requestId: request.requestId);
+          requestId: request.requestId,
+        );
+      });
 
+      // Step 3b: Convert transient retry-exhausted errors and rate limits to AiExhaustedException
+      // bound explicitly to the selected provider, then emit to EffectBus for global UI notification.
       if (e is AiTransientException) {
         final exhaustedError = AiExhaustedException(
-          message: 'server_busy',
-          triedProviders: [selectedProvider],
+          message: e.message,
+          provider: selectedProvider,
         );
         _effectBus.emit(exhaustedError, StackTrace.current);
         throw exhaustedError;
       } else if (e is AiRateLimitException) {
         final exhaustedError = AiExhaustedException(
-          message: 'error_quota_exceeded',
-          triedProviders: [selectedProvider],
+          message: e.message,
+          provider: selectedProvider,
         );
         _effectBus.emit(exhaustedError, StackTrace.current);
         throw exhaustedError;
       }
       rethrow;
+    } catch (e) {
+      // Step 3c: Catch any unexpected exceptions, convert to AiHardErrorException, and log
+      final hardError = AiHardErrorException(
+        message: 'something_went_wrong',
+        provider: selectedProvider,
+      );
+      _effectBus.safeEffect(() async {
+        debugPrint('❌ The Analytics request has failed.');
+        await _analytics.logAiRequestFailed(
+          modelAttempted: selectedProvider,
+          capability: request.capability,
+          failureType: hardError.failureType,
+          failureReason: e.toString(),
+          requestId: request.requestId,
+        );
+      });
+      throw hardError;
     }
+  }
+
+  // ── Prompt Synthesis Helpers ────────────────────────────────────────────────
+
+  /// Synthesizes the previous conversation context and the user's latest follow-up request
+  /// into a single, cohesive, self-contained visual prompt for image generation models.
+  ///
+  /// Used for multi-turn image generation continuity (Option A).
+  /// Fails silently by returning null so callers can fall back to the raw prompt without errors.
+  Future<String?> synthesizeImagePrompt({
+    required String currentPrompt,
+    required List<Map<String, String>> conversationHistory,
+    required AiProviderId provider,
+  }) async {
+    final trimmed = currentPrompt.trim();
+    if (trimmed.isEmpty) return null;
+    if (conversationHistory.isEmpty) return trimmed;
+
+    if (!_registry.supports(provider, AiCapability.textGeneration)) {
+      return null;
+    }
+
+    final adapter = _adapters[provider];
+    if (adapter == null) return null;
+
+    String apiKey;
+    try {
+      apiKey = await _getOrValidateApiKey(provider);
+    } catch (e) {
+      debugPrint(
+          '⚠️ AiOrchestrator: Key check failed for prompt synthesis: $e');
+      return null;
+    }
+
+    final historySnippet = conversationHistory
+        .map((entry) =>
+            '${entry['role'] == 'user' ? 'User' : 'Assistant'}: ${entry['content']}')
+        .join('\n');
+
+    final synthesisInstruction =
+        '''${AppConstants.aiImagePromptSynthesisSystemInstruction}
+
+Previous conversation:
+$historySnippet
+
+User's latest request:
+$trimmed
+
+Synthesized prompt:''';
+
+    final request = AiRequest(
+      capability: AiCapability.textGeneration,
+      prompt: synthesisInstruction,
+      responseLength: ResponseLength.short,
+      disableSearchGrounding: true,
+      thinkingLevel: GeminiThinkingLevel.low,
+    );
+
+    try {
+      final response = await adapter
+          .generateText(
+            request: request,
+            apiKey: apiKey,
+          )
+          .timeout(const Duration(seconds: 15));
+      final text = response.text?.trim();
+      if (text != null && text.isNotEmpty) {
+        final cleaned = text
+            .replaceAll(RegExp(r'^["\s]+|["\s]+$'), '')
+            .replaceAll(
+                RegExp(r'^(Prompt|Visual Prompt|Synthesized Prompt):\s*',
+                    caseSensitive: false),
+                '')
+            .trim();
+        if (cleaned.isNotEmpty) {
+          return cleaned;
+        }
+      }
+    } catch (e) {
+      debugPrint(
+          '⚠️ AiOrchestrator: Image prompt synthesis skipped (non-fatal): $e');
+    }
+    return null;
+  }
+
+  /// Synthesizes a natural, concise 3-5 word conversation title using an LLM.
+  ///
+  /// Multi-tier waterfall strategy:
+  /// 1. Dedicated Admin Gemini Key (from compile-time secrets.json / environment):
+  ///    Provides free, high-speed title generation for all users without consuming user BYOK quotas.
+  /// 2. User's BYOK Gemini key (if configured in user settings).
+  /// 3. User's active conversation provider (e.g. OpenAI or Claude).
+  ///
+  /// Fails silently by returning null so callers retain their initial fallback title.
+  Future<String?> generateConversationTitle({
+    required String prompt,
+    required AiProviderId provider,
+  }) async {
+    final trimmed = prompt.trim();
+    if (trimmed.isEmpty) return null;
+
+    // 1. Highest priority: Dedicated Admin Gemini Key (from secrets.json / environment)
+    if (AppConstants.adminGeminiApiKey.trim().isNotEmpty) {
+      final title = await _synthesizeWithAdapter(
+        provider: AiProviderId.gemini,
+        apiKey: AppConstants.adminGeminiApiKey.trim(),
+        prompt: trimmed,
+      );
+      if (title != null && title.isNotEmpty) return title;
+    }
+
+    // 2. Second priority: User's BYOK Gemini key if available
+    try {
+      final geminiKey = await _getOrValidateApiKey(AiProviderId.gemini);
+      if (geminiKey.isNotEmpty) {
+        final title = await _synthesizeWithAdapter(
+          provider: AiProviderId.gemini,
+          apiKey: geminiKey,
+          prompt: trimmed,
+        );
+        if (title != null && title.isNotEmpty) return title;
+      }
+    } catch (_) {
+      // User has no Gemini key configured; proceed to active provider
+    }
+
+    // 3. Third priority: User's active conversation provider (e.g. OpenAI / Claude)
+    if (provider != AiProviderId.gemini) {
+      try {
+        final activeKey = await _getOrValidateApiKey(provider);
+        if (activeKey.isNotEmpty) {
+          final title = await _synthesizeWithAdapter(
+            provider: provider,
+            apiKey: activeKey,
+            prompt: trimmed,
+          );
+          if (title != null && title.isNotEmpty) return title;
+        }
+      } catch (e) {
+        debugPrint(
+            '⚠️ AiOrchestrator: Active provider title synthesis failed: $e');
+      }
+    }
+
+    return null;
+  }
+
+  /// Helper to execute title synthesis on a specific provider and adapter with fast 5s timeout and failover.
+  Future<String?> _synthesizeWithAdapter({
+    required AiProviderId provider,
+    required String apiKey,
+    required String prompt,
+  }) async {
+    if (!_registry.supports(provider, AiCapability.textGeneration)) return null;
+
+    final adapter = _adapters[provider];
+    if (adapter == null) return null;
+
+    final trimmedPrompt = prompt.trim();
+    if (trimmedPrompt.isEmpty) return null;
+
+    final titleInstruction =
+        '''${AppConstants.aiTitleSynthesisSystemInstruction}
+
+User prompt:
+$trimmedPrompt
+
+Title:''';
+
+    final request = AiRequest(
+      capability: AiCapability.textGeneration,
+      prompt: titleInstruction,
+      responseLength: ResponseLength.short,
+      disableSearchGrounding: true,
+      thinkingLevel: GeminiThinkingLevel.low,
+    );
+
+    try {
+      final response = await adapter
+          .generateText(
+            request: request,
+            apiKey: apiKey,
+          )
+          .timeout(const Duration(seconds: 10));
+      final text = response.text?.trim();
+      if (text != null && text.isNotEmpty) {
+        final cleaned = text
+            .replaceAll(RegExp(r'^["\s]+|["\s.]+$'), '')
+            .replaceAll(
+                RegExp(r'^(Title|Subject|Topic):\s*', caseSensitive: false),
+                '')
+            .trim();
+        if (cleaned.isNotEmpty) {
+          return cleaned.length > 50
+              ? cleaned.substring(0, 50).trim()
+              : cleaned;
+        }
+      }
+    } on TimeoutException catch (e) {
+      debugPrint(
+          '⚠️ AiOrchestrator: Title synthesis timeout on ${provider.displayName}: $e');
+    } on AiTransientException catch (e) {
+      debugPrint(
+          '⚠️ AiOrchestrator: Title synthesis transient error on ${provider.displayName}: $e');
+    } catch (e) {
+      debugPrint(
+          '⚠️ AiOrchestrator: Title synthesis failed on ${provider.displayName}: $e');
+    }
+    return null;
+  }
+
+  // ── Private: Key Retrieval & Validation ───────────────────────────────────
+
+  /// Retrieves and validates the API key for [providerId] from the repository or memory cache.
+  ///
+  /// Throws [AiException] if the key is missing, network is down, or retrieval fails.
+  Future<String> _getOrValidateApiKey(AiProviderId providerId) async {
+    Map<AiProviderId, ApiKeyModel> keys;
+    try {
+      keys = await _keyRepository.loadKeys(
+        uid: currentUid,
+        providerId: providerId,
+      );
+    } on ApiKeyException catch (e) {
+      if (e.code == ApiKeyErrorCodes.noInternet) {
+        throw AiTransientException(
+          message: 'no_internet_connection',
+          provider: providerId,
+        );
+      }
+      throw AiHardErrorException(
+        message: e.code,
+        provider: providerId,
+      );
+    } catch (e) {
+      throw AiHardErrorException(
+        message: 'something_went_wrong',
+        provider: providerId,
+      );
+    }
+
+    final keyModel = keys[providerId];
+    if (keyModel == null || keyModel.apiKey.trim().isEmpty) {
+      debugPrint('⚠️ Orchestrator: no key found for ${providerId.id}');
+      throw AiHardErrorException(
+        message: 'error_no_models_with_key',
+        provider: providerId,
+      );
+    }
+
+    return keyModel.apiKey.trim();
   }
 
   // ── Private: Execute with Retry ────────────────────────────────────────────
 
   /// Execute a request on a specific provider with transient retry logic.
   ///
-  /// Retries up to [AppConstants.maxRetryAttempts] times for transient errors.
-  /// Adds exponential backoff between retries.
+  /// Flow:
+  /// 1. Fetches the provider's API key from repository (memory cache or Firestore).
+  /// 2. If no key is found, throws [AiHardErrorException].
+  /// 3. Executes the provider adapter within a retry loop:
+  ///    - [AiHardErrorException]: Never retried (invalid key, bad prompt).
+  ///    - [AiRateLimitException]: Never retried on the same provider (quota exhausted).
+  ///    - [AiTransientException]: Retried up to [AppConstants.maxRetryAttempts] with exponential backoff.
+  /// 4. Dispatches asynchronous usage recording via [_saveUsageEvent] without blocking return.
   Future<AiResponse> _executeWithRetry({
     required AiRequest request,
     required AiProviderId providerId,
@@ -160,93 +468,63 @@ class AiOrchestrator {
     final adapter = _adapters[providerId]!;
     int attempt = 0;
 
-    // Retrieve API key from Firestore (uses local cache after first read)
-    final keyModel = await _keyRepository.loadKey(
-      uid: request.uid,
-      providerId: providerId,
-    );
-
-    if (keyModel == null || keyModel.apiKey.isEmpty) {
-      // Key was deleted mid-session — treat as unavailable
-      debugPrint(
-        '⚠️ Orchestrator: no key found for ${providerId.id}',
-      );
-      throw AiHardErrorException(
-        message: 'error_no_models_with_key',
-        provider: providerId,
-      );
-    }
+    // Retrieve API key from repository (short-circuits to local cache if present)
+    final apiKey = await _getOrValidateApiKey(providerId);
 
     while (true) {
       attempt++;
 
       try {
-        debugPrint(
-          '▶️ Orchestrator: attempt $attempt on ${providerId.id}',
-        );
-
+        // Execute request against provider adapter
         final response = await adapter.execute(
           request: request,
-          apiKey: keyModel.apiKey,
+          apiKey: apiKey,
         );
 
-        _effectBus.safeEffect(() async {
-          await _analytics.logAiRequestSuccess(
-            modelUsed: providerId,
-            capability: request.capability,
-            responseTimeMs: response.responseTimeMs,
-            tokenCount: response.tokenCount,
-            requestId: request.requestId,
-          );
-        });
-
-        // Fire-and-forget usage tracking — must never block the AI response
+        // Fire-and-forget usage tracking — must never block returning the AI response to UI
         _effectBus.safeEffect(() async {
           _saveUsageEvent(
-              uid: request.uid, request: request, response: response);
+            uid: currentUid,
+            request: request,
+            response: response,
+            apiKey: apiKey,
+          );
         });
-
-        debugPrint(
-          '✅ Orchestrator: success on ${providerId.id}, '
-          'completion time (${response.responseTimeMs}ms)',
-        );
-
         return response;
       } on AiHardErrorException {
-        // Hard errors are never retried
+        // Hard errors are permanent (e.g. invalid key, bad parameters) — never retried
         rethrow;
       } on AiRateLimitException {
-        // Rate limits are never retried on the same provider
+        // Rate limits are exhausted quotas — never retried on the same provider
         rethrow;
       } on AiTransientException {
+        // Transient errors (network blips, 503 engine overload) are retried with backoff
         if (attempt >= AppConstants.maxRetryAttempts) {
-          // Retries exhausted — surface failure for the selected provider.
-          debugPrint("🔄 Maximum orchestra retry attempts reached");
+          // Maximum retries reached — rethrow to surface failure
           rethrow;
         }
 
-        // Exponential backoff: 500ms, then 1000ms
+        // Exponential backoff: 500ms on 1st retry, 1000ms on 2nd retry
         final delayMs = 500 * attempt;
-        debugPrint(
-          '🔄 Orchestrator: retry $attempt in ${delayMs}ms '
-          '[${providerId.id}]',
-        );
         await Future.delayed(Duration(milliseconds: delayMs));
+      } catch (e) {
+        throw AiHardErrorException(
+          message: 'something_went_wrong',
+          provider: providerId,
+        );
       }
     }
-  }
-
-  // ── Injectable Adapters (for testing) ─────────────────────────────────────
-
-  /// Replace an adapter — used in tests to inject mock adapters.
-  @visibleForTesting
-  void injectAdapter(AiProviderId providerId, AiProviderAdapter adapter) {
-    _adapters[providerId] = adapter;
   }
 
   // ── Usage Tracking ─────────────────────────────────────────────────────────
 
   /// Records usage data to Firestore after every successful AI request.
+  ///
+  /// Derives a [keyHint] — the last 6 characters of the active [apiKey] — to
+  /// enable key-rotation detection in [UsageFirestoreDao]. When the hint stored
+  /// in `usageSummaries` differs from the incoming hint, the DAO atomically
+  /// resets budget counters so the new key's Google billing account starts
+  /// tracking from zero, while preserving the user's budget cap preference.
   ///
   /// This is a fire-and-forget call — any failure is silently logged and
   /// never propagates back to the AI response caller.
@@ -254,21 +532,18 @@ class AiOrchestrator {
     required String uid,
     required AiRequest request,
     required AiResponse response,
+    required String apiKey,
   }) async {
-    debugPrint(
-        '📊 Orchestrator: _saveUsageEvent called for ${response.modelUsed.id}');
     try {
-      final summary =
-          await _usageRepo.getSummary(uid: uid, provider: response.modelUsed);
-      if (summary == null || !summary.enabled) {
-        debugPrint(
-            '📊 Orchestrator: Skipping usage event — usage tracking not enabled for ${response.modelUsed.id}');
-        return;
-      }
       final now = DateTime.now();
       final monthKey = UsageEventModel.monthKeyFrom(now);
       final capability = request.capability;
 
+      // Derive non-secret key fingerprint: last 6 characters of the raw API key.
+      // 6 chars of a 39–51 char key cannot be reversed or used to reconstruct the original.
+      final keyHint = apiKey.length >= 6 ? apiKey.substring(apiKey.length - 6) : null;
+
+      // Attachment count determination based on capability requested
       final imageCount = (capability == AiCapability.imageGeneration)
           ? (request.imageCount ?? 1)
           : 0;
@@ -276,6 +551,7 @@ class AiOrchestrator {
           ? (request.pdfBytes?.length ?? 0)
           : 0;
 
+      // Calculate financial expenditure based on pricing table and token metrics
       final estimatedCost = UsageCostEstimator.estimate(
         provider: response.modelUsed,
         capability: capability,
@@ -285,13 +561,19 @@ class AiOrchestrator {
         imageQuality: request.imageQuality ?? ImageQuality.low,
       );
 
+      // Event document ID: uses request.requestId (UUID v4) directly for 1:1 message
+      // correlation and write idempotency, avoiding redundant timestamp string concatenation.
+      final eventId = request.requestId.isNotEmpty
+          ? request.requestId
+          : '${response.modelUsed.id}_${now.millisecondsSinceEpoch}';
+
       final event = UsageEventModel(
-        id: '${request.requestId}_${now.millisecondsSinceEpoch}',
+        id: eventId,
         provider: response.modelUsed,
         model:
             UsagePricingTable.modelName(response.modelUsed, request.capability),
         capability: capability,
-        requestId: request.requestId,
+        requestId: request.requestId.isNotEmpty ? request.requestId : eventId,
         inputTokens: response.inputTokens,
         outputTokens: response.outputTokens,
         totalTokens: response.tokenCount,
@@ -300,9 +582,14 @@ class AiOrchestrator {
         estimatedCostUsd: estimatedCost,
         createdAt: now,
         monthKey: monthKey,
+        // Key fingerprint forwarded to DAO for rotation detection in usageSummaries.
+        // NOT written into the usageEvents document — only used to compare with the
+        // stored keyHint in the provider's summary document.
+        keyHint: keyHint,
       );
 
-      // Intentionally unawaited — usage must never block the chat UI
+      // Persists the granular usage event and increments (or resets) the provider's
+      // summary counters atomically via Firestore batch without blocking chat UI.
       _usageRepo.saveEvent(uid: uid, event: event);
     } catch (e) {
       debugPrint('⚠️ Usage event construction failed (non-fatal): $e');

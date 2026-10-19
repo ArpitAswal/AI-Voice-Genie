@@ -1,8 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 
 /// Displays text with a smooth typewriter reveal animation.
@@ -36,27 +39,133 @@ class TypewriterText extends StatefulWidget {
     required this.text,
     required this.animate,
     this.style,
-    this.charsPerTick = 1,
-    this.tickDuration = const Duration(milliseconds: 40),
+    this.charsPerTick = AppConstants.typewriterCharsPerTick,
+    this.tickDuration = AppConstants.typewriterTickDuration,
     this.onTick,
+    this.onTickWithCount,
     this.onAnimationStart,
+    this.onComplete,
   });
 
   /// Called on every animation tick (each character reveal).
   /// Use this to trigger auto-scroll so the latest text stays visible.
   final VoidCallback? onTick;
 
+  /// Called on every animation tick with the current revealed character count.
+  final void Function(int visibleChars)? onTickWithCount;
+
   /// Called once when the typewriter animation begins.
   final VoidCallback? onAnimationStart;
+
+  /// Called once when the typewriter animation completes all characters.
+  final VoidCallback? onComplete;
+
+  /// Opens web links in the default browser across Android and iOS.
+  static Future<void> launchUrlSafely(String? href) async {
+    if (href == null || href.isEmpty) return;
+    try {
+      final uri = Uri.parse(href);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('⚠️ TypewriterText: Error opening link $href: $e');
+    }
+  }
+
+  /// Builds theme-aware markdown styling for the chat bubble.
+  static MarkdownStyleSheet buildMarkdownStyleSheet(
+    BuildContext context,
+    TextStyle? defaultStyle,
+  ) {
+    final textColor = defaultStyle?.color ??
+        (context.isDark ? AppColors.white : AppColors.black);
+
+    return MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+      p: defaultStyle,
+      pPadding: EdgeInsets.zero,
+      a: defaultStyle?.copyWith(
+        color: context.primaryColor,
+        decoration: TextDecoration.underline,
+        decorationColor: context.primaryColor,
+        fontWeight: FontWeight.w600,
+      ),
+      strong: defaultStyle?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: textColor,
+      ),
+      em: defaultStyle?.copyWith(
+        fontStyle: FontStyle.italic,
+        color: textColor,
+      ),
+      h1: context.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: textColor,
+      ),
+      h2: context.textTheme.titleSmall?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: textColor,
+      ),
+      h3: context.textTheme.bodyMedium?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: textColor,
+      ),
+      listBullet: defaultStyle?.copyWith(
+        fontWeight: FontWeight.bold,
+        color: textColor,
+      ),
+      listIndent: 16.0,
+      code: defaultStyle?.copyWith(
+        fontFamily: 'monospace',
+        backgroundColor: context.isDark
+            ? AppColors.white.withValues(alpha: 0.1)
+            : AppColors.black.withValues(alpha: 0.08),
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: context.isDark
+            ? AppColors.cardDark.withValues(alpha: 0.7)
+            : AppColors.cardLight.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: context.isDark ? Colors.white10 : Colors.black12,
+        ),
+      ),
+      codeblockPadding: const EdgeInsets.all(8),
+      blockquote: defaultStyle?.copyWith(
+        fontStyle: FontStyle.italic,
+        color: textColor.withValues(alpha: 0.85),
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: context.isDark
+            ? AppColors.primaryLight.withValues(alpha: 0.15)
+            : AppColors.primaryDark.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(6),
+        border: Border(
+          left: BorderSide(
+            color: context.primaryColor,
+            width: 3,
+          ),
+        ),
+      ),
+      blockquotePadding:
+          const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+    );
+  }
 
   @override
   State<TypewriterText> createState() => _TypewriterTextState();
 }
 
-class _TypewriterTextState extends State<TypewriterText> {
+class _TypewriterTextState extends State<TypewriterText>
+    with AutomaticKeepAliveClientMixin {
   Timer? _timer;
   int _visibleCount = 0;
   bool _animationDone = false;
+
+  @override
+  bool get wantKeepAlive => widget.animate && !_animationDone;
 
   @override
   void initState() {
@@ -87,6 +196,11 @@ class _TypewriterTextState extends State<TypewriterText> {
         _animationDone = true;
         _visibleCount = widget.text.length;
       }
+      updateKeepAlive();
+    } else if (oldWidget.animate && !widget.animate && !_animationDone) {
+      _timer?.cancel();
+      _animationDone = true;
+      updateKeepAlive();
     }
   }
 
@@ -102,10 +216,13 @@ class _TypewriterTextState extends State<TypewriterText> {
         if (_visibleCount >= widget.text.length) {
           _animationDone = true;
           _timer?.cancel();
+          widget.onComplete?.call();
+          updateKeepAlive();
         }
       });
-      // Notify parent to scroll after every reveal so the latest text stays visible
+      // Notify parent after every reveal so the latest text stays visible
       widget.onTick?.call();
+      widget.onTickWithCount?.call(_visibleCount);
     });
   }
 
@@ -117,30 +234,26 @@ class _TypewriterTextState extends State<TypewriterText> {
 
   @override
   Widget build(BuildContext context) {
-    // When animation is complete (or never needed), use a simple Text
-    // to avoid any ongoing StatefulWidget overhead.
-    if (_animationDone || !widget.animate) {
-      return Text(
-        widget.text,
-        style: widget.style ??
-            context.textTheme.bodySmall?.copyWith(
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-              color: context.isDark ? AppColors.white : AppColors.black,
-            ),
-      );
-    }
+    super.build(context);
 
-    // Animation in progress — show only the visible slice
-    final visibleText = widget.text.substring(0, _visibleCount);
-    return Text(
-      visibleText,
-      style: widget.style ??
-          context.textTheme.bodySmall?.copyWith(
-            height: 1.5,
-            fontWeight: FontWeight.w500,
-            color: context.isDark ? AppColors.white : AppColors.black,
-          ),
+    final defaultStyle = widget.style ??
+        context.textTheme.bodySmall?.copyWith(
+          height: 1.5,
+          fontWeight: FontWeight.w500,
+          color: context.isDark ? AppColors.white : AppColors.black,
+        );
+
+    // If animation is done or animate is false, ALWAYS render full widget.text.
+    final textToShow = (_animationDone || !widget.animate)
+        ? widget.text
+        : widget.text.substring(0, _visibleCount);
+
+    return MarkdownBody(
+      data: textToShow,
+      selectable:
+          false, // Ensures link taps are not swallowed by text selection gesture arena
+      onTapLink: (text, href, title) => TypewriterText.launchUrlSafely(href),
+      styleSheet: TypewriterText.buildMarkdownStyleSheet(context, defaultStyle),
     );
   }
 }

@@ -28,6 +28,8 @@ abstract interface class UsageRepository {
   Future<UsageSummaryModel?> getSummary({
     required String uid,
     required AiProviderId provider,
+    String? docId,
+    String? keyHint,
   });
 
   /// Loads all unified usage profiles across all providers.
@@ -50,6 +52,7 @@ abstract interface class UsageRepository {
   Future<void> disableBudget({
     required String uid,
     required AiProviderId provider,
+    String? docId,
   });
 
   /// Deletes all usage events, summaries, and budgets for a user from Firestore.

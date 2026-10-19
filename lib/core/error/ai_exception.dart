@@ -72,24 +72,37 @@ class AiCapabilityGapException extends AiException {
   }) : super(failureType: AiFailureType.capabilityGap);
 }
 
-/// Selected model exhausted — the selected model failed after retry policy.
+/// Selected model exhausted — the selected AI provider failed after exhausting
+/// all allowed transient retry attempts or hitting hard/rate-limit boundaries.
 ///
-/// Orchestrator behavior: emit via EffectBus, show global error to user.
+/// Under the single-provider execution model, we do not silently fail over to
+/// other providers. The orchestrator emits this failure via [EffectBus] and
+/// surfaces an accurate diagnostic error message for the specific selected provider.
 class AiExhaustedException extends AiException {
-  final List<AiProviderId> triedProviders;
-
+  /// Constructs an [AiExhaustedException] bound explicitly to the [provider]
+  /// that was selected and failed execution.
   const AiExhaustedException({
     required super.message,
-    required this.triedProviders,
+    required super.provider,
+    super.statusCode,
   }) : super(
-          provider: AiProviderId.openAi, // placeholder — all failed
           failureType: AiFailureType.exhausted,
         );
+
+  /// Convenience getter for callers or test suites that inspect the list of
+  /// attempted providers (returns a single-element list containing [provider]).
+  List<AiProviderId> get triedProviders => [provider];
 }
 
-/// Utility to map HTTP status codes to the correct AiException subtype.
+/// Utility to map raw HTTP status codes and error payloads to the appropriate [AiException] subtype.
 ///
-/// Called by each provider adapter in its error handler.
+/// Flow and classification:
+/// - 400: Client/parameter error or malformed request payload.
+/// - 401: Invalid or missing API key.
+/// - 403: Permission denied or geographic/regional restriction.
+/// - 413: Payload Entity Too Large (e.g., oversized PDF or high-res image batch).
+/// - 429: Rate limit or billing quota exhaustion.
+/// - 500, 502, 503, 504: Upstream server outages or temporary overload (eligible for retry).
 AiException mapHttpErrorToAiException({
   required int statusCode,
   required AiProviderId provider,
@@ -125,6 +138,13 @@ AiException mapHttpErrorToAiException({
       }
       return AiHardErrorException(
         message: 'error_permission_denied',
+        provider: provider,
+        statusCode: statusCode,
+      );
+    case 413:
+      // Request Entity Too Large - payload exceeds limits (large PDF/image)
+      return AiHardErrorException(
+        message: 'pdf_payload_too_large',
         provider: provider,
         statusCode: statusCode,
       );

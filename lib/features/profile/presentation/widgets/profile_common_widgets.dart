@@ -163,6 +163,7 @@ class ProfileListTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Color? titleColor;
+  final Color? subtitleColor;
   final Color? iconColor;
   final VoidCallback? onTap;
   final Widget? trailing;
@@ -174,6 +175,7 @@ class ProfileListTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.titleColor,
+    this.subtitleColor,
     this.iconColor,
     this.onTap,
     this.trailing,
@@ -203,7 +205,10 @@ class ProfileListTile extends StatelessWidget {
                 Text(
                   subtitle!,
                   style: context.textTheme.bodySmall?.copyWith(
-                    color: context.isDark ? AppColors.darkWarning : AppColors.lightWarning,
+                    color: subtitleColor ??
+                        (context.isDark
+                            ? AppColors.darkWarning
+                            : AppColors.lightWarning),
                     fontWeight: FontWeight.w500,
                   ),
                 ),

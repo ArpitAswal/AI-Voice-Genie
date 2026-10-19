@@ -52,13 +52,13 @@ class _ThemeSwitcher extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _ThemeOption(
-            label: context.l10n.translate('theme_light'),
+            label: context.l10n.themeLight,
             isSelected: effectiveType == ThemeType.light,
             onTap: () =>
                 context.read<ThemeProvider>().setTheme(ThemeType.light),
           ),
           _ThemeOption(
-            label: context.l10n.translate('theme_dark'),
+            label: context.l10n.themeDark,
             isSelected: effectiveType == ThemeType.dark,
             onTap: () => context.read<ThemeProvider>().setTheme(ThemeType.dark),
           ),
@@ -75,8 +75,8 @@ class _LanguagePopupButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final localeProvider = context.watch<LocaleProvider>();
     final currentLabel = localeProvider.isEnglish
-        ? context.l10n.translate('language_en')
-        : context.l10n.translate('language_hi');
+        ? context.l10n.languageEn
+        : context.l10n.languageHi;
 
     return PopupMenuButton<Locale>(
       color: ProfileUiHelpers.panelColor(context),
@@ -97,8 +97,8 @@ class _LanguagePopupButton extends StatelessWidget {
               children: [
                 Text(
                   locale.languageCode == 'en'
-                      ? context.l10n.translate('language_en')
-                      : context.l10n.translate('language_hi'),
+                      ? context.l10n.languageEn
+                      : context.l10n.languageHi,
                   style: context.textTheme.headlineSmall?.copyWith(
                     fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                     color: isActive

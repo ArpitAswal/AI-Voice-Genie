@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,7 +8,7 @@ import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/status_message_utils.dart';
-import '../../profile/domain/profile_view_model.dart';
+import '../../profile/presentation/profile_view_model.dart';
 import 'widgets/about_widgets.dart';
 import '../../profile/presentation/widgets/profile_common_widgets.dart';
 
@@ -40,10 +41,14 @@ class _AboutScreenState extends State<AboutScreen> {
     switch (result) {
       case ProfileLinkResult.opened:
         return;
+      case ProfileLinkResult.copied:
+        context.showSuccessToast(
+          '${context.l10n.copiedToClipboard}: ${AppConstants.supportEmail}',
+        );
       case ProfileLinkResult.missing:
-        context.showWarning(context.l10n.translate('link_unavailable'));
+        context.showWarning(context.l10n.linkUnavailable);
       case ProfileLinkResult.failed:
-        context.showError(context.l10n.translate('could_not_open_link'));
+        context.showError(context.l10n.couldNotOpenLink);
     }
   }
 
@@ -86,52 +91,57 @@ class _AboutScreenState extends State<AboutScreen> {
                         icon: Icons.tag_rounded,
                       ),
                       AboutStatusChip(
-                        label: context.l10n.developmentBuild,
-                        icon: Icons.construction_rounded,
-                        color: context.isDark
-                            ? AppColors.darkWarning
-                            : AppColors.lightWarning,
+                        label: kReleaseMode
+                            ? context.l10n.productionBuild
+                            : context.l10n.developmentBuild,
+                        icon: kReleaseMode
+                            ? Icons.verified_rounded
+                            : Icons.construction_rounded,
+                        color: kReleaseMode
+                            ? (context.isDark
+                                ? AppColors.darkSuccess
+                                : AppColors.lightSuccess)
+                            : (context.isDark
+                                ? AppColors.darkWarning
+                                : AppColors.lightWarning),
                       ),
                     ],
                   ),
                   const SizedBox(height: 18),
                   AboutInfoPanel(
-                    title: context.l10n.translate('about_mission_title'),
-                    body: context.l10n.translate('about_mission_body'),
+                    title: context.l10n.aboutMissionTitle,
+                    body: context.l10n.aboutMissionBody,
                     icon: Icons.auto_awesome_rounded,
                   ),
                   const SizedBox(height: 18),
                   AboutSectionCard(
-                    title: context.l10n.translate('legal'),
+                    title: context.l10n.legal,
                     children: [
                       ProfileListTile(
                         icon: Icons.privacy_tip_outlined,
                         iconColor: AppColors.grey,
                         title: context.l10n.privacyPolicy,
-                        subtitle: context.l10n.translate('read_in_app'),
+                        subtitle: context.l10n.readInApp,
                         showChevron: true,
                         onTap: () => AppRoutes.navigateTo(
-                          context, AppRoutes.privacy,
-                          arguments: {
-                            'title': context.l10n.privacyPolicy,
-                            'mdFileName': 'legal/privacy_policy.md'
-                          }
-                        ),
+                            context, AppRoutes.privacy, arguments: {
+                          'title': context.l10n.privacyPolicy,
+                          'mdFileName': 'legal/privacy_policy.md'
+                        }),
                       ),
                       const AboutDivider(),
                       ProfileListTile(
-                        icon: Icons.description_outlined,
-                        iconColor: AppColors.grey,
-                        title: context.l10n.termsOfService,
-                        subtitle: context.l10n.translate('read_in_app'),
-                        showChevron: true,
-                        onTap: () => AppRoutes.navigateTo(context,
-                            AppRoutes.terms,
-                        arguments: {
-                          'title': context.l10n.termsOfService,
-                          'mdFileName': 'legal/terms_of_service.md',
-                        })
-                      ),
+                          icon: Icons.description_outlined,
+                          iconColor: AppColors.grey,
+                          title: context.l10n.termsOfService,
+                          subtitle: context.l10n.readInApp,
+                          showChevron: true,
+                          onTap: () => AppRoutes.navigateTo(
+                                  context, AppRoutes.terms,
+                                  arguments: {
+                                    'title': context.l10n.termsOfService,
+                                    'mdFileName': 'legal/terms_of_service.md',
+                                  })),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -141,10 +151,10 @@ class _AboutScreenState extends State<AboutScreen> {
                       ProfileListTile(
                         icon: Icons.support_agent_rounded,
                         iconColor: AppColors.grey,
-                        title: context.l10n.translate('contact_support'),
+                        title: context.l10n.contactSupport,
                         subtitle: AppConstants.supportEmail.isNotEmpty
                             ? AppConstants.supportEmail
-                            : context.l10n.translate('not_configured'),
+                            : context.l10n.notConfigured,
                         trailing: Icon(
                           Icons.open_in_new_rounded,
                           color: context.textTheme.bodySmall?.color
@@ -152,20 +162,22 @@ class _AboutScreenState extends State<AboutScreen> {
                           size: context.textTheme.titleLarge?.fontSize,
                         ),
                         onTap: () => _handleLinkResult(
-                          viewModel.openSupport(context.l10n.appName),
+                          viewModel.openSupport(
+                            '${context.l10n.appName} - ${context.l10n.contactSupport}',
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 18),
                   AboutSectionCard(
-                    title: context.l10n.translate('credits_attribution'),
+                    title: context.l10n.creditsAttribution,
                     children: [
                       ProfileListTile(
                         icon: Icons.inventory_2_outlined,
                         iconColor: AppColors.grey,
-                        title: context.l10n.translate('open_source_licenses'),
-                        subtitle: context.l10n.translate('view_licenses'),
+                        title: context.l10n.openSourceLicenses,
+                        subtitle: context.l10n.viewLicenses,
                         trailing: Icon(
                           Icons.open_in_new_rounded,
                           color: context.textTheme.bodySmall?.color

@@ -43,7 +43,7 @@ class ProfileHeader extends StatelessWidget {
                 if (email.isNotEmpty)
                   Text(email, style: context.textTheme.bodyMedium),
                 if (create.isNotEmpty)
-                  Text("${context.l10n.translate('active_user')}, $create",
+                  Text("${context.l10n.activeUser}, $create",
                       style: context.textTheme.bodyMedium),
                 // if (dob != null)
                 //   Text(dob.toString(), style: context.textTheme.bodyLarge),
@@ -54,6 +54,8 @@ class ProfileHeader extends StatelessWidget {
                 ] else if (state.isNotEmpty) ...[
                   Text(state, style: context.textTheme.bodyMedium)
                 ],
+                if(user?.isNewUser ?? false)
+                  Text(context.l10n.newUser)
               ]),
         ),
         const SizedBox(width: 4),

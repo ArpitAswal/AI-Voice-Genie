@@ -131,9 +131,11 @@ class SpeechGrammarFormatter {
     out = out.replaceAll(RegExp(r'\b(exclamation mark|exclamation point)\b', caseSensitive: false), '!');
     out = out.replaceAll(RegExp(r'\b(comma)\b', caseSensitive: false), ',');
     out = out.replaceAll(RegExp(r'\b(new line|next line)\b', caseSensitive: false), '\n');
-    // Fix any awkward spacing created around symbols (e.g., "word , next" -> "word, next")
-    out = out.replaceAll(RegExp(r'\s+([.,!?])'), r'\1');
-    out = out.replaceAll(RegExp(r'([.,!?])(?=[a-zA-Z0-9])'), r'\1 ');
+    // Spacing cleanup:
+    // 1. Remove extraneous whitespace before punctuation (e.g., "word  ." -> "word.")
+    out = out.replaceAllMapped(RegExp(r'\s+([.,!?])'), (m) => m[1]!);
+    // 2. Ensure standard single space after punctuation when directly followed by alphanumeric text (e.g., "word.Next" -> "word. Next")
+    out = out.replaceAllMapped(RegExp(r'([.,!?])(?=[a-zA-Z0-9])'), (m) => '${m[1]} ');
     return out;
   }
 

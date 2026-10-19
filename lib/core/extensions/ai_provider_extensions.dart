@@ -25,7 +25,23 @@ extension AiProviderColorExtension on AiProviderId {
 }
 
 extension AiProviderModelInfoExtension on AiProviderId {
-  /// Returns tailored capabilities info for Intro/Home screen
+  /// Home Screen (Discovery & Motivation):
+  /// Returns a punchy, user-focused marketing message describing what the user
+  /// can achieve with this specific AI provider rather than technical jargon.
+  String marketingPitch(AppLocalizations l10n) {
+    switch (this) {
+      case AiProviderId.openAi:
+        return l10n.openAiMarketingPitch;
+      case AiProviderId.gemini:
+        return l10n.geminiMarketingPitch;
+      case AiProviderId.claude:
+        return l10n.claudeMarketingPitch;
+    }
+  }
+
+  /// Profile Tab (AI Intelligence Section):
+  /// Returns clean bullet points highlighting active user-facing capabilities
+  /// (e.g. Image Generation, Voice Transcription, Code, Vision).
   String capabilitiesInfo(AppLocalizations l10n) {
     switch (this) {
       case AiProviderId.openAi:
@@ -37,28 +53,23 @@ extension AiProviderModelInfoExtension on AiProviderId {
     }
   }
 
-  /// Returns active models & technical specs for Manage API Keys screen
-  String technicalSpecs(AppLocalizations l10n) {
+  /// Key Setup Screen:
+  /// Returns a transparent model-to-purpose mapping so users understand
+  /// exactly which underlying model is invoked for chat, images, and audio.
+  String modelPurposes(AppLocalizations l10n) {
     switch (this) {
       case AiProviderId.openAi:
-        return l10n.openAiTechSpecs;
+        return l10n.openAiModelPurposes;
       case AiProviderId.gemini:
-        return l10n.geminiTechSpecs;
+        return l10n.geminiModelPurposes;
       case AiProviderId.claude:
-        return l10n.claudeTechSpecs;
+        return l10n.claudeModelPurposes;
     }
   }
 
-  /// Returns pricing & efficiency info for AI Intelligence / Usage screen
-  String pricingAndEfficiency(AppLocalizations l10n) {
-    switch (this) {
-      case AiProviderId.openAi:
-        return l10n.openAiPricingInfo;
-      case AiProviderId.gemini:
-        return l10n.geminiPricingInfo;
-      case AiProviderId.claude:
-        return l10n.claudePricingInfo;
-    }
-  }
+  /// Alias for [modelPurposes] to maintain backward compatibility across existing screens.
+  String technicalSpecs(AppLocalizations l10n) => modelPurposes(l10n);
+
+  /// Alias for [capabilitiesInfo] to maintain backward compatibility across existing screens.
+  String pricingAndEfficiency(AppLocalizations l10n) => capabilitiesInfo(l10n);
 }
-

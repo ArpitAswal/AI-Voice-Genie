@@ -1,17 +1,25 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
+
+import 'package:flutter/foundation.dart';
 
 import 'package:ai_voice_genie/core/constants/app_assets.dart';
 import 'package:ai_voice_genie/features/chat/domain/chat_attachment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/extensions/string_extension.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/pdf_document_service.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../shared/model/image_model.dart';
@@ -69,12 +77,44 @@ class MessageBubble extends StatelessWidget {
   bool get _canSpeakMessage =>
       !_isUser &&
       message.status != MessageStatus.failed &&
-      message.content.trim().isNotEmpty &&
+      !message.isUserCancelled &&
+      message.lastPrompt.trim().isNotEmpty &&
       (message.imageUrls == null || message.imageUrls!.isEmpty) &&
       (message.pdfInfo == null || message.pdfInfo!.isEmpty);
 
+  /// Resolves the human-readable text for a message (handles error messages, PDFs, stopped states).
+  static String resolveDisplayText(BuildContext context, MessageModel message) {
+    if (message.status == MessageStatus.failed) {
+      // Try to translate the failure reason, fallback to raw message
+      return AppLocalizations.of(context)?.translate(message.lastPrompt) ??
+          message.lastPrompt;
+    }
+    // For generated PDF messages, ensure we never render the raw markdown document in the bubble.
+    if (message.requestCapability == AiCapability.pdfGeneration &&
+        message.pdfInfo != null &&
+        message.pdfInfo!.isNotEmpty) {
+      return AppLocalizations.of(context)?.hereIsYourPdf ??
+          'Here is the required PDF as you requested.';
+    }
+    if (message.lastPrompt.trim().isEmpty &&
+        (message.isUserCancelled || message.status == MessageStatus.partial)) {
+      return AppLocalizations.of(context)?.stopResponse ?? 'Stopped';
+    }
+    return message.lastPrompt;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasImages =
+        message.imageUrls != null && message.imageUrls!.isNotEmpty;
+    final hasPdfs = message.pdfInfo != null && message.pdfInfo!.isNotEmpty;
+    final text = resolveDisplayText(context, message).trim();
+
+    // Guard: Never render a collapsed empty bubble container if there is literally nothing to display.
+    if (text.isEmpty && !hasImages && !hasPdfs) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment:
           _isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -135,8 +175,8 @@ class MessageBubble extends StatelessWidget {
           // Placing it here keeps the action row compact and accessible.
           ttsButton: _canSpeakMessage
               ? TtsPlaybackButton(
-                  messageId: message.id,
-                  messageContent: message.content,
+                  messageId: message.messageId,
+                  messageContent: message.lastPrompt,
                   isTablet: isTablet,
                 )
               : null,
@@ -148,9 +188,9 @@ class MessageBubble extends StatelessWidget {
 
   /// Copies the text content to clipboard and shows a toast
   void _copyToClipboard(BuildContext context) {
-    Clipboard.setData(ClipboardData(text: message.content));
+    Clipboard.setData(ClipboardData(text: message.lastPrompt));
     context.showSuccessToast(
-      AppLocalizations.of(context)!.translate('copied_to_clipboard'),
+      context.l10n.copiedToClipboard,
     );
   }
 }
@@ -183,6 +223,18 @@ class _MessageTimestampRow extends StatelessWidget {
             message.timestamp.toTimeString,
             style: context.textTheme.bodySmall,
           ),
+          // For AI messages stopped by user, display a subtle Stopped badge
+          if (!_isUser && message.isUserCancelled) ...[
+            const SizedBox(width: 4),
+            Text(
+              '• ${AppLocalizations.of(context)?.responseStopped ?? "Stopped"}',
+              style: context.textTheme.bodySmall?.copyWith(
+                color:
+                    context.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                fontSize: 11,
+              ),
+            ),
+          ],
           // For user messages, display a status indicator (sending/delivered/failed)
           if (_isUser) ...[
             const SizedBox(width: 4),
@@ -214,7 +266,7 @@ class _MessageBubbleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = _displayText(context).trim();
+    final text = MessageBubble.resolveDisplayText(context, message).trim();
 
     // For AI messages, use TypewriterText which animates only the latest
     // response. For user messages, always use plain Text (no animation).
@@ -227,21 +279,41 @@ class _MessageBubbleContent extends StatelessWidget {
       );
 
       if (!isUser) {
-        textWidget = Selector<ChatProvider, String?>(
-          selector: (_, p) => p.lastGeneratedMessageId,
-          builder: (_, lastId, __) {
+        textWidget = Selector<ChatProvider, bool>(
+          selector: (_, p) => p.shouldAnimateMessage(message.messageId),
+          builder: (context, shouldAnimate, _) {
+            if (!shouldAnimate) {
+              return MarkdownBody(
+                data: text,
+                selectable: false,
+                onTapLink: (text, href, title) =>
+                    TypewriterText.launchUrlSafely(href),
+                styleSheet:
+                    TypewriterText.buildMarkdownStyleSheet(context, baseStyle),
+              );
+            }
             return TypewriterText(
+              key: ValueKey('typewriter_${message.messageId}'),
               text: text,
-              animate: message.id == lastId,
+              animate: true,
               style: baseStyle,
               onTick: onTypewriterTick,
+              onTickWithCount: (count) {
+                context.read<ChatProvider>().updateRevealedLength(count);
+              },
               onAnimationStart: () {
                 final prefs = context.read<AiPreferencesProvider>();
                 if (prefs.autoTextToSpeech) {
                   context
                       .read<VoiceProvider>()
-                      .speak(text, messageId: message.id);
+                      .speak(text, messageId: message.messageId);
                 }
+              },
+              onComplete: () {
+                context
+                    .read<ChatProvider>()
+                    .markMessageAnimated(message.messageId);
+                onTypewriterTick?.call();
               },
             );
           },
@@ -254,14 +326,14 @@ class _MessageBubbleContent extends StatelessWidget {
     // Compile the children based on what attachments the message has.
     final children = <Widget>[
       // 1. If images are present, render the image grid.
-      // Only AI (non-user) image-generation responses get the download button.
+      // Both AI-generated images and user-attached images get the download button.
       if (message.imageUrls != null && message.imageUrls!.isNotEmpty)
         _ChatImage(
           images: message.imageUrls!,
           size: message.imageSize ?? AiImageSize.square,
-          // Pass metadata only for AI messages — user-attached images do not get the button.
-          messageId: isUser ? null : message.id,
-          provider: isUser ? null : (message.modelRequest?.id ?? 'unknown'),
+          messageId: message.messageId,
+          provider:
+              message.modelRequest?.id ?? (isUser ? 'user_upload' : 'unknown'),
         ),
 
       // 2. If PDFs are present, render the PDF cards.
@@ -292,16 +364,6 @@ class _MessageBubbleContent extends StatelessWidget {
           isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: children,
     );
-  }
-
-  /// Gets the localized error text if the message failed to send, or the raw content.
-  String _displayText(BuildContext context) {
-    if (message.status == MessageStatus.failed) {
-      // Try to translate the failure reason, fallback to raw message
-      return AppLocalizations.of(context)?.translate(message.content) ??
-          message.content;
-    }
-    return message.content;
   }
 }
 
@@ -398,7 +460,7 @@ Widget _buildImageWithDownload({
   required String url,
   required String imageKey,
   required String provider,
-  required int totalImages,
+  int totalImages = 1,
 }) {
   return Stack(
     children: [
@@ -407,7 +469,6 @@ Widget _buildImageWithDownload({
         imageSource: url,
         imageKey: imageKey,
         provider: provider,
-        imageCountInMessage: totalImages,
       ),
     ],
   );
@@ -463,11 +524,14 @@ class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
       }
     } else if (!url.startsWith('/') &&
         !url.startsWith('file:') &&
-        url.length > 200) {
+        url.length > 100) {
       isBase64 = true;
     }
 
     if (isBase64) {
+      // Strip any whitespace for cache key and decoding consistency
+      base64Data = base64Data.replaceAll(RegExp(r'\s+'), '');
+
       if (_base64Cache.containsKey(base64Data)) {
         setState(() {
           _decodedBytes = _base64Cache[base64Data];
@@ -494,11 +558,16 @@ class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
     }
   }
 
+  static Uint8List _decodeBase64(String data) {
+    final cleaned = data.replaceAll(RegExp(r'\s+'), '');
+    return base64Decode(base64.normalize(cleaned));
+  }
+
   Future<void> _decodeAsync(String base64Data) async {
     try {
-      final bytes = await Isolate.run(() => base64Decode(base64Data));
+      final bytes = await compute(_decodeBase64, base64Data);
       if (!mounted) return;
-      if (_base64Cache.length >= 50) {
+      if (_base64Cache.length >= 25) {
         _base64Cache.remove(_base64Cache.keys.first);
       }
       _base64Cache[base64Data] = bytes;
@@ -600,7 +669,7 @@ class _ImageFallback extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              l10n?.translate('failed_to_load_image') ?? 'Failed to load image',
+              l10n?.failedToLoadImage ?? 'Failed to load image',
               style: context.textTheme.headlineSmall?.copyWith(
                   fontSize: (gifSize * 0.1), fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
@@ -636,86 +705,275 @@ Widget _pdfView(
     ),
   );
 
-  return Container(
-    constraints: BoxConstraints(
-      minHeight: (squareView) ? 100 : 60,
+  final openButton = IconButton(
+    padding: EdgeInsets.zero,
+    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+    icon: Icon(
+      Icons.visibility_outlined,
+      color: context.isDark ? AppColors.primaryLight : AppColors.white,
+      size: 19,
     ),
-    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-    decoration: BoxDecoration(
-      color: context.isDark
-          ? AppColors.pdfBackgroundDark
-          : AppColors.pdfBackgroundLight,
+    tooltip: 'View PDF',
+    onPressed: () => _openOrDownloadPdf(context, pdfInfo),
+  );
+
+  final shareButton = (pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
+          pdfInfo.path.isNotEmpty)
+      ? IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+          icon: Icon(
+            Icons.share_outlined,
+            color: context.isDark ? AppColors.primaryLight : AppColors.white,
+            size: 18,
+          ),
+          tooltip: 'Share PDF',
+          onPressed: () => _sharePdf(context, pdfInfo),
+        )
+      : const SizedBox.shrink();
+
+  final downloadButton = (pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
+          pdfInfo.path.isNotEmpty)
+      ? IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+          icon: Icon(
+            Icons.file_download_outlined,
+            color: context.isDark ? AppColors.primaryLight : AppColors.white,
+            size: 20,
+          ),
+          tooltip: 'Download PDF',
+          onPressed: () => _downloadPdfToDevice(context, pdfInfo),
+        )
+      : const SizedBox.shrink();
+
+  final actionRow = Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      openButton,
+      const SizedBox(width: 2),
+      shareButton,
+      const SizedBox(width: 2),
+      downloadButton,
+    ],
+  );
+
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: () => _openOrDownloadPdf(context, pdfInfo),
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(
-          color: context.isDark ? Colors.black54 : Colors.white70, width: 1),
-    ),
-    child: (squareView)
-        ? Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Container(
+        constraints: BoxConstraints(
+          minHeight: (squareView) ? 100 : 60,
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        decoration: BoxDecoration(
+          color: context.isDark
+              ? AppColors.pdfBackgroundDark
+              : AppColors.pdfBackgroundLight,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: context.isDark ? Colors.black54 : Colors.white70,
+              width: 1),
+        ),
+        child: (squareView)
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      pdfView,
+                      const SizedBox(width: spacing),
+                      actionRow,
+                    ],
+                  ),
+                  const SizedBox(height: spacing / 2),
+                  Text(pdfInfo.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textTheme.bodySmall?.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: spacing / 2),
+                  if (pdfInfo.fileSizeLabel.isNotEmpty)
+                    Text(pdfInfo.fileSizeLabel,
+                        style: context.textTheme.bodySmall?.copyWith(
+                            color: Colors.white, fontWeight: FontWeight.w500))
+                ],
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   pdfView,
                   const SizedBox(width: spacing),
-                  Icon(
-                    Icons.check_circle_rounded,
-                    color: context.isDark
-                        ? AppColors.primaryLight
-                        : AppColors.white,
-                    size: 20,
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(pdfInfo.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textTheme.bodySmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500)),
+                        const SizedBox(height: spacing / 2),
+                        if (pdfInfo.fileSizeLabel.isNotEmpty)
+                          Text(pdfInfo.fileSizeLabel,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500))
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: spacing),
+                  actionRow,
                 ],
               ),
-              const SizedBox(height: spacing / 2),
-              Text(pdfInfo.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.textTheme.bodySmall?.copyWith(
-                      color: Colors.white, fontWeight: FontWeight.w500)),
-              const SizedBox(height: spacing / 2),
-              if (pdfInfo.fileSizeLabel.isNotEmpty)
-                Text(pdfInfo.fileSizeLabel,
-                    style: context.textTheme.bodySmall?.copyWith(
-                        color: Colors.white, fontWeight: FontWeight.w500))
-            ],
-          )
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              pdfView,
-              const SizedBox(width: spacing),
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(pdfInfo.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textTheme.bodySmall?.copyWith(
-                            color: Colors.white, fontWeight: FontWeight.w500)),
-                    const SizedBox(height: spacing / 2),
-                    if (pdfInfo.fileSizeLabel.isNotEmpty)
-                      Text(pdfInfo.fileSizeLabel,
-                          style: context.textTheme.bodySmall?.copyWith(
-                              color: Colors.white, fontWeight: FontWeight.w500))
-                  ],
-                ),
-              ),
-              const SizedBox(width: spacing),
-              Icon(
-                Icons.check_circle_rounded,
-                color:
-                    context.isDark ? AppColors.primaryLight : AppColors.white,
-                size: 20,
-              ),
-            ],
-          ),
+      ),
+    ),
   );
+}
+
+Future<void> _openOrDownloadPdf(
+    BuildContext context, PdfAttachmentInfo pdfInfo) async {
+  final openResult = await PdfDocumentService.instance.openPdf(pdfInfo);
+  if (openResult.type != ResultType.done && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(openResult.message.isNotEmpty
+            ? openResult.message
+            : 'Cannot open ${pdfInfo.name}'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+}
+
+Future<void> _sharePdf(BuildContext context, PdfAttachmentInfo pdfInfo) async {
+  try {
+    final safeName =
+        pdfInfo.name.endsWith('.pdf') ? pdfInfo.name : '${pdfInfo.name}.pdf';
+    final docsDir = await getApplicationDocumentsDirectory();
+    final cachedFile = File('${docsDir.path}/generated_pdfs/$safeName');
+    String? localPath;
+
+    if (await cachedFile.exists() && await cachedFile.length() > 0) {
+      localPath = cachedFile.path;
+    } else {
+      final bytes = await PdfDocumentService.instance.resolvePdfBytes(pdfInfo);
+      if (bytes != null && bytes.isNotEmpty) {
+        localPath = await PdfDocumentService.instance.savePdfLocally(
+          bytes: bytes,
+          fileName: safeName,
+        );
+      }
+    }
+
+    if (localPath != null && await File(localPath).exists()) {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile(localPath, mimeType: 'application/pdf', name: safeName)
+          ],
+          subject: pdfInfo.name,
+        ),
+      );
+      return;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Cannot share ${pdfInfo.name}: file unavailable'),
+          backgroundColor: AppColors.darkError,
+        ),
+      );
+    }
+  } catch (e) {
+    debugPrint('⚠️ Error sharing PDF: $e');
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to share PDF: $e'),
+          backgroundColor: AppColors.darkError,
+        ),
+      );
+    }
+  }
+}
+
+Future<void> _downloadPdfToDevice(
+    BuildContext context, PdfAttachmentInfo pdfInfo) async {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const SizedBox(
+            width: 14,
+            height: 14,
+            child:
+                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Downloading ${pdfInfo.name}...',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      duration: const Duration(seconds: 1),
+    ),
+  );
+
+  final bytes = await PdfDocumentService.instance.resolvePdfBytes(pdfInfo);
+  if (bytes == null || bytes.isEmpty) {
+    unawaited(AnalyticsService.instance.logPdfDownload(
+      result: 'failure',
+      fileSizeBytes: pdfInfo.fileSizeBytes,
+      failureReason: 'empty_bytes',
+    ));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download ${pdfInfo.name}'),
+          backgroundColor: AppColors.darkError,
+        ),
+      );
+    }
+    return;
+  }
+
+  final saved = await PdfDocumentService.instance.savePdfToPublicDownloads(
+    bytes: bytes,
+    fileName: pdfInfo.name,
+  );
+
+  unawaited(AnalyticsService.instance.logPdfDownload(
+    result: saved ? 'success' : 'failure',
+    fileSizeBytes: bytes.length,
+    failureReason: saved ? '' : 'save_failed',
+  ));
+
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved
+              ? 'PDF saved to Downloads (${pdfInfo.name})'
+              : 'Failed to save PDF to Downloads',
+        ),
+        backgroundColor: saved ? AppColors.darkSuccess : AppColors.darkError,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 }
 
 class _OneAttachmentView extends StatelessWidget {

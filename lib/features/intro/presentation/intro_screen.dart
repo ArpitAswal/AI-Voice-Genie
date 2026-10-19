@@ -1,4 +1,3 @@
-import 'package:ai_voice_genie/core/constants/app_constants.dart';
 import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
 import 'package:ai_voice_genie/core/localization/app_localizations.dart';
 import 'package:ai_voice_genie/core/router/app_routes.dart';
@@ -103,23 +102,26 @@ class IntroScreen extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           padding: EdgeInsets.zero,
           children: [
+            // OpenAI Intelligence Card: Displays marketing pitch and key capabilities
             _EngineCard(
-                title: AppConstants.openAiDisplayName,
-                description: context.l10n.chatGPTModelMessage,
+                title: AiProviderId.openAi.displayName,
+                description: AiProviderId.openAi.marketingPitch(context.l10n),
                 capability: AiProviderId.openAi.capabilitiesInfo(context.l10n),
                 faIcon: FontAwesomeIcons.openai,
                 gradient: AppColors.openAIGradient),
             const SizedBox(height: 16),
+            // Google Gemini Card: Highlights fast multimodal search and image creation
             _EngineCard(
-                title: AppConstants.geminiDisplayName,
-                description: context.l10n.geminiModelMessage,
+                title: AiProviderId.gemini.displayName,
+                description: AiProviderId.gemini.marketingPitch(context.l10n),
                 capability: AiProviderId.gemini.capabilitiesInfo(context.l10n),
                 faIcon: FontAwesomeIcons.gemini,
                 gradient: AppColors.geminiGradient),
             const SizedBox(height: 16),
+            // Anthropic Claude Card: Highlights expert reasoning, coding, and document analysis
             _EngineCard(
-                title: AppConstants.claudeDisplayName,
-                description: context.l10n.claudeModelMessage,
+                title: AiProviderId.claude.displayName,
+                description: AiProviderId.claude.marketingPitch(context.l10n),
                 capability: AiProviderId.claude.capabilitiesInfo(context.l10n),
                 faIcon: FontAwesomeIcons.claude,
                 gradient: AppColors.claudeGradient),
@@ -132,7 +134,7 @@ class IntroScreen extends StatelessWidget {
   Widget _buildTapToSpeak(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     // Semantic tooltip informs screen readers what this button does
-    final voiceTooltip = l10n.translate('tap_to_start_voice_chat');
+    final voiceTooltip = l10n.tapToStartVoiceChat;
 
     return Center(
       child: Column(
@@ -154,7 +156,7 @@ class IntroScreen extends StatelessWidget {
                   if (!voiceProvider.isSttAvailable ||
                       voiceProvider.isUnavailable) {
                     context.showError(
-                      l10n.translate('speech_text_unavailable'),
+                      l10n.speechTextUnavailable,
                     );
                     return;
                   }
@@ -212,7 +214,7 @@ class IntroScreen extends StatelessWidget {
             ),
           ),
           SizedBox(height: context.isTablet ? 16 : 8),
-          Text(l10n.translate('voice_assistant').toUpperCase(),
+          Text(l10n.voiceAssistant.toUpperCase(),
               style: context.textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,

@@ -5,17 +5,17 @@ enum AiProviderId {
   openAi(
     'openai',
     'ChatGPT',
-    '• Image Generation (GPT-Image-1)\n• Text, Vision & PDF Analysis (GPT-4o)',
+    '• Image Generation (GPT-Image-2.5 Flare)\n• Text, Vision & PDF Analysis (GPT-6 Luna)\n• PDF Generation (GPT-6 Luna)',
   ),
   gemini(
     'gemini',
     'Gemini',
-    '• Image Generation (Gemini 2.5 Flash Image)\n• Fast Multimodal Reasoning (Gemini 2.5 Flash)',
+    '• Image Generation (Gemini 3.1 Flash-Lite Image)\n• Fast Multimodal Reasoning (Gemini 3.5 Flash-Lite)',
   ),
   claude(
     'claude',
     'Claude',
-    '• Advanced Reasoning & Coding (Claude 3.5 Sonnet)\n• Deep PDF & Vision Analysis (Claude 3.5 Sonnet)',
+    '• Advanced Reasoning & Coding (Claude Haiku 4.5)\n• Deep PDF & Vision Analysis (Claude Haiku 4.5)',
   );
 
   /// Internal ID used in Firestore, analytics, and API routing
@@ -44,7 +44,7 @@ enum AiProviderId {
 /// Used by the orchestrator to route requests and detect capability gaps.
 enum AiCapability {
   /// Standard text conversation / prompt-response
-  textGeneration('text_generation', 'Text Chat'),
+  textGeneration('text_generation', 'Text Generation'),
 
   /// Generate an image from a text description
   imageGeneration('image_generation', 'Image Generation'),
@@ -53,7 +53,10 @@ enum AiCapability {
   imageUnderstanding('image_understanding', 'Image Reading'),
 
   /// Extract text from a PDF and answer questions about it
-  pdfParsing('pdf_parsing', 'PDF Reading');
+  pdfParsing('pdf_parsing', 'PDF Reading'),
+
+  /// Generate a formatted PDF document from a user prompt
+  pdfGeneration('pdf_generation', 'PDF Generation');
 
   final String id;
   final String displayName;
@@ -357,8 +360,9 @@ enum ImageQuality {
   const ImageQuality(this.value);
 
   static ImageQuality fromValue(String value) {
+    final lower = value.toLowerCase();
     return ImageQuality.values.firstWhere(
-      (e) => e.value == value,
+      (e) => e.value.toLowerCase() == lower || e.name.toLowerCase() == lower,
       orElse: () => ImageQuality.low,
     );
   }
@@ -367,14 +371,25 @@ enum ImageQuality {
 /// Desired image size for generation requests.
 enum AiImageSize {
   /// 1024×1024 — default square format
-  square(width: 1024, height: 1024, apiValue: '1024x1024', name: 'Square (1024x1024)'),
+  square(
+      width: 1024,
+      height: 1024,
+      apiValue: '1024x1024',
+      name: 'Square (1024x1024)'),
 
   /// 1024×1536 — portrait
-  portrait(width: 1024, height: 1536, apiValue: '1024x1536', name: 'Portrait (1024x1536)'),
+  portrait(
+      width: 1024,
+      height: 1536,
+      apiValue: '1024x1536',
+      name: 'Portrait (1024x1536)'),
 
   /// 1536×1024 — landscape / widescreen
   landscape(
-      width: 1536, height: 1024, apiValue: '1536x1024', name: 'Landscape (1536x1024)');
+      width: 1536,
+      height: 1024,
+      apiValue: '1536x1024',
+      name: 'Landscape (1536x1024)');
 
   const AiImageSize(
       {required this.width,
@@ -390,24 +405,27 @@ enum AiImageSize {
   double get aspectRatio => width / height;
 
   static AiImageSize fromValue(String value) {
-    // Check both name (e.g. 'square') and apiValue (e.g. '1024x1024') for backward compatibility
+    final lower = value.toLowerCase();
+    if (lower.contains('landscape') ||
+        lower.contains('16:9') ||
+        lower.contains('1536x1024')) {
+      return AiImageSize.landscape;
+    }
+    if (lower.contains('portrait') ||
+        lower.contains('9:16') ||
+        lower.contains('1024x1536')) {
+      return AiImageSize.portrait;
+    }
+    if (lower.contains('square') ||
+        lower.contains('1:1') ||
+        lower.contains('1024x1024')) {
+      return AiImageSize.square;
+    }
     return AiImageSize.values.firstWhere(
       (size) => size.name == value || size.apiValue == value,
       orElse: () => AiImageSize.square,
     );
   }
-}
-
-/// How the response content should be rendered in the UI.
-enum AiResponseContentType {
-  /// Plain or markdown text
-  text,
-
-  /// Analysing image/pdf content and providing a summary
-  analysis,
-
-  /// Base64-encoded image data
-  imageBase64,
 }
 
 /// Vision detail level for OpenAI image analysis requests.
@@ -445,21 +463,71 @@ enum VisionDetailLevel {
 }
 
 /// Represents the user's preferred AI response length (max output tokens).
+///
+/// Each tier maps to provider-appropriate token bounds tailored for each model:
+/// - OpenAI (GPT-6 Luna): supports up to 16,384 output tokens
+/// - Gemini (Gemini 3.5 Flash-Lite): supports up to 16,384 output tokens
+/// - Claude (Claude Haiku 4.5): supports up to 8,192 output tokens (Anthropic API ceiling)
 enum ResponseLength {
-  short(250, 1000, 'Short', 'Good for quick and simple answers.'),
-  balanced(1000, 4000, 'Balanced',
-      'Best for standard conversations and general-purpose chat.'),
-  detailed(2048, 8000, 'Detailed',
-      'Best for long-form content, analyzing documents or generating code.'),
-  maximum(4096, 16000, 'Maximum',
-      'Ideal for extensive research articles or generating large code files.');
+  short(
+    openAiMaxTokens: 500,
+    geminiMaxTokens: 1000,
+    claudeMaxTokens: 500,
+    displayName: 'Short',
+    description: 'Good for quick and simple answers.',
+  ),
+  balanced(
+    openAiMaxTokens: 2048,
+    geminiMaxTokens: 4000,
+    claudeMaxTokens: 2048,
+    displayName: 'Balanced',
+    description: 'Best for standard conversations and general-purpose chat.',
+  ),
+  detailed(
+    openAiMaxTokens: 8192,
+    geminiMaxTokens: 8192,
+    claudeMaxTokens: 4096,
+    displayName: 'Detailed',
+    description:
+        'Best for long-form content, analyzing documents or generating code.',
+  ),
+  maximum(
+    openAiMaxTokens: 16384,
+    geminiMaxTokens: 16384,
+    claudeMaxTokens: 8192,
+    displayName: 'Maximum',
+    description:
+        'Ideal for extensive research articles or generating large code files.',
+  );
 
-  final int maxTokens;
+  final int openAiMaxTokens;
   final int geminiMaxTokens;
+  final int claudeMaxTokens;
   final String displayName;
   final String description;
 
-  const ResponseLength(this.maxTokens, this.geminiMaxTokens, this.displayName, this.description);
+  const ResponseLength({
+    required this.openAiMaxTokens,
+    required this.geminiMaxTokens,
+    required this.claudeMaxTokens,
+    required this.displayName,
+    required this.description,
+  });
+
+  /// Default token limit (defaults to OpenAI token bound for backward compatibility).
+  int get maxTokens => openAiMaxTokens;
+
+  /// Returns the token limit for a specific provider.
+  int tokensFor(AiProviderId provider) {
+    switch (provider) {
+      case AiProviderId.openAi:
+        return openAiMaxTokens;
+      case AiProviderId.gemini:
+        return geminiMaxTokens;
+      case AiProviderId.claude:
+        return claudeMaxTokens;
+    }
+  }
 
   static ResponseLength fromValue(int value) {
     return ResponseLength.values.firstWhere(
@@ -474,6 +542,13 @@ enum ResponseLength {
       orElse: () => ResponseLength.balanced,
     );
   }
+}
+
+/// Extension providing safe access to provider token ceilings on nullable [ResponseLength].
+extension ResponseLengthNullableExtension on ResponseLength? {
+  int get openAiMaxTokens => (this ?? ResponseLength.balanced).openAiMaxTokens;
+  int get geminiMaxTokens => (this ?? ResponseLength.balanced).geminiMaxTokens;
+  int get claudeMaxTokens => (this ?? ResponseLength.balanced).claudeMaxTokens;
 }
 
 // =============================================================================
@@ -524,6 +599,55 @@ enum AiPreferenceControl {
   /// Gemini-specific: controls image_size tier in response_format (1K / 2K / 4K).
   /// Only exposed for Gemini image generation.
   geminiImageSize,
+
+  /// Gemini-specific: controls reasoning thinking level (low / medium / high).
+  /// Exposed for Gemini 3.8 Flash text generation.
+  geminiThinkingLevel,
+}
+
+// =============================================================================
+// GEMINI THINKING CONFIG ENUMS
+// =============================================================================
+
+/// Thinking level for Gemini 3.8 models (reasoning budget and depth).
+///
+/// Sent as `thinkingLevel` within `thinkingConfig` in `generationConfig`.
+///
+/// Supported levels for gemini-3.8-flash:
+///   - low: Fastest response with minimal reasoning tokens (low cost/latency).
+///   - medium: Balanced reasoning (Google's default setting).
+///   - high: Deep reasoning for complex math, coding, and multi-step logic.
+/// Note: `minimal` is explicitly NOT supported by gemini-3.8-flash (returns 400).
+enum GeminiThinkingLevel {
+  /// Low reasoning depth — fast response, minimal thinking tokens
+  low('low', 'Low', 'Fastest response with minimal reasoning tokens'),
+
+  /// Medium reasoning depth — balanced quality and speed (Default)
+  medium('medium', 'Medium', 'Balanced reasoning for everyday tasks (Default)'),
+
+  /// High reasoning depth — deep reasoning for complex problems
+  high('high', 'High', 'Deep reasoning for complex math, coding & logic');
+
+  /// Value sent to the Gemini API in `generationConfig.thinkingConfig.thinkingLevel`.
+  final String apiValue;
+
+  /// Human-readable display name shown in the UI.
+  final String displayName;
+
+  /// Brief explanation of the thinking level behavior.
+  final String description;
+
+  const GeminiThinkingLevel(this.apiValue, this.displayName, this.description);
+
+  /// Safe deserialization from storage string or API value.
+  static GeminiThinkingLevel fromString(String? value) {
+    if (value == null || value.isEmpty) return GeminiThinkingLevel.medium;
+    final lower = value.toLowerCase();
+    return GeminiThinkingLevel.values.firstWhere(
+      (e) => e.apiValue == lower || e.name == lower,
+      orElse: () => GeminiThinkingLevel.medium,
+    );
+  }
 }
 
 // =============================================================================

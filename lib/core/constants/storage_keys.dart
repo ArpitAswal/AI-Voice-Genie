@@ -20,9 +20,10 @@ class StorageKeys {
   static const String termsVersionAccepted = 'termsVersionAccepted';
 
   // ── App Settings ──────────────────────────────────────────────────────────
+  // Current UI theme setting (system / light / dark)
   static const String themeMode = 'themeMode';
+  // Selected app interface language code (e.g., 'en', 'hi')
   static const String locale = 'locale';
-  static const String notificationsEnabled = 'notificationsEnabled';
 
   // ── AI Model Preferences ──────────────────────────────────────────────────
   // The user's currently selected/preferred AI provider ID
@@ -45,6 +46,11 @@ class StorageKeys {
   static const String preferredVisionDetailLevel = 'preferredVisionDetailLevel';
   // The user's preferred response length/max tokens
   static const String preferredResponseLength = 'preferredResponseLength';
+  // The user's preferred Gemini thinking level (low / medium / high)
+  static const String preferredGeminiThinkingLevel =
+      'preferredGeminiThinkingLevel';
+  // The user's preferred Gemini aspect ratio (1:1, 16:9, 9:16)
+  static const String preferredGeminiAspectRatio = 'preferredGeminiAspectRatio';
 
   /// Helper to generate a provider-specific storage key.
   static String providerPrefKey(String baseKey, String providerId) {
@@ -53,7 +59,7 @@ class StorageKeys {
 
   // ── Active Conversation Cache ──────────────────────────────────────────────
   // ID of the last open conversation (to restore on app resume)
-  static const String lastOpenConversationId = 'lastOpenConversationId';
+  // static const String lastOpenConversationId = 'lastOpenConversationId';
 
   // ── Voice Settings ────────────────────────────────────────────────────────
   // Whether to use device-native TTS or AI-powered TTS (if key available)
@@ -64,12 +70,4 @@ class StorageKeys {
   static const String ttsSpeed = 'ttsSpeed';
   // Whether AI responses should be automatically read aloud
   static const String autoTextToSpeech = 'autoTextToSpeech';
-
-  // ── Notifications ─────────────────────────────────────────────────────────
-  static const String fcmToken = 'fcmToken';
-  static const String lastNotificationDate = 'lastNotificationDate';
-
-  // ── Analytics ─────────────────────────────────────────────────────────────
-  // Tracks which session analytics have been sent (prevents duplicate events)
-  static const String lastAnalyticsDate = 'lastAnalyticsDate';
 }

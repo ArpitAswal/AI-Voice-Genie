@@ -179,6 +179,10 @@ class _CapabilityIcon extends StatelessWidget {
           Icons.picture_as_pdf_outlined,
           AppColors.lightWarning,
         ),
+      AiCapability.pdfGeneration => (
+          Icons.picture_as_pdf_rounded,
+          AppColors.accentLight,
+        ),
     };
 
     final size = isTablet ? 44.0 : 38.0;

@@ -82,8 +82,6 @@ class AppColors {
   // ── Chat Bubble Colors ────────────────────────────────────────────────────
   static const Color messageBubbleLight = Color(0xFFDEE5FF);
   static const Color messageBubbleDark = Color(0xFF2D3D70);
-  static const Color messageBubbleTextLight = Color(0xFFFFFFFF);
-  static const Color messageBubbleTextDark = Color(0xFFFFFFFF);
   static const Color pdfBackgroundLight = Color(0xFF6F8FF1);
   static const Color pdfBackgroundDark = Color(0xFF0F172A);
 

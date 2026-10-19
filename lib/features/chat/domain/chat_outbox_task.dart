@@ -18,7 +18,13 @@ enum OutboxTaskType {
   deleteAllConversations('delete_all_conversations'),
 
   /// Hard-delete local Hive records after remote deletion is confirmed.
-  hardDeleteLocalConversation('hard_delete_local_conversation');
+  hardDeleteLocalConversation('hard_delete_local_conversation'),
+
+  /// Save/update an API key document in Firestore.
+  saveApiKey('save_api_key'),
+
+  /// Delete an API key document in Firestore.
+  deleteApiKey('delete_api_key');
 
   final String value;
   const OutboxTaskType(this.value);
@@ -105,7 +111,7 @@ class ChatOutboxTask {
     String? operationId,
     required this.uid,
     required this.type,
-    required this.conversationId,
+    this.conversationId = '',
     this.messageIds = const [],
     this.payload = const {},
     this.status = OutboxTaskStatus.pending,

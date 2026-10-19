@@ -67,7 +67,7 @@ class AppRoutes {
   /// Onboarding — shown once after first install
   static const String onboarding = '/onboarding';
 
-  /// API Key setup — shown after first sign-in
+  /// API Key setup & management — onboarding flow or via Settings
   static const String keySetup = '/key-setup';
 
   /// Main tab bar screen — entry after auth
@@ -77,17 +77,11 @@ class AppRoutes {
   static const String chat = '/chat';
   static const String chatDetail = '/chat-detail';
 
-  /// API key management
-  static const String apiKeyManagement = '/api-keys';
-
   /// Edit profile
   static const String profileEdit = '/profile/edit';
 
   /// About app
   static const String about = '/about';
-
-  /// Exception / 404
-  static const String exception = '/exception';
 
   /// Privacy Policy
   static const String privacy = '/about/privacy-policy';
@@ -156,9 +150,11 @@ class AppRoutes {
     );
   }
 
-  /// Pop the current route.
+  /// Pop the current route safely if there is a route on the stack.
   static void pop<T>(BuildContext context, [T? result]) {
-    Navigator.of(context).pop<T>(result);
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop<T>(result);
+    }
   }
 
   /// Pop back to the very first route.
@@ -210,10 +206,15 @@ class AppRoutes {
           TransitionType.slide,
         );
 
-      // ── Key Setup ──────────────────────────────────────────────────────────
+      // ── Key Setup & Management ─────────────────────────────────────────────
       case keySetup:
+        final keyArgs = arguments is KeySetupArguments ? arguments : null;
+
         return _buildRoute(
-          const KeySetupScreen(),
+          KeySetupScreen(
+            isInitialSetup: keyArgs?.isInitialSetup ?? true,
+            initialFocusProvider: keyArgs?.initialFocusProvider,
+          ),
           settings,
           TransitionType.slide,
         );
@@ -246,21 +247,9 @@ class AppRoutes {
               TransitionType.fade,
               const Duration(milliseconds: 700));
         } else {
-          return _buildRoute(const ChatDetailScreen(conversationId: ''),
-              settings, TransitionType.fade, const Duration(milliseconds: 700));
+          return _buildRoute(const ChatDetailScreen(), settings,
+              TransitionType.fade, const Duration(milliseconds: 700));
         }
-
-      // ── API Key Management ─────────────────────────────────────────────────
-      case apiKeyManagement:
-        final initialProvider = arguments is AiProviderId ? arguments : null;
-        return _buildRoute(
-          KeySetupScreen(
-            isInitialSetup: false,
-            initialFocusProvider: initialProvider,
-          ),
-          settings,
-          TransitionType.slide,
-        );
 
       // ── Profile Edit ───────────────────────────────────────────────────────
       case profileEdit:
@@ -279,7 +268,8 @@ class AppRoutes {
         );
 
       case privacy || terms:
-        Map<String, dynamic>? value = arguments is Map<String,dynamic> ? arguments : null;
+        Map<String, dynamic>? value =
+            arguments is Map<String, dynamic> ? arguments : null;
         return _buildRoute(
           LegalScreen(title: value?['title'], mdFileName: value?['mdFileName']),
           settings,
@@ -401,13 +391,13 @@ abstract class RouteArguments {
   const RouteArguments();
 }
 
-/// Arguments for ChatDetailScreen — open a specific conversation.
+/// Arguments for ChatDetailScreen — open a specific conversation or view active new chat.
 class ChatDetailArguments extends RouteArguments {
-  final String conversationId;
+  final String? conversationId;
   final String? initialTitle;
 
   const ChatDetailArguments({
-    required this.conversationId,
+    this.conversationId,
     this.initialTitle,
   });
 }
@@ -432,13 +422,26 @@ class PdfReaderArguments extends RouteArguments {
   });
 }
 
-/// Arguments for ApiKeyManagementScreen — optionally focus on a provider.
-class ApiKeyManagementArguments extends RouteArguments {
-  /// If set, scroll directly to this provider's card on open
-  final String? focusProviderId;
+/// Arguments for [KeySetupScreen] — configure whether it is shown during
+/// initial post-sign-in onboarding or from Settings / Profile key management.
+class KeySetupArguments extends RouteArguments {
+  /// Whether this is the initial post-auth setup flow (true, default)
+  /// or key management accessed from Settings/Profile (false).
+  final bool isInitialSetup;
 
-  const ApiKeyManagementArguments({this.focusProviderId});
+  /// The provider card to automatically focus when the screen opens
+  /// (e.g. when navigated to from a specific provider badge).
+  final AiProviderId? initialFocusProvider;
+
+  const KeySetupArguments({
+    this.isInitialSetup = true,
+    this.initialFocusProvider,
+  });
 }
+
+/// Legacy arguments alias — use [KeySetupArguments] instead.
+@Deprecated('Use KeySetupArguments instead')
+typedef ApiKeyManagementArguments = KeySetupArguments;
 
 /// Arguments for [ChatScreen] — controls whether the screen opens in
 /// voice-dictation mode (mic starts automatically) or in the default

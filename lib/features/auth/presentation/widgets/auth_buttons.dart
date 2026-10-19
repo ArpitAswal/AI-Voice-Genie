@@ -2,8 +2,8 @@ import 'package:ai_voice_genie/core/enums/app_enums.dart';
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_assets.dart';
-import '../../../core/constants/app_colors.dart';
+import 'package:ai_voice_genie/core/constants/app_assets.dart';
+import 'package:ai_voice_genie/core/constants/app_colors.dart';
 
 class AuthButtons extends StatelessWidget {
   final bool isTablet;

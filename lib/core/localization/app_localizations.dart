@@ -35,7 +35,7 @@ class AppLocalizations {
     'en': {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI Voice Genie',
-      'app_tagline': 'Your intelligent AI assistant',
+      'app_tagline': 'Voice-first AI • ChatGPT · Gemini · Claude',
       'ai_assist': 'Your AI assistant is ready to help you.',
       'ask_genie_anything': 'Ask Genie Anything',
       'welcome_message': 'Welcome to',
@@ -79,6 +79,7 @@ class AppLocalizations {
       'generate_code': 'Generate Code',
       'analyze_image': 'Analyze Image',
       'pdf_summarize': 'Summarize PDF',
+      'generate_pdf': 'Generate PDF',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'Continue with Google',
@@ -89,7 +90,17 @@ class AppLocalizations {
       'signing_in': 'Signing you in...',
       'signing_out': "Signing you out...",
       'sign_in_failed': 'Sign in failed. Please try again.',
+      'user_disabled': 'This account has been disabled.',
+      'invalid_credential': 'Invalid credentials. Please try again.',
+      'user_not_found': 'Account not found.',
+      'account_exists_different_credential':
+          'Account exists with another sign-in method.',
+      'too_many_requests': 'Too many attempts. Please try again later.',
+      'operation_not_allowed': 'Sign-in method is not enabled.',
+      'apple_not_available': 'Apple Sign-In is not available on this device.',
       'sign_out_success': 'Signed out successfully.',
+      'sign_out_failed': 'Sign out failed. Please try again.',
+      'delete_account_failed': 'Failed to delete account. Please try again.',
 
       // ── Onboarding ─────────────────────────────────────────────────────────
       'onboarding_title_1': 'Generate Text & Answer Questions',
@@ -145,6 +156,13 @@ class AppLocalizations {
       'delete_all_confirm_message':
           'Are you sure you want to delete all conversations? This cannot be undone.',
       'deleting_all_conversations': 'Deleting all conversations...',
+      'delete_selected_conversations': 'Delete Selected Conversations',
+      'delete_selected_confirm':
+          'Are you sure you want to delete {0} selected conversations? This cannot be undone.',
+      'conversations_deleted': 'Selected conversations deleted.',
+      'select_all': 'Select All',
+      'deselect_all': 'Deselect All',
+      'selected_count': '{0} selected',
       'start_conversation': 'Start a conversation with your AI assistant.',
       'conversation_history': 'History',
       'history_subtitle': 'Review your recent thoughts.',
@@ -159,13 +177,15 @@ class AppLocalizations {
       'prompt_too_long': 'Message is too long (max 10,000 characters)',
       'response_failed': 'Failed to get a response. Please try again.',
       'prompt_template_summarize_pdf':
-          'Summarize this attached PDF document. Break it down into key highlights, main takeaways, and any actionable items.',
+          'Summarize the key findings, executive takeaways, and main conclusions from this document into bullet points.',
       'prompt_template_generate_code':
-          'Write a clean, optimized function in [Language] to handle [Problem/Goal]. Please include brief comments explaining the logic.',
+          'Write a Python script to parse a CSV file, compute summary statistics, and generate a clean visual chart.',
       'prompt_template_analyze_image':
-          'Analyze this image and describe what is happening in detail. [Optional: Extract any visible text or UI elements].',
+          'Analyze this image in detail and describe the visual scene, key elements, and any visible text or data.',
       'prompt_template_create_image':
-          'Generate a high-quality, realistic image of [Describe your scene, style, lighting, and details here].',
+          'Generate a high-quality photo of a serene Japanese Zen garden with cherry blossoms, a stone lantern, and a peaceful koi pond in soft morning light, 8k photographic style.',
+      'prompt_template_generate_pdf':
+          'Generate a professional PDF report on the fundamentals of Artificial Intelligence, including an executive summary, core milestones, and future trends.',
       'conversation_name_update': 'Conversation name changed',
 
       // ── AI Model Selection ─────────────────────────────────────────────────
@@ -177,30 +197,47 @@ class AppLocalizations {
       'add_key_for_model': 'Add Key',
       'api_keys_secure_note':
           'Your API keys are stored securely. Only you have the authority to access and manage your personal keys.',
+      // ── Home Screen: Marketing Value Proposition ─────────────────────────
+      'openai_marketing_pitch':
+          'Create studio-quality images, generate smart PDF documents, and craft creative content.',
+      'gemini_marketing_pitch':
+          'Lightning-fast answers, instant image creation, and effortless large-file analysis powered by Google.',
+      'claude_marketing_pitch':
+          'Tackle complex coding, solve difficult logic problems, and digest dense documents with expert precision.',
       'gpt_model_message':
-          'Master of conversational flow and complex text generation.',
+          'Create studio-quality images, generate smart PDF documents, and craft creative content.',
       'gemini_model_message':
-          'Multimodal powerhouse for advanced image and data synthesis.',
+          'Lightning-fast answers, instant image creation, and effortless large-file analysis powered by Google.',
       'claude_model_message':
-          'Expert analytical reasoning and long-form PDF understanding.',
+          'Tackle complex coding, solve difficult logic problems, and digest dense documents with expert precision.',
+
+      // ── Profile Tab (AI Intelligence): Active Capabilities ────────────────
       'openai_capabilities_info':
-          '• Image Generation (GPT-Image-1)\n• Text, Vision & PDF Analysis (GPT-4o)',
+          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• PDF & Document Intelligence',
       'gemini_capabilities_info':
-          '• Image Generation (Gemini 2.5 Flash Image)\n• Fast Multimodal Reasoning (Gemini 2.5 Flash)',
+          '• Fast Multimodal Chat & Search\n• Visual Image Generation\n• Inline PDF & Document Parsing',
       'claude_capabilities_info':
-          '• Advanced Reasoning & Coding (Claude 3.5 Sonnet)\n• Deep PDF & Vision Analysis (Claude 3.5 Sonnet)',
+          '• Advanced Code & Logical Reasoning\n• Deep Document & Vision Analysis\n• Voice & Image Gen not supported',
+
+      // ── Key Setup Screen: Model-to-Purpose Mapping ─────────────────────────
+      'openai_model_purposes':
+          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation',
+      'gemini_model_purposes':
+          '• gemini-3.5-flash-lite: Text, Vision & PDF Analysis\n• gemini-3.1-flash-lite-image: Image Generation',
+      'claude_model_purposes':
+          '• claude-haiku-4-5-20251001: Coding, Analytical Chat, PDFs & Vision',
       'openai_tech_specs':
-          '• Active Models: gpt-4o, gpt-image-1\n• Unlocks 128k context window with GPT-Image-1 image generation.',
+          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation',
       'gemini_tech_specs':
-          '• Active Models: gemini-2.5-flash, gemini-2.5-flash-image\n• Unlocks 1M context window with Google\'s native multimodal engine.',
+          '• gemini-3.5-flash-lite: Text, Vision & PDF Analysis\n• gemini-3.1-flash-lite-image: Image Generation',
       'claude_tech_specs':
-          '• Active Model: claude-3-5-sonnet-latest\n• Unlocks 200k context window with Anthropic\'s flagship reasoning engine.',
+          '• claude-haiku-4-5-20251001: Coding, Analytical Chat, PDFs & Vision',
       'openai_pricing_info':
-          '• Primary Model: gpt-4o (\$2.50 / 1M input tokens)\n• Image Gen: gpt-image-1 (\$0.011 - \$0.167 / image)',
+          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• PDF & Document Intelligence',
       'gemini_pricing_info':
-          '• Primary Model: gemini-2.5-flash (\$0.30 / 1M input tokens)\n• Image Gen: gemini-2.5-flash-image (~\$0.011 / image)',
+          '• Fast Multimodal Chat & Search\n• Visual Image Generation\n• Inline PDF & Document Parsing',
       'claude_pricing_info':
-          '• Primary Model: claude-3-5-sonnet (\$3.00 / 1M input tokens)\n• Output Tokens: \$15.00 / 1M (Vision & PDF included)',
+          '• Advanced Code & Logical Reasoning\n• Deep Document & Vision Analysis\n• Voice & Image Gen not supported',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'Not supported',
@@ -253,14 +290,27 @@ class AppLocalizations {
       // ── AI Preferences ─────────────────────────────────────────────────────
       'response_length': 'Response Length',
       'response_length_hint': 'Adjust the maximum length of model replies.',
+      'gemini_thinking_level': 'Thinking Level (Reasoning)',
+      'gemini_thinking_level_hint':
+          'Adjust reasoning depth and thinking budget for Gemini 3.8 Flash.',
+      'gemini_aspect_ratio': 'Image Aspect Ratio',
+      'gemini_aspect_ratio_hint':
+          'Choose output shape: Square (1:1), Landscape (16:9), or Portrait (9:16).',
+      'gemini_info_title': 'Key Note: Gemini Image Generation',
+      'gemini_info_desc':
+          'Gemini automatically generates 1K images natively. Advanced options (quality, background, count) are managed internally by Google.',
+      'claude_info_title': 'Key Note: Claude Image Generation',
+      'claude_info_desc':
+          'Image generation is not supported by Anthropic Claude. Claude specializes in advanced reasoning, coding, and document analysis.',
       'vision_image_count': 'Vision Image Count',
       'vision_image_count_hint':
           'Set the default limit for multi-modal image attachments.',
       'vision_pdf_count': 'Vision PDF Count',
       'vision_pdf_count_hint':
           'Set the default limit for multi-modal PDF attachments.',
-      'vision_detail_level': 'Vision Detail Level',
-      'vision_detail_level_hint': 'Set detail level for vision requests.',
+      'vision_detail_level': 'Image Analysis Detail',
+      'vision_detail_level_hint':
+          'Resolution (Auto, Low, High) used when analyzing uploaded images.',
 
       // ── PDF Reader ─────────────────────────────────────────────────────────
       'pdf_reader': 'PDF Reader',
@@ -269,8 +319,19 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF uploaded.',
       'reading_pdf': 'Reading PDF...',
       'ask_about_pdf': 'Ask anything about this PDF...',
+      'here_is_your_pdf': 'Here is the required PDF as you requested.',
       'file_already_attached': 'This file is already attached.',
       'pdf_too_large': 'PDF is too large. Maximum size is 10MB.',
+      'pdf_payload_too_large':
+          'Combined PDF attachments exceed the 15MB limit. Please attach fewer or smaller files.',
+      'pdf_file_too_large_detail':
+          '"{name}" ({size} MB) exceeds the 10MB limit.',
+      'pdf_payload_too_large_detail':
+          'Combined size of attachments ({size} MB) exceeds the 15MB limit.',
+      'image_payload_too_large':
+          'Combined image attachments exceed the 15MB limit. Please attach fewer or smaller files.',
+      'image_payload_too_large_detail':
+          'Combined size of images ({size} MB) exceeds the 15MB limit.',
       'pdf_read_failed': 'Could not read this PDF. Please try another file.',
       'pdf_attached': 'PDF attached',
       'remove_pdf': 'Remove PDF',
@@ -294,6 +355,7 @@ class AppLocalizations {
       // TTS action button tooltips below AI text response bubbles
       'play_response': 'Play response',
       'stop_response': 'Stop response',
+      'response_stopped': 'Stopped',
       'error_speech_timeout': 'Error: Speech timeout exceeded.',
 
       // ── Settings ───────────────────────────────────────────────────────────
@@ -399,9 +461,10 @@ class AppLocalizations {
       'usage_load_failed': 'Failed to load usage data.',
       'about_app': 'About AI Voice Genie',
       'development_build': 'Development Build',
-      'about_mission_title': 'Mission',
+      'production_build': 'Production Ready',
+      'about_mission_title': 'About This App',
       'about_mission_body':
-          'AI Voice Genie brings ChatGPT, Gemini, and Claude into one voice-first workspace for chat, images, documents, and everyday thinking.',
+          'AI Voice Genie is a personal, voice-first AI workspace built by an independent developer. It unifies ChatGPT, Gemini, and Claude in one place — with your own API keys, so you stay in full control of your data and costs.',
       'legal': 'Legal',
       'credits_attribution': 'Credits & Attribution',
       'open_source_licenses': 'Open-source Licenses',
@@ -411,7 +474,7 @@ class AppLocalizations {
       'view_licenses': 'View package licenses',
       'read_in_app': 'Read in app',
       'official_document': 'Official Legal Document',
-      'last_updated': 'Updated July 2026',
+      'last_updated': 'Updated October 2026',
       'no_data_selling': 'No Data Selling',
       'user_agreement': 'User Agreement',
       'ai_guidelines': 'AI Guidelines',
@@ -559,7 +622,8 @@ class AppLocalizations {
       'create_image': 'चित्र बनाएं',
       'generate_code': 'कोड जनरेट करें',
       'analyze_image': 'चित्र का विश्लेषण करें',
-      'pdf_summarize': 'पीडीएफ का सारांश प्रस्तुत करेंं',
+      'pdf_summarize': 'पीडीएफ का सारांश प्रस्तुत करें',
+      'generate_pdf': 'पीडीएफ बनाएं',
 
       // ── Auth ───────────────────────────────────────────────────────────────
       'sign_in_with_google': 'गूगल के साथ जारी रखें',
@@ -570,7 +634,17 @@ class AppLocalizations {
       'signing_in': 'साइन इन हो रहा है...',
       'signing_out': "साइन आउट हो रहा है...",
       'sign_in_failed': 'साइन इन विफल। कृपया पुनः प्रयास करें।',
+      'user_disabled': 'यह खाता अक्षम कर दिया गया है।',
+      'invalid_credential': 'अमान्य क्रेडेंशियल। कृपया पुनः प्रयास करें।',
+      'user_not_found': 'खाता नहीं मिला।',
+      'account_exists_different_credential':
+          'खाता किसी अन्य साइन-इन विधि से मौजूद है।',
+      'too_many_requests': 'बहुत सारे प्रयास। कृपया बाद में प्रयास करें।',
+      'operation_not_allowed': 'साइन-इन विधि सक्षम नहीं है।',
+      'apple_not_available': 'इस डिवाइस पर एप्पल साइन-इन उपलब्ध नहीं है।',
       'sign_out_success': 'सफलतापूर्वक साइन आउट हो गए।',
+      'sign_out_failed': 'साइन आउट विफल। कृपया पुनः प्रयास करें।',
+      'delete_account_failed': 'खाता हटाने में विफल। कृपया पुनः प्रयास करें।',
 
       // ── Onboarding ─────────────────────────────────────────────────────────
       'onboarding_title_1': 'पाठ उत्पन्न करें और प्रश्नों के उत्तर दें',
@@ -627,6 +701,13 @@ class AppLocalizations {
       'delete_all_confirm_message':
           'क्या आप सभी बातचीत हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
       'deleting_all_conversations': 'सभी बातचीत हटाई जा रही हैं...',
+      'delete_selected_conversations': 'चुनी गई बातचीत हटाएं',
+      'delete_selected_confirm':
+          'क्या आप {0} चुनी गई बातचीत हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
+      'conversations_deleted': 'चुनी गई बातचीत हटाई गई।',
+      'select_all': 'सभी चुनें',
+      'deselect_all': 'सभी अचयनित करें',
+      'selected_count': '{0} चुने गए',
       'start_conversation': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
       'conversation_history': 'इतिहास',
       'history_subtitle': 'अपने हालिया विचारों की समीक्षा करें।',
@@ -641,13 +722,15 @@ class AppLocalizations {
       'prompt_too_long': 'संदेश बहुत लंबा है (अधिकतम 10,000 अक्षर)',
       'response_failed': 'जवाब नहीं मिला। पुनः प्रयास करें।',
       'prompt_template_summarize_pdf':
-          'इस संलग्न PDF दस्तावेज़ का सारांश दें। इसे मुख्य हाइलाइट्स, मुख्य निष्कर्षों और कार्य योग्य बिंदुओं में बांटें।',
+          'इस दस्तावेज़ से मुख्य निष्कर्ष, कार्यकारी सारांश और महत्वपूर्ण बिंदु बुलेट पॉइंट्स में प्रस्तुत करें।',
       'prompt_template_generate_code':
-          '[Language] में [Problem/Goal] को संभालने के लिए एक साफ़, ऑप्टिमाइज़्ड फ़ंक्शन लिखें। कृपया लॉजिक समझाने वाली छोटी टिप्पणियां शामिल करें।',
+          'एक पायथन स्क्रिप्ट लिखें जो CSV फ़ाइल को पढ़े, आंकड़ों का विश्लेषण करे और एक साफ़ चार्ट तैयार करे।',
       'prompt_template_analyze_image':
-          'इस चित्र का विश्लेषण करें और विस्तार से बताएं कि इसमें क्या हो रहा है। [वैकल्पिक: दिखने वाला टेक्स्ट या UI एलिमेंट निकालें].',
+          'इस चित्र का विस्तार से विश्लेषण करें और दृश्य, मुख्य तत्वों तथा दिखने वाले किसी भी टेक्स्ट या डेटा की व्याख्या करें।',
       'prompt_template_create_image':
-          '[Describe your scene, style, lighting, and details here] की एक उच्च-गुणवत्ता, वास्तविक दिखने वाली छवि जनरेट करें।',
+          'सुबह की सौम्य रोशनी में खिले चेरी ब्लॉसम, पत्थर के लालटेन और शांत कोई मछली के तालाब वाले सुरम्य जापानी ज़ेन गार्डन की एक सुंदर तस्वीर बनाएं, 8k फ़ोटोग्राफ़िक शैली।',
+      'prompt_template_generate_pdf':
+          'आर्टिफिशियल इंटेलिजेंस के सिद्धांतों पर एक पेशेवर पीडीएफ रिपोर्ट तैयार करें, जिसमें कार्यकारी सारांश, प्रमुख चरण और भविष्य के रुझान शामिल हों।',
       'conversation_name_update': 'बातचीत का नाम बदल दिया गया',
 
       // ── AI Model Selection ─────────────────────────────────────────────────
@@ -659,29 +742,47 @@ class AppLocalizations {
       'add_key_for_model': 'Key जोड़ें',
       'api_keys_secure_note':
           'आपकी API की (key) सुरक्षित है। केवल कंपनी को ही आपकी व्यक्तिगत की (key) सहेजने का अधिकार है।',
-      'gpt_model_message': 'संवादात्मक प्रवाह और जटिल पाठ निर्माण में निपुण।',
+      // ── Home Screen: Marketing Value Proposition (Hindi) ───────────────────
+      'openai_marketing_pitch':
+          'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्मार्ट दस्तावेज़ तैयार करें और रचनात्मक सामग्री बनाएं।',
+      'gemini_marketing_pitch':
+          'Google द्वारा संचालित त्वरित उत्तर, तुरंत चित्र निर्माण और बड़ी फाइलों का आसान विश्लेषण।',
+      'claude_marketing_pitch':
+          'जटिल कोडिंग करें, कठिन तार्किक समस्याओं को हल करें और बड़े दस्तावेजों को विशेषज्ञ सटीकता से समझें।',
+      'gpt_model_message':
+          'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्मार्ट दस्तावेज़ तैयार करें और रचनात्मक सामग्री बनाएं।',
       'gemini_model_message':
-          'उन्नत छवि और डेटा संश्लेषण के लिए मल्टीमॉडल पावरहाउस।',
+          'Google द्वारा संचालित त्वरित उत्तर, तुरंत चित्र निर्माण और बड़ी फाइलों का आसान विश्लेषण।',
       'claude_model_message':
-          'उत्कृष्ट विश्लेषणात्मक तर्क क्षमता और पीडीएफ फॉर्मेट को समझने की क्षमता।',
+          'जटिल कोडिंग करें, कठिन तार्किक समस्याओं को हल करें और बड़े दस्तावेजों को विशेषज्ञ सटीकता से समझें।',
+
+      // ── Profile Tab (AI Intelligence): Active Capabilities (Hindi) ─────────
       'openai_capabilities_info':
-          '• चित्र निर्माण (GPT-Image-1)\n• पाठ, दृष्टि और पीडीएफ विश्लेषण (GPT-4o)',
+          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• पीडीएफ और दस्तावेज़ विश्लेषण',
       'gemini_capabilities_info':
-          '• चित्र निर्माण (Gemini 2.5 Flash Image)\n• तीव्र मल्टीमॉडल तर्क (Gemini 2.5 Flash)',
+          '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• इनलाइन पीडीएफ और दस्तावेज विश्लेषण',
       'claude_capabilities_info':
-          '• उन्नत तर्क और कोडिंग (Claude 3.5 Sonnet)\n• गहन पीडीएफ और दृष्टि समझ (Claude 3.5 Sonnet)',
+          '• उन्नत कोडिंग और तार्किक तर्क\n• गहन दस्तावेज और दृष्टि समझ\n• वॉयस और चित्र निर्माण समर्थित नहीं',
+
+      // ── Key Setup Screen: Model-to-Purpose Mapping (Hindi) ───────────────────
+      'openai_model_purposes':
+          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण',
+      'gemini_model_purposes':
+          '• gemini-3.5-flash-lite: पाठ, दृष्टि और पीडीएफ विश्लेषण\n• gemini-3.1-flash-lite-image: चित्र निर्माण',
+      'claude_model_purposes':
+          '• claude-haiku-4-5-20251001: कोडिंग, विश्लेषणात्मक चैट, पीडीएफ और दृष्टि',
       'openai_tech_specs':
-          '• सक्रिय मॉडल: gpt-4o, gpt-image-1\n• 128k कॉन्टेक्स्ट विंडो और GPT-Image-1 चित्र निर्माण को अनलॉक करता है।',
+          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण',
       'gemini_tech_specs':
-          '• सक्रिय मॉडल: gemini-2.5-flash, gemini-2.5-flash-image\n• Google के नेटिव मल्टीमॉडल इंजन के साथ 1M कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
+          '• gemini-3.5-flash-lite: पाठ, दृष्टि और पीडीएफ विश्लेषण\n• gemini-3.1-flash-lite-image: चित्र निर्माण',
       'claude_tech_specs':
-          '• सक्रिय मॉडल: claude-3-5-sonnet-latest\n• Anthropic के प्रमुख तर्क इंजन के साथ 200k कॉन्टेक्स्ट विंडो को अनलॉक करता है।',
+          '• claude-haiku-4-5-20251001: कोडिंग, विश्लेषणात्मक चैट, पीडीएफ और दृष्टि',
       'openai_pricing_info':
-          '• प्राथमिक मॉडल: gpt-4o (\$2.50 / 1M इनपुट टोकन)\n• चित्र निर्माण: gpt-image-1 (\$0.011 - \$0.167 / चित्र)',
+          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• पीडीएफ और दस्तावेज़ विश्लेषण',
       'gemini_pricing_info':
-          '• प्राथमिक मॉडल: gemini-2.5-flash (\$0.30 / 1M इनपुट टोकन)\n• चित्र निर्माण: gemini-2.5-flash-image (~\$0.011 / चित्र)',
+          '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• इनलाइन पीडीएफ और दस्तावेज विश्लेषण',
       'claude_pricing_info':
-          '• प्राथमिक मॉडल: claude-3-5-sonnet (\$3.00 / 1M इनपुट टोकन)\n• आउटपुट टोकन: \$15.00 / 1M (दृष्टि और पीडीएफ शामिल)',
+          '• उन्नत कोडिंग और तार्किक तर्क\n• गहन दस्तावेज और दृष्टि समझ\n• वॉयस और चित्र निर्माण समर्थित नहीं',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'समर्थित नहीं',
@@ -732,14 +833,27 @@ class AppLocalizations {
       // ── AI Preferences ─────────────────────────────────────────────────────
       'response_length': 'उत्तर लंबाई',
       'response_length_hint': 'मॉडल के उत्तर की अधिकतम लंबाई बदलें।',
+      'gemini_thinking_level': 'सोचने का स्तर (Reasoning)',
+      'gemini_thinking_level_hint':
+          'Gemini 3.8 Flash के लिए तर्क क्षमता और थिंकिंग बजट चुनें।',
+      'gemini_aspect_ratio': 'इमेज पहलू अनुपात (Aspect Ratio)',
+      'gemini_aspect_ratio_hint':
+          'इमेज का आकार चुनें: चौकोर (1:1), लैंडस्केप (16:9), या पोर्ट्रेट (9:16)।',
+      'gemini_info_title': 'विशेष नोट: Gemini इमेज जनरेशन',
+      'gemini_info_desc':
+          'Gemini 1K रिज़ॉल्यूशन में इमेज स्वतः जनरेट करता है। क्वालिटी, बैकग्राउंड और संख्या Google द्वारा आंतरिक रूप से प्रबंधित होते हैं।',
+      'claude_info_title': 'विशेष नोट: Claude इमेज जनरेशन',
+      'claude_info_desc':
+          'Anthropic Claude में इमेज जनरेशन समर्थित नहीं है। Claude उन्नत तर्क, कोडिंग और दस्तावेज़ विश्लेषण में सक्षम है।',
       'vision_image_count': 'विज़न इमेज संख्या',
       'vision_image_count_hint':
           'बहु-मोडल इमेज अटैचमेंट की डिफ़ॉल्ट सीमा तय करें।',
       'vision_pdf_count': 'विज़न PDF संख्या',
       'vision_pdf_count_hint':
           'बहु-मोडल PDF अटैचमेंट की डिफ़ॉल्ट सीमा तय करें।',
-      'vision_detail_level': 'विज़न विवरण स्तर',
-      'vision_detail_level_hint': 'विज़न अनुरोधों के लिए विवरण स्तर तय करें।',
+      'vision_detail_level': 'इमेज विश्लेषण विवरण',
+      'vision_detail_level_hint':
+          'अपलोड की गई छवियों के विश्लेषण के लिए रेज़ोल्यूशन (ऑटो, कम, उच्च)।',
 
       // ── PDF Reader ─────────────────────────────────────────────────────────
       'pdf_reader': 'PDF रीडर',
@@ -748,8 +862,19 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF अपलोड हो गई।',
       'reading_pdf': 'PDF पढ़ी जा रही है...',
       'ask_about_pdf': 'इस PDF के बारे में कुछ भी पूछें...',
+      'here_is_your_pdf': 'यह रहा आपका अनुरोधित PDF दस्तावेज़।',
       'file_already_attached': 'यह फ़ाइल पहले से ही जुड़ी हुई है।',
       'pdf_too_large': 'PDF बहुत बड़ी है। अधिकतम आकार 10MB है।',
+      'pdf_payload_too_large':
+          'संयुक्त PDF अटैचमेंट 15MB की सीमा से अधिक हैं। कृपया छोटी या कम फ़ाइलें संलग्न करें।',
+      'pdf_file_too_large_detail':
+          '"{name}" ({size} MB) 10MB की सीमा से अधिक है।',
+      'pdf_payload_too_large_detail':
+          'अटैचमेंट्स का कुल आकार ({size} MB) 15MB की सीमा से अधिक है।',
+      'image_payload_too_large':
+          'संयुक्त चित्र संलग्नक 15MB की सीमा से अधिक हैं। कृपया छोटी या कम फ़ाइलें संलग्न करें।',
+      'image_payload_too_large_detail':
+          'चित्रों का कुल आकार ({size} MB) 15MB की सीमा से अधिक है।',
       'pdf_read_failed': 'यह PDF नहीं पढ़ी जा सकी।',
       'pdf_attached': 'PDF जोड़ी गई',
       'remove_pdf': 'PDF हटाएं',
@@ -774,6 +899,7 @@ class AppLocalizations {
       // TTS action button tooltips below AI text response bubbles
       'play_response': 'जवाब सुनें',
       'stop_response': 'जवाब रोकें',
+      'response_stopped': 'रोक दिया गया',
       'error_speech_timeout': 'त्रुटि: स्पीच टाइमआउट की सीमा पार हो गई।',
 
       // ── Settings ───────────────────────────────────────────────────────────
@@ -877,11 +1003,12 @@ class AppLocalizations {
       'configure': 'कॉन्फ़िगर करें',
       'help_center': 'सहायता और समर्थन',
       'coming_soon': 'जल्द आ रहा है।',
-      'about_app': 'ऐएआई वॉइस जीनियस के बारे में',
+      'about_app': 'AI Voice Genie के बारे में',
       'development_build': 'डेवलपमेंट बिल्ड',
-      'about_mission_title': 'मिशन',
+      'production_build': 'प्रोडक्शन रेडी',
+      'about_mission_title': 'इस ऐप के बारे में',
       'about_mission_body':
-          'AI Voice Genie ChatGPT, Gemini और Claude को chat, images, documents और everyday thinking के लिए एक voice-first workspace में लाता है।',
+          'AI Voice Genie एक स्वतंत्र डेवलपर द्वारा बनाया गया voice-first AI वर्कस्पेस है। यह ChatGPT, Gemini और Claude को एक ही जगह लाता है — आपकी अपनी API कीज़ के साथ, ताकि डेटा और खर्च पर पूरा नियंत्रण आपका हो।',
       'legal': 'कानूनी',
       'credits_attribution': 'क्रेडिट और एट्रिब्यूशन',
       'open_source_licenses': 'ओपन-सोर्स लाइसेंस',
@@ -891,7 +1018,7 @@ class AppLocalizations {
       'view_licenses': 'पैकेज लाइसेंस देखें',
       'read_in_app': 'ऐप में पढ़ें',
       'official_document': 'आधिकारिक कानूनी दस्तावेज़',
-      'last_updated': 'अद्यतन: जुलाई 2026',
+      'last_updated': 'अद्यतन: अक्टूबर 2026',
       'no_data_selling': 'डेटा की बिक्री नहीं',
       'user_agreement': 'उपयोगकर्ता समझौता',
       'ai_guidelines': 'AI दिशानिर्देश',
@@ -1004,6 +1131,13 @@ class AppLocalizations {
     return _strings[locale.languageCode]?[key] ?? key;
   }
 
+  /// Static translation lookup that works without a BuildContext.
+  /// Used by background services, data mappers, and domain models to resolve
+  /// localized error values for storage in Firestore.
+  static String lookupMessage(String key, [String languageCode = 'en']) {
+    return _strings[languageCode]?[key] ?? _strings['en']?[key] ?? key;
+  }
+
   // ==========================================================================
   // NAMED GETTERS — for the most commonly used strings
   // ==========================================================================
@@ -1021,10 +1155,20 @@ class AppLocalizations {
   String get delete => translate('delete');
   String get pleaseWait => translate('please_wait');
   String get somethingWentWrong => translate('something_went_wrong');
+  String get retry => translate('retry');
   String get offlineDeleteQueued => translate('offline_delete_queued');
   String get noInternet => translate('no_internet_connection');
   String get signInWithGoogle => translate('sign_in_with_google');
   String get signInWithApple => translate('sign_in_with_apple');
+  String get signInFailed => translate('sign_in_failed');
+  String get userDisabled => translate('user_disabled');
+  String get invalidCredential => translate('invalid_credential');
+  String get userNotFound => translate('user_not_found');
+  String get accountExistsDifferentCredential =>
+      translate('account_exists_different_credential');
+  String get tooManyRequests => translate('too_many_requests');
+  String get operationNotAllowed => translate('operation_not_allowed');
+  String get appleNotAvailable => translate('apple_not_available');
   String get signOut => translate('sign_out');
   String get settings => translate('settings');
   String get newConversation => translate('new_conversation');
@@ -1033,6 +1177,15 @@ class AppLocalizations {
   String get deleteConversation => translate('delete_conversation');
   String get deletingAllConversations =>
       translate('deleting_all_conversations');
+  String get deleteSelectedConversations =>
+      translate('delete_selected_conversations');
+  String deleteSelectedConfirm(int count) =>
+      translate('delete_selected_confirm').replaceAll('{0}', count.toString());
+  String get conversationsDeleted => translate('conversations_deleted');
+  String get selectAll => translate('select_all');
+  String get deselectAll => translate('deselect_all');
+  String selectedCount(int count) =>
+      translate('selected_count').replaceAll('{0}', count.toString());
   String get typeMessage => translate('type_message');
   String get send => translate('send');
   String get aiThinking => translate('ai_thinking');
@@ -1096,13 +1249,25 @@ class AppLocalizations {
   String get askQuestion => translate('ask_question');
   String get generateImage => translate('generate_image');
   String get uploadPdf => translate('upload_pdf');
+  String get hereIsYourPdf => translate('here_is_your_pdf');
   String get intelligentModels => translate('intelligent_models');
+  // Home Screen marketing pitch getters
+  String get openAiMarketingPitch => translate('openai_marketing_pitch');
+  String get geminiMarketingPitch => translate('gemini_marketing_pitch');
+  String get claudeMarketingPitch => translate('claude_marketing_pitch');
   String get chatGPTModelMessage => translate('gpt_model_message');
   String get geminiModelMessage => translate('gemini_model_message');
   String get claudeModelMessage => translate('claude_model_message');
+
+  // Profile Tab active capabilities getters
   String get openAiCapabilitiesInfo => translate('openai_capabilities_info');
   String get geminiCapabilitiesInfo => translate('gemini_capabilities_info');
   String get claudeCapabilitiesInfo => translate('claude_capabilities_info');
+
+  // Key Setup Screen model-to-purpose getters
+  String get openAiModelPurposes => translate('openai_model_purposes');
+  String get geminiModelPurposes => translate('gemini_model_purposes');
+  String get claudeModelPurposes => translate('claude_model_purposes');
   String get openAiTechSpecs => translate('openai_tech_specs');
   String get geminiTechSpecs => translate('gemini_tech_specs');
   String get claudeTechSpecs => translate('claude_tech_specs');
@@ -1116,9 +1281,13 @@ class AppLocalizations {
   String get analyzeImage => translate('analyze_image');
   String get summarizePdf => translate('pdf_summarize');
   String get summarizePdfPrompt => translate('prompt_template_summarize_pdf');
+  String get generatePdf => translate('generate_pdf');
+  String get generatePdfPrompt => translate('prompt_template_generate_pdf');
   String get generateCodePrompt => translate('prompt_template_generate_code');
   String get analyzeImagePrompt => translate('prompt_template_analyze_image');
   String get createImagePrompt => translate('prompt_template_create_image');
+  String get stopResponse => translate('stop_response');
+  String get responseStopped => translate('response_stopped');
   String get deleting => translate('deleting');
   String get profile => translate('profile');
   String get editProfile => translate('edit_profile');
@@ -1204,6 +1373,8 @@ class AppLocalizations {
   String get requiresRecentLogin => translate('requires_recent_login');
   String get signOutConfirm => translate('sign_out_confirm');
   String get signOutSuccess => translate('sign_out_success');
+  String get signOutFailed => translate('sign_out_failed');
+  String get deleteAccountFailed => translate('delete_account_failed');
   String get signingOut => translate('signing_out');
   String get aboutApp => translate('about_app');
   String get appVersion => translate('app_version');
@@ -1247,6 +1418,104 @@ class AppLocalizations {
       translate('image_save_permission_denied');
   String get imageSaveNoSpace => translate('image_save_no_space');
   String get imageDownloadFailed => translate('image_download_failed');
+
+  // ── Auth & Privacy ────────────────────────────────────────────────────────
+  String get privacyNotePrefix => translate('privacy_note_prefix');
+  String get privacyNoteAnd => translate('privacy_note_and');
+  String get privacyNoteSuffix => translate('privacy_note_suffix');
+  String get signingIn => translate('signing_in');
+
+  // ── Keys & Account ────────────────────────────────────────────────────────
+  String get deleteKey => translate('delete_key');
+  String get activeUser => translate('active_user');
+  String get newUser => translate('new_user');
+  String get displayName => translate('display_name');
+  String get fakeName => translate('fake_name');
+  String get emailAddress => translate('email_address');
+  String get fakeEmail => translate('fake_email');
+  String get themeLight => translate('theme_light');
+  String get themeDark => translate('theme_dark');
+  String get languageEn => translate('language_en');
+  String get languageHi => translate('language_hi');
+
+  // ── AI Preferences ────────────────────────────────────────────────────────
+  String get responseLength => translate('response_length');
+  String get responseLengthHint => translate('response_length_hint');
+  String get geminiThinkingLevel => translate('gemini_thinking_level');
+  String get geminiThinkingLevelHint => translate('gemini_thinking_level_hint');
+  String get geminiAspectRatio => translate('gemini_aspect_ratio');
+  String get geminiAspectRatioHint => translate('gemini_aspect_ratio_hint');
+  String get geminiInfoTitle => translate('gemini_info_title');
+  String get geminiInfoDesc => translate('gemini_info_desc');
+  String get claudeInfoTitle => translate('claude_info_title');
+  String get claudeInfoDesc => translate('claude_info_desc');
+  String get visionImageCount => translate('vision_image_count');
+  String get visionImageCountHint => translate('vision_image_count_hint');
+  String get visionPdfCount => translate('vision_pdf_count');
+  String get visionPdfCountHint => translate('vision_pdf_count_hint');
+  String get visionDetailLevel => translate('vision_detail_level');
+  String get visionDetailLevelHint => translate('vision_detail_level_hint');
+
+  // ── Legal & About ─────────────────────────────────────────────────────────
+  String get productionBuild => translate('production_build');
+
+  String get aboutMissionTitle => translate('about_mission_title');
+  String get aboutMissionBody => translate('about_mission_body');
+  String get legal => translate('legal');
+  String get readInApp => translate('read_in_app');
+  String get contactSupport => translate('contact_support');
+  String get notConfigured => translate('not_configured');
+  String get creditsAttribution => translate('credits_attribution');
+  String get openSourceLicenses => translate('open_source_licenses');
+  String get viewLicenses => translate('view_licenses');
+  String get userAgreement => translate('user_agreement');
+  String get lastUpdated => translate('last_updated');
+  String get aiGuidelines => translate('ai_guidelines');
+  String get officialDocument => translate('official_document');
+  String get noDataSelling => translate('no_data_selling');
+  String get aboutDeveloper => translate('about_developer');
+  String get independentDeveloper => translate('independent_developer');
+  String get copyright => translate('copyright');
+
+  // ── Chat & Attachments ────────────────────────────────────────────────────
+  String get deleteConversationConfirm =>
+      translate('delete_conversation_confirm');
+  String get conversationDeleted => translate('conversation_deleted');
+  String get renaming => translate('renaming');
+  String get conversationNameUpdate => translate('conversation_name_update');
+  String get renameConversationName => translate('rename_conversation_name');
+  String get rename => translate('rename');
+  String get chooseFromGallery => translate('choose_from_gallery');
+  String get takePhoto => translate('take_photo');
+  String get choosePdf => translate('choose_pdf');
+  String get cannotMixImagesAndPdfs => translate('cannot_mix_images_and_pdfs');
+  String get attachFile => translate('attach_file');
+  String get removeFile => translate('remove_file');
+  String get copiedToClipboard => translate('copied_to_clipboard');
+  String get failedToLoadImage => translate('failed_to_load_image');
+  String maxImageAttachments(int count) =>
+      translate('max_image_attachments').replaceAll('{count}', '$count');
+  String maxPdfAttachments(int count) =>
+      translate('max_pdf_attachments').replaceAll('{count}', '$count');
+  String get pdfTooLarge => translate('pdf_too_large');
+  String get pdfPayloadTooLarge => translate('pdf_payload_too_large');
+  String pdfFileTooLargeDetail(
+          {required String name, required String sizeMB}) =>
+      translate('pdf_file_too_large_detail')
+          .replaceAll('{name}', name)
+          .replaceAll('{size}', sizeMB);
+  String pdfPayloadTooLargeDetail(String totalSizeMB) =>
+      translate('pdf_payload_too_large_detail')
+          .replaceAll('{size}', totalSizeMB);
+  String get imagePayloadTooLarge => translate('image_payload_too_large');
+  String imagePayloadTooLargeDetail(String totalSizeMB) =>
+      translate('image_payload_too_large_detail')
+          .replaceAll('{size}', totalSizeMB);
+
+  // ── Intro & Voice ─────────────────────────────────────────────────────────
+  String get tapToStartVoiceChat => translate('tap_to_start_voice_chat');
+  String get speechTextUnavailable => translate('speech_text_unavailable');
+  String get voiceAssistant => translate('voice_assistant');
 }
 
 // ==========================================================================

@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:ai_voice_genie/core/utils/widget_utils.dart';
-import 'package:ai_voice_genie/shared/model/image_model.dart';
-import 'package:ai_voice_genie/shared/widgets/image_view.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:lottie/lottie.dart';
@@ -39,6 +37,9 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
   bool _showScrollToTop = false;
+  final Set<String> _selectedConversationIds = <String>{};
+
+  bool get _isSelectionMode => _selectedConversationIds.isNotEmpty;
 
   @override
   void initState() {
@@ -116,7 +117,25 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     await _loadInitialConversations(wait: true);
   }
 
-  Future<void> _confirmDeleteAll() async {
+  bool _areAllSelected(List<ConversationModel> conversations) {
+    if (conversations.isEmpty) return false;
+    return conversations.every((c) => _selectedConversationIds.contains(c.id));
+  }
+
+  void _toggleSelectAll(List<ConversationModel> conversations) {
+    setState(() {
+      if (_areAllSelected(conversations)) {
+        _selectedConversationIds.clear();
+      } else {
+        _selectedConversationIds.addAll(conversations.map((c) => c.id));
+      }
+    });
+  }
+
+  Future<void> _confirmDeleteSelected() async {
+    final count = _selectedConversationIds.length;
+    if (count == 0) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AppAlertDialog(
@@ -127,7 +146,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
             const SizedBox(width: 12),
             Flexible(
               child: Text(
-                context.l10n.deleteAllConversations,
+                context.l10n.deleteSelectedConversations,
                 style: context.textTheme.titleLarge
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
@@ -135,7 +154,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
           ],
         ),
         content: Text(
-          context.l10n.deleteAllConfirmMessage,
+          context.l10n.deleteSelectedConfirm(count),
           style: context.textTheme.bodyMedium?.copyWith(
             height: 1.4,
           ),
@@ -165,25 +184,30 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     );
 
     if (confirmed == true) {
-      _deleteAll();
+      _deleteSelected();
     }
   }
 
-  Future<void> _deleteAll() async {
+  Future<void> _deleteSelected() async {
     final uid = context.read<AuthProvider>().currentUser?.uid;
     if (uid == null) return;
-    // Local-first delete: conversations disappear immediately from the UI.
-    // No loading overlay is needed — Firestore deletion runs in the background.
+
+    final idsToDelete = _selectedConversationIds.toList();
     try {
-      LoadingOverlay.show(context,
-          message: context.l10n.deleteAllConversations);
-      // Await the delayed period, then properly await the delete operation.
-      // Previously the delete was fire-and-forget which allowed the UI to
-      // refresh before the Hive soft-delete and outbox enqueue had finished.
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted) return;
-      await context.read<ChatProvider>().deleteAllConversations(uid);
-      // Reload from Hive — list will be empty since all are soft-deleted
+      LoadingOverlay.show(
+        context,
+        message: context.l10n.deleteSelectedConversations,
+      );
+
+      await context.read<ChatProvider>().deleteMultipleConversations(
+            uid: uid,
+            conversationIds: idsToDelete,
+          );
+
+      setState(() {
+        _selectedConversationIds.clear();
+      });
+
       await _loadInitialConversations();
 
       bool isOffline = false;
@@ -202,7 +226,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
         );
       } else {
         context.showSuccessToast(
-          AppLocalizations.of(context)!.translate('conversation_deleted'),
+          context.l10n.conversationsDeleted,
         );
       }
     } catch (e) {
@@ -228,142 +252,197 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     final isSearching = chatProvider.searchQuery != null &&
         chatProvider.searchQuery!.isNotEmpty;
 
-    return Scaffold(
-      floatingActionButton: _showScrollToTop
-          ? FloatingActionButton(
-              onPressed: _scrollToTop,
-              mini: true,
-              backgroundColor: context.primaryColor,
-              child: const Icon(Icons.arrow_upward, color: Colors.white),
-            )
-          : null,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _refresh,
-          child: Column(
-            children: [
-              // Fixed Header Section
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.horizontalPadding,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(context.l10n.conversationHistory,
-                              style: Theme.of(context).textTheme.displayMedium),
-                        ),
-                        if (conversations.isNotEmpty || isSearching) ...[
-                          SizedBox(
-                            height: 28,
-                            child: IconButton(
-                              onPressed: () =>
-                                  AppRoutes.navigateTo(context, AppRoutes.chat),
-                              icon: const FaIcon(FontAwesomeIcons.solidMessage),
-                              tooltip: context.l10n.newConversation,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8.0, vertical: 0.0),
-                              color: AppColors.info,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _confirmDeleteAll,
-                            child: const ImageView(
-                              image: ImageViewData.asset(
-                                AppAssets.deleteIcon,
-                              ),
-                              width: 28,
-                              height: 28,
-                            ),
-                          )
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(context.l10n.historySubtitle,
-                        style: context.textTheme.bodyLarge),
-
-                    // Search Container (Fixed)
-                    Padding(
-                      padding:
-                          EdgeInsets.symmetric(vertical: isTablet ? 24 : 16),
-                      child: context.themedTextField(
-                        enabled: !chatProvider.isLoadingMoreConversations &&
-                                conversations.isNotEmpty ||
-                            isSearching,
-                        onChanged: _onSearchChanged,
-                        hint: context.l10n.searchPlaceholder,
-                        controller: _searchController,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Scrollable Content
-              Expanded(
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  slivers: [
-                    if (conversations.isEmpty &&
-                        !isSearching &&
-                        chatProvider.isLoadingMoreConversations)
-                      _buildShimmerList()
-                    else if (conversations.isEmpty && !isSearching)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: EmptyHistoryView(isTablet: isTablet),
-                      )
-                    else if (conversations.isEmpty && isSearching)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.center,
+    return PopScope(
+      canPop: !_isSelectionMode,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_isSelectionMode) {
+          setState(() {
+            _selectedConversationIds.clear();
+          });
+        }
+      },
+      child: Scaffold(
+        floatingActionButton: (_showScrollToTop && !_isSelectionMode)
+            ? FloatingActionButton(
+                onPressed: _scrollToTop,
+                mini: true,
+                backgroundColor: context.primaryColor,
+                child: const Icon(Icons.arrow_upward, color: Colors.white),
+              )
+            : null,
+        body: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _isSelectionMode ? () async {} : _refresh,
+            child: Column(
+              children: [
+                // Fixed Header Section
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      if (_isSelectionMode) ...[
+                        Row(
                           children: [
-                            SizedBox(
-                              width: context.screenWidth * 0.8,
-                              height: context.screenWidth * 0.8,
-                              child: Lottie.asset(
-                                AppAssets.emptySearch,
-                                reverse: true,
-                                repeat: true,
-                                fit: BoxFit.cover,
-                                imageProviderFactory: (lottieImage) {
-                                  return const AssetImage(AppAssets.appLogo);
-                                },
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded),
+                              tooltip: context.l10n.cancel,
+                              onPressed: () {
+                                setState(() {
+                                  _selectedConversationIds.clear();
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                context.l10n.selectedCount(
+                                    _selectedConversationIds.length),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                               ),
                             ),
-                            Text(
-                              context.l10n.noConversationFound(
-                                  chatProvider.searchQuery ?? ''),
-                              style: context.textTheme.bodyLarge,
-                            )
+                            IconButton(
+                              icon: Icon(
+                                _areAllSelected(conversations)
+                                    ? Icons.deselect_rounded
+                                    : Icons.select_all_rounded,
+                                color: context.primaryColor,
+                              ),
+                              tooltip: _areAllSelected(conversations)
+                                  ? context.l10n.deselectAll
+                                  : context.l10n.selectAll,
+                              onPressed: () => _toggleSelectAll(conversations),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: AppColors.lightError,
+                              ),
+                              tooltip: context.l10n.deleteSelectedConversations,
+                              onPressed: _selectedConversationIds.isEmpty
+                                  ? null
+                                  : _confirmDeleteSelected,
+                            ),
                           ],
                         ),
-                      )
-                    else
-                      ..._buildGroupedLists(conversations),
-                    if (chatProvider.isLoadingMoreConversations &&
-                        conversations.isNotEmpty)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding:
-                              EdgeInsets.only(bottom: context.verticalSpacing),
-                          child: const Center(
-                              child: CircularProgressIndicator.adaptive()),
+                        const SizedBox(height: 16),
+                      ] else ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(context.l10n.conversationHistory,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displayMedium),
+                            ),
+                            if (conversations.isNotEmpty || isSearching)
+                              SizedBox(
+                                height: 28,
+                                child: IconButton(
+                                  onPressed: () => AppRoutes.navigateTo(
+                                      context, AppRoutes.chat),
+                                  icon: const FaIcon(
+                                      FontAwesomeIcons.solidMessage),
+                                  tooltip: context.l10n.newConversation,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0, vertical: 0.0),
+                                  color: AppColors.info,
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                  ],
+                        const SizedBox(height: 8),
+                        Text(context.l10n.historySubtitle,
+                            style: context.textTheme.bodyLarge),
+
+                        // Search Container (Fixed)
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                              vertical: isTablet ? 24 : 16),
+                          child: context.themedTextField(
+                            enabled: !chatProvider.isLoadingMoreConversations &&
+                                    conversations.isNotEmpty ||
+                                isSearching,
+                            onChanged: _onSearchChanged,
+                            hint: context.l10n.searchPlaceholder,
+                            controller: _searchController,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Scrollable Content
+                Expanded(
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    slivers: [
+                      if (conversations.isEmpty &&
+                          !isSearching &&
+                          chatProvider.isLoadingMoreConversations)
+                        _buildShimmerList()
+                      else if (conversations.isEmpty && !isSearching)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: EmptyHistoryView(isTablet: isTablet),
+                        )
+                      else if (conversations.isEmpty && isSearching)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: context.screenWidth * 0.8,
+                                height: context.screenWidth * 0.8,
+                                child: Lottie.asset(
+                                  AppAssets.emptySearch,
+                                  reverse: true,
+                                  repeat: true,
+                                  fit: BoxFit.cover,
+                                  imageProviderFactory: (lottieImage) {
+                                    return const AssetImage(AppAssets.appLogo);
+                                  },
+                                ),
+                              ),
+                              Text(
+                                context.l10n.noConversationFound(
+                                    chatProvider.searchQuery ?? ''),
+                                style: context.textTheme.bodyLarge,
+                              )
+                            ],
+                          ),
+                        )
+                      else
+                        ..._buildGroupedLists(conversations),
+                      if (chatProvider.isLoadingMoreConversations &&
+                          conversations.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                                bottom: context.verticalSpacing),
+                            child: const Center(
+                                child: CircularProgressIndicator.adaptive()),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -439,11 +518,32 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final conversation = items[index];
+            final isSelected =
+                _selectedConversationIds.contains(conversation.id);
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: CustomConversationCard(
                 conversation: conversation,
+                isSelectionMode: _isSelectionMode,
+                isSelected: isSelected,
+                onLongPress: () {
+                  if (!_isSelectionMode) {
+                    setState(() {
+                      _selectedConversationIds.add(conversation.id);
+                    });
+                  }
+                },
                 onTap: () async {
+                  if (_isSelectionMode) {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedConversationIds.remove(conversation.id);
+                      } else {
+                        _selectedConversationIds.add(conversation.id);
+                      }
+                    });
+                    return;
+                  }
                   final result = await AppRoutes.navigateTo(
                     context,
                     AppRoutes.chatDetail,

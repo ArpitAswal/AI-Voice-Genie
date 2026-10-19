@@ -16,6 +16,8 @@ import '../domain/local_message_record.dart';
 import '../domain/message_model.dart';
 import 'chat_outbox_store.dart';
 import 'local_chat_store.dart';
+import '../../key_setup/data/api_key_repository_impl.dart';
+import '../../key_setup/presentation/api_key_provider.dart';
 
 /// Background coordinator that keeps Hive and Firestore in sync.
 ///
@@ -230,6 +232,12 @@ class ChatSyncService {
           await _localStore.hardDeleteConversation(
               task.uid, task.conversationId);
           await _outboxStore.markSucceeded(task.operationId);
+
+        case OutboxTaskType.saveApiKey:
+          await _executeSaveApiKey(task);
+
+        case OutboxTaskType.deleteApiKey:
+          await _executeDeleteApiKey(task);
       }
     } on FirebaseException catch (e) {
       // Classify the error to determine retry behavior
@@ -240,11 +248,16 @@ class ChatSyncService {
         isRetryable: isRetryable,
       );
 
-      // For non-retryable errors on upsert tasks, mark the local conversation
-      // as syncFailed so the UI can show a subtle warning indicator
+      // For non-retryable errors, mark local models as syncFailed so the UI can show warning indicators
       if (!isRetryable && task.type == OutboxTaskType.upsertMessagePair) {
         await _localStore.markConversationSyncFailed(
             task.uid, task.conversationId);
+      } else if (!isRetryable && task.type == OutboxTaskType.saveApiKey) {
+        final providerIdStr = task.payload['providerId'] as String?;
+        if (providerIdStr != null) {
+          ApiKeyProvider.instance
+              ?.markCloudSyncFailed(AiProviderId.fromId(providerIdStr));
+        }
       }
     } catch (e) {
       // Unexpected errors — treat as retryable by default
@@ -282,17 +295,46 @@ class ChatSyncService {
       return;
     }
 
+    // Defensive check: if the user already deleted this conversation while offline
+    // or before the sync worker reached this task, skip the Firestore write so we
+    // do not resurrect dead conversations or orphan remote documents.
+    final localConv = _localStore.getConversation(uid, conversationId);
+    if (localConv == null ||
+        localConv.isDeleted ||
+        localConv.syncStatus == SyncStatus.pendingDelete) {
+      debugPrint(
+          '🛡️ ChatSyncService: skipping upsert for deleted conversation $conversationId');
+      await _outboxStore.markSucceeded(task.operationId);
+      return;
+    }
+
     final convData = Map<String, dynamic>.from(rawConv);
     final userMsgData = Map<String, dynamic>.from(rawUser);
     final aiMsgData = Map<String, dynamic>.from(rawAi);
 
-    // Replace the ISO string timestamp (from toCacheMap) with the Firestore server timestamp
+    // Convert client ISO string timestamps to Firestore Timestamps so authentic
+    // prompt creation and AI completion times are preserved in Firestore
+    final rawUserTs = userMsgData[FirebaseCollections.fieldMessageTimestamp];
+    final userDateTime = rawUserTs is String
+        ? DateTime.tryParse(rawUserTs)
+        : (rawUserTs is DateTime ? rawUserTs : null);
     userMsgData[FirebaseCollections.fieldMessageTimestamp] =
-        FieldValue.serverTimestamp();
-    aiMsgData[FirebaseCollections.fieldMessageTimestamp] =
-        FieldValue.serverTimestamp();
+        userDateTime != null
+            ? Timestamp.fromDate(userDateTime)
+            : FieldValue.serverTimestamp();
+
+    final rawAiTs = aiMsgData[FirebaseCollections.fieldMessageTimestamp];
+    final aiDateTime = rawAiTs is String
+        ? DateTime.tryParse(rawAiTs)
+        : (rawAiTs is DateTime ? rawAiTs : null);
+    aiMsgData[FirebaseCollections.fieldMessageTimestamp] = aiDateTime != null
+        ? Timestamp.fromDate(aiDateTime)
+        : FieldValue.serverTimestamp();
+
     convData[FirebaseCollections.fieldConversationLastMessageAt] =
-        FieldValue.serverTimestamp();
+        aiDateTime != null
+            ? Timestamp.fromDate(aiDateTime)
+            : FieldValue.serverTimestamp();
 
     final userMessageId = payload['userMessageId'] as String? ?? '';
     final aiMessageId = payload['aiMessageId'] as String? ?? '';
@@ -355,6 +397,16 @@ class ChatSyncService {
 
   /// Update only the conversation title field in Firestore.
   Future<void> _executeUpdateTitle(ChatOutboxTask task) async {
+    final localConv =
+        _localStore.getConversation(task.uid, task.conversationId);
+    if (localConv == null ||
+        localConv.isDeleted ||
+        localConv.syncStatus == SyncStatus.pendingDelete) {
+      debugPrint(
+          '🛡️ ChatSyncService: skipping title update for deleted conversation ${task.conversationId}');
+      await _outboxStore.markSucceeded(task.operationId);
+      return;
+    }
     final newTitle = task.payload['title'] as String? ?? '';
     await _remote.updateConversationTitle(
       uid: task.uid,
@@ -362,6 +414,44 @@ class ChatSyncService {
       title: newTitle,
     );
     await _outboxStore.markSucceeded(task.operationId);
+  }
+
+  /// Persist an API key to Firestore via ApiKeyRepositoryImpl.
+  Future<void> _executeSaveApiKey(ChatOutboxTask task) async {
+    final providerIdStr = task.payload['providerId'] as String?;
+    final apiKey = task.payload['apiKey'] as String?;
+    if (providerIdStr == null || apiKey == null) {
+      await _outboxStore.markFailed(task.operationId, 'Corrupt API key payload',
+          isRetryable: false);
+      return;
+    }
+    final provider = AiProviderId.fromId(providerIdStr);
+    await ApiKeyRepositoryImpl().saveKey(
+      uid: task.uid,
+      providerId: provider,
+      apiKey: apiKey,
+    );
+    ApiKeyProvider.instance?.clearCloudSyncFailed(provider);
+    await _outboxStore.markSucceeded(task.operationId);
+    debugPrint(
+        '✅ ChatSyncService: synced API key [$providerIdStr] to Firestore');
+  }
+
+  /// Delete an API key document from Firestore via ApiKeyRepositoryImpl.
+  Future<void> _executeDeleteApiKey(ChatOutboxTask task) async {
+    final providerIdStr = task.payload['providerId'] as String?;
+    if (providerIdStr == null) {
+      await _outboxStore.markFailed(task.operationId, 'Corrupt API key payload',
+          isRetryable: false);
+      return;
+    }
+    final provider = AiProviderId.fromId(providerIdStr);
+    await ApiKeyRepositoryImpl().deleteKey(
+      uid: task.uid,
+      providerId: provider,
+    );
+    await _outboxStore.markSucceeded(task.operationId);
+    debugPrint('✅ ChatSyncService: deleted API key [$providerIdStr] remotely');
   }
 
   // ── Remote Stream Merge ────────────────────────────────────────────────────
@@ -578,12 +668,11 @@ class ChatSyncService {
 
   /// Determine whether a Firestore error code should be retried.
   ///
-  /// Retryable: network issues, server unavailable, rate limits
-  /// Non-retryable: permission errors, auth failures, bad request payloads
+  /// Retryable: network issues, server unavailable, rate limits, token finish / unauthenticated
+  /// Non-retryable: permission errors, bad request payloads
   bool _isRetryableFirestoreError(String? code) {
     const nonRetryable = {
       'permission-denied',
-      'unauthenticated',
       'invalid-argument',
       'not-found', // Trying to update a doc that never existed
     };

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
+import '../enums/app_enums.dart';
 import '../localization/app_localizations.dart';
 
 /// Centralized validator functions for AI Voice Genie.
@@ -70,10 +71,17 @@ class Validators {
 
   // ── API Key ───────────────────────────────────────────────────────────────
 
-  /// Validates an AI provider API key before saving
+  /// Validates an AI provider API key before initiating remote validation or saving.
+  ///
+  /// Flow:
+  /// 1. Verifies non-empty input.
+  /// 2. Asserts minimum key length (>= 20 characters).
+  /// 3. Cross-checks known provider prefixes to prevent accidental cross-provider paste mistakes
+  ///    (e.g., pasting an OpenAI key into the Gemini field).
   static String? validateApiKey(
     String? value, {
     required String providerName,
+    AiProviderId? providerId,
     BuildContext? context,
   }) {
     if (value == null || value.trim().isEmpty) {
@@ -82,10 +90,39 @@ class Validators {
           : 'API key is required';
     }
 
-    if (value.trim().length < 20) {
+    final trimmed = value.trim();
+    if (trimmed.length < 20) {
       return context != null
           ? context.l10n.apiKeyTooShort
           : 'This doesn\'t look like a valid $providerName API key';
+    }
+
+    // Fast client-side mismatch prevention: catch accidental cross-provider pasting
+    if (providerId != null) {
+      switch (providerId) {
+        case AiProviderId.gemini:
+          if (trimmed.startsWith('sk-') || trimmed.startsWith('sk-ant-')) {
+            return 'This looks like an OpenAI or Claude key, not a Gemini key';
+          }
+          break;
+        case AiProviderId.openAi:
+          if (trimmed.startsWith('AIzaSy')) {
+            return 'This looks like a Google Gemini key, not an OpenAI key';
+          }
+          if (trimmed.startsWith('sk-ant-')) {
+            return 'This looks like an Anthropic Claude key, not an OpenAI key';
+          }
+          break;
+        case AiProviderId.claude:
+          if (trimmed.startsWith('AIzaSy')) {
+            return 'This looks like a Google Gemini key, not a Claude key';
+          }
+          if (trimmed.startsWith('sk-proj-') ||
+              (trimmed.startsWith('sk-') && !trimmed.startsWith('sk-ant-'))) {
+            return 'This looks like an OpenAI key, not an Anthropic Claude key';
+          }
+          break;
+      }
     }
 
     return null;

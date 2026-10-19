@@ -1,15 +1,16 @@
-import 'dart:ui';
-
 import 'package:ai_voice_genie/features/usage/presentation/usage_provider.dart';
 import 'package:ai_voice_genie/features/voice_speech/presentation/voice_speech_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:provider/single_child_widget.dart';
 
 import 'core/constants/app_colors.dart';
+import 'core/enums/app_enums.dart';
 import 'core/error/effect_listener.dart';
 
 import 'core/localization/app_localizations.dart';
@@ -36,6 +37,12 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // In release builds, disable debugPrint output to eliminate console overhead.
+  // In development/debug mode, debugPrint outputs normally so logs can be monitored.
+  if (kReleaseMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
 
   // ── Firebase ────────────────────────────────────────────────────────────────
   // Uncomment after running: flutterfire configure
@@ -156,7 +163,7 @@ class AiVoiceGenieApp extends StatelessWidget {
   ///   1. Theme + Locale (no dependencies — initialize from storage)
   ///   2. Auth (depends on storage being ready)
   ///   3. Feature providers (depend on auth being ready)
-  List<ChangeNotifierProvider> _buildProviders() {
+  List<SingleChildWidget> _buildProviders() {
     return [
       // ── Core Providers ────────────────────────────────────────────────────
       ChangeNotifierProvider<ThemeProvider>(
@@ -177,9 +184,20 @@ class AiVoiceGenieApp extends StatelessWidget {
       ),
       ChangeNotifierProvider<ApiKeyProvider>(create: (_) => ApiKeyProvider()),
       ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
-      // VoiceProvider — lazy: false so voice availability resolves during startup
-      ChangeNotifierProvider<VoiceProvider>(
-        create: (_) => VoiceProvider(),
+      // VoiceProvider — ProxyProvider so it receives the ApiKeyProvider's current
+      // OpenAI key and can auto-select the Whisper STT backend when available.
+      // lazy: false so voice availability resolves during startup.
+      ChangeNotifierProxyProvider<ApiKeyProvider, VoiceProvider>(
+        create: (ctx) => VoiceProvider(
+          // Lazy getter: evaluated at each startListening call so key
+          // additions/removals take effect without restarting the provider.
+          openAiKeyGetter: () =>
+              ctx.read<ApiKeyProvider>().rawKeyFor(AiProviderId.openAi),
+        ),
+        update: (ctx, apiKeys, previous) {
+          // The getter closure already reads ApiKeyProvider live — no rebuild needed.
+          return previous!;
+        },
         lazy: false,
       ),
       ChangeNotifierProvider<UsageProvider>(create: (_) => UsageProvider()),

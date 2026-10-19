@@ -152,7 +152,6 @@ class VoiceInputButtonState extends State<VoiceInputButton>
                 onTap: isProcessing
                     ? null
                     : () => _handleTap(context, voiceProvider),
-                isTablet: widget.isTablet,
                 isLoading: isProcessing,
                 tooltip: widget.tooltip,
                 color: isListening
@@ -180,7 +179,7 @@ class VoiceInputButtonState extends State<VoiceInputButton>
             if (isListening) ...[
               const SizedBox(height: 4),
               Text(
-                AppLocalizations.of(context)!.translate('listening'),
+                context.l10n.listening,
                 style: context.textTheme.labelSmall?.copyWith(
                     color: context.isDark
                         ? AppColors.darkError

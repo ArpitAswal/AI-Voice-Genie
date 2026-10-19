@@ -24,14 +24,14 @@ abstract class DeviceImageSaveService {
 
 /// Live implementation that delegates to the native MethodChannel.
 ///
-/// Channel: "com.example.voice_genie/image_save"
+/// Channel: "com.voicegenie.app/image_save"
 /// Method:  "saveImageBytes"
 ///
 /// Native response map:
 ///   "success" → bool
 ///   "error"   → String? — machine-readable reason code on failure
 class DeviceImageSaveServiceImpl implements DeviceImageSaveService {
-  static const _channel = MethodChannel('com.example.voice_genie/image_save');
+  static const _channel = MethodChannel('com.voicegenie.app/image_save');
 
   @override
   Future<DeviceImageSaveResult> saveImageBytes({

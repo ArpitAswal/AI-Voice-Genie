@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:ai_voice_genie/core/error/effect_bus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,8 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/constants/firebase_collections.dart';
@@ -17,6 +17,8 @@ import '../../../../core/constants/storage_keys.dart';
 import '../../../../core/services/storage_service.dart';
 import '../domain/auth_repository.dart';
 import '../domain/user_model.dart';
+import 'remote_user_dao.dart';
+import 'user_dto.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../chat/data/remote_chat_store.dart';
 import '../../usage/data/usage_repository_impl.dart';
@@ -36,22 +38,26 @@ class AuthRepositoryImpl implements AuthRepository {
   final FirebaseFirestore _firestore;
   final GoogleSignIn _googleSignIn;
   final StorageService _storage;
+  final RemoteUserDao _userDao;
 
-  AuthRepositoryImpl(
-      {FirebaseAuth? firebaseAuth,
-      FirebaseFirestore? firestore,
-      GoogleSignIn? googleSignIn,
-      StorageService? storage,
-      EffectBus? effectBus})
-      : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance,
+  AuthRepositoryImpl({
+    FirebaseAuth? firebaseAuth,
+    FirebaseFirestore? firestore,
+    GoogleSignIn? googleSignIn,
+    StorageService? storage,
+    RemoteUserDao? userDao,
+  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+        _firestore = firestore ?? FirebaseCollections.firestore,
         _googleSignIn = googleSignIn ?? GoogleSignIn(),
-        _storage = storage ?? StorageService();
+        _storage = storage ?? StorageService(),
+        _userDao = userDao ??
+            RemoteUserDaoImpl(
+                firestore: firestore ?? FirebaseCollections.firestore);
 
-  // ── Apple Sign-In Availability ─────────────────────────────────────────────
+  // ── Apple Sign-In Availability (disabled pending Apple Developer account) ─
 
-  @override
-  bool get isAppleSignInAvailable => Platform.isIOS;
+  // @override
+  // bool get isAppleSignInAvailable => Platform.isIOS;
 
   // ── Google Sign-In ─────────────────────────────────────────────────────────
 
@@ -93,18 +99,42 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      debugPrint(
-          "⚠️ AuthRepositoryImpl: signInWithGoogle and firebaseUser signInWithCredential");
+      final isNewUserFromAuth =
+          userCredential.additionalUserInfo?.isNewUser ?? false;
+
       // Create or update Firestore document and return normalized UserModel
-      return await _createOrUpdateUser(
-        firebaseUser: firebaseUser,
-        provider: SocialAuthProvider.google,
-      );
+      try {
+        final user = await _createOrUpdateUser(
+          firebaseUser: firebaseUser,
+          provider: SocialAuthProvider.google,
+          isNewUserFromAuth: isNewUserFromAuth,
+        );
+        return user;
+      } catch (e) {
+        // Rollback: If profile creation fails, sign out from Firebase Auth so
+        // the client is not left in a half-authenticated state with no Firestore doc.
+        await _firebaseAuth.signOut().catchError((_) {});
+        rethrow;
+      }
     } on AuthException {
       // Re-throw our typed exceptions as-is
       rethrow;
     } on SocketException {
       throw const AuthException(AuthErrorCodes.noInternet);
+    } on TimeoutException {
+      throw const AuthException(AuthErrorCodes.noInternet);
+    } on PlatformException catch (e) {
+      // Google Sign-In throws PlatformException on native dialog cancellation or network failure
+      if (e.code == 'sign_in_canceled' || e.code == '12501') {
+        // User cancelled native Google account picker — return null silently
+        return null;
+      } else if (e.code == 'network_error' || e.code == '7') {
+        throw const AuthException(AuthErrorCodes.noInternet);
+      }
+      throw AuthException(
+        AuthErrorCodes.signInFailed,
+        technicalMessage: 'PlatformException: ${e.code} — ${e.message}',
+      );
     } on FirebaseAuthException catch (e) {
       throw AuthException(
         _mapFirebaseAuthError(e.code),
@@ -118,83 +148,67 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
-  // ── Apple Sign-In ──────────────────────────────────────────────────────────
+  // ── Apple Sign-In (disabled pending Apple Developer account) ───────────────
 
-  @override
-  Future<UserModel?> signInWithApple() async {
-    try {
-      // Generate a cryptographic nonce for Apple Sign-In security
-      // The raw nonce is sent to Apple, the hashed nonce is sent to Firebase
-      // Firebase verifies that hash(rawNonce) == hashedNonce
-      final rawNonce = _generateNonce();
-      final hashedNonce = _sha256ofString(rawNonce);
-
-      // Request Apple credential with the hashed nonce
-      AuthorizationCredentialAppleID appleCredential;
-      try {
-        appleCredential = await SignInWithApple.getAppleIDCredential(
-          scopes: [
-            AppleIDAuthorizationScopes.email,
-            AppleIDAuthorizationScopes.fullName,
-          ],
-          nonce: hashedNonce,
-        );
-      } on SignInWithAppleAuthorizationException catch (e) {
-        // User cancelled the Apple sheet — not an error
-        if (e.code == AuthorizationErrorCode.canceled) return null;
-        throw AuthException(
-          AuthErrorCodes.signInFailed,
-          technicalMessage:
-              'Apple authorization error: ${e.code} — ${e.message}',
-        );
-      }
-
-      // Create Firebase OAuth credential with the raw nonce
-      // Firebase will hash it internally and compare with hashedNonce
-      final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,
-        rawNonce: rawNonce,
-      );
-
-      // Sign in to Firebase with Apple credential
-      final userCredential =
-          await _firebaseAuth.signInWithCredential(oauthCredential);
-
-      final firebaseUser = userCredential.user;
-      if (firebaseUser == null) {
-        throw const AuthException(
-          AuthErrorCodes.signInFailed,
-          technicalMessage: 'Firebase user was null after Apple sign-in',
-        );
-      }
-
-      // Apple only provides name and email on the FIRST sign-in
-      // Extract them here — they will be null on subsequent sign-ins
-      final appleGivenName = appleCredential.givenName;
-      final appleEmail = appleCredential.email;
-
-      return await _createOrUpdateUser(
-        firebaseUser: firebaseUser,
-        provider: SocialAuthProvider.apple,
-        appleGivenName: appleGivenName,
-        appleEmail: appleEmail,
-      );
-    } on AuthException {
-      rethrow;
-    } on SocketException {
-      throw const AuthException(AuthErrorCodes.noInternet);
-    } on FirebaseAuthException catch (e) {
-      throw AuthException(
-        _mapFirebaseAuthError(e.code),
-        technicalMessage: 'FirebaseAuthException: ${e.code} — ${e.message}',
-      );
-    } catch (e) {
-      throw AuthException(
-        AuthErrorCodes.unknown,
-        technicalMessage: 'Unexpected Apple sign-in error: $e',
-      );
-    }
-  }
+  // @override
+  // Future<UserModel?> signInWithApple() async {
+  //   try {
+  //     final rawNonce = _generateNonce();
+  //     final hashedNonce = _sha256ofString(rawNonce);
+  //     AuthorizationCredentialAppleID appleCredential;
+  //     try {
+  //       appleCredential = await SignInWithApple.getAppleIDCredential(
+  //         scopes: [
+  //           AppleIDAuthorizationScopes.email,
+  //           AppleIDAuthorizationScopes.fullName,
+  //         ],
+  //         nonce: hashedNonce,
+  //       );
+  //     } on SignInWithAppleAuthorizationException catch (e) {
+  //       if (e.code == AuthorizationErrorCode.canceled) return null;
+  //       throw AuthException(
+  //         AuthErrorCodes.signInFailed,
+  //         technicalMessage:
+  //             'Apple authorization error: ${e.code} — ${e.message}',
+  //       );
+  //     }
+  //     final oauthCredential = OAuthProvider('apple.com').credential(
+  //       idToken: appleCredential.identityToken,
+  //       rawNonce: rawNonce,
+  //     );
+  //     final userCredential =
+  //         await _firebaseAuth.signInWithCredential(oauthCredential);
+  //     final firebaseUser = userCredential.user;
+  //     if (firebaseUser == null) {
+  //       throw const AuthException(
+  //         AuthErrorCodes.signInFailed,
+  //         technicalMessage: 'Firebase user was null after Apple sign-in',
+  //       );
+  //     }
+  //     final appleGivenName = appleCredential.givenName;
+  //     final appleEmail = appleCredential.email;
+  //     return await _createOrUpdateUser(
+  //       firebaseUser: firebaseUser,
+  //       provider: SocialAuthProvider.apple,
+  //       appleGivenName: appleGivenName,
+  //       appleEmail: appleEmail,
+  //     );
+  //   } on AuthException {
+  //     rethrow;
+  //   } on SocketException {
+  //     throw const AuthException(AuthErrorCodes.noInternet);
+  //   } on FirebaseAuthException catch (e) {
+  //     throw AuthException(
+  //       _mapFirebaseAuthError(e.code),
+  //       technicalMessage: 'FirebaseAuthException: ${e.code} — ${e.message}',
+  //     );
+  //   } catch (e) {
+  //     throw AuthException(
+  //       AuthErrorCodes.unknown,
+  //       technicalMessage: 'Unexpected Apple sign-in error: $e',
+  //     );
+  //   }
+  // }
 
   // ── Get Current User ───────────────────────────────────────────────────────
 
@@ -224,12 +238,10 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     try {
-      // Fetch Firestore document to get full profile including flags
-      final doc = await _firestore
-          .doc(FirebaseCollections.userDoc(firebaseUser.uid))
-          .get();
+      // Fetch Firestore user profile via DAO
+      final user = await _userDao.getUser(firebaseUser.uid);
 
-      if (!doc.exists || doc.data() == null) {
+      if (user == null) {
         // If the Firestore document does not exist, the account was deleted
         // (e.g. on another device). Do NOT recreate the user document! Sign out and return null.
         debugPrint(
@@ -240,12 +252,10 @@ class AuthRepositoryImpl implements AuthRepository {
         return null;
       }
 
-      return UserModel.fromFirestore(doc.data()!);
+      return user;
     } catch (e) {
-      // If Firestore fails, return a minimal model from Firebase data
-      // so the user is not signed out unexpectedly due to transient network errors
       debugPrint('⚠️ AuthRepository: getCurrentUser Firestore error — $e');
-      return _buildMinimalUserModel(firebaseUser);
+      return null;
     }
   }
 
@@ -253,15 +263,27 @@ class AuthRepositoryImpl implements AuthRepository {
   Stream<UserModel?> get authStateChanges =>
       _firebaseAuth.userChanges().map((user) {
         if (user == null) return null;
-        return _buildMinimalUserModel(user);
+        SocialAuthProvider provider = SocialAuthProvider.google;
+        if (user.providerData.isNotEmpty) {
+          final pId = user.providerData.first.providerId.toLowerCase();
+          if (pId.contains('apple')) {
+            provider = SocialAuthProvider.apple;
+          } else if (pId.contains('google')) {
+            provider = SocialAuthProvider.google;
+          }
+        }
+        return UserModel(
+          uid: user.uid,
+          authProvider: provider,
+          email: user.email ?? '',
+          displayName: user.displayName ?? '',
+          photoUrl: user.photoURL ?? '',
+        );
       });
 
   @override
   Stream<bool> watchUserExists(String uid) {
-    return _firestore
-        .doc(FirebaseCollections.userDoc(uid))
-        .snapshots()
-        .map((doc) => doc.exists);
+    return _userDao.watchUserExists(uid);
   }
 
   @override
@@ -274,7 +296,10 @@ class AuthRepositoryImpl implements AuthRepository {
       if (e.code == 'user-not-found' ||
           e.code == 'user-disabled' ||
           e.code == 'user-token-expired') {
-        throw AuthException('session_expired', technicalMessage: e.code);
+        throw AuthException(
+          AuthErrorCodes.sessionExpired,
+          technicalMessage: e.code,
+        );
       }
     }
   }
@@ -283,21 +308,38 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signOut() async {
+    // 1. Sign out from Google Sign-In (clears cached Google account)
     try {
-      // Sign out from Google Sign-In (clears cached Google account)
       await _googleSignIn.signOut();
-
-      // Sign out from Firebase Auth
-      await _firebaseAuth.signOut();
-
-      // Clear all local session data
-      _storage.clearUserData();
-      _storage.setBool(StorageKeys.isLoggedIn, false);
-      debugPrint('⚠️ AuthRepositoryImpl: User signed out successfully');
     } catch (e) {
-      // Google sign-out failure is not critical — continue with Firebase signout
-      debugPrint('⚠️ AuthRepository: Google/Firebase signOut error — $e');
+      debugPrint('⚠️ AuthRepository: Google signOut error (ignored): $e');
     }
+
+    // 2. Sign out from Firebase Auth
+    try {
+      await _firebaseAuth.signOut();
+    } on FirebaseAuthException catch (e) {
+      debugPrint('⚠️ AuthRepository: Firebase signOut error — ${e.code}');
+      throw AuthException(
+        AuthErrorCodes.signOutFailed,
+        technicalMessage: e.message,
+      );
+    } catch (e) {
+      debugPrint('⚠️ AuthRepository: Firebase signOut error — $e');
+      throw AuthException(
+        AuthErrorCodes.signOutFailed,
+        technicalMessage: e.toString(),
+      );
+    }
+
+    // 3. Clear all local session data
+    try {
+      await _storage.clearUserData();
+      await _storage.setBool(StorageKeys.isLoggedIn, false);
+    } catch (e) {
+      debugPrint('⚠️ AuthRepository: Storage clear error (ignored): $e');
+    }
+    debugPrint('⚠️ AuthRepositoryImpl: User signed out successfully');
   }
 
   // ── Delete Account ────────────────────────────────────────────────────────
@@ -336,26 +378,27 @@ class AuthRepositoryImpl implements AuthRepository {
                     '✅ Successfully re-authenticated Google user before account deletion');
               }
             }
-          } else if (info.providerId == 'apple.com') {
-            debugPrint(
-                '🔄 Attempting Apple re-authentication before account deletion...');
-            final rawNonce = _generateNonce();
-            final hashedNonce = _sha256ofString(rawNonce);
-            final appleCredential = await SignInWithApple.getAppleIDCredential(
-              scopes: [
-                AppleIDAuthorizationScopes.email,
-                AppleIDAuthorizationScopes.fullName,
-              ],
-              nonce: hashedNonce,
-            );
-            final oauthCredential = OAuthProvider('apple.com').credential(
-              idToken: appleCredential.identityToken,
-              rawNonce: rawNonce,
-            );
-            await user.reauthenticateWithCredential(oauthCredential);
-            reauthSuccess = true;
-            debugPrint(
-                '✅ Successfully re-authenticated Apple user before account deletion');
+            // Apple re-authentication is temporarily disabled pending Apple Developer account setup
+            // } else if (info.providerId == 'apple.com') {
+            //   debugPrint(
+            //       '🔄 Attempting Apple re-authentication before account deletion...');
+            //   final rawNonce = _generateNonce();
+            //   final hashedNonce = _sha256ofString(rawNonce);
+            //   final appleCredential = await SignInWithApple.getAppleIDCredential(
+            //     scopes: [
+            //       AppleIDAuthorizationScopes.email,
+            //       AppleIDAuthorizationScopes.fullName,
+            //     ],
+            //     nonce: hashedNonce,
+            //   );
+            //   final oauthCredential = OAuthProvider('apple.com').credential(
+            //     idToken: appleCredential.identityToken,
+            //     rawNonce: rawNonce,
+            //   );
+            //   await user.reauthenticateWithCredential(oauthCredential);
+            //   reauthSuccess = true;
+            //   debugPrint(
+            //       '✅ Successfully re-authenticated Apple user before account deletion');
           }
         }
       } catch (e) {
@@ -415,9 +458,9 @@ class AuthRepositoryImpl implements AuthRepository {
         debugPrint('⚠️ Error deleting Firestore usage data: $e');
       }
 
-      // 3. Delete user profile doc from Firestore
+      // 3. Delete user profile doc from Firestore via DAO
       try {
-        await _firestore.doc(FirebaseCollections.userDoc(uid)).delete();
+        await _userDao.deleteUserDoc(uid);
         debugPrint('🗑️ Deleted Firestore user doc for uid=$uid');
       } catch (e) {
         debugPrint('⚠️ Error deleting Firestore user doc: $e');
@@ -433,6 +476,10 @@ class AuthRepositoryImpl implements AuthRepository {
       }
 
       // 4. Delete user from Firebase Auth
+      // NOTE: We intentionally do NOT delete the hashed identity in
+      // RegisteredAccounts/{emailHash}. This ensures that if the user recreates
+      // an account with the same email, they are not treated as a new user again
+      // (prevents re-registration credit/benefit farming exploits).
       await user.delete();
       debugPrint('🗑️ Deleted Firebase Auth user');
 
@@ -446,8 +493,13 @@ class AuthRepositoryImpl implements AuthRepository {
       }
 
       // 6. Clear local preferences and onboarding status
-      _storage.clearUserData();
-      _storage.setBool(StorageKeys.isLoggedIn, false);
+      try {
+        await _storage.clearUserData();
+        await _storage.setBool(StorageKeys.isLoggedIn, false);
+      } catch (e) {
+        debugPrint(
+            '⚠️ AuthRepository: storage clear error during deleteAccount (ignored): $e');
+      }
       return true;
     } on FirebaseAuthException catch (e) {
       debugPrint(
@@ -459,12 +511,18 @@ class AuthRepositoryImpl implements AuthRepository {
               'FirebaseAuthException: requires-recent-login — ${e.message}',
         );
       }
-      return false;
+      throw AuthException(
+        AuthErrorCodes.deleteAccountFailed,
+        technicalMessage: e.message,
+      );
     } on AuthException {
       rethrow;
     } catch (e) {
       debugPrint('⚠️ AuthRepositoryImpl deleteAccount error: $e');
-      return false;
+      throw AuthException(
+        AuthErrorCodes.deleteAccountFailed,
+        technicalMessage: e.toString(),
+      );
     }
   }
 
@@ -478,173 +536,193 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<UserModel?> _createOrUpdateUser({
     required User firebaseUser,
     required SocialAuthProvider provider,
+    bool isNewUserFromAuth = false,
     String? appleGivenName,
     String? appleEmail,
   }) async {
     final uid = firebaseUser.uid;
-    final docRef = _firestore.doc(FirebaseCollections.userDoc(uid));
+    final fsStopwatch = Stopwatch()..start();
 
     try {
-      // Fetch existing document to determine new vs returning user
-      final existingDoc = await docRef.get();
-      final isNewUser = !existingDoc.exists;
+      // Resolve display name from OAuth provider
+      final resolvedDisplayName = _resolveDisplayName(
+        firebaseUser: firebaseUser,
+        provider: provider,
+        appleGivenName: appleGivenName,
+      );
 
-      String resolvedDisplayName;
-      String resolvedEmail;
-      String resolvedPhotoUrl;
-      DateTime? createdAt;
-      DateTime? lastLoginAt;
-      DateTime? lastUpdatedAt;
-      int? age;
-      DateTime? dateOfBirth;
-      String? gender;
-      String? country;
-      String? state;
-      bool onboardingDone = false;
-      bool keySetupDone = false;
-      bool termsAccepted = false;
-      DateTime? termsAcceptedAt;
-      String? termsVersionAccepted;
+      // Resolve email from OAuth provider
+      final resolvedEmail = _resolveEmail(
+        firebaseUser: firebaseUser,
+        provider: provider,
+        appleEmail: appleEmail,
+      );
 
-      if (isNewUser) {
-        // ── NEW USER ─────────────────────────────────────────────────────────
-        // For Google: use Firebase user data directly
-        // For Apple: use credential data (available on first sign-in only)
-        resolvedDisplayName = _resolveDisplayName(
-          firebaseUser: firebaseUser,
-          provider: provider,
-          appleGivenName: appleGivenName,
-        );
-        resolvedEmail = _resolveEmail(
-          firebaseUser: firebaseUser,
-          provider: provider,
-          appleEmail: appleEmail,
-        );
-        resolvedPhotoUrl = provider == SocialAuthProvider.google
-            ? (firebaseUser.photoURL ?? '')
-            : ''; // Apple never provides photo
+      // Resolve profile photo URL (Google provides photo; Apple does not)
+      final resolvedPhotoUrl = provider == SocialAuthProvider.google
+          ? (firebaseUser.photoURL ?? '')
+          : '';
+
+      DocumentSnapshot<Map<String, dynamic>>? existingDoc;
+
+      // OPTIMIZATION: If Firebase Auth reports a brand-new user (just-minted UID),
+      // their Firestore document cannot exist yet. Skip the wasted 1.5s getUserDoc read.
+      if (!isNewUserFromAuth) {
+        existingDoc = await _userDao.getUserDoc(uid).timeout(
+              const Duration(seconds: 15),
+              onTimeout: () => throw FirebaseException(
+                plugin: 'cloud_firestore',
+                code: 'unavailable',
+                message: 'Firestore connection timed out',
+              ),
+            );
+        debugPrint(
+            '⏱️ Firestore getUserDoc read completed in: ${fsStopwatch.elapsedMilliseconds}ms (exists: ${existingDoc.exists})');
+      } else {
+        debugPrint(
+            '⚡ Fast-path: isNewUserFromAuth is true, skipping non-existent user doc read.');
+      }
+
+      if (existingDoc == null || !existingDoc.exists) {
+        // ── NEW OR RE-REGISTERED USER DOCUMENT CREATION ───────────────────────
+        final normalizedIdentifier =
+            (resolvedEmail.isNotEmpty ? resolvedEmail : uid)
+                .toLowerCase()
+                .trim();
+        final emailHash = _sha256ofString(normalizedIdentifier);
+        final registryDocPath =
+            FirebaseCollections.registeredAccountDoc(emailHash);
+        final registryRef = _firestore.doc(registryDocPath);
+
+        bool hasEverRegistered = false;
+        try {
+          final registryDoc = await registryRef.get().timeout(
+                const Duration(seconds: 15),
+              );
+          hasEverRegistered = registryDoc.exists;
+        } catch (e) {
+          debugPrint(
+              '⚠️ AuthRepository: RegisteredAccounts check skipped/failed (non-fatal): $e');
+        }
+
+        final isNewUser = !hasEverRegistered;
+
+        // Record in permanent registry in background (non-blocking)
+        if (!hasEverRegistered) {
+          unawaited(registryRef.set({
+            FirebaseCollections.fieldRegisteredAt: FieldValue.serverTimestamp(),
+            FirebaseCollections.fieldRegisteredProvider: provider.id,
+            FirebaseCollections.fieldRegisteredUid: uid,
+          }).catchError((e) {
+            debugPrint(
+                '⚠️ AuthRepository: Failed to record email hash in registry (non-fatal): $e');
+          }));
+        }
 
         // Build the user model for the new document
         final newUser = UserModel(
           uid: uid,
+          authProvider: provider,
           email: resolvedEmail,
           displayName: resolvedDisplayName,
           photoUrl: resolvedPhotoUrl,
-          authProvider: provider,
-          isNewUser: true,
+          isNewUser: isNewUser,
           onboardingDone: false,
           keySetupDone: false,
           termsAccepted: true,
           termsAcceptedAt: DateTime.now().toUtc(),
           termsVersionAccepted: AppConstants.currentTermsVersion,
-          createdAt: DateTime.now().toUtc(), // Fix: populate createdAt immediately for UI
+          createdAt: DateTime.now().toUtc(),
         );
 
-        // Write new user document with server timestamps
-        await docRef.set(newUser.toFirestoreNewUser());
+        // Write new user document to Firestore via DAO — CRITICAL: AWAITED before navigation
+        await _userDao.createUser(newUser).timeout(
+              const Duration(seconds: 15),
+              onTimeout: () => throw FirebaseException(
+                plugin: 'cloud_firestore',
+                code: 'unavailable',
+                message: 'Firestore connection timed out',
+              ),
+            );
         debugPrint(
-            "⚠️ AuthRepositoryImpl: User data set to firestore successfully");
-        // Persist session to Hive
-        await _persistSession(newUser);
+            "⚠️ AuthRepositoryImpl: User data set to firestore successfully in ${fsStopwatch.elapsedMilliseconds}ms (isNewUser: $isNewUser)");
+
+        // Persist session to Hive in the background so it does not delay navigation
+        unawaited(_persistSession(newUser).catchError((e) {
+          debugPrint(
+              '⚠️ AuthRepository: Non-fatal _persistSession Hive error: $e');
+        }));
 
         return newUser;
       } else {
         // ── RETURNING USER ────────────────────────────────────────────────────
         final existingData = existingDoc.data()!;
+        final storedUser = UserDto.fromFirestore(existingData);
 
-        // For Apple returning users — name and email are null from Apple
-        // Read the stored values from Firestore instead
-        resolvedDisplayName =
-            existingData[FirebaseCollections.fieldDisplayName] as String? ?? '';
-        resolvedEmail =
-            existingData[FirebaseCollections.fieldEmail] as String? ?? '';
-        resolvedPhotoUrl =
-            existingData[FirebaseCollections.fieldPhotoUrl] as String? ?? '';
-        if (resolvedPhotoUrl.isEmpty && provider == SocialAuthProvider.google) {
-          resolvedPhotoUrl = firebaseUser.photoURL ?? '';
-          if (resolvedPhotoUrl.isNotEmpty) {
-            docRef.update({FirebaseCollections.fieldPhotoUrl: resolvedPhotoUrl});
-          }
+        final finalDisplayName = storedUser.displayName.isNotEmpty
+            ? storedUser.displayName
+            : resolvedDisplayName;
+        final finalEmail =
+            storedUser.email.isNotEmpty ? storedUser.email : resolvedEmail;
+        String finalPhotoUrl = storedUser.photoUrl;
+
+        // If photo was missing in Firestore but provided by Google, backfill it in background
+        if (finalPhotoUrl.isEmpty && resolvedPhotoUrl.isNotEmpty) {
+          finalPhotoUrl = resolvedPhotoUrl;
+          unawaited(_userDao
+              .updateUserField(
+                uid,
+                FirebaseCollections.fieldPhotoUrl,
+                resolvedPhotoUrl,
+              )
+              .catchError((_) {}));
         }
-        onboardingDone =
-            existingData[FirebaseCollections.fieldOnboardingDone] as bool? ??
-                false;
-        keySetupDone =
-            existingData[FirebaseCollections.fieldKeySetupDone] as bool? ??
-                false;
-        termsAccepted =
-            existingData[FirebaseCollections.fieldTermsAccepted] as bool? ??
-                false;
-        termsAcceptedAt =
-            (existingData[FirebaseCollections.fieldTermsAcceptedAt]
-                    as Timestamp?)
-                ?.toDate();
-        termsVersionAccepted =
-            existingData[FirebaseCollections.fieldTermsVersionAccepted]
-                as String?;
-        age = existingData[FirebaseCollections.fieldAge] as int?;
-        gender = existingData[FirebaseCollections.fieldGender] as String?;
-        country = existingData[FirebaseCollections.fieldCountry] as String?;
-        state = existingData[FirebaseCollections.fieldState] as String?;
-        dateOfBirth =
-            (existingData[FirebaseCollections.fieldDateOfBirth] as Timestamp?)
-                ?.toDate();
-        createdAt =
-            (existingData[FirebaseCollections.fieldCreatedAt] as Timestamp?)
-                ?.toDate();
-        lastLoginAt =
-            (existingData[FirebaseCollections.fieldLastLoginAt] as Timestamp?)
-                ?.toDate();
-        lastUpdatedAt =
-            (existingData[FirebaseCollections.fieldLastUpdatedAt] as Timestamp?)
-                ?.toDate();
 
-        // Update only lastLoginAt — preserve all other fields
-        await docRef.update({
-          FirebaseCollections.fieldLastLoginAt: FieldValue.serverTimestamp(),
-          FirebaseCollections.fieldNewUser: false
-        });
+        // Update lastLoginAt asynchronously in the background via DAO so it does not delay returning to UI
+        unawaited(_userDao.updateLastLogin(uid).catchError((e) {
+          debugPrint('⚠️ Non-fatal lastLoginAt update error: $e');
+        }));
 
-        final returningUser = UserModel(
-          uid: uid,
-          email: resolvedEmail,
-          displayName: resolvedDisplayName,
-          photoUrl: resolvedPhotoUrl,
+        final returningUser = storedUser.copyWith(
+          displayName: finalDisplayName,
+          email: finalEmail,
+          photoUrl: finalPhotoUrl,
           authProvider: provider,
           isNewUser: false,
-          onboardingDone: onboardingDone,
-          keySetupDone: keySetupDone,
-          termsAccepted: termsAccepted,
-          termsAcceptedAt: termsAcceptedAt,
-          termsVersionAccepted: termsVersionAccepted,
-          dateOfBirth: dateOfBirth,
-          createdAt: createdAt,
-          lastLoginAt: lastLoginAt,
-          age: age,
-          gender: gender,
-          country: country,
-          state: state,
-          lastUpdatedAt: lastUpdatedAt,
         );
 
         debugPrint(
-            "⚠️ AuthRepositoryImpl: User data get from firestore successfully");
+            "⚠️ AuthRepositoryImpl: Returning user profile processed in ${fsStopwatch.elapsedMilliseconds}ms");
 
-        // Re-hydrate Hive with latest data from Firestore
-        await _persistSession(returningUser);
+        // Persist session to Hive in the background so it does not delay navigation
+        unawaited(_persistSession(returningUser).catchError((e) {
+          debugPrint(
+              '⚠️ AuthRepository: Non-fatal _persistSession Hive error: $e');
+        }));
 
         return returningUser;
       }
     } on FirebaseException catch (e) {
       debugPrint(
-        '❌ AuthRepository: Firestore write failed — ${e.code}: ${e.message}',
+        '❌ AuthRepository: Firestore operation failed — ${e.code}: ${e.message}',
       );
-      // Return minimal model from Firebase data so auth still succeeds
-      // Firestore failure must not block the user from using the app
-      return _buildMinimalUserModel(firebaseUser, provider: provider);
+      throw AuthException(
+        _mapFirestoreError(e.code),
+        technicalMessage: e.message ?? 'Firestore operation failed',
+      );
+    } on TimeoutException catch (e) {
+      debugPrint('❌ AuthRepository: Firestore operation timed out — $e');
+      throw const AuthException(
+        AuthErrorCodes.noInternet,
+        technicalMessage: 'Firestore operation timed out',
+      );
     } catch (e) {
-      debugPrint('❌ AuthProvider unexpected sign-in error: $e');
-      return null;
+      debugPrint(
+          '❌ AuthRepository unexpected sign-in error in _createOrUpdateUser: $e');
+      throw AuthException(
+        AuthErrorCodes.unknown,
+        technicalMessage: 'Unexpected error in _createOrUpdateUser: $e',
+      );
     }
   }
 
@@ -652,22 +730,24 @@ class AuthRepositoryImpl implements AuthRepository {
 
   /// Write all session-related keys to Hive for fast startup reads.
   Future<void> _persistSession(UserModel user) async {
-    await _storage.setBool(StorageKeys.isLoggedIn, true);
-    await _storage.setUserData(StorageKeys.userId, user.uid);
-    await _storage.setUserData(StorageKeys.userEmail, user.email);
-    await _storage.setUserData(StorageKeys.userDisplayName, user.displayName);
-    await _storage.setUserData(StorageKeys.userPhotoUrl, user.photoUrl);
-    await _storage.setBool(
-      StorageKeys.onboardingCompleted,
-      user.onboardingDone,
-    );
-    await _storage.setBool(StorageKeys.keySetupCompleted, user.keySetupDone);
-    await _storage.setBool(StorageKeys.termsAccepted, user.termsAccepted);
-    if (user.termsVersionAccepted != null) {
-      await _storage.setUserData(
-        StorageKeys.termsVersionAccepted,
-        user.termsVersionAccepted!,
-      );
+    try {
+      await Future.wait([
+        _storage.setBool(StorageKeys.isLoggedIn, true),
+        _storage.setBool(StorageKeys.onboardingCompleted, user.onboardingDone),
+        _storage.setBool(StorageKeys.keySetupCompleted, user.keySetupDone),
+        _storage.setBool(StorageKeys.termsAccepted, user.termsAccepted),
+        _storage.setUserData(StorageKeys.userId, user.uid),
+        _storage.setUserData(StorageKeys.userEmail, user.email),
+        _storage.setUserData(StorageKeys.userDisplayName, user.displayName),
+        _storage.setUserData(StorageKeys.userPhotoUrl, user.photoUrl),
+        if (user.termsVersionAccepted != null)
+          _storage.setUserData(
+            StorageKeys.termsVersionAccepted,
+            user.termsVersionAccepted!,
+          ),
+      ]);
+    } catch (e) {
+      debugPrint('⚠️ AuthRepository: Non-fatal _persistSession Hive error: $e');
     }
   }
 
@@ -706,28 +786,6 @@ class AuthRepositoryImpl implements AuthRepository {
     return '';
   }
 
-  /// Build a minimal UserModel from Firebase user data only (no Firestore).
-  ///
-  /// Used as a safety fallback when Firestore is unavailable.
-  UserModel _buildMinimalUserModel(
-    User firebaseUser, {
-    SocialAuthProvider provider = SocialAuthProvider.google,
-  }) {
-    return UserModel(
-      uid: firebaseUser.uid,
-      email: firebaseUser.email ?? '',
-      displayName: firebaseUser.displayName ?? 'User',
-      photoUrl: firebaseUser.photoURL ?? '',
-      authProvider: provider,
-      isNewUser: false,
-      onboardingDone: false,
-      keySetupDone: false,
-      termsAccepted: _storage.getBool(StorageKeys.termsAccepted),
-      termsVersionAccepted:
-          _storage.getUserData(StorageKeys.termsVersionAccepted) as String?,
-    );
-  }
-
   // ── Private: Firebase Error Mapping ───────────────────────────────────────
 
   /// Map Firebase Auth error codes to AppLocalizations keys.
@@ -735,32 +793,52 @@ class AuthRepositoryImpl implements AuthRepository {
     switch (code) {
       case 'user-disabled':
         return AuthErrorCodes.userDisabled;
+      case 'user-not-found':
+        return AuthErrorCodes.userNotFound;
       case 'invalid-credential':
       case 'invalid-verification-code':
       case 'invalid-verification-id':
+      case 'wrong-password':
         return AuthErrorCodes.invalidCredential;
+      case 'account-exists-with-different-credential':
+        return AuthErrorCodes.accountExistsDifferentCredential;
+      case 'too-many-requests':
+        return AuthErrorCodes.tooManyRequests;
+      case 'operation-not-allowed':
+        return AuthErrorCodes.operationNotAllowed;
       case 'network-request-failed':
         return AuthErrorCodes.noInternet;
+      case 'requires-recent-login':
+        return AuthErrorCodes.requiresRecentLogin;
       default:
         return AuthErrorCodes.signInFailed;
     }
   }
 
-  // ── Private: Nonce Generation for Apple Sign-In ────────────────────────────
-
-  /// Generate a cryptographically secure random nonce string.
-  ///
-  /// Used to prevent replay attacks in Apple Sign-In.
-  /// The raw nonce is sent to Apple; its SHA-256 hash is sent to Firebase.
-  String _generateNonce([int length = 32]) {
-    const charset =
-        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
-    final random = Random.secure();
-    return List.generate(
-      length,
-      (_) => charset[random.nextInt(charset.length)],
-    ).join();
+  /// Map Firestore error codes to AppLocalizations keys.
+  String _mapFirestoreError(String code) {
+    switch (code) {
+      case 'unavailable':
+      case 'deadline-exceeded':
+        return AuthErrorCodes.noInternet;
+      case 'permission-denied':
+        return AuthErrorCodes.operationNotAllowed;
+      default:
+        return AuthErrorCodes.firestoreWriteFailed;
+    }
   }
+
+  // ── Private: Nonce Generation for Apple Sign-In (disabled) ───────────────
+
+  // String _generateNonce([int length = 32]) {
+  //   const charset =
+  //       '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+  //   final random = Random.secure();
+  //   return List.generate(
+  //     length,
+  //     (_) => charset[random.nextInt(charset.length)],
+  //   ).join();
+  // }
 
   /// Return the SHA-256 hash of a string (used for Apple nonce).
   String _sha256ofString(String input) {
@@ -780,11 +858,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final uid = _firebaseAuth.currentUser?.uid ?? '';
       debugPrint(
           "⚠️ AuthRepository: updateUser $uid \n with update field data -> $field : $value");
-      // Update only lastUpdatedAt and given field — preserve all other fields
-      await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
-        FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
-        field: value,
-      });
+      // Update field in Firestore via DAO
+      await _userDao.updateUserField(uid, field, value);
 
       // Re-hydrate Hive with latest data from Firestore
       await _persistSession(currentUser);
@@ -816,6 +891,7 @@ class AuthRepositoryImpl implements AuthRepository {
     UserModel currentUser, {
     required String displayName,
     required String photoUrl,
+    required String email,
     DateTime? dateOfBirth,
     int? age,
     String? gender,
@@ -825,8 +901,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     final resolvedDisplayName = displayName.trim();
     String resolvedPhotoUrl = photoUrl.trim();
+    final resolvedEmail = email.trim();
 
-    if (currentUser.uid.isEmpty || resolvedDisplayName.isEmpty) {
+    if (currentUser.uid.isEmpty ||
+        resolvedDisplayName.isEmpty ||
+        resolvedEmail.isEmpty) {
       return false;
     }
 
@@ -834,54 +913,22 @@ class AuthRepositoryImpl implements AuthRepository {
       final authUser = _firebaseAuth.currentUser;
       final uid = authUser?.uid ?? currentUser.uid;
 
-      // ── PHOTO HANDLING (Local + Firestore Base64) ──────────────────────────
+      // 1. Process photo in-memory (DO NOT copy to local file yet!)
       if (photoFile != null) {
-        // 1. Store locally for fast access on this device
-        final appDir = await getApplicationDocumentsDirectory();
-        final localFile = File('${appDir.path}/profile_avatar.jpg');
-        debugPrint('📸 Saving local profile image to: ${localFile.path}');
-        await photoFile.copy(localFile.path);
-
-        // 2. Convert to Base64 for Firestore syncing (no Storage available)
         final bytes = await photoFile.readAsBytes();
-        debugPrint('📸 Photo size: ${bytes.length} bytes');
         final base64String = base64Encode(bytes);
         resolvedPhotoUrl = 'data:image/jpeg;base64,$base64String';
-        debugPrint('📸 Base64 string length: ${resolvedPhotoUrl.length}');
       } else if (resolvedPhotoUrl.isEmpty) {
         resolvedPhotoUrl = currentUser.photoUrl.isNotEmpty
             ? currentUser.photoUrl
             : (authUser?.photoURL ?? '');
       }
 
-      await _firestore.doc(FirebaseCollections.userDoc(uid)).update({
-        FirebaseCollections.fieldDisplayName: resolvedDisplayName,
-        FirebaseCollections.fieldPhotoUrl: resolvedPhotoUrl,
-        FirebaseCollections.fieldDateOfBirth:
-            dateOfBirth != null ? Timestamp.fromDate(dateOfBirth) : null,
-        FirebaseCollections.fieldAge: age,
-        FirebaseCollections.fieldGender: gender,
-        FirebaseCollections.fieldCountry: country,
-        FirebaseCollections.fieldState: state,
-        FirebaseCollections.fieldLastUpdatedAt: FieldValue.serverTimestamp(),
-      });
-
-      if (authUser != null) {
-        // Firebase Auth photoURL has a length limit, so we might not be able
-        // to store large Base64 strings there. We'll prioritize Firestore.
-        try {
-          EffectBus.instance.safeEffect(() async {
-            await authUser.updateDisplayName(resolvedDisplayName);
-            await authUser.updatePhotoURL(
-              resolvedPhotoUrl.startsWith('data:') ? null : resolvedPhotoUrl,
-            );
-          });
-        } catch (_) {}
-      }
-
-      final updatedUser = currentUser.copyWith(
+      // 2. Prepare Firestore update map
+      final updateMap = UserDto.toProfileUpdateMap(
         displayName: resolvedDisplayName,
         photoUrl: resolvedPhotoUrl,
+        email: resolvedEmail,
         dateOfBirth: dateOfBirth,
         age: age,
         gender: gender,
@@ -889,17 +936,81 @@ class AuthRepositoryImpl implements AuthRepository {
         state: state,
       );
 
-      _persistSession(updatedUser);
+      // 3. REMOTE FIRST: Write to Firestore with timeout.
+      // If network fails or times out, execution halts here and jumps to catch.
+      // Local database and local cache file are NOT updated!
+      await _userDao.updateProfile(uid, updateMap).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw FirebaseException(
+              plugin: 'cloud_firestore',
+              code: 'unavailable',
+              message: 'Profile update timed out',
+            ),
+          );
+
+      // 4. REMOTE SUCCEEDED — Safe to cache local avatar file
+      if (photoFile != null) {
+        try {
+          final appDir = await getApplicationDocumentsDirectory();
+          final localFile = File('${appDir.path}/profile_avatar.jpg');
+          await photoFile.copy(localFile.path);
+        } catch (e) {
+          debugPrint('⚠️ Non-fatal local avatar cache copy error: $e');
+        }
+      }
+
+      // 5. Update Firebase Auth user (displayName and photo if standard URL)
+      if (authUser != null) {
+        try {
+          EffectBus.instance.safeEffect(() async {
+            if (authUser.displayName != resolvedDisplayName) {
+              await authUser.updateDisplayName(resolvedDisplayName);
+            }
+            if (!resolvedPhotoUrl.startsWith('data:') &&
+                authUser.photoURL != resolvedPhotoUrl) {
+              await authUser.updatePhotoURL(resolvedPhotoUrl);
+            }
+          });
+        } catch (_) {}
+      }
+
+      // 6. ONLY on verified remote success, update local database (Hive)
+      final updatedUser = currentUser.copyWith(
+        displayName: resolvedDisplayName,
+        photoUrl: resolvedPhotoUrl,
+        email: resolvedEmail,
+        dateOfBirth: dateOfBirth,
+        age: age,
+        gender: gender,
+        country: country,
+        state: state,
+      );
+
+      await _persistSession(updatedUser);
       return true;
     } on FirebaseException catch (e) {
       debugPrint(
         '⚠️ AuthRepository: updateProfile Firestore failed — '
         '${e.code}: ${e.message}',
       );
-      return false;
+      throw AuthException(
+        _mapFirestoreError(e.code),
+        technicalMessage: e.message ?? 'Firestore update failed',
+      );
+    } on TimeoutException {
+      debugPrint('❌ AuthRepository: updateProfile timed out');
+      throw const AuthException(
+        AuthErrorCodes.noInternet,
+        technicalMessage: 'Profile update timed out',
+      );
+    } on SocketException {
+      throw const AuthException(AuthErrorCodes.noInternet);
     } catch (e) {
-      debugPrint('❌ AuthRepository: updateProfile error : $e');
-      return false;
+      debugPrint('❌ AuthRepository: updateProfile error: $e');
+      throw AuthException(
+        AuthErrorCodes.unknown,
+        technicalMessage: e.toString(),
+      );
     }
   }
 }

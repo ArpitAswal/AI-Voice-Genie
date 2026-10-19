@@ -7,12 +7,15 @@ import 'package:ai_voice_genie/core/error/effect_bus.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/enums/app_enums.dart';
-import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/services/analytics_service.dart';
 import '../../../core/services/storage_service.dart';
-import '../../../core/utils/status_message_utils.dart';
 import '../../../features/chat/data/chat_sync_service.dart';
+import '../../../features/chat/presentation/chat_provider.dart';
+import '../../../features/usage/presentation/usage_provider.dart';
+import '../../../features/voice_speech/presentation/voice_speech_provider.dart';
+import '../../key_setup/data/api_key_repository_impl.dart';
+import '../../key_setup/presentation/api_key_provider.dart';
 import '../domain/auth_repository.dart';
 import '../domain/user_model.dart';
 import '../data/auth_repository_impl.dart';
@@ -43,12 +46,15 @@ import '../data/auth_repository_impl.dart';
 class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   final AuthRepository _repository;
   final AnalyticsService _analytics;
+  final StorageService _storage;
 
   AuthProvider({
     AuthRepository? repository,
     AnalyticsService? analytics,
+    StorageService? storage,
   })  : _repository = repository ?? AuthRepositoryImpl(),
-        _analytics = analytics ?? AnalyticsService.instance {
+        _analytics = analytics ?? AnalyticsService.instance,
+        _storage = storage ?? StorageService() {
     WidgetsBinding.instance.addObserver(this);
     _initAuthStateListener();
   }
@@ -63,6 +69,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   StreamSubscription<bool>? _userExistsSub;
   String? _watchedUid;
   bool _isLocalSignOutOrDelete = false;
+  bool _isHandlingRemoteTermination = false;
 
   /// Current authentication state — drives SplashScreen navigation.
   AuthState get authState => _authState;
@@ -74,8 +81,8 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// Null when no error. Reset to null after being consumed by UI.
   String? get authError => _authError;
 
-  /// Whether Apple Sign-In should be shown in the UI (iOS only).
-  bool get isAppleSignInAvailable => _repository.isAppleSignInAvailable;
+  // Apple Sign-In availability getter — disabled pending Apple Developer account setup
+  // bool get isAppleSignInAvailable => _repository.isAppleSignInAvailable;
 
   /// Convenience getter — true if a user is signed in.
   bool get isAuthenticated => _authState == AuthState.authenticated;
@@ -88,64 +95,74 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// Sets authState to authenticated or unauthenticated.
   /// SplashScreen waits for this to complete before navigating.
   Future<void> initialize() async {
+    // Capture login status and user ID before network verification or potential sign-out
+    bool wasLoggedInOnLaunch = false;
+    String? staleUid;
     try {
-      final user = await _repository.getCurrentUser();
+      wasLoggedInOnLaunch = _storage.getBool(StorageKeys.isLoggedIn);
+      staleUid = _storage.getUserData<String>(StorageKeys.userId);
+    } catch (_) {}
 
+    UserModel? user;
+    try {
+      user = await _repository.getCurrentUser();
+    } on AuthException catch (e) {
+      debugPrint('⚠️ AuthProvider initialize AuthException: ${e.code}');
+    } catch (e) {
+      debugPrint('⚠️ AuthProvider initialize error: $e');
+    } finally {
+      _currentUser = user;
       if (user != null) {
-        _currentUser = user;
         _analytics.setUserId(user.uid);
         _setAuthState(AuthState.authenticated);
-        // Start background sync as soon as an existing session is restored.
-        // This drains any outbox tasks from the previous session and activates
-        // Firestore streams for the conversation list.
-        try {
-          await ChatSyncService.instance.start(user.uid);
-        } catch (e) {
-          debugPrint('⚠️ ChatSyncService start error (ignored): $e');
-        }
+
+        // Run chat sync in the background so it never blocks splash screen or app initialization
+        unawaited(ChatSyncService.instance.start(user.uid).catchError((e) {
+          debugPrint('⚠️ ChatSyncService background start error: $e');
+        }));
       } else {
-        bool wasLoggedIn = false;
-        try {
-          wasLoggedIn = StorageService().getBool(StorageKeys.isLoggedIn);
-        } catch (_) {}
-        if (wasLoggedIn) {
-          try {
-            await StorageService().clearUserData();
-          } catch (_) {}
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final context = AppRoutes.navigatorKey.currentContext;
-            if (context != null) {
-              MessageUtils.showWarning(context, context.l10n.sessionExpired);
-            }
-          });
-        }
+        await _handleExpiredSessionIfNeeded(
+          wasLoggedIn: wasLoggedInOnLaunch,
+          staleUid: staleUid,
+        );
         _setAuthState(AuthState.unauthenticated);
       }
+    }
+  }
+
+  bool _isSessionExpired = false;
+
+  /// Whether the previous session expired or was terminated remotely.
+  bool get isSessionExpired => _isSessionExpired;
+
+  /// Consumes the session expired flag, returning true once and resetting to false.
+  bool consumeSessionExpired() {
+    if (_isSessionExpired) {
+      _isSessionExpired = false;
+      return true;
+    }
+    return false;
+  }
+
+  /// Cleans up local user data and alerts the user if a previous session was active but is now invalid.
+  Future<void> _handleExpiredSessionIfNeeded({
+    required bool wasLoggedIn,
+    String? staleUid,
+  }) async {
+    if (wasLoggedIn) {
       debugPrint(
-          '\u26a0\ufe0f AuthProvider initialize with either authenticate or unauthenticated state');
-    } catch (e) {
-      debugPrint('\u26a0\ufe0f AuthProvider initialize error: $e');
-      bool wasLoggedIn = false;
-      try {
-        wasLoggedIn = StorageService().getBool(StorageKeys.isLoggedIn);
-      } catch (_) {}
-      if (wasLoggedIn &&
-          (e.toString().contains('user-not-found') ||
-              e.toString().contains('user-disabled') ||
-              e.toString().contains('user-token-expired'))) {
+          '⚠️ AuthProvider: Expired or remote-terminated session detected on launch. Flagging isSessionExpired.');
+      // Flag session as expired so LoginScreen can present the warning when it mounts
+      _isSessionExpired = true;
+      if (staleUid != null && staleUid.isNotEmpty) {
         try {
-          await StorageService().clearUserData();
+          await _storage.clearChatBoxes(staleUid);
         } catch (_) {}
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final context = AppRoutes.navigatorKey.currentContext;
-          if (context != null) {
-            MessageUtils.showWarning(context, context.l10n.sessionExpired);
-          }
-        });
       }
-      // On any initialization error, treat as unauthenticated
-      // Never leave the user stuck on the splash screen
-      _setAuthState(AuthState.unauthenticated);
+      try {
+        await _storage.clearUserData();
+        await _storage.setBool(StorageKeys.isLoggedIn, false);
+      } catch (_) {}
     }
   }
 
@@ -155,79 +172,98 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   ///
   /// Returns true on success, false on cancellation.
   /// Sets authError on failure — UI observes and shows it.
-  Future<bool> signInWithGoogle() async {
-    // Fire analytics BEFORE auth — tracks button taps independently of outcome
-    _effectBus.safeEffect(() async {
-      _analytics.authenticationButtonTapped(SocialAuthProvider.google);
-    });
-
-    debugPrint('⚠️ AuthProvider performing signInWithGoogle');
-    return _performSignIn(
+  Future<void> signInWithGoogle() async {
+    await _performSignIn(
       () => _repository.signInWithGoogle(),
       provider: SocialAuthProvider.google,
     );
   }
 
-  // ── Apple Sign-In ──────────────────────────────────────────────────────────
+  // ── Apple Sign-In (disabled pending Apple Developer account) ───────────────
 
-  /// Sign in with Apple (iOS only).
-  ///
-  /// Returns true on success, false on cancellation.
-  /// Sets authError on failure — UI observes and shows it.
-  Future<bool> signInWithApple() async {
-    // Fire analytics BEFORE auth — tracks button taps independently of outcome
-    await _analytics.authenticationButtonTapped(SocialAuthProvider.apple);
-    debugPrint('⚠️ AuthProvider performing signInWithApple');
-
-    return _performSignIn(
-      () => _repository.signInWithApple(),
-      provider: SocialAuthProvider.apple,
-    );
-  }
+  // Future<bool> signInWithApple() async {
+  //   await _analytics.logAuthInitiated(SocialAuthProvider.apple, '');
+  //   debugPrint('⚠️ AuthProvider performing signInWithApple');
+  //   return _performSignIn(
+  //     () => _repository.signInWithApple(),
+  //     provider: SocialAuthProvider.apple,
+  //   );
+  // }
 
   // ── Sign Out ───────────────────────────────────────────────────────────────
 
   /// Sign out the current user.
   ///
-  /// Clears all session data and sets state to unauthenticated.
-  Future<void> signOut() async {
+  /// Clears all session data and sets state to unauthenticated only on success.
+  /// Returns [true] if sign-out succeeded, [false] otherwise.
+  Future<bool> signOut() async {
     _isLocalSignOutOrDelete = true;
-    try {
-      debugPrint("\u26a0\ufe0f AuthProvider Signing Out");
-      final signingOutUid = _currentUser?.uid;
+    _authError = null;
+    final signingOutUser = _currentUser;
+    final uid = signingOutUser?.uid;
 
-      // Stop sync BEFORE clearing local data to ensure no in-flight Firestore
-      // operations run against stale credentials after the Firebase token expires.
+    try {
+      // 1. Immediately stop any active voice listening or TTS speech
+      try {
+        await VoiceProvider.instance?.reset();
+      } catch (e) {
+        debugPrint('⚠️ VoiceProvider reset error (ignored): $e');
+      }
+
+      // 2. Temporarily stop sync so in-flight queries don't hit Firestore
       try {
         await ChatSyncService.instance.stop();
       } catch (e) {
         debugPrint('⚠️ ChatSyncService stop error (ignored): $e');
       }
 
+      // 3. Execute remote sign-out FIRST.
+      // If this fails (e.g. platform error / network exception), it will jump
+      // straight to catch block WITHOUT deleting local data or firing sign-out analytics!
       await _repository.signOut();
-      await _analytics.clearUserId();
-      if (_currentUser != null) {
-        _analytics.logUserSignedOut(_currentUser!.uid);
+
+      // 4. Remote sign-out succeeded — now safe to emit analytics
+      if (signingOutUser != null) {
+        _effectBus.safeEffect(() async {
+          await _analytics.logUserSignedOut(signingOutUser);
+          await _analytics.clearUserId();
+        });
       }
 
-      // Clear this user's chat data from Hive so the next user session starts clean.
-      // This is critical when two different accounts sign in on the same device.
-      if (signingOutUid != null) {
+      // 5. Remote sign-out succeeded — now safe to wipe local Hive chat boxes
+      if (uid != null) {
         try {
-          await StorageService().clearChatBoxes(signingOutUid);
-        } catch (_) {}
+          await _storage.clearChatBoxes(uid);
+        } catch (e) {
+          debugPrint('⚠️ Clear chat boxes error (ignored): $e');
+        }
       }
-      try {
-        await StorageService().clearUserData();
-      } catch (_) {}
 
+      // 6. Invalidate in-memory caches and reset providers across the entire app
+      _resetAppProvidersAndCaches();
+
+      // 7. Only on full success transition to unauthenticated!
       _currentUser = null;
       _setAuthState(AuthState.unauthenticated);
+      return true;
+    } on AuthException catch (e) {
+      debugPrint('⚠️ AuthProvider signOut AuthException: ${e.code}');
+      _authError = e.code;
+      // Signout failed: user remains authenticated. Resume background sync.
+      if (uid != null) {
+        unawaited(ChatSyncService.instance.start(uid).catchError((_) {}));
+      }
+      notifyListeners();
+      return false;
     } catch (e) {
-      debugPrint('\u26a0\ufe0f AuthProvider signOut error: $e');
-      // Even on error, clear local state so user is not stuck
-      _currentUser = null;
-      _setAuthState(AuthState.unauthenticated);
+      debugPrint('⚠️ AuthProvider signOut error: $e');
+      _authError = AuthErrorCodes.signOutFailed;
+      // Signout failed: user remains authenticated. Resume background sync.
+      if (uid != null) {
+        unawaited(ChatSyncService.instance.start(uid).catchError((_) {}));
+      }
+      notifyListeners();
+      return false;
     } finally {
       _isLocalSignOutOrDelete = false;
     }
@@ -243,11 +279,20 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> deleteAccount() async {
     _isLocalSignOutOrDelete = true;
     _authError = null;
-    try {
-      debugPrint("⚠️ AuthProvider Deleting Account");
-      final deletingUid = _currentUser?.uid;
+    final deletingUser = _currentUser;
+    final uid = deletingUser?.uid;
 
-      // Stop sync BEFORE clearing local data or deleting credentials so that
+    try {
+      debugPrint('⚠️ AuthProvider Deleting Account');
+
+      // 1. Immediately stop any active voice listening or TTS speech
+      try {
+        await VoiceProvider.instance?.reset();
+      } catch (e) {
+        debugPrint('⚠️ VoiceProvider reset error (ignored): $e');
+      }
+
+      // 2. Stop sync BEFORE clearing local data or deleting credentials so that
       // background workers do not attempt new Firestore reads/writes mid-deletion.
       try {
         await ChatSyncService.instance.stop();
@@ -255,43 +300,58 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
         debugPrint('⚠️ ChatSyncService stop error (ignored): $e');
       }
 
-      // Execute remote deletion (conversations, profile doc, API keys, auth account).
+      // 3. Execute remote deletion (conversations, profile doc, API keys, auth account).
       // If any critical step fails (e.g. requires-recent-login), we abort and return false
       // so the user remains on the profile screen with an error message instead of navigating away.
       final success = await _repository.deleteAccount();
       if (!success) {
-        _authError ??= 'something_went_wrong';
+        _authError ??= AuthErrorCodes.deleteAccountFailed;
+        if (uid != null) {
+          unawaited(ChatSyncService.instance.start(uid).catchError((_) {}));
+        }
         notifyListeners();
         return false;
       }
 
-      // Log deletion event and clear analytics tracking IDs
-      await _analytics.clearUserId();
-      if (deletingUid != null) {
-        _analytics.logAccountDeleted(deletingUid);
+      // 4. Log deletion event and clear analytics tracking IDs in the background.
+      // Correct order: log account deleted FIRST, then clear the user ID.
+      if (deletingUser != null) {
+        _effectBus.safeEffect(() async {
+          await _analytics.logAccountDeleted(deletingUser);
+          await _analytics.clearUserId();
+        });
       }
 
-      // Wipe local Hive databases (chat history and user preferences)
-      if (deletingUid != null) {
+      // 5. Wipe local Hive chat boxes
+      if (uid != null) {
         try {
-          await StorageService().clearChatBoxes(deletingUid);
-        } catch (_) {}
+          await _storage.clearChatBoxes(uid);
+        } catch (e) {
+          debugPrint('⚠️ Storage clearChatBoxes error (ignored): $e');
+        }
       }
-      try {
-        await StorageService().clearUserData();
-      } catch (_) {}
 
+      // 6. Invalidate in-memory caches and reset all providers across the app
+      _resetAppProvidersAndCaches();
+
+      // Only on full success transition to unauthenticated!
       _currentUser = null;
       _setAuthState(AuthState.unauthenticated);
       return true;
     } on AuthException catch (e) {
       debugPrint('⚠️ AuthProvider deleteAccount AuthException: ${e.code}');
       _authError = e.code;
+      if (uid != null) {
+        unawaited(ChatSyncService.instance.start(uid).catchError((_) {}));
+      }
       notifyListeners();
       return false;
     } catch (e) {
       debugPrint('⚠️ AuthProvider deleteAccount error: $e');
-      _authError = 'something_went_wrong';
+      _authError = AuthErrorCodes.deleteAccountFailed;
+      if (uid != null) {
+        unawaited(ChatSyncService.instance.start(uid).catchError((_) {}));
+      }
       notifyListeners();
       return false;
     } finally {
@@ -305,6 +365,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> updateProfile({
     required String displayName,
     required String photoUrl,
+    required String email,
     DateTime? dateOfBirth,
     int? age,
     String? gender,
@@ -315,8 +376,9 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
     final user = _currentUser;
     final resolvedDisplayName = displayName.trim();
     final resolvedPhotoUrl = photoUrl.trim();
+    final resolvedEmail = email.trim();
 
-    if (user == null || resolvedDisplayName.isEmpty) {
+    if (user == null || resolvedDisplayName.isEmpty || resolvedEmail.isEmpty) {
       return false;
     }
 
@@ -325,6 +387,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
         user,
         displayName: resolvedDisplayName,
         photoUrl: resolvedPhotoUrl,
+        email: resolvedEmail,
         dateOfBirth: dateOfBirth,
         age: age,
         gender: gender,
@@ -344,9 +407,14 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       return true;
+    } on AuthException catch (e) {
+      debugPrint('❌ AuthProvider.updateProfile AuthException: ${e.code}');
+      _authError = e.code;
+      notifyListeners();
+      return false;
     } catch (e) {
       debugPrint('❌ AuthProvider.updateProfile error: $e');
-      _authError = 'something_went_wrong';
+      _authError = AuthErrorCodes.unknown;
       notifyListeners();
       return false;
     }
@@ -371,61 +439,72 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   ///
   /// Handles loading state, error mapping, analytics, and state transitions.
   /// The caller provides the repository method to invoke.
-  Future<bool> _performSignIn(
+  Future<void> _performSignIn(
     Future<UserModel?> Function() signInMethod, {
     required SocialAuthProvider provider,
   }) async {
     // Clear any previous error before starting
-    _authError = null;
-    _setAuthState(AuthState.authenticating);
-
     try {
+      _authError = null;
+      _setAuthState(AuthState.authenticating);
+
       final user = await signInMethod();
 
       // Null means user cancelled — not an error
       if (user == null) {
         _setAuthState(AuthState.unauthenticated);
-        return false;
+        return;
       }
 
       _currentUser = user;
-
-      // Fire the correct analytics event based on new vs returning
-      if (user.isNewUser) {
-        await _analytics.logUserRegistered(user);
-      } else {
-        await _analytics.logUserSignedIn(user);
-      }
-
-      await _analytics.setUserId(user.uid);
-
       _setAuthState(AuthState.authenticated);
-      // Start background sync immediately after fresh sign-in so that
-      // any outbox tasks and Firestore streams are active from the first screen.
-      try {
-        await ChatSyncService.instance.start(user.uid);
-      } catch (e) {
+
+      // Log analytics asynchronously without blocking or failing auth
+      _effectBus.safeEffect(() async {
+        await _analytics.logAuthInitiated(provider, userId: user.uid);
+        if (user.isNewUser) {
+          await _analytics.logUserRegistered(user);
+        } else {
+          await _analytics.logUserSignedIn(user);
+        }
+        await _analytics.setUserId(user.uid);
+      });
+
+      // Run background sync in background so sign-in finishes immediately.
+      unawaited(ChatSyncService.instance.start(user.uid).catchError((e) {
         debugPrint('⚠️ ChatSyncService start error (ignored): $e');
-      }
-      return true;
+      }));
     } on AuthException catch (e) {
       // Cancelled is not an error — just return false silently
       if (e.isCancelled) {
         _setAuthState(AuthState.unauthenticated);
-        return false;
+        return;
       }
 
       debugPrint('❌ AuthProvider sign-in failed: ${e.technicalMessage}');
 
-      // Set the error code for UI to display
+      _effectBus.safeEffect(() async {
+        await _analytics.logUserAuthFailed(
+          authProvider: provider,
+          errorCode: e.code,
+        );
+      });
+
+      // Set the error code for UI to display localized message
       _authError = e.code;
       _setAuthState(AuthState.unauthenticated);
-      return false;
     } catch (e) {
       debugPrint('❌ AuthProvider unexpected sign-in error: $e');
-      _authError = 'something_went_wrong';
+
+      _effectBus.safeEffect(() async {
+        await _analytics.logUserAuthFailed(
+          authProvider: provider,
+          errorCode: AuthErrorCodes.unknown,
+        );
+      });
+
+      _authError = AuthErrorCodes.unknown;
       _setAuthState(AuthState.unauthenticated);
-      return false;
     }
   }
 
@@ -455,8 +534,11 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (_watchedUid == uid && _userExistsSub != null) return;
     _watchedUid = uid;
     _userExistsSub?.cancel();
+    bool hasSeenExistingDoc = _currentUser != null && !_currentUser!.isNewUser;
     _userExistsSub = _repository.watchUserExists(uid).listen((exists) async {
-      if (!exists &&
+      if (exists) {
+        hasSeenExistingDoc = true;
+      } else if (hasSeenExistingDoc &&
           _authState == AuthState.authenticated &&
           !_isLocalSignOutOrDelete) {
         debugPrint(
@@ -481,12 +563,33 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _verifySessionValidityOnResume() async {
     try {
       await _repository.reloadSession();
+      // Sync latest profile updates made remotely from another device (e.g. Device B)
+      final freshUser = await _repository.getCurrentUser();
+      if (freshUser != null) {
+        final hasChanged = freshUser.photoUrl != _currentUser?.photoUrl ||
+            freshUser.displayName != _currentUser?.displayName ||
+            freshUser.email != _currentUser?.email ||
+            freshUser.country != _currentUser?.country ||
+            freshUser.state != _currentUser?.state ||
+            freshUser.gender != _currentUser?.gender ||
+            freshUser.age != _currentUser?.age ||
+            freshUser.dateOfBirth != _currentUser?.dateOfBirth;
+        if (hasChanged) {
+          debugPrint(
+              '🔄 AuthProvider: Remote profile updates synced on app resume.');
+          _currentUser = freshUser;
+          notifyListeners();
+        }
+      }
     } on AuthException catch (e) {
-      if (e.code == 'user-not-found' ||
+      if (e.code == AuthErrorCodes.sessionExpired ||
+          e.code == 'user-not-found' ||
           e.code == 'user-disabled' ||
-          e.code == 'user-token-expired') {
+          e.code == 'user-token-expired' ||
+          e.technicalMessage == 'user-not-found' ||
+          e.technicalMessage == 'user-disabled') {
         debugPrint(
-            '⚠️ AuthProvider: Remote session termination detected on resume (${e.code})');
+            '⚠️ AuthProvider: Remote session termination detected on resume (${e.code} / ${e.technicalMessage})');
         await _handleRemoteSessionTermination();
       }
     } catch (_) {}
@@ -534,36 +637,71 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _handleRemoteSessionTermination() async {
-    _userExistsSub?.cancel();
-    _watchedUid = null;
-    final uid = _currentUser?.uid;
+  /// Centralized in-memory cache and provider reset across the app
+  void _resetAppProvidersAndCaches() {
     try {
-      await ChatSyncService.instance.stop();
-    } catch (_) {}
-
-    try {
-      await _repository.signOut();
-    } catch (_) {}
-
-    if (uid != null) {
-      try {
-        await StorageService().clearChatBoxes(uid);
-      } catch (_) {}
+      ApiKeyRepositoryImpl.clearMemoryCache();
+      ApiKeyProvider.instance?.reset();
+    } catch (e) {
+      debugPrint('⚠️ ApiKeyProvider reset error (ignored): $e');
     }
+
     try {
-      await StorageService().clearUserData();
-      await StorageService().setBool(StorageKeys.isLoggedIn, false);
-    } catch (_) {}
+      UsageProvider.instance?.clear();
+    } catch (e) {
+      debugPrint('⚠️ UsageProvider clear error (ignored): $e');
+    }
 
-    _currentUser = null;
-    _setAuthState(AuthState.unauthenticated);
+    try {
+      ChatProvider.instance?.resetSession();
+    } catch (e) {
+      debugPrint('⚠️ ChatProvider resetSession error (ignored): $e');
+    }
+  }
 
-    // Show Snackbar and redirect to login screen like banking apps do
-    final context = AppRoutes.navigatorKey.currentContext;
-    if (context != null && context.mounted) {
-      MessageUtils.showWarning(context, context.l10n.sessionExpired);
-      AppRoutes.navigateAndRemoveUntil(context, AppRoutes.login);
+  Future<void> _handleRemoteSessionTermination() async {
+    if (_isHandlingRemoteTermination) return;
+    _isHandlingRemoteTermination = true;
+
+    try {
+      _userExistsSub?.cancel();
+      _watchedUid = null;
+      final uid = _currentUser?.uid;
+
+      try {
+        await VoiceProvider.instance?.reset();
+      } catch (_) {}
+
+      try {
+        await ChatSyncService.instance.stop();
+      } catch (_) {}
+
+      try {
+        await _repository.signOut();
+      } catch (_) {}
+
+      if (uid != null) {
+        try {
+          await _storage.clearChatBoxes(uid);
+        } catch (_) {}
+      }
+
+      _resetAppProvidersAndCaches();
+
+      _isSessionExpired = true;
+      _currentUser = null;
+      _setAuthState(AuthState.unauthenticated);
+
+      // Clear navigation backstack and redirect to login screen
+      final navContext = AppRoutes.navigatorKey.currentContext;
+      if (navContext != null && navContext.mounted) {
+        AppRoutes.navigateAndRemoveUntil(navContext, AppRoutes.login);
+      } else {
+        AppRoutes.navigatorKey.currentState
+            ?.pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
+      }
+    } finally {
+      _isHandlingRemoteTermination = false;
     }
   }
 
@@ -572,6 +710,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _userExistsSub?.cancel();
     _authStateSub?.cancel();
+    _watchedUid = null;
     super.dispose();
   }
 }
