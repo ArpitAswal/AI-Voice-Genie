@@ -28,6 +28,7 @@ import '../domain/chat_repository.dart';
 import '../domain/conversation_model.dart';
 import '../domain/conversation_page_cursor.dart';
 import '../domain/message_model.dart';
+import '../domain/local_message_record.dart';
 import '../domain/message_page_cursor.dart';
 
 /// State manager for the chat feature.
@@ -107,9 +108,133 @@ class ChatProvider extends ChangeNotifier {
   }
 
   /// Marks an AI message as having completed its typewriter animation so it
-  /// never re-animates on ListView scroll recycling.
+  /// never re-animates on ListView scroll recycling and resets [_isGenerating] to false.
   void markMessageAnimated(String messageId) {
     _animatedMessageIds.add(messageId);
+    if (_isGenerating) {
+      _isGenerating = false;
+      notifyListeners();
+    }
+  }
+
+  /// True only while waiting for the AI network response before any assistant bubble is visible.
+  bool get isWaitingForAiResponse =>
+      _isGenerating &&
+      (_messages.isEmpty || _messages.last.role == MessageRole.user);
+
+  @visibleForTesting
+  void addMessageForTesting(MessageModel msg) {
+    _messages.add(msg);
+    _isGenerating = true;
+  }
+
+  int _activeGenerationId = 0;
+  int _currentRevealedLength = 0;
+
+  /// Updates the current character reveal offset during typewriter streaming animation.
+  void updateRevealedLength(int count) {
+    _currentRevealedLength = count;
+  }
+
+  /// Safely sanitizes and closes unclosed markdown blocks (such as code fences
+  /// or unclosed bold tags) when a message reveal is stopped mid-way.
+  static String repairMarkdown(String text) {
+    var trimmed = text.trimRight();
+    if (trimmed.isEmpty) return trimmed;
+
+    // 1. Check for unclosed code block fences (```)
+    final codeBlockMatches = RegExp(r'```').allMatches(trimmed).length;
+    if (codeBlockMatches.isOdd) {
+      final lastBlockIndex = trimmed.lastIndexOf('```');
+      final afterBlock = trimmed.substring(lastBlockIndex + 3);
+      if (!afterBlock.contains('\n')) {
+        // The language identifier was only partially typed (e.g., "```pyth") with no newline.
+        // Strip the incomplete code fence header rather than leaving a broken block.
+        trimmed = trimmed.substring(0, lastBlockIndex).trimRight();
+      } else {
+        // Code has started rendering; close the block so syntax formatting renders completely.
+        trimmed = '$trimmed\n```';
+      }
+    }
+
+    // 2. Check for unclosed bold markers (**)
+    final boldMatches = RegExp(r'\*\*').allMatches(trimmed).length;
+    if (boldMatches.isOdd) {
+      trimmed = '$trimmed**';
+    }
+
+    return trimmed;
+  }
+
+  /// Stops any in-flight AI response generation or typewriter animation immediately.
+  /// Freezes text at the exact character revealed so far and preserves the response
+  /// as a partial response with finishReason = 'user-cancellation' and status = MessageStatus.partial.
+  void stopGenerating() {
+    if (!_isGenerating) return;
+    _activeGenerationId++;
+    _isGenerating = false;
+
+    // If an AI message is actively in the messages list and still animating:
+    if (_messages.isNotEmpty && _messages.last.role == MessageRole.assistant) {
+      final lastMsg = _messages.last;
+      if (lastMsg.status != MessageStatus.failed) {
+        String effectiveText = lastMsg.lastPrompt;
+        if (_currentRevealedLength > 0 &&
+            _currentRevealedLength < lastMsg.lastPrompt.length) {
+          final slice = lastMsg.lastPrompt.substring(0, _currentRevealedLength);
+          final repaired = repairMarkdown(slice);
+          if (repaired.trim().isNotEmpty) {
+            effectiveText = repaired;
+          }
+        }
+
+        final stoppedMsg = lastMsg.copyWith(
+          prompt: effectiveText,
+          status: MessageStatus.partial,
+          finishReason: AppConstants.finishReasonUserCancellation,
+        );
+        _messages[_messages.length - 1] = stoppedMsg;
+        _animatedMessageIds.add(stoppedMsg.messageId);
+        if (_activeConversation != null) {
+          try {
+            final uid = _resolveUid();
+            unawaited(LocalChatStore.instance.saveMessage(
+              LocalMessageRecord.fromMessageModel(
+                stoppedMsg,
+                uid: uid,
+                conversationId: _activeConversation!.id,
+                syncStatus: SyncStatus.pendingCreate,
+              ),
+            ));
+            final existingConv = LocalChatStore.instance
+                .getConversation(uid, _activeConversation!.id);
+            if (existingConv != null) {
+              final subtitle = stoppedMsg.lastPrompt.trim().isNotEmpty
+                  ? stoppedMsg.lastPrompt
+                  : (existingConv.lastMessage.trim().isNotEmpty
+                      ? existingConv.lastMessage
+                      : stoppedMsg.lastPrompt);
+              unawaited(LocalChatStore.instance.saveConversation(
+                existingConv.copyWith(
+                  lastMessage: subtitle,
+                  localUpdatedAt: DateTime.now(),
+                ),
+              ));
+            }
+          } catch (e) {
+            debugPrint('⚠️ Error saving stopped message to LocalChatStore: $e');
+          }
+          unawaited(_repository.cacheMessages(
+            conversationId: _activeConversation!.id,
+            messages: _messages,
+          ));
+        }
+      }
+    }
+
+    _currentRevealedLength = 0;
+    _animatedMessageIds.addAll(_messages.map((m) => m.messageId));
+    notifyListeners();
   }
 
   bool get isLoadingMoreMessages => _isLoadingMoreMessages;
@@ -323,8 +448,16 @@ class ChatProvider extends ChangeNotifier {
           .stopWatchingConversation(_activeConversation!.id);
       _activeConversation = null;
     }
-    _animatedMessageIds.clear();
+    // Mark any existing in-memory messages as animated so they never replay
+    // their typewriter effect if re-opened from history.
+    _animatedMessageIds.addAll(_messages.map((m) => m.messageId));
+    _messages.clear();
+    _isGenerating = false;
+    _currentRevealedLength = 0;
     _messagesSubscription?.cancel();
+    _messagesSubscription = null;
+    _conversationSubscription?.cancel();
+    _conversationSubscription = null;
   }
 
   // ── Send Message ───────────────────────────────────────────────────────────
@@ -365,6 +498,8 @@ class ChatProvider extends ChangeNotifier {
     Uint8List? generatedPdfBytes;
     String? generatedPdfFileName;
     List<PdfAttachmentInfo> pdfInfo = [];
+    _activeGenerationId++;
+    final int currentGenId = _activeGenerationId;
 
     // Step 1: Concurrency Guard.
     // Drop any duplicate or re-entrant invocations immediately while generation is already in flight.
@@ -592,58 +727,82 @@ class ChatProvider extends ChangeNotifier {
         selectedProvider: selectedProvider,
       );
 
-      // Step 7: Post-render background compilation for specialized media (PDF documents).
-      // If the response is a generated PDF document, compile the Markdown to binary PDF locally
-      // and update the existing bubble so the PDF card is interactive.
-      if (aiResponse.capability == AiCapability.pdfGeneration &&
-          aiResponse.text != null &&
-          aiResponse.text!.isNotEmpty) {
-        final docTitle = PdfDocumentService.extractDocumentTitle(
-          effectivePrompt,
-          aiResponse.text!,
+      final bool wasAborted = _activeGenerationId != currentGenId;
+
+      if (wasAborted) {
+        debugPrint(
+            '🛑 Generation $currentGenId was aborted by user; preserving response as user-cancellation.');
+        aiMessage = MessageModel.fromAiResponse(
+          aiResponse,
+          status: MessageStatus.partial,
+          finishReason: AppConstants.finishReasonUserCancellation,
+          imageSize: isImageGen ? userMessage.imageSize : null,
+          generateImageRequest:
+              isImageGen ? userMessage.generateImageRequest : null,
+          imageQuality: isImageGen ? userMessage.imageQuality : null,
+          imageBackground: isImageGen ? userMessage.imageBackground : null,
+          pdfInfo: pdfInfo,
         );
-
-        try {
-          final pdfBytes =
-              await PdfDocumentService.instance.compileMarkdownToPdf(
-            title: docTitle,
-            markdownContent: aiResponse.text!,
-          );
-          generatedPdfBytes = pdfBytes;
-
-          final cleanFileName = PdfDocumentService.formatFileName(docTitle);
-          generatedPdfFileName = cleanFileName;
-
-          final localPath = await PdfDocumentService.instance.savePdfToDevice(
-            bytes: pdfBytes,
-            fileName: cleanFileName,
+        _animatedMessageIds.add(aiMessage.messageId);
+      } else {
+        // Step 7: Post-render background compilation for specialized media (PDF documents).
+        // If the response is a generated PDF document, compile the Markdown to binary PDF locally
+        // and update the existing bubble so the PDF card is interactive.
+        if (aiResponse.capability == AiCapability.pdfGeneration &&
+            aiResponse.text != null &&
+            aiResponse.text!.isNotEmpty) {
+          final docTitle = PdfDocumentService.extractDocumentTitle(
+            effectivePrompt,
+            aiResponse.text!,
           );
 
-          pdfInfo = [
-            PdfAttachmentInfo(
-              path: localPath ?? '',
-              name: cleanFileName,
-              fileSizeBytes: pdfBytes.lengthInBytes,
-            ),
-          ];
-        } catch (e) {
-          debugPrint('⚠️ ChatProvider: Error compiling PDF locally: $e');
+          try {
+            final pdfBytes =
+                await PdfDocumentService.instance.compileMarkdownToPdf(
+              title: docTitle,
+              markdownContent: aiResponse.text!,
+            );
+            generatedPdfBytes = pdfBytes;
+
+            final cleanFileName = PdfDocumentService.formatFileName(docTitle);
+            generatedPdfFileName = cleanFileName;
+
+            final localPath = await PdfDocumentService.instance.savePdfToDevice(
+              bytes: pdfBytes,
+              fileName: cleanFileName,
+            );
+
+            pdfInfo = [
+              PdfAttachmentInfo(
+                path: localPath ?? '',
+                name: cleanFileName,
+                fileSizeBytes: pdfBytes.lengthInBytes,
+              ),
+            ];
+          } catch (e) {
+            debugPrint('⚠️ ChatProvider: Error compiling PDF locally: $e');
+          }
         }
-      }
 
-      // Step 8: Build AI response message.
-      // Automatically leverages Base64 image data from aiResponse so image generation
-      // renders instantly without waiting for cloud uploads or disk writes.
-      aiMessage = MessageModel.fromAiResponse(
-        aiResponse,
-        imageSize: isImageGen ? userMessage.imageSize : null,
-        generateImageRequest:
-            isImageGen ? userMessage.generateImageRequest : null,
-        imageQuality: isImageGen ? userMessage.imageQuality : null,
-        imageBackground: isImageGen ? userMessage.imageBackground : null,
-        pdfInfo: pdfInfo,
-      );
+        // Step 8: Build AI response message.
+        // Automatically leverages Base64 image data from aiResponse so image generation
+        // renders instantly without waiting for cloud uploads or disk writes.
+        aiMessage = MessageModel.fromAiResponse(
+          aiResponse,
+          imageSize: isImageGen ? userMessage.imageSize : null,
+          generateImageRequest:
+              isImageGen ? userMessage.generateImageRequest : null,
+          imageQuality: isImageGen ? userMessage.imageQuality : null,
+          imageBackground: isImageGen ? userMessage.imageBackground : null,
+          pdfInfo: pdfInfo,
+        );
+      }
     } catch (e) {
+      if (_activeGenerationId != currentGenId) {
+        debugPrint(
+            '🛑 Generation $currentGenId was aborted by user; ignoring error.');
+        return;
+      }
       // Step 9: Error handling.
       // Capture failure message and create a failed AI message bubble so the user sees the error state.
       final friendlyMessage = _friendlyAiErrorMessage(e);
@@ -665,23 +824,85 @@ class ChatProvider extends ChangeNotifier {
       );
     } finally {
       // Step 10: Finalization & Background Persistence.
-      if (_activeConversation != null &&
-          aiMessage != null &&
-          userMessage != null) {
-        if (_activeConversation!.title.isEmpty) {
-          final fallback = deriveFallbackTitle(effectivePrompt, attachments);
-          _activeConversation = _activeConversation!.copyWith(title: fallback);
+      if (aiMessage != null && userMessage != null) {
+        final String effectiveAiLastMessage = aiMessage.lastPrompt
+                .trim()
+                .isNotEmpty
+            ? aiMessage.lastPrompt.trim()
+            : (aiMessage.imageUrls != null && aiMessage.imageUrls!.isNotEmpty
+                ? 'Image'
+                : (aiMessage.pdfInfo != null && aiMessage.pdfInfo!.isNotEmpty
+                    ? 'PDF Document'
+                    : userMessage.lastPrompt));
+
+        final String currentOrFallbackTitle =
+            (_activeConversation?.title.isNotEmpty == true)
+                ? _activeConversation!.title
+                : deriveFallbackTitle(effectivePrompt, attachments);
+
+        final conversationToPersist = (_activeConversation ??
+                ConversationModel(
+                  id: targetConversationId,
+                  title: currentOrFallbackTitle,
+                  lastMessage: effectiveAiLastMessage,
+                  capability: requestCapability,
+                  lastProvider: selectedProvider,
+                ))
+            .copyWith(
+          title: currentOrFallbackTitle,
+          lastMessage: effectiveAiLastMessage,
+        );
+
+        if (_activeConversation != null &&
+            _activeConversation!.id == targetConversationId) {
+          _activeConversation = conversationToPersist;
+          _messages.add(aiMessage);
+
+          final bool wasAborted = _activeGenerationId != currentGenId;
+          final bool isPureImageGen = aiMessage.requestCapability ==
+                  AiCapability.imageGeneration &&
+              (aiMessage.imageUrls != null && aiMessage.imageUrls!.isNotEmpty);
+          final bool shouldSkipAnimation = wasAborted ||
+              aiMessage.finishReason == 'Fail' ||
+              isPureImageGen ||
+              aiMessage.lastPrompt.trim().isEmpty;
+
+          if (shouldSkipAnimation) {
+            _animatedMessageIds.add(aiMessage.messageId);
+            _isGenerating = false;
+          } else {
+            // Keep _isGenerating = true while TypewriterText reveals the tokens
+            _isGenerating = true;
+          }
+          notifyListeners();
+        } else {
+          _animatedMessageIds.add(aiMessage.messageId);
+          _isGenerating = false;
         }
-        _messages.add(aiMessage);
-        _isGenerating = false;
-        notifyListeners();
+
+        try {
+          final existingConv = LocalChatStore.instance
+              .getConversation(resolvedUid, targetConversationId);
+          if (existingConv != null) {
+            unawaited(LocalChatStore.instance.saveConversation(
+              existingConv.copyWith(
+                lastMessage: effectiveAiLastMessage,
+                title: currentOrFallbackTitle,
+                localUpdatedAt: DateTime.now(),
+              ),
+            ));
+          }
+          _markConversationHistoryDirty();
+        } catch (e) {
+          debugPrint('⚠️ Error updating immediate lastMessage in Hive: $e');
+        }
 
         // Only extract and persist generated media attachments if the AI response succeeded without error
         final bool isAiSuccess = aiMessage.finishReason != 'Fail';
 
         unawaited(_persistMessagePairInBackground(
           uid: resolvedUid,
-          conversation: _activeConversation!,
+          conversation: conversationToPersist,
           userMessage: userMessage,
           aiMessage: aiMessage,
           attachments: attachments,
@@ -696,8 +917,9 @@ class ChatProvider extends ChangeNotifier {
       }
 
       // 10d. For new conversations, establish reactive listeners for local Hive storage
-      //      and remote Firestore cross-device synchronization now that generation is complete.
-      if (isNewConversation) {
+      //      and remote Firestore cross-device synchronization only if still active.
+      if (isNewConversation &&
+          _activeConversation?.id == targetConversationId) {
         _subscribeToMessages(resolvedUid, targetConversationId);
         _subscribeToConversation(resolvedUid, targetConversationId);
       }
@@ -726,7 +948,17 @@ class ChatProvider extends ChangeNotifier {
   }) async {
     try {
       final conversationId = conversation.id;
-      var conversationToPersist = conversation;
+      final String effectiveAiSnippet = aiMessage.lastPrompt.trim().isNotEmpty
+          ? aiMessage.lastPrompt.trim()
+          : (aiMessage.imageUrls != null && aiMessage.imageUrls!.isNotEmpty
+              ? 'Image'
+              : (aiMessage.pdfInfo != null && aiMessage.pdfInfo!.isNotEmpty
+                  ? 'PDF Document'
+                  : conversation.lastMessage));
+
+      var conversationToPersist = conversation.copyWith(
+        lastMessage: effectiveAiSnippet,
+      );
       if (conversationToPersist.title.trim().isEmpty) {
         final fallback = deriveFallbackTitle(
           userMessage.lastPrompt,
@@ -867,6 +1099,22 @@ class ChatProvider extends ChangeNotifier {
         );
       }
 
+      // If the user cancelled/stopped the response while background tasks were running,
+      // preserve the stopped/truncated version instead of the full text!
+      final inMemoryMsg = _messages.firstWhere(
+        (m) => m.messageId == aiMessageToPersist.messageId,
+        orElse: () => aiMessageToPersist,
+      );
+      if (inMemoryMsg.finishReason ==
+          AppConstants.finishReasonUserCancellation) {
+        aiMessageToPersist = inMemoryMsg;
+        conversationToPersist = conversationToPersist.copyWith(
+          lastMessage: inMemoryMsg.lastPrompt.trim().isNotEmpty
+              ? inMemoryMsg.lastPrompt.trim()
+              : conversationToPersist.lastMessage,
+        );
+      }
+
       await _repository.createOrAppendMessagePair(
         uid: uid,
         conversation: conversationToPersist,
@@ -930,8 +1178,43 @@ class ChatProvider extends ChangeNotifier {
     } on ChatException {
       return false;
     } catch (e) {
-      debugPrint('\u26a0\ufe0f ChatProvider.deleteConversation error: $e');
+      debugPrint('⚠️ ChatProvider.deleteConversation error: $e');
       return false;
+    }
+  }
+
+  /// Deletes multiple conversations sequentially using the local-first pattern.
+  /// Local cache (Hive) is updated for each, and remote Firestore deletions
+  /// are enqueued in the sync outbox. UI listeners are notified once at the end.
+  Future<void> deleteMultipleConversations({
+    String? uid,
+    required List<String> conversationIds,
+  }) async {
+    final resolvedUid = _resolveUid(uid);
+    try {
+      for (final conversationId in conversationIds) {
+        await _repository.deleteConversationLocalFirst(
+          uid: resolvedUid,
+          conversationId: conversationId,
+        );
+
+        unawaited(
+          CloudStorageService.instance.deleteConversationAttachments(
+            uid: resolvedUid,
+            conversationId: conversationId,
+          ),
+        );
+
+        if (_activeConversation?.id == conversationId) {
+          clearConversation();
+        }
+      }
+
+      _markConversationHistoryDirty();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('⚠️ ChatProvider.deleteMultipleConversations error: $e');
+      rethrow;
     }
   }
 
@@ -1231,10 +1514,12 @@ class ChatProvider extends ChangeNotifier {
     }
 
     // 1. Strip bracketed / parenthetical system options & UI hints (e.g. [Optional: ...])
-    String cleaned = trimmed.replaceAll(
-      RegExp(r'\[.*?\]|\(.*?\)', dotAll: true),
-      ' ',
-    ).trim();
+    String cleaned = trimmed
+        .replaceAll(
+          RegExp(r'\[.*?\]|\(.*?\)', dotAll: true),
+          ' ',
+        )
+        .trim();
 
     // 2. Strip conversational greetings, polite requests, commands, and compound meta-verbs iteratively
     final prefixPattern = RegExp(
@@ -1327,33 +1612,46 @@ class ChatProvider extends ChangeNotifier {
 
     if (askingAboutCapabilities) return false;
 
-    // 2. Strong match: Verb + nearby image noun + optional "of", "for", or "with"
+    // 2. Hindi image generation intent
+    final hindiMatch = RegExp(
+      r'(\b(तस्वीर|चित्र|फोटो|इमेज)\b.{0,40}\b(बनाएं|बनाओ|दिखाएं|दिखाओ|क्रिएट|जनरेट)\b)|(\b(बनाएं|बनाओ|दिखाएं|दिखाओ|क्रिएट|जनरेट)\b.{0,40}\b(तस्वीर|चित्र|फोटो|इमेज)\b)',
+    ).hasMatch(lower);
+    if (hindiMatch) return true;
+
+    // 3. Strong match: Verb + nearby image noun + optional "of", "for", or "with"
     final strongMatch = RegExp(
-      r'\b(create|generate|draw|make|design|render|paint|need|want|show me)\b.{0,80}\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b',
+      r'\b(create|generate|draw|make|design|render|paint|need|want|show me)\b.{0,80}\b(image|picture|photo|art|illustration|poster|logo|wallpaper|graphic|artwork|painting|sketch|portrait|landscape)\b',
     ).hasMatch(lower);
 
     if (strongMatch) return true;
 
-    // 3. Command at the very beginning of the prompt
+    // 4. Command at the very beginning of the prompt
     final commandAtStart = RegExp(
-      r'^(can you|could you|please|i want to|i need to)?\s*(create|generate|draw|make|design|render|paint)\b.{0,80}\b(image|picture|photo|art|illustration|poster|logo|wallpaper)\b',
+      r'^(can you|could you|please|i want to|i need to)?\s*(create|generate|draw|make|design|render|paint)\b.{0,80}\b(image|picture|photo|art|illustration|poster|logo|wallpaper|graphic|artwork|painting|sketch|portrait|landscape)\b',
     ).hasMatch(lower);
 
     if (commandAtStart) return true;
 
-    // 4. Strict visual verbs that strongly imply image generation even without nouns
+    // 5. Strict visual verbs that strongly imply image generation even without nouns
     final visualVerbAtStart = RegExp(
       r'^(can you|could you|please)?\s*(draw|paint|sketch)\b',
     ).hasMatch(lower);
 
     if (visualVerbAtStart) return true;
 
-    // 5. Starts directly with describing the image
+    // 6. Starts directly with describing the image
     final nounAtStart = RegExp(
-      r'^(a|an|the|some)?\s*(image|picture|photo|illustration|poster|logo)\s+(of|for)\b',
+      r'^(a|an|the|some)?\s*(image|picture|photo|illustration|poster|logo|artwork)\s+(of|for)\b',
     ).hasMatch(lower);
 
-    return nounAtStart;
+    if (nounAtStart) return true;
+
+    // 7. Visual rendering and artistic style keywords (e.g. "... 8k photographic style", "... digital art style", "... photorealistic render")
+    final styleDirective = RegExp(
+      r'\b(photographic style|photo style|8k|4k|hyperrealistic|photorealistic|digital art|oil painting|watercolor painting|3d render|cinematic render|anime style|vector art|octane render)\b',
+    ).hasMatch(lower);
+
+    return styleDirective;
   }
 
   void _markConversationHistoryDirty() {

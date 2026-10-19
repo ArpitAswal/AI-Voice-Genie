@@ -3,6 +3,7 @@ import 'package:ai_voice_genie/features/chat/presentation/widgets/chat_input.dar
 import 'package:ai_voice_genie/shared/widgets/chat_model_selector_dropdown.dart';
 import 'package:ai_voice_genie/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -63,6 +64,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   bool _isFetchingOldMessages = false;
   double _previousMaxScrollExtent = 0;
   bool _showScrollToBottom = false;
+  bool _isAutoScrollActive = true;
 
   @override
   void initState() {
@@ -107,12 +109,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     final currentOffset = _scrollController.offset;
     final distanceFromBottom = maxScroll - currentOffset;
 
-    // Show floating button when user is scrolled away from the bottom (> 100px)
-    final shouldShowFab = distanceFromBottom > 100;
+    // Show floating button when user is scrolled away from the bottom (> 60px)
+    final shouldShowFab = distanceFromBottom > 60;
     if (shouldShowFab != _showScrollToBottom) {
       setState(() {
         _showScrollToBottom = shouldShowFab;
       });
+    }
+
+    if (distanceFromBottom <= 20) {
+      _isAutoScrollActive = true;
     }
 
     if (_scrollController.position.pixels <= 100) {
@@ -122,6 +128,12 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   void _scrollToBottomAnimated() {
     if (!_scrollController.hasClients) return;
+    _isAutoScrollActive = true;
+    if (_showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = false;
+      });
+    }
     _scrollController.animateTo(
       _scrollController.position.maxScrollExtent,
       duration: const Duration(milliseconds: 300),
@@ -142,10 +154,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final currentOffset = _scrollController.offset;
       final distanceFromBottom = maxScroll - currentOffset;
 
-      final isUserDragging =
-          _scrollController.position.isScrollingNotifier.value;
-
-      if (!isUserDragging && distanceFromBottom <= 140) {
+      if (_isAutoScrollActive) {
         _scrollController.jumpTo(maxScroll);
         if (_showScrollToBottom) {
           setState(() {
@@ -153,7 +162,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           });
         }
       } else {
-        final shouldShowFab = distanceFromBottom > 100;
+        final shouldShowFab = distanceFromBottom > 60;
         if (shouldShowFab != _showScrollToBottom) {
           setState(() {
             _showScrollToBottom = shouldShowFab;
@@ -237,6 +246,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       }
     }
     if (currentGenerating && !_wasGenerating) {
+      _isAutoScrollActive = true;
       shouldScroll = true;
     }
 
@@ -287,6 +297,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     List<ChatAttachment> attachments,
     AiProviderId selectedProvider,
   ) async {
+    _isAutoScrollActive = true;
     // Explicitly pass conversationId or fallback to activeConversation.id so subsequent
     // messages in this screen are strictly appended to this conversation thread.
     context.read<ChatProvider>().sendMessage(
@@ -494,12 +505,34 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                       );
                     }
 
-                    return NotificationListener<ScrollMetricsNotification>(
+                    return NotificationListener<ScrollNotification>(
                       onNotification: (notification) {
+                        if (notification is ScrollUpdateNotification) {
+                          if (notification.dragDetails != null) {
+                            if (notification.scrollDelta != null &&
+                                notification.scrollDelta! < 0) {
+                              _isAutoScrollActive = false;
+                            } else if (notification.scrollDelta != null &&
+                                notification.scrollDelta! > 0) {
+                              final dist =
+                                  notification.metrics.maxScrollExtent -
+                                      notification.metrics.pixels;
+                              if (dist <= 20) {
+                                _isAutoScrollActive = true;
+                              }
+                            }
+                          }
+                        } else if (notification is UserScrollNotification) {
+                          if (notification.direction ==
+                              ScrollDirection.forward) {
+                            _isAutoScrollActive = false;
+                          }
+                        }
+
                         final metrics = notification.metrics;
                         final distanceFromBottom =
                             metrics.maxScrollExtent - metrics.pixels;
-                        final shouldShowFab = distanceFromBottom > 100;
+                        final shouldShowFab = distanceFromBottom > 60;
                         if (shouldShowFab != _showScrollToBottom) {
                           setState(() {
                             _showScrollToBottom = shouldShowFab;
@@ -514,7 +547,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           horizontal: isTablet ? 16 : 12,
                         ),
                         itemCount: messages.length +
-                            (chatProvider.isGenerating ? 1 : 0) +
+                            (chatProvider.isWaitingForAiResponse ? 1 : 0) +
                             (chatProvider.isLoadingMoreMessages ? 1 : 0),
                         itemBuilder: (context, index) {
                           // Load more indicator at top
@@ -538,9 +571,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                                   ? index - 1
                                   : index;
 
-                          // Typing indicator at bottom
+                          // Typing indicator at bottom (only while waiting for initial response)
                           if (adjustedIndex == messages.length &&
-                              chatProvider.isGenerating) {
+                              chatProvider.isWaitingForAiResponse) {
                             return const TypingIndicator();
                           }
 
@@ -550,6 +583,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           }
 
                           return MessageBubble(
+                            key: ValueKey(messages[adjustedIndex].messageId),
                             message: messages[adjustedIndex],
                             isTablet: isTablet,
                             onTypewriterTick: _onTypewriterTick,

@@ -5,6 +5,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 
 /// Displays text with a smooth typewriter reveal animation.
@@ -38,9 +39,10 @@ class TypewriterText extends StatefulWidget {
     required this.text,
     required this.animate,
     this.style,
-    this.charsPerTick = 1,
-    this.tickDuration = const Duration(milliseconds: 40),
+    this.charsPerTick = AppConstants.typewriterCharsPerTick,
+    this.tickDuration = AppConstants.typewriterTickDuration,
     this.onTick,
+    this.onTickWithCount,
     this.onAnimationStart,
     this.onComplete,
   });
@@ -49,123 +51,23 @@ class TypewriterText extends StatefulWidget {
   /// Use this to trigger auto-scroll so the latest text stays visible.
   final VoidCallback? onTick;
 
+  /// Called on every animation tick with the current revealed character count.
+  final void Function(int visibleChars)? onTickWithCount;
+
   /// Called once when the typewriter animation begins.
   final VoidCallback? onAnimationStart;
 
   /// Called once when the typewriter animation completes all characters.
   final VoidCallback? onComplete;
 
-  @override
-  State<TypewriterText> createState() => _TypewriterTextState();
-}
-
-class _TypewriterTextState extends State<TypewriterText>
-    with AutomaticKeepAliveClientMixin {
-  Timer? _timer;
-  int _visibleCount = 0;
-  bool _animationDone = false;
-
-  @override
-  bool get wantKeepAlive => widget.animate && !_animationDone;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.animate && widget.text.isNotEmpty) {
-      widget.onAnimationStart?.call();
-      _startAnimation();
-    } else {
-      _animationDone = true;
-      _visibleCount = widget.text.length;
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant TypewriterText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    final textChanged = oldWidget.text != widget.text;
-
-    // If the text content changed mid-animation, restart cleanly.
-    if (textChanged) {
-      _timer?.cancel();
-      _animationDone = false;
-      _visibleCount = 0;
-      if (widget.animate) {
-        _startAnimation();
-      } else {
-        _animationDone = true;
-        _visibleCount = widget.text.length;
-      }
-      updateKeepAlive();
-    }
-  }
-
-  void _startAnimation() {
-    _timer = Timer.periodic(widget.tickDuration, (_) {
-      if (!mounted) {
-        _timer?.cancel();
-        return;
-      }
-      setState(() {
-        _visibleCount =
-            (_visibleCount + widget.charsPerTick).clamp(0, widget.text.length);
-        if (_visibleCount >= widget.text.length) {
-          _animationDone = true;
-          _timer?.cancel();
-          widget.onComplete?.call();
-          updateKeepAlive();
-        }
-      });
-      // Notify parent to scroll after every reveal so the latest text stays visible
-      widget.onTick?.call();
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    if (widget.animate && !_animationDone) {
-      widget.onComplete?.call();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-
-    final defaultStyle = widget.style ??
-        context.textTheme.bodySmall?.copyWith(
-          height: 1.5,
-          fontWeight: FontWeight.w500,
-          color: context.isDark ? AppColors.white : AppColors.black,
-        );
-
-    // Render markdown continuously during typewriter reveal as well as when complete,
-    // ensuring consistent styling (headings, bold, lists, links) throughout the streaming animation.
-    final textToShow = (_animationDone || !widget.animate)
-        ? widget.text
-        : widget.text.substring(0, _visibleCount);
-
-    return MarkdownBody(
-      data: textToShow,
-      selectable:
-          false, // Ensures link taps are not swallowed by text selection gesture arena
-      onTapLink: (text, href, title) => _launchUrlSafely(href),
-      styleSheet: _buildMarkdownStyleSheet(context, defaultStyle),
-    );
-  }
-
   /// Opens web links in the default browser across Android and iOS.
-  Future<void> _launchUrlSafely(String? href) async {
+  static Future<void> launchUrlSafely(String? href) async {
     if (href == null || href.isEmpty) return;
     try {
       final uri = Uri.parse(href);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        // Fallback: attempt direct launch without canLaunchUrl guard
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     } catch (e) {
@@ -174,7 +76,7 @@ class _TypewriterTextState extends State<TypewriterText>
   }
 
   /// Builds theme-aware markdown styling for the chat bubble.
-  MarkdownStyleSheet _buildMarkdownStyleSheet(
+  static MarkdownStyleSheet buildMarkdownStyleSheet(
     BuildContext context,
     TextStyle? defaultStyle,
   ) {
@@ -249,6 +151,109 @@ class _TypewriterTextState extends State<TypewriterText>
       ),
       blockquotePadding:
           const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+    );
+  }
+
+  @override
+  State<TypewriterText> createState() => _TypewriterTextState();
+}
+
+class _TypewriterTextState extends State<TypewriterText>
+    with AutomaticKeepAliveClientMixin {
+  Timer? _timer;
+  int _visibleCount = 0;
+  bool _animationDone = false;
+
+  @override
+  bool get wantKeepAlive => widget.animate && !_animationDone;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animate && widget.text.isNotEmpty) {
+      widget.onAnimationStart?.call();
+      _startAnimation();
+    } else {
+      _animationDone = true;
+      _visibleCount = widget.text.length;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TypewriterText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final textChanged = oldWidget.text != widget.text;
+
+    // If the text content changed mid-animation, restart cleanly.
+    if (textChanged) {
+      _timer?.cancel();
+      _animationDone = false;
+      _visibleCount = 0;
+      if (widget.animate) {
+        _startAnimation();
+      } else {
+        _animationDone = true;
+        _visibleCount = widget.text.length;
+      }
+      updateKeepAlive();
+    } else if (oldWidget.animate && !widget.animate && !_animationDone) {
+      _timer?.cancel();
+      _animationDone = true;
+      updateKeepAlive();
+    }
+  }
+
+  void _startAnimation() {
+    _timer = Timer.periodic(widget.tickDuration, (_) {
+      if (!mounted) {
+        _timer?.cancel();
+        return;
+      }
+      setState(() {
+        _visibleCount =
+            (_visibleCount + widget.charsPerTick).clamp(0, widget.text.length);
+        if (_visibleCount >= widget.text.length) {
+          _animationDone = true;
+          _timer?.cancel();
+          widget.onComplete?.call();
+          updateKeepAlive();
+        }
+      });
+      // Notify parent after every reveal so the latest text stays visible
+      widget.onTick?.call();
+      widget.onTickWithCount?.call(_visibleCount);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
+    final defaultStyle = widget.style ??
+        context.textTheme.bodySmall?.copyWith(
+          height: 1.5,
+          fontWeight: FontWeight.w500,
+          color: context.isDark ? AppColors.white : AppColors.black,
+        );
+
+    // If animation is done or animate is false, ALWAYS render full widget.text.
+    final textToShow = (_animationDone || !widget.animate)
+        ? widget.text
+        : widget.text.substring(0, _visibleCount);
+
+    return MarkdownBody(
+      data: textToShow,
+      selectable:
+          false, // Ensures link taps are not swallowed by text selection gesture arena
+      onTapLink: (text, href, title) => TypewriterText.launchUrlSafely(href),
+      styleSheet: TypewriterText.buildMarkdownStyleSheet(context, defaultStyle),
     );
   }
 }

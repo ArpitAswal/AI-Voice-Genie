@@ -60,6 +60,22 @@ class AppConstants {
   static const String geminiDisplayName = 'Gemini';
   static const String claudeDisplayName = 'Claude';
 
+  // ── AI Finish Reasons ─────────────────────────────────────────────────────
+  static const String finishReasonStop = 'stop';
+  static const String finishReasonLength = 'length';
+  static const String finishReasonContentFilter = 'content_filter';
+  static const String finishReasonUserCancellation = 'user-cancellation';
+  static const String finishReasonFail = 'Fail';
+
+  // ── Typewriter / Streaming Animation Speed ────────────────────────────────
+  /// Duration between each character reveal tick in typewriter streaming animation.
+  /// 40ms ≈ 25 chars/sec (matches ChatGPT / Claude web streaming feel).
+  /// Lowering this value (e.g. 20ms) makes streaming faster; increasing it (e.g. 60ms) makes it slower.
+  static const Duration typewriterTickDuration = Duration(milliseconds: 40);
+
+  /// Number of characters revealed per animation tick. Default is 1.
+  static const int typewriterCharsPerTick = 1;
+
   // ── AI Standard System Instructions ───────────────────────────────────────
   /// System instruction for general text generation and conversation.
   /// Enforces direct, authoritative, structured responses without conversational filler.

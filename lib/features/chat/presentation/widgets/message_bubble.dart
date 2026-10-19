@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -7,6 +8,7 @@ import 'package:ai_voice_genie/core/constants/app_assets.dart';
 import 'package:ai_voice_genie/features/chat/domain/chat_attachment.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -16,6 +18,7 @@ import '../../../../core/enums/app_enums.dart';
 import '../../../../core/extensions/build_context_extensions.dart';
 import '../../../../core/extensions/string_extension.dart';
 import '../../../../core/localization/app_localizations.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/pdf_document_service.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
@@ -74,12 +77,44 @@ class MessageBubble extends StatelessWidget {
   bool get _canSpeakMessage =>
       !_isUser &&
       message.status != MessageStatus.failed &&
+      !message.isUserCancelled &&
       message.lastPrompt.trim().isNotEmpty &&
       (message.imageUrls == null || message.imageUrls!.isEmpty) &&
       (message.pdfInfo == null || message.pdfInfo!.isEmpty);
 
+  /// Resolves the human-readable text for a message (handles error messages, PDFs, stopped states).
+  static String resolveDisplayText(BuildContext context, MessageModel message) {
+    if (message.status == MessageStatus.failed) {
+      // Try to translate the failure reason, fallback to raw message
+      return AppLocalizations.of(context)?.translate(message.lastPrompt) ??
+          message.lastPrompt;
+    }
+    // For generated PDF messages, ensure we never render the raw markdown document in the bubble.
+    if (message.requestCapability == AiCapability.pdfGeneration &&
+        message.pdfInfo != null &&
+        message.pdfInfo!.isNotEmpty) {
+      return AppLocalizations.of(context)?.hereIsYourPdf ??
+          'Here is the required PDF as you requested.';
+    }
+    if (message.lastPrompt.trim().isEmpty &&
+        (message.isUserCancelled || message.status == MessageStatus.partial)) {
+      return AppLocalizations.of(context)?.stopResponse ?? 'Stopped';
+    }
+    return message.lastPrompt;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasImages =
+        message.imageUrls != null && message.imageUrls!.isNotEmpty;
+    final hasPdfs = message.pdfInfo != null && message.pdfInfo!.isNotEmpty;
+    final text = resolveDisplayText(context, message).trim();
+
+    // Guard: Never render a collapsed empty bubble container if there is literally nothing to display.
+    if (text.isEmpty && !hasImages && !hasPdfs) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment:
           _isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -188,6 +223,18 @@ class _MessageTimestampRow extends StatelessWidget {
             message.timestamp.toTimeString,
             style: context.textTheme.bodySmall,
           ),
+          // For AI messages stopped by user, display a subtle Stopped badge
+          if (!_isUser && message.isUserCancelled) ...[
+            const SizedBox(width: 4),
+            Text(
+              '• ${AppLocalizations.of(context)?.responseStopped ?? "Stopped"}',
+              style: context.textTheme.bodySmall?.copyWith(
+                color:
+                    context.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                fontSize: 11,
+              ),
+            ),
+          ],
           // For user messages, display a status indicator (sending/delivered/failed)
           if (_isUser) ...[
             const SizedBox(width: 4),
@@ -219,7 +266,7 @@ class _MessageBubbleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = _displayText(context).trim();
+    final text = MessageBubble.resolveDisplayText(context, message).trim();
 
     // For AI messages, use TypewriterText which animates only the latest
     // response. For user messages, always use plain Text (no animation).
@@ -235,11 +282,25 @@ class _MessageBubbleContent extends StatelessWidget {
         textWidget = Selector<ChatProvider, bool>(
           selector: (_, p) => p.shouldAnimateMessage(message.messageId),
           builder: (context, shouldAnimate, _) {
+            if (!shouldAnimate) {
+              return MarkdownBody(
+                data: text,
+                selectable: false,
+                onTapLink: (text, href, title) =>
+                    TypewriterText.launchUrlSafely(href),
+                styleSheet:
+                    TypewriterText.buildMarkdownStyleSheet(context, baseStyle),
+              );
+            }
             return TypewriterText(
+              key: ValueKey('typewriter_${message.messageId}'),
               text: text,
-              animate: shouldAnimate,
+              animate: true,
               style: baseStyle,
               onTick: onTypewriterTick,
+              onTickWithCount: (count) {
+                context.read<ChatProvider>().updateRevealedLength(count);
+              },
               onAnimationStart: () {
                 final prefs = context.read<AiPreferencesProvider>();
                 if (prefs.autoTextToSpeech) {
@@ -249,7 +310,9 @@ class _MessageBubbleContent extends StatelessWidget {
                 }
               },
               onComplete: () {
-                context.read<ChatProvider>().markMessageAnimated(message.messageId);
+                context
+                    .read<ChatProvider>()
+                    .markMessageAnimated(message.messageId);
                 onTypewriterTick?.call();
               },
             );
@@ -301,23 +364,6 @@ class _MessageBubbleContent extends StatelessWidget {
           isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: children,
     );
-  }
-
-  /// Gets the localized error text if the message failed to send, or the raw content.
-  String _displayText(BuildContext context) {
-    if (message.status == MessageStatus.failed) {
-      // Try to translate the failure reason, fallback to raw message
-      return AppLocalizations.of(context)?.translate(message.lastPrompt) ??
-          message.lastPrompt;
-    }
-    // For generated PDF messages, ensure we never render the raw markdown document in the bubble.
-    if (message.requestCapability == AiCapability.pdfGeneration &&
-        message.pdfInfo != null &&
-        message.pdfInfo!.isNotEmpty) {
-      return AppLocalizations.of(context)?.hereIsYourPdf ??
-          'Here is the required PDF as you requested.';
-    }
-    return message.lastPrompt;
   }
 }
 
@@ -414,7 +460,7 @@ Widget _buildImageWithDownload({
   required String url,
   required String imageKey,
   required String provider,
-  required int totalImages,
+  int totalImages = 1,
 }) {
   return Stack(
     children: [
@@ -423,7 +469,6 @@ Widget _buildImageWithDownload({
         imageSource: url,
         imageKey: imageKey,
         provider: provider,
-        imageCountInMessage: totalImages,
       ),
     ],
   );
@@ -832,7 +877,9 @@ Future<void> _sharePdf(BuildContext context, PdfAttachmentInfo pdfInfo) async {
     if (localPath != null && await File(localPath).exists()) {
       await SharePlus.instance.share(
         ShareParams(
-          files: [XFile(localPath, mimeType: 'application/pdf', name: safeName)],
+          files: [
+            XFile(localPath, mimeType: 'application/pdf', name: safeName)
+          ],
           subject: pdfInfo.name,
         ),
       );
@@ -887,6 +934,11 @@ Future<void> _downloadPdfToDevice(
 
   final bytes = await PdfDocumentService.instance.resolvePdfBytes(pdfInfo);
   if (bytes == null || bytes.isEmpty) {
+    unawaited(AnalyticsService.instance.logPdfDownload(
+      result: 'failure',
+      fileSizeBytes: pdfInfo.fileSizeBytes,
+      failureReason: 'empty_bytes',
+    ));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -902,6 +954,12 @@ Future<void> _downloadPdfToDevice(
     bytes: bytes,
     fileName: pdfInfo.name,
   );
+
+  unawaited(AnalyticsService.instance.logPdfDownload(
+    result: saved ? 'success' : 'failure',
+    fileSizeBytes: bytes.length,
+    failureReason: saved ? '' : 'save_failed',
+  ));
 
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(

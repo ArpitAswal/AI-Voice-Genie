@@ -1,7 +1,7 @@
 // import 'dart:io';
 
 import 'package:ai_voice_genie/core/enums/app_enums.dart';
-import 'package:ai_voice_genie/features/auth/presentation/auth_buttons.dart';
+import 'package:ai_voice_genie/features/auth/presentation/widgets/auth_buttons.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';

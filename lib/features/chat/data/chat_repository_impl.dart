@@ -483,9 +483,18 @@ class ChatRepositoryImpl implements ChatRepository {
 
     // ── Step 1: Write conversation metadata to Hive ───────────────────────────
     // This is the local-first write. The UI stream updates immediately.
-    String effectiveLastMessage = userMessage.lastPrompt.trim();
+    // The conversation preview must always reflect the latest message (the AI response).
+    String effectiveLastMessage = conversation.lastMessage.trim();
     if (effectiveLastMessage.isEmpty) {
-      if (userMessage.imageUrls?.isNotEmpty == true) {
+      if (aiMessage.lastPrompt.trim().isNotEmpty) {
+        effectiveLastMessage = aiMessage.lastPrompt.trim();
+      } else if (aiMessage.imageUrls?.isNotEmpty == true) {
+        effectiveLastMessage = 'Image';
+      } else if (aiMessage.pdfInfo?.isNotEmpty == true) {
+        effectiveLastMessage = 'PDF Document';
+      } else if (userMessage.lastPrompt.trim().isNotEmpty) {
+        effectiveLastMessage = userMessage.lastPrompt.trim();
+      } else if (userMessage.imageUrls?.isNotEmpty == true) {
         effectiveLastMessage = 'Image(s)';
       } else if (userMessage.pdfInfo?.isNotEmpty == true) {
         effectiveLastMessage = 'PDF Document';

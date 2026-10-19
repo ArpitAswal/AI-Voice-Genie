@@ -12,7 +12,7 @@ import '../../../core/utils/app_validators.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../core/utils/widget_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
-import '../domain/profile_view_model.dart';
+import 'profile_view_model.dart';
 import 'widgets/profile_avatar.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -283,8 +283,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           hint: context.l10n.fakeName,
                           prefixIcon: Icons.person_4,
                           textCapitalization: TextCapitalization.words,
-                          validator: (value) =>
-                              Validators.validateRequired(value, context: context),
+                          validator: (value) => Validators.validateRequired(
+                              value,
+                              context: context),
                         ),
                         const SizedBox(height: 20),
 

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/utils/status_message_utils.dart';
-import '../../domain/profile_view_model.dart';
+import '../profile_view_model.dart';
 import 'profile_common_widgets.dart';
 
 class ProfileSupportPanel extends StatelessWidget {
@@ -12,9 +13,14 @@ class ProfileSupportPanel extends StatelessWidget {
 
   void _openHelpSupport(BuildContext context) async {
     final viewModel = context.read<ProfileViewModel>();
-    final result = await viewModel.openSupport(context.l10n.appName);
+    final result = await viewModel.openSupport(
+      '${context.l10n.appName} - ${context.l10n.helpCenter}',
+    );
     if (!context.mounted) return;
-    if (result == ProfileLinkResult.missing) {
+    if (result == ProfileLinkResult.copied) {
+      context.showSuccessToast(
+          '${context.l10n.copiedToClipboard}: ${AppConstants.supportEmail}');
+    } else if (result == ProfileLinkResult.missing) {
       context.showWarning(context.l10n.linkUnavailable);
     } else if (result == ProfileLinkResult.failed) {
       context.showError(context.l10n.couldNotOpenLink);

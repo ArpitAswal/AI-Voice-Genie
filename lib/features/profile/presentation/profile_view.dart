@@ -11,7 +11,7 @@ import '../../../../core/widgets/app_alert_dialog.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../usage/presentation/usage_provider.dart';
-import '../domain/profile_view_model.dart';
+import 'profile_view_model.dart';
 import 'widgets/ai_intelligence_section.dart';
 import 'widgets/ai_preferences_panel.dart';
 import 'widgets/profile_common_widgets.dart';

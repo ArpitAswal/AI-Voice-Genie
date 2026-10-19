@@ -3,9 +3,13 @@
 ## Overview
 - **AI Voice Genie** is a multi-model AI assistant mobile application built with Flutter using Feature-First MVVM architecture with Provider.
 - Isolation of concerns: Repositories encapsulate network, database, and platform dependencies away from UI logic.
-- AI requests support text generation, image generation, multi-image vision analysis, and multi-PDF document parsing via a centralized `AiOrchestrator` routing to provider adapters (OpenAI, Gemini, Claude).
+- AI requests support text generation, image generation, multi-image vision analysis, multi-PDF document parsing, and PDF generation via a centralized `AiOrchestrator` routing to provider adapters (OpenAI, Gemini, Claude).
 - Local-First Storage & Offline Sync: Hive handles instant UI reads/writes (`chat_conversations_box`, `chat_messages_box`) with cursor-based pagination, an outbox queue (`chat_outbox_box`) captures pending mutations, and `ChatSyncService` reconciles remote Firestore changes asynchronously.
 - Platform Native Channel Integration: Native Kotlin (`ImageSavePlugin.kt`) and Swift (`ImageSavePlugin.swift`) plugins handle scoped media downloads directly to device galleries (`Pictures/AI Voice Genie` on Android, `Photos` on iOS).
+
+> **Last MVVM Audit**: 2026-10-16 — Two misplacements corrected:
+> 1. `ProfileViewModel` moved from `features/profile/domain/` → `features/profile/presentation/`
+> 2. `AuthButtons` widget moved from `features/auth/presentation/` root → `features/auth/presentation/widgets/`
 
 ---
 
@@ -135,32 +139,169 @@ graph TD
 
 ## Dart File Placement Audit
 
+> All files below have been verified correct as of 2026-10-16 MVVM audit.
+
 ### Core Infrastructure Files
 
-| File | Class / Type | Directory Judgment | Purpose |
-|---|---|---|---|
-| `lib/core/constants/app_constants.dart` | `AppConstants` | Correct in `core/constants` | App limits, asset paths, timeouts, default prompt templates. |
-| `lib/core/constants/firebase_collections.dart` | `FirebaseCollections` | Correct in `core/constants` | Canonical Firestore collection names, document paths, and field keys. |
-| `lib/core/enums/app_enums.dart` | `AiProviderId`, `AiCapability`, `MessageRole`, `MessageStatus`, `SyncStatus`, `ImageDownloadState`, `DeviceImageSaveResult` | Correct in `core/enums` | All application-wide enums for data models, UI states, analytics, and platform channels. |
-| `lib/core/services/storage_service.dart` | `StorageService` | Correct in `core/services` | Global Hive initialization, box management, and data wipes. |
-| `lib/core/services/device_image_save_service.dart` | `DeviceImageSaveService` | Correct in `core/services` | MethodChannel interface for saving images to native device galleries. |
-| `lib/core/services/analytics_service.dart` | `AnalyticsService` | Correct in `core/services` | Centralized Firebase Analytics logging service. |
-| `lib/core/services/cloudinary_service.dart` | `CloudinaryService` | Correct in `core/services` | Cloudinary API wrapper for uploading user profile pictures. |
-| `lib/core/services/ai_preferences_service.dart` | `AiPreferencesService` | Correct in `core/services` | Local Hive persistence for AI preferences (model, token limits, vision quality, image size). |
-| `lib/core/localization/app_localizations.dart` | `AppLocalizations` | Correct in `core/localization` | English and Hindi localization lookup table with parameter replacement. |
+| File | Class / Type | Layer | Directory Verdict | Purpose |
+|---|---|---|---|---|
+| `lib/core/constants/app_constants.dart` | `AppConstants` | Core | ✅ Correct | App limits, asset paths, timeouts, default prompt templates. |
+| `lib/core/constants/firebase_collections.dart` | `FirebaseCollections` | Core | ✅ Correct | Canonical Firestore collection names, document paths, and field keys. |
+| `lib/core/constants/storage_keys.dart` | `StorageKeys` | Core | ✅ Correct | All Hive key strings for persistence. |
+| `lib/core/constants/app_colors.dart` | `AppColors` | Core | ✅ Correct | All named color constants for the app. |
+| `lib/core/constants/app_text_styles.dart` | `AppTextStyles` | Core | ✅ Correct | Light and dark text theme definitions. |
+| `lib/core/constants/app_assets.dart` | `AppAssets` | Core | ✅ Correct | Asset path string constants. |
+| `lib/core/enums/app_enums.dart` | `AiProviderId`, `AiCapability`, `MessageRole`, `MessageStatus`, `SyncStatus`, `ImageDownloadState`, `DeviceImageSaveResult` | Core | ✅ Correct | All application-wide enums for data models, UI states, analytics, and platform channels. |
+| `lib/core/services/storage_service.dart` | `StorageService` | Infrastructure | ✅ Correct | Global Hive initialization, box management, and data wipes. |
+| `lib/core/services/device_image_save_service.dart` | `DeviceImageSaveService` | Infrastructure | ✅ Correct | MethodChannel interface for saving images to native device galleries. |
+| `lib/core/services/analytics_service.dart` | `AnalyticsService` | Infrastructure | ✅ Correct | Centralized Firebase Analytics logging service. |
+| `lib/core/services/cloud_storage_service.dart` | `CloudStorageService` | Infrastructure | ✅ Correct | Cloudinary API wrapper for uploading user profile pictures. |
+| `lib/core/services/ai_preferences_service.dart` | `AiPreferencesService` | Infrastructure | ✅ Correct | Local Hive persistence for AI preferences (model, token limits, vision quality, image size). |
+| `lib/core/services/pdf_document_service.dart` | `PdfDocumentService` | Infrastructure | ✅ Correct | PDF parsing and text extraction service. |
+| `lib/core/services/secure_storage_service.dart` | `SecureStorageService` | Infrastructure | ✅ Correct | flutter_secure_storage wrapper for sensitive keys. |
+| `lib/core/localization/app_localizations.dart` | `AppLocalizations` | Core | ✅ Correct | English and Hindi localization lookup table with parameter replacement. |
+| `lib/core/localization/locale_provider.dart` | `LocaleProvider extends ChangeNotifier` | ViewModel | ✅ Correct (co-located with locale config) | Locale state, supportedLocales, initialize(), setLocale(). |
+| `lib/core/theme/theme_provider.dart` | `ThemeProvider extends ChangeNotifier` | ViewModel | ✅ Correct (co-located with theme config) | ThemeMode state, initialize(), setTheme(ThemeType). |
+| `lib/core/preferences/ai_preferences_provider.dart` | `AiPreferencesProvider extends ChangeNotifier` | ViewModel | ✅ Correct (app-global cross-feature VM) | AI model, token, vision, image size preferences state. |
+| `lib/core/router/app_routes.dart` | `AppRoutes` | Core | ✅ Correct | Route name constants, generateRoute(), navigation helpers, argument classes. |
+| `lib/core/error/ai_exception.dart` | `AiException` (sealed) | Core | ✅ Correct | Typed AI error hierarchy. |
+| `lib/core/error/effect_bus.dart` | `EffectBus` | Core | ✅ Correct | Global async error propagation stream. |
+| `lib/core/error/effect_listener.dart` | `GlobalEffectListener extends StatefulWidget` | View (wrapper) | ✅ Correct (MaterialApp.builder level) | Listens to EffectBus, shows warnings. |
+| `lib/core/utils/status_message_utils.dart` | `StatusMessageUtils` | Core | ✅ Correct | Overlay-based priority status message manager. |
+| `lib/core/utils/loading_overlay.dart` | `LoadingOverlay` | Core | ✅ Correct | Full-screen loading overlay with BuildContext extension. |
+| `lib/core/utils/app_validators.dart` | `AppValidators` | Core | ✅ Correct | Static form validation methods. |
+| `lib/core/utils/speech_grammar_formatter.dart` | `SpeechGrammarFormatter` | Core | ✅ Correct | Grammar correction for speech-to-text output. |
+| `lib/core/utils/widget_utils.dart` | `WidgetUtils` | Core | ✅ Correct | Reusable widget builder extensions on BuildContext. |
+| `lib/core/extensions/ai_provider_extensions.dart` | Extension on `AiProviderId` | Core | ✅ Correct | Display name, color, icon helpers for provider enum. |
+| `lib/core/extensions/build_context_extensions.dart` | Extensions on `BuildContext` | Core | ✅ Correct | Responsive layout, theme, and media query helpers. |
+| `lib/core/extensions/string_extension.dart` | Extensions on `String`, `DateTime` | Core | ✅ Correct | capitalize, titleCase, isValidEmail, date formatting. |
+| `lib/core/security/encryption_service.dart` | `EncryptionService` | Infrastructure | ✅ Correct | AES encryption wrapper for sensitive data. |
+| `lib/core/widgets/app_alert_dialog.dart` | `AppAlertDialog` | View (shared) | ✅ Correct | Themed alert dialog widget. |
+| `lib/core/widgets/shimmer_loading.dart` | `ShimmerLoading` | View (shared) | ✅ Correct | Shimmer skeleton loading widget. |
+
+### AI Layer Files
+
+| File | Class / Type | Layer | Directory Verdict | Purpose |
+|---|---|---|---|---|
+| `lib/ai_layer/adapters/ai_provider_adapter.dart` | `abstract AiProviderAdapter` | AI Interface | ✅ Correct | Abstract contract for all provider adapters. |
+| `lib/ai_layer/adapters/openai_adapter.dart` | `OpenAiAdapter` | AI Data | ✅ Correct | OpenAI HTTP implementation (text, image, vision, PDF). |
+| `lib/ai_layer/adapters/gemini_adapter.dart` | `GeminiAdapter` | AI Data | ✅ Correct | Gemini HTTP implementation (text, image, vision, PDF). |
+| `lib/ai_layer/adapters/claude_adapter.dart` | `ClaudeAdapter` | AI Data | ✅ Correct | Claude HTTP implementation (text, vision, PDF; no image gen). |
+| `lib/ai_layer/models/ai_request.dart` | `AiRequest`, `AiImageSize` | AI Model | ✅ Correct | Unified request payload for all capabilities. |
+| `lib/ai_layer/models/ai_response.dart` | `AiResponse`, `AiResponseContentType` | AI Model | ✅ Correct | Unified response from all providers. |
+| `lib/ai_layer/models/ai_provider_config.dart` | `AiProviderConfig` | AI Model | ✅ Correct | Provider capability and priority configuration. |
+| `lib/ai_layer/models/ai_model_capability_profile.dart` | `AiModelCapabilityProfile` | AI Model | ✅ Correct | Per-model capability matrix (context window, features). |
+| `lib/ai_layer/models/effective_ai_request_preferences.dart` | `EffectiveAiRequestPreferences` | AI Model | ✅ Correct | Resolved preferences after merging user settings. |
+| `lib/ai_layer/orchestrator/ai_orchestrator.dart` | `AiOrchestrator` | AI Orchestration | ✅ Correct | Central AI entry point with retry and fallback logic. |
+| `lib/ai_layer/orchestrator/model_selector.dart` | `ModelSelector` | AI Orchestration | ✅ Correct | Pure function: selects provider list for a capability. |
+| `lib/ai_layer/registry/provider_registry.dart` | `ProviderRegistry` | AI Registry | ✅ Correct | Capability matrix; registers all provider configs. |
+
+### Feature Files — Full Audit
+
+| File | Class / Type | MVVM Layer | Directory Verdict | Notes |
+|---|---|---|---|---|
+| `features/auth/domain/user_model.dart` | `UserModel` | Model | ✅ Correct | Immutable entity. Pure Dart. |
+| `features/auth/domain/auth_repository.dart` | `abstract AuthRepository` | Domain Interface | ✅ Correct | No Flutter imports. |
+| `features/auth/data/auth_repository_impl.dart` | `AuthRepositoryImpl` | Repository | ✅ Correct | Firebase/Google Sign-In impl. |
+| `features/auth/data/remote_user_dao.dart` | `RemoteUserDao`, `RemoteUserDaoImpl` | Data Access | ✅ Correct | Firestore user document operations. |
+| `features/auth/data/user_dto.dart` | `UserDto` | Data Transfer | ✅ Correct | Firestore ↔ UserModel serialization. |
+| `features/auth/presentation/auth_provider.dart` | `AuthProvider extends ChangeNotifier` | ViewModel | ✅ Correct | Auth state, sign-in/out methods. |
+| `features/auth/presentation/auth_screen.dart` | `AuthScreen extends StatelessWidget` | View | ✅ Correct | Login UI, no business logic. |
+| `features/auth/presentation/widgets/auth_buttons.dart` | `AuthButtons extends StatelessWidget` | View (widget) | ✅ Correct *(moved from presentation/ root)* | Google/Apple sign-in button widget. |
+| `features/chat/domain/conversation_model.dart` | `ConversationModel` | Model | ✅ Correct | Immutable conversation entity. |
+| `features/chat/domain/message_model.dart` | `MessageModel` | Model | ✅ Correct | Immutable message entity. |
+| `features/chat/domain/chat_attachment.dart` | `ChatAttachment` | Model | ✅ Correct | Attachment metadata entity. |
+| `features/chat/domain/chat_outbox_task.dart` | `ChatOutboxTask` | Model | ✅ Correct | Outbox queue task entity. |
+| `features/chat/domain/chat_page.dart` | `ChatPage` | Domain | ✅ Correct | Paginated conversation cursor. |
+| `features/chat/domain/chat_sync_state.dart` | `ChatSyncState` | Domain | ✅ Correct | Sync state enum/model. |
+| `features/chat/domain/chat_repository.dart` | `abstract ChatRepository` | Domain Interface | ✅ Correct | No Flutter imports. |
+| `features/chat/domain/conversation_page_cursor.dart` | `ConversationPageCursor` | Domain | ✅ Correct | Cursor-based pagination state. |
+| `features/chat/domain/message_page_cursor.dart` | `MessagePageCursor` | Domain | ✅ Correct | Message pagination cursor. |
+| `features/chat/domain/local_conversation_record.dart` | `LocalConversationRecord` | Domain | ✅ Correct | Hive-adapted conversation record. |
+| `features/chat/domain/local_message_record.dart` | `LocalMessageRecord` | Domain | ✅ Correct | Hive-adapted message record. |
+| `features/chat/data/chat_repository_impl.dart` | `ChatRepositoryImpl` | Repository | ✅ Correct | Orchestrates local + remote chat. |
+| `features/chat/data/local_chat_store.dart` | `LocalChatStore` | Data | ✅ Correct | Hive local read/write operations. |
+| `features/chat/data/chat_outbox_store.dart` | `ChatOutboxStore` | Data | ✅ Correct | Outbox queue persistence. |
+| `features/chat/data/remote_chat_store.dart` | `RemoteChatStore` | Data | ✅ Correct | Firestore remote operations. |
+| `features/chat/data/chat_sync_service.dart` | `ChatSyncService` | Data (Background) | ✅ Correct | Offline → remote sync worker. |
+| `features/chat/data/local_message_dao.dart` | `LocalMessageDao` | Data Access | ✅ Correct | Hive message box operations. |
+| `features/chat/data/message_dto.dart` | `MessageDto` | Data Transfer | ✅ Correct | Firestore ↔ MessageModel serialization. |
+| `features/chat/presentation/chat_provider.dart` | `ChatProvider extends ChangeNotifier` | ViewModel | ✅ Correct | Active chat state, message stream, AI request dispatch. |
+| `features/chat/presentation/chat_screen.dart` | `ChatScreen` | View | ✅ Correct | Start conversation screen with suggestion actions. |
+| `features/chat/presentation/chat_detail_screen.dart` | `ChatDetailScreen` | View | ✅ Correct | Active conversation thread UI. |
+| `features/chat/presentation/chat_history_screen.dart` | `ChatHistoryScreen` | View | ✅ Correct | Conversation list/history UI. |
+| `features/chat/presentation/widgets/message_bubble.dart` | `MessageBubble` | View (widget) | ✅ Correct | Single message rendering widget. |
+| `features/chat/presentation/widgets/chat_input.dart` | `ChatInput` | View (widget) | ✅ Correct | Input bar with voice, attachments, send. |
+| `features/chat/presentation/widgets/custom_conversation_card.dart` | `CustomConversationCard` | View (widget) | ✅ Correct | Conversation list item card. |
+| `features/chat/presentation/widgets/change_title_dialog.dart` | `ChangeTitleDialog` | View (widget) | ✅ Correct | Rename conversation dialog. |
+| `features/chat/presentation/widgets/conversation_title.dart` | `ConversationTitle` | View (widget) | ✅ Correct | AppBar title with edit action. |
+| `features/chat/presentation/widgets/empty_history_view.dart` | `EmptyHistoryView` | View (widget) | ✅ Correct | Empty state for history screen. |
+| `features/chat/presentation/widgets/model_indicator_chip.dart` | `ModelIndicatorChip` | View (widget) | ✅ Correct | Active AI model badge chip. |
+| `features/chat/presentation/widgets/typewriter_text.dart` | `TypewriterText` | View (widget) | ✅ Correct | Typewriter animation for AI responses. |
+| `features/profile/domain/` | *(empty after audit — ProfileViewModel moved)* | — | ✅ Cleaned | No domain entities needed for profile feature. |
+| `features/profile/presentation/profile_view_model.dart` | `ProfileViewModel extends ChangeNotifier` | ViewModel | ✅ Correct *(moved from domain/)* | Profile actions: save, signOut, deleteAccount, openUrl. |
+| `features/profile/presentation/profile_view.dart` | `ProfileView` | View | ✅ Correct | Profile tab UI. |
+| `features/profile/presentation/edit_profile_screen.dart` | `EditProfileScreen` | View | ✅ Correct | Edit name, photo, DOB, location. |
+| `features/profile/presentation/widgets/account_panel.dart` | `AccountPanel` | View (widget) | ✅ Correct | Account section panel widget. |
+| `features/profile/presentation/widgets/ai_intelligence_section.dart` | `AiIntelligenceSection` | View (widget) | ✅ Correct | AI intelligence settings section. |
+| `features/profile/presentation/widgets/ai_preferences_panel.dart` | `AiPreferencesPanel` | View (widget) | ✅ Correct | AI model/preference settings panel. |
+| `features/profile/presentation/widgets/profile_avatar.dart` | `ProfileAvatar` | View (widget) | ✅ Correct | Circular avatar with upload overlay. |
+| `features/profile/presentation/widgets/profile_common_widgets.dart` | Shared profile widgets | View (widget) | ✅ Correct | Reusable profile section components. |
+| `features/profile/presentation/widgets/profile_header.dart` | `ProfileHeader` | View (widget) | ✅ Correct | Profile name/photo header. |
+| `features/profile/presentation/widgets/settings_panel.dart` | `SettingsPanel` | View (widget) | ✅ Correct | App settings (theme, language). |
+| `features/profile/presentation/widgets/support_panel.dart` | `SupportPanel` | View (widget) | ✅ Correct | Help/support links panel. |
+| `features/key_setup/domain/api_key_model.dart` | `ApiKeyModel` | Model | ✅ Correct | API key entity. |
+| `features/key_setup/domain/api_key_repository.dart` | `abstract ApiKeyRepository` | Domain Interface | ✅ Correct | Key retrieval/storage contract. |
+| `features/key_setup/data/api_key_repository_impl.dart` | `ApiKeyRepositoryImpl` | Repository | ✅ Correct | Secure storage-backed key persistence. |
+| `features/key_setup/presentation/api_key_provider.dart` | `ApiKeyProvider extends ChangeNotifier` | ViewModel | ✅ Correct | Key setup state, provider unlock status. |
+| `features/key_setup/presentation/key_setup_screen.dart` | `KeySetupScreen` | View | ✅ Correct | API key input and validation UI. |
+| `features/usage/domain/usage_event_model.dart` | `UsageEventModel` | Model | ✅ Correct | Usage event entity. |
+| `features/usage/domain/usage_summary_model.dart` | `UsageSummaryModel` | Model | ✅ Correct | Aggregated usage summary entity. |
+| `features/usage/domain/monthly_usage_data.dart` | `MonthlyUsageData` | Model | ✅ Correct | Monthly cost/token breakdown. |
+| `features/usage/domain/usage_repository.dart` | `abstract UsageRepository` | Domain Interface | ✅ Correct | Usage data contract. |
+| `features/usage/data/usage_repository_impl.dart` | `UsageRepositoryImpl` | Repository | ✅ Correct | Firestore usage persistence. |
+| `features/usage/data/usage_firestore_dao.dart` | `UsageFirestoreDao` | Data Access | ✅ Correct | Firestore usage document operations. |
+| `features/usage/data/usage_dto.dart` | `UsageEventDto`, `UsageSummaryDto` | Data Transfer | ✅ Correct | Firestore ↔ model serialization. |
+| `features/usage/data/usage_cost_estimator.dart` | `abstract UsageCostEstimator` | Data (Pure Logic) | ✅ Correct | Token cost calculation (pure functions). |
+| `features/usage/data/usage_pricing_table.dart` | `abstract UsagePricingTable` | Data (Pure Logic) | ✅ Correct | Provider pricing constants. |
+| `features/usage/presentation/usage_provider.dart` | `UsageProvider extends ChangeNotifier` | ViewModel | ✅ Correct | Usage tracking state, budget limits. |
+| `features/usage/presentation/widgets/budget_editor_sheet.dart` | `BudgetEditorSheet` | View (widget) | ✅ Correct | Budget limit editor bottom sheet. |
+| `features/voice_speech/domain/voice_speech_repository.dart` | `abstract VoiceSpeechRepository` | Domain Interface | ✅ Correct | STT/TTS contract. |
+| `features/voice_speech/data/voice_speech_repository_impl.dart` | `VoiceSpeechRepositoryImpl` | Repository | ✅ Correct | speech_to_text + flutter_tts impl. |
+| `features/voice_speech/data/whisper_transcription_service.dart` | `WhisperTranscriptionService` | Data Service | ✅ Correct | OpenAI Whisper API transcription (future capability). |
+| `features/voice_speech/presentation/voice_speech_provider.dart` | `VoiceSpeechProvider extends ChangeNotifier` | ViewModel | ✅ Correct | Dictation state, TTS playback control. |
+| `features/voice_speech/presentation/widgets/tts_play_button.dart` | `TtsPlayButton` | View (widget) | ✅ Correct | TTS play/pause/stop control. |
+| `features/voice_speech/presentation/widgets/voice_input_button.dart` | `VoiceInputButton` | View (widget) | ✅ Correct | Microphone record button with state. |
+| `features/image_download/domain/image_download_repository.dart` | `abstract ImageDownloadRepository` | Domain Interface | ✅ Correct | Image download/save contract. |
+| `features/image_download/data/image_download_repository_impl.dart` | `ImageDownloadRepositoryImpl` | Repository | ✅ Correct | HTTP download + native save impl. |
+| `features/image_download/presentation/image_download_provider.dart` | `ImageDownloadProvider extends ChangeNotifier` | ViewModel | ✅ Correct | Per-image scoped download state. |
+| `features/home/presentation/tab_bar_screen.dart` | `TabBarScreen` | View | ✅ Correct | Bottom navigation tab host. |
+| `features/splash/presentation/splash_screen.dart` | `SplashScreen` | View | ✅ Correct | Session router. Observes AuthProvider state. |
+| `features/intro/presentation/intro_screen.dart` | `IntroScreen` | View | ✅ Correct | Home landing screen. |
+| `features/onboarding/presentation/onboarding_screen.dart` | `OnboardingScreen` | View | ✅ Correct | Onboarding carousel. |
+| `features/legal_section/presentation/legal_screen.dart` | `LegalScreen` | View | ✅ Correct | Privacy/ToS toggle viewer. |
+| `features/legal_section/presentation/about_screen.dart` | `AboutScreen` | View | ✅ Correct | App info, version, links. |
+| `features/legal_section/presentation/widgets/about_widgets.dart` | About sub-widgets | View (widget) | ✅ Correct | Reusable about section components. |
+| `shared/model/image_model.dart` | `ImageModel` | Model (shared) | ✅ Correct | Shared AI-generated image data model. |
+| `shared/widgets/chat_action_button.dart` | `ChatActionButton` | View (shared widget) | ✅ Correct | Reusable chat action button. |
+| `shared/widgets/chat_model_selector_dropdown.dart` | `ChatModelSelectorDropdown` | View (shared widget) | ✅ Correct | AI model picker dropdown. |
+| `shared/widgets/default_value_dropdown_selector.dart` | `DefaultValueDropdownSelector` | View (shared widget) | ✅ Correct | Generic labeled dropdown. |
+| `shared/widgets/dynamic_shimmer.dart` | `DynamicShimmer` | View (shared widget) | ✅ Correct | Contextual shimmer loader. |
+| `shared/widgets/generated_image_download_button.dart` | `GeneratedImageDownloadButton` | View (shared widget) | ✅ Correct | Download button for AI images. |
+| `shared/widgets/image_view.dart` | `ImageView` | View (shared widget) | ✅ Correct | Full-screen image viewer. |
 
 ### Feature Files Overview
 
 | Feature | Primary Screens / Widgets | ViewModels / Providers | Repositories / Data Stores |
 |---|---|---|---|
-| **Auth** | `LoginScreen` | `AuthProvider` | `AuthRepositoryImpl` |
+| **Auth** | `AuthScreen`, `widgets/AuthButtons` | `AuthProvider` | `AuthRepositoryImpl`, `RemoteUserDaoImpl` |
 | **Key Setup** | `KeySetupScreen` | `ApiKeyProvider` | `ApiKeyRepositoryImpl` |
-| **Chat** | `ChatScreen`, `ChatDetailScreen`, `ConversationHistoryScreen`, `MessageBubble` | `ChatProvider` | `ChatRepositoryImpl`, `LocalChatStore`, `ChatOutboxStore`, `RemoteChatStore`, `ChatSyncService` |
+| **Chat** | `ChatScreen`, `ChatDetailScreen`, `ChatHistoryScreen`, `MessageBubble` | `ChatProvider` | `ChatRepositoryImpl`, `LocalChatStore`, `ChatOutboxStore`, `RemoteChatStore`, `ChatSyncService` |
 | **Image Download** | `GeneratedImageDownloadButton` | `ImageDownloadProvider` | `ImageDownloadRepositoryImpl`, `DeviceImageSaveService` |
 | **Profile** | `ProfileView`, `EditProfileScreen`, `ProfileAvatar`, `AccountPanel`, `AiPreferencesPanel` | `ProfileViewModel`, `AuthProvider`, `AiPreferencesProvider` | `AuthRepositoryImpl`, `AiPreferencesService` |
-| **Voice Speech** | `VoiceSpeechWidget`, `VoiceSettingsDialog` | `VoiceSpeechProvider` | `SpeechToText`, `FlutterTts` |
-| **Usage** | `UsageScreen`, `UsageCard` | `UsageProvider` | `UsageRepositoryImpl` |
-| **Legal** | `LegalScreen`, `AboutScreen` | N/A | Static localized assets & metadata |
+| **Voice Speech** | `VoiceInputButton`, `TtsPlayButton` | `VoiceSpeechProvider` | `VoiceSpeechRepositoryImpl`, `WhisperTranscriptionService` |
+| **Usage** | `UsageProvider` (embedded in ProfileView), `BudgetEditorSheet` | `UsageProvider` | `UsageRepositoryImpl`, `UsageFirestoreDao` |
+| **Legal** | `LegalScreen`, `AboutScreen` | N/A (uses `ProfileViewModel` for links) | Static localized assets & metadata |
 
 
 # AI Voice Genie — Flutter MVVM Directory Structure
@@ -376,10 +517,11 @@ lib/
 │   │   │
 │   │   ├── analytics_service.dart
 │   │   │     CONTAINS : Firebase Analytics wrapper (singleton).
-│   │   │                logSignInButtonTapped, logAiRequestInitiated,
-│   │   │                logAiRequestSuccess, logAiRequestFailed,
-│   │   │                logAiFallbackTriggered, logAiCapabilityGap,
+│   │   │                logAuthInitiated, logUserAuthFailed,
+│   │   │                logAiRequestInitiated, logAiRequestSuccess,
+│   │   │                logAiRequestFailed, logAiCapabilityGap,
 │   │   │                logFeatureUsed, logModelKeyAdded, logModelKeyRemoved,
+│   │   │                logImageDownload, logPdfDownload,
 │   │   │                logUserSignedIn, logUserRegistered, setUserId, clearUserId
 │   │   │     ADD HERE : New analytics event method when tracking a new action.
 │   │   │     RULE     : Never call FirebaseAnalytics.instance directly in a feature.
@@ -569,14 +711,21 @@ lib/
 │   │   │                    AuthException, AuthErrorCodes
 │   │   │
 │   │   ├── data/
-│   │   │   └── auth_repository_impl.dart       ← [REPOSITORY IMPLEMENTATION]
-│   │   │         CONTAINS : AuthRepositoryImpl implements AuthRepository
-│   │   │                    Google Sign-In flow + Firebase credential
-│   │   │                    Apple Sign-In flow + nonce generation
-│   │   │                    _createOrUpdateUser() → Firestore new/returning user logic
-│   │   │                    Apple missing-field fallback (reads Firestore for stored data)
-│   │   │                    _persistSession() → Hive writes
-│   │   │                    Firebase error code mapping
+│   │   │   ├── auth_repository_impl.dart       ← [REPOSITORY IMPLEMENTATION]
+│   │   │   │     CONTAINS : AuthRepositoryImpl implements AuthRepository
+│   │   │   │                Google Sign-In flow + Firebase credential
+│   │   │   │                Apple Sign-In flow + nonce generation
+│   │   │   │                _createOrUpdateUser() → Firestore new/returning user logic
+│   │   │   │                Apple missing-field fallback (reads Firestore for stored data)
+│   │   │   │                _persistSession() → Hive writes
+│   │   │   │                Firebase error code mapping
+│   │   │   │
+│   │   │   ├── remote_user_dao.dart            ← [DATA ACCESS OBJECT]
+│   │   │   │     CONTAINS : abstract RemoteUserDao + RemoteUserDaoImpl
+│   │   │   │                Firestore user document read/write operations.
+│   │   │   │
+│   │   │   └── user_dto.dart                   ← [DATA TRANSFER OBJECT]
+│   │   │         CONTAINS : UserDto — Firestore map ↔ UserModel serialization.
 │   │   │
 │   │   └── presentation/
 │   │       ├── auth_provider.dart              ← [VIEWMODEL]
@@ -584,15 +733,21 @@ lib/
 │   │       │                authError (String?), isAppleSignInAvailable (bool)
 │   │       │     METHODS  : initialize(), signInWithGoogle(), signInWithApple(),
 │   │       │                signOut(), clearAuthError()
-│   │       │     CONSUMED : SplashScreen (authState), LoginScreen (signIn methods, authError)
+│   │       │     CONSUMED : SplashScreen (authState), AuthScreen (signIn methods, authError)
 │   │       │     WIRED IN : main.dart (lazy: false — eager initialization)
 │   │       │
-│   │       └── login_screen.dart               ← [VIEW]
-│   │             OBSERVES : AuthProvider (authError for error display)
-│   │             RENDERS  : App logo, tagline, Google button, Apple button (iOS only)
-│   │             ACTIONS  : _handleGoogleSignIn(), _handleAppleSignIn()
-│   │             RULE     : Does NOT navigate. SplashScreen handles navigation.
+│   │       ├── auth_screen.dart                ← [VIEW]
+│   │       │     OBSERVES : AuthProvider (authError for error display)
+│   │       │     RENDERS  : App logo, tagline, Google button, Apple button (iOS only)
+│   │       │     ACTIONS  : _handleGoogleSignIn(), _handleAppleSignIn()
+│   │       │     RULE     : Does NOT navigate. SplashScreen handles navigation.
+│   │       │
+│   │       └── widgets/
+│   │           └── auth_buttons.dart           ← [VIEW WIDGET]
+│   │                 CONTAINS : AuthButtons — themed Google/Apple sign-in button.
+│   │                 NOTE     : Moved from presentation/ root → presentation/widgets/ (MVVM audit).
 │   │
+
 │   ├── onboarding/
 │   │   └── presentation/
 │   │       └── onboarding_screen.dart          ← [VIEW]
@@ -794,7 +949,7 @@ lib/
 │   │   │   ├── pdf_document_model.dart        ← [MODEL] PDF metadata entity
 │   │   │   └── pdf_repository.dart            ← [INTERFACE] extract, save, load
 │   │   ├── data/
-│   │   │   └── pdf_repository_impl.dart       ← [IMPL] syncfusion text extraction + AI
+│   │   │   └── pdf_repository_impl.dart       ← [IMPL] base64 direct multimodal ingestion + AI
 │   │   └── presentation/
 │   │       ├── pdf_provider.dart              ← [VIEWMODEL]
 │   │       ├── pdf_reader_screen.dart         ← [VIEW]

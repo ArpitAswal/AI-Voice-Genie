@@ -12,11 +12,17 @@ import '../../domain/conversation_model.dart';
 class CustomConversationCard extends StatelessWidget {
   final ConversationModel conversation;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelectionMode;
+  final bool isSelected;
 
   const CustomConversationCard({
     super.key,
     required this.conversation,
     required this.onTap,
+    this.onLongPress,
+    this.isSelectionMode = false,
+    this.isSelected = false,
   });
 
   @override
@@ -40,27 +46,59 @@ class CustomConversationCard extends StatelessWidget {
         ? '$timeStr $tz'
         : '${DateFormat('yyyy-MM-dd').format(localDate)}, $timeStr $tz';
 
+    final effectiveCardColor = isSelected
+        ? (context.isDark
+            ? context.primaryColor.withValues(alpha: 0.18)
+            : context.primaryColor.withValues(alpha: 0.10))
+        : (context.isDark ? AppColors.cardDark : AppColors.cardLight);
+
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(16),
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-            color: context.isDark ? AppColors.cardDark : AppColors.cardLight,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                  color: (context.isDark)
-                      ? AppColors.tealAccent.withValues(alpha: 0.5)
-                      : AppColors.cyanAccent.withValues(alpha: 0.3),
-                  blurRadius: 3.0,
-                  spreadRadius: 1)
-            ]),
+          color: effectiveCardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? context.primaryColor : Colors.transparent,
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (context.isDark)
+                  ? AppColors.tealAccent.withValues(alpha: 0.5)
+                  : AppColors.cyanAccent.withValues(alpha: 0.3),
+              blurRadius: 3.0,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
+                if (isSelectionMode) ...[
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(
+                      isSelected
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      key: ValueKey(isSelected),
+                      color: isSelected
+                          ? context.primaryColor
+                          : (context.isDark
+                              ? AppColors.darkTextTertiary
+                              : AppColors.lightTextTertiary),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
                 Expanded(
                   child: Text(
                     conversation.title.isEmpty
@@ -101,13 +139,14 @@ class CustomConversationCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                Icon(
-                  Icons.chevron_right,
-                  color: context.isDark
-                      ? AppColors.darkTextTertiary
-                      : AppColors.lightTextTertiary,
-                  size: 20,
-                ),
+                if (!isSelectionMode)
+                  Icon(
+                    Icons.chevron_right,
+                    color: context.isDark
+                        ? AppColors.darkTextTertiary
+                        : AppColors.lightTextTertiary,
+                    size: 20,
+                  ),
               ],
             ),
             const SizedBox(height: 8),

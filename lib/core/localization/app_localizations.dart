@@ -35,7 +35,7 @@ class AppLocalizations {
     'en': {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI Voice Genie',
-      'app_tagline': 'Your intelligent AI assistant',
+      'app_tagline': 'Voice-first AI • ChatGPT · Gemini · Claude',
       'ai_assist': 'Your AI assistant is ready to help you.',
       'ask_genie_anything': 'Ask Genie Anything',
       'welcome_message': 'Welcome to',
@@ -156,6 +156,13 @@ class AppLocalizations {
       'delete_all_confirm_message':
           'Are you sure you want to delete all conversations? This cannot be undone.',
       'deleting_all_conversations': 'Deleting all conversations...',
+      'delete_selected_conversations': 'Delete Selected Conversations',
+      'delete_selected_confirm':
+          'Are you sure you want to delete {0} selected conversations? This cannot be undone.',
+      'conversations_deleted': 'Selected conversations deleted.',
+      'select_all': 'Select All',
+      'deselect_all': 'Deselect All',
+      'selected_count': '{0} selected',
       'start_conversation': 'Start a conversation with your AI assistant.',
       'conversation_history': 'History',
       'history_subtitle': 'Review your recent thoughts.',
@@ -176,7 +183,7 @@ class AppLocalizations {
       'prompt_template_analyze_image':
           'Analyze this image in detail and describe the visual scene, key elements, and any visible text or data.',
       'prompt_template_create_image':
-          'A serene Japanese Zen garden with cherry blossoms, a stone lantern, and a peaceful koi pond in soft morning light, 8k photographic style.',
+          'Generate a high-quality photo of a serene Japanese Zen garden with cherry blossoms, a stone lantern, and a peaceful koi pond in soft morning light, 8k photographic style.',
       'prompt_template_generate_pdf':
           'Generate a professional PDF report on the fundamentals of Artificial Intelligence, including an executive summary, core milestones, and future trends.',
       'conversation_name_update': 'Conversation name changed',
@@ -348,6 +355,7 @@ class AppLocalizations {
       // TTS action button tooltips below AI text response bubbles
       'play_response': 'Play response',
       'stop_response': 'Stop response',
+      'response_stopped': 'Stopped',
       'error_speech_timeout': 'Error: Speech timeout exceeded.',
 
       // ── Settings ───────────────────────────────────────────────────────────
@@ -453,9 +461,10 @@ class AppLocalizations {
       'usage_load_failed': 'Failed to load usage data.',
       'about_app': 'About AI Voice Genie',
       'development_build': 'Development Build',
-      'about_mission_title': 'Mission',
+      'production_build': 'Production Ready',
+      'about_mission_title': 'About This App',
       'about_mission_body':
-          'AI Voice Genie brings ChatGPT, Gemini, and Claude into one voice-first workspace for chat, images, documents, and everyday thinking.',
+          'AI Voice Genie is a personal, voice-first AI workspace built by an independent developer. It unifies ChatGPT, Gemini, and Claude in one place — with your own API keys, so you stay in full control of your data and costs.',
       'legal': 'Legal',
       'credits_attribution': 'Credits & Attribution',
       'open_source_licenses': 'Open-source Licenses',
@@ -465,7 +474,7 @@ class AppLocalizations {
       'view_licenses': 'View package licenses',
       'read_in_app': 'Read in app',
       'official_document': 'Official Legal Document',
-      'last_updated': 'Updated July 2026',
+      'last_updated': 'Updated October 2026',
       'no_data_selling': 'No Data Selling',
       'user_agreement': 'User Agreement',
       'ai_guidelines': 'AI Guidelines',
@@ -692,6 +701,13 @@ class AppLocalizations {
       'delete_all_confirm_message':
           'क्या आप सभी बातचीत हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
       'deleting_all_conversations': 'सभी बातचीत हटाई जा रही हैं...',
+      'delete_selected_conversations': 'चुनी गई बातचीत हटाएं',
+      'delete_selected_confirm':
+          'क्या आप {0} चुनी गई बातचीत हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
+      'conversations_deleted': 'चुनी गई बातचीत हटाई गई।',
+      'select_all': 'सभी चुनें',
+      'deselect_all': 'सभी अचयनित करें',
+      'selected_count': '{0} चुने गए',
       'start_conversation': 'अपने AI सहायक के साथ बातचीत शुरू करें।',
       'conversation_history': 'इतिहास',
       'history_subtitle': 'अपने हालिया विचारों की समीक्षा करें।',
@@ -712,7 +728,7 @@ class AppLocalizations {
       'prompt_template_analyze_image':
           'इस चित्र का विस्तार से विश्लेषण करें और दृश्य, मुख्य तत्वों तथा दिखने वाले किसी भी टेक्स्ट या डेटा की व्याख्या करें।',
       'prompt_template_create_image':
-          'सुबह की सौम्य रोशनी में खिले चेरी ब्लॉसम, पत्थर के लालटेन और शांत कोई मछली के तालाब वाला सुरम्य जापानी ज़ेन गार्डन, 8k फ़ोटोग्राफ़िक शैली।',
+          'सुबह की सौम्य रोशनी में खिले चेरी ब्लॉसम, पत्थर के लालटेन और शांत कोई मछली के तालाब वाले सुरम्य जापानी ज़ेन गार्डन की एक सुंदर तस्वीर बनाएं, 8k फ़ोटोग्राफ़िक शैली।',
       'prompt_template_generate_pdf':
           'आर्टिफिशियल इंटेलिजेंस के सिद्धांतों पर एक पेशेवर पीडीएफ रिपोर्ट तैयार करें, जिसमें कार्यकारी सारांश, प्रमुख चरण और भविष्य के रुझान शामिल हों।',
       'conversation_name_update': 'बातचीत का नाम बदल दिया गया',
@@ -883,6 +899,7 @@ class AppLocalizations {
       // TTS action button tooltips below AI text response bubbles
       'play_response': 'जवाब सुनें',
       'stop_response': 'जवाब रोकें',
+      'response_stopped': 'रोक दिया गया',
       'error_speech_timeout': 'त्रुटि: स्पीच टाइमआउट की सीमा पार हो गई।',
 
       // ── Settings ───────────────────────────────────────────────────────────
@@ -986,11 +1003,12 @@ class AppLocalizations {
       'configure': 'कॉन्फ़िगर करें',
       'help_center': 'सहायता और समर्थन',
       'coming_soon': 'जल्द आ रहा है।',
-      'about_app': 'ऐएआई वॉइस जीनियस के बारे में',
+      'about_app': 'AI Voice Genie के बारे में',
       'development_build': 'डेवलपमेंट बिल्ड',
-      'about_mission_title': 'मिशन',
+      'production_build': 'प्रोडक्शन रेडी',
+      'about_mission_title': 'इस ऐप के बारे में',
       'about_mission_body':
-          'AI Voice Genie ChatGPT, Gemini और Claude को chat, images, documents और everyday thinking के लिए एक voice-first workspace में लाता है।',
+          'AI Voice Genie एक स्वतंत्र डेवलपर द्वारा बनाया गया voice-first AI वर्कस्पेस है। यह ChatGPT, Gemini और Claude को एक ही जगह लाता है — आपकी अपनी API कीज़ के साथ, ताकि डेटा और खर्च पर पूरा नियंत्रण आपका हो।',
       'legal': 'कानूनी',
       'credits_attribution': 'क्रेडिट और एट्रिब्यूशन',
       'open_source_licenses': 'ओपन-सोर्स लाइसेंस',
@@ -1000,7 +1018,7 @@ class AppLocalizations {
       'view_licenses': 'पैकेज लाइसेंस देखें',
       'read_in_app': 'ऐप में पढ़ें',
       'official_document': 'आधिकारिक कानूनी दस्तावेज़',
-      'last_updated': 'अद्यतन: जुलाई 2026',
+      'last_updated': 'अद्यतन: अक्टूबर 2026',
       'no_data_selling': 'डेटा की बिक्री नहीं',
       'user_agreement': 'उपयोगकर्ता समझौता',
       'ai_guidelines': 'AI दिशानिर्देश',
@@ -1159,6 +1177,15 @@ class AppLocalizations {
   String get deleteConversation => translate('delete_conversation');
   String get deletingAllConversations =>
       translate('deleting_all_conversations');
+  String get deleteSelectedConversations =>
+      translate('delete_selected_conversations');
+  String deleteSelectedConfirm(int count) =>
+      translate('delete_selected_confirm').replaceAll('{0}', count.toString());
+  String get conversationsDeleted => translate('conversations_deleted');
+  String get selectAll => translate('select_all');
+  String get deselectAll => translate('deselect_all');
+  String selectedCount(int count) =>
+      translate('selected_count').replaceAll('{0}', count.toString());
   String get typeMessage => translate('type_message');
   String get send => translate('send');
   String get aiThinking => translate('ai_thinking');
@@ -1259,6 +1286,8 @@ class AppLocalizations {
   String get generateCodePrompt => translate('prompt_template_generate_code');
   String get analyzeImagePrompt => translate('prompt_template_analyze_image');
   String get createImagePrompt => translate('prompt_template_create_image');
+  String get stopResponse => translate('stop_response');
+  String get responseStopped => translate('response_stopped');
   String get deleting => translate('deleting');
   String get profile => translate('profile');
   String get editProfile => translate('edit_profile');
@@ -1428,6 +1457,8 @@ class AppLocalizations {
   String get visionDetailLevelHint => translate('vision_detail_level_hint');
 
   // ── Legal & About ─────────────────────────────────────────────────────────
+  String get productionBuild => translate('production_build');
+
   String get aboutMissionTitle => translate('about_mission_title');
   String get aboutMissionBody => translate('about_mission_body');
   String get legal => translate('legal');

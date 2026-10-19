@@ -185,48 +185,42 @@ class FirebaseCollections {
   static const String fieldMessagePdfInfo = fieldPdfInfo;
 
   // ── Analytics Event Names ─────────────────────────────────────────────────
-  static const String eventAuthenticationButtonTapped =
-      'authentication_button_tapped';
+  static const String eventAuthenticateUser = 'authenticate_user';
   static const String eventUserSignedIn = 'user_signed_in';
   static const String eventUserRegistered = 'user_registered';
+  static const String eventUserAuthFailed = 'user_auth_failed';
   static const String eventUserSignedOut = 'user_signed_out';
   static const String eventAccountDeleted = 'account_deleted';
   static const String eventAiRequestInitiated = 'ai_request_initiated';
   static const String eventAiRequestSuccess = 'ai_request_success';
   static const String eventAiRequestFailed = 'ai_request_failed';
-  static const String eventAiFallbackTriggered = 'ai_fallback_triggered';
   static const String eventAiCapabilityGap = 'ai_capability_gap';
   static const String eventFeatureUsed = 'feature_used';
   static const String eventModelAdded = 'ai_model_added';
   static const String eventModelRemoved = 'ai_model_removed';
-  // Fired when the user taps the download button on a generated image.
-  // Parameters: provider, result, failure_reason, mime_type, source_type, image_count_in_message
+  // Fired when the user taps download on an AI-generated image.
   static const String eventGeneratedImageDownload = 'generated_image_download';
+  // Fired when the user taps download on an AI-compiled PDF document.
+  static const String eventGeneratedPdfDownload = 'generated_pdf_download';
 
   // ── Analytics Parameter Names ─────────────────────────────────────────────
   static const String paramAuthProvider = 'auth_provider';
-  static const String paramModelAttempted = 'model_attempted';
+  static const String paramAuthErrorCode = 'error_code';
   static const String paramModelUsed = 'model_used';
   static const String paramCapability = 'request_capability';
   static const String paramFailureType = 'failure_type';
   static const String paramFailureReason = 'failure_reason';
-  static const String paramFromModel = 'from_model';
-  static const String paramToModel = 'to_model';
-  static const String paramReason = 'reason';
   static const String paramFeature = 'feature';
   static const String paramResponseTimeMs = 'response_time_ms';
-  static const String paramModelFeatures = 'model_features';
   static const String paramUserId = 'user_id';
   static const String paramUserEmail = 'user_email';
 
   /// Shared request ID linking initiated/success/failure events to the usage event.
   static const String paramRequestId = 'request_id';
-  // Image download event parameters (safe — no URL or prompt text)
+  // Download event parameters (safe — no URL, prompt text, or PII)
   static const String paramDownloadResult = 'result';
   static const String paramDownloadFailureReason = 'failure_reason';
-  static const String paramDownloadMimeType = 'mime_type';
-  static const String paramDownloadSourceType = 'source_type';
-  static const String paramImageCountInMessage = 'image_count_in_message';
+  static const String paramFileSizeBytes = 'file_size_bytes';
 
   // ── Usage Tracking Collection Names ───────────────────────────────────────
   static const String usageEvents = 'usageEvents';

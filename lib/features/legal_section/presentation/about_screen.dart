@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,7 +8,7 @@ import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/status_message_utils.dart';
-import '../../profile/domain/profile_view_model.dart';
+import '../../profile/presentation/profile_view_model.dart';
 import 'widgets/about_widgets.dart';
 import '../../profile/presentation/widgets/profile_common_widgets.dart';
 
@@ -40,6 +41,10 @@ class _AboutScreenState extends State<AboutScreen> {
     switch (result) {
       case ProfileLinkResult.opened:
         return;
+      case ProfileLinkResult.copied:
+        context.showSuccessToast(
+          '${context.l10n.copiedToClipboard}: ${AppConstants.supportEmail}',
+        );
       case ProfileLinkResult.missing:
         context.showWarning(context.l10n.linkUnavailable);
       case ProfileLinkResult.failed:
@@ -86,11 +91,19 @@ class _AboutScreenState extends State<AboutScreen> {
                         icon: Icons.tag_rounded,
                       ),
                       AboutStatusChip(
-                        label: context.l10n.developmentBuild,
-                        icon: Icons.construction_rounded,
-                        color: context.isDark
-                            ? AppColors.darkWarning
-                            : AppColors.lightWarning,
+                        label: kReleaseMode
+                            ? context.l10n.productionBuild
+                            : context.l10n.developmentBuild,
+                        icon: kReleaseMode
+                            ? Icons.verified_rounded
+                            : Icons.construction_rounded,
+                        color: kReleaseMode
+                            ? (context.isDark
+                                ? AppColors.darkSuccess
+                                : AppColors.lightSuccess)
+                            : (context.isDark
+                                ? AppColors.darkWarning
+                                : AppColors.lightWarning),
                       ),
                     ],
                   ),
@@ -149,7 +162,9 @@ class _AboutScreenState extends State<AboutScreen> {
                           size: context.textTheme.titleLarge?.fontSize,
                         ),
                         onTap: () => _handleLinkResult(
-                          viewModel.openSupport(context.l10n.appName),
+                          viewModel.openSupport(
+                            '${context.l10n.appName} - ${context.l10n.contactSupport}',
+                          ),
                         ),
                       ),
                     ],

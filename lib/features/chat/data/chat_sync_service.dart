@@ -295,6 +295,19 @@ class ChatSyncService {
       return;
     }
 
+    // Defensive check: if the user already deleted this conversation while offline
+    // or before the sync worker reached this task, skip the Firestore write so we
+    // do not resurrect dead conversations or orphan remote documents.
+    final localConv = _localStore.getConversation(uid, conversationId);
+    if (localConv == null ||
+        localConv.isDeleted ||
+        localConv.syncStatus == SyncStatus.pendingDelete) {
+      debugPrint(
+          '🛡️ ChatSyncService: skipping upsert for deleted conversation $conversationId');
+      await _outboxStore.markSucceeded(task.operationId);
+      return;
+    }
+
     final convData = Map<String, dynamic>.from(rawConv);
     final userMsgData = Map<String, dynamic>.from(rawUser);
     final aiMsgData = Map<String, dynamic>.from(rawAi);
@@ -384,6 +397,16 @@ class ChatSyncService {
 
   /// Update only the conversation title field in Firestore.
   Future<void> _executeUpdateTitle(ChatOutboxTask task) async {
+    final localConv =
+        _localStore.getConversation(task.uid, task.conversationId);
+    if (localConv == null ||
+        localConv.isDeleted ||
+        localConv.syncStatus == SyncStatus.pendingDelete) {
+      debugPrint(
+          '🛡️ ChatSyncService: skipping title update for deleted conversation ${task.conversationId}');
+      await _outboxStore.markSucceeded(task.operationId);
+      return;
+    }
     final newTitle = task.payload['title'] as String? ?? '';
     await _remote.updateConversationTitle(
       uid: task.uid,

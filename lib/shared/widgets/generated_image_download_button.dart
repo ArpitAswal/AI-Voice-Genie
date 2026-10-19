@@ -36,15 +36,11 @@ class GeneratedImageDownloadButton extends StatelessWidget {
   /// AI provider name for analytics (e.g. "openai", "gemini").
   final String provider;
 
-  /// Total number of generated images in this message — for analytics only.
-  final int imageCountInMessage;
-
   const GeneratedImageDownloadButton({
     super.key,
     required this.imageSource,
     required this.imageKey,
     required this.provider,
-    required this.imageCountInMessage,
   });
 
   @override
@@ -70,9 +66,6 @@ class GeneratedImageDownloadButton extends StatelessWidget {
     BuildContext context,
     ImageDownloadProvider downloadProvider,
   ) async {
-    // Detect source type for analytics before download starts (source string is safe)
-    final sourceType = _detectSourceType(imageSource);
-
     await downloadProvider.downloadImage(
       imageSource: imageSource,
       imageKey: imageKey,
@@ -100,29 +93,17 @@ class GeneratedImageDownloadButton extends StatelessWidget {
     // Analytics: fire-and-forget after result is known.
     // Parameters are safe — no URL, prompt text, or user ID.
     final isSuccess = failure == null;
-    // Read failure once to avoid repeated null checks — guaranteed non-null in failure branch.
     final failureValue = failure;
     EffectBus.instance.safeEffect(() async {
       AnalyticsService.instance.logImageDownload(
         provider: provider,
         result: isSuccess ? 'success' : 'failure',
         failureReason: failureValue != null ? _failureReason(failureValue) : '',
-        mimeType: _guessMimeType(imageSource),
-        sourceType: sourceType,
-        imageCountInMessage: imageCountInMessage,
       );
     });
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-
-  String _detectSourceType(String source) {
-    if (source.startsWith('http://') || source.startsWith('https://')) {
-      return 'remote_url';
-    }
-    if (source.startsWith('data:image')) return 'data_uri';
-    return 'local_file';
-  }
 
   /// Maps a [DeviceImageSaveResult] failure to a localized user message.
   String _failureMessage(BuildContext context, DeviceImageSaveResult failure) {
@@ -152,16 +133,6 @@ class GeneratedImageDownloadButton extends StatelessWidget {
       default:
         return 'unknown';
     }
-  }
-
-  String _guessMimeType(String source) {
-    if (source.startsWith('data:image/')) {
-      final end = source.indexOf(';');
-      if (end > 11) return source.substring(5, end);
-    }
-    if (source.contains('.png')) return 'image/png';
-    if (source.contains('.webp')) return 'image/webp';
-    return 'image/jpeg';
   }
 }
 

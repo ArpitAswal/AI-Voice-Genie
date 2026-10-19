@@ -286,6 +286,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
     String? promptTemplate,
   }) async {
     try {
+      if (promptTemplate != null) {
+        _applyPromptTemplate(promptTemplate, focus: false);
+      }
       final List<XFile> images;
       if (source == ImageSource.gallery) {
         images = await _imagePicker.pickMultiImage();
@@ -352,11 +355,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
       }
 
       if (addedAny) {
-        if (promptTemplate != null) {
-          _applyPromptTemplate(promptTemplate);
-        } else {
-          widget.onUserInteracted?.call();
-        }
+        widget.onUserInteracted?.call();
       }
       return addedAny;
     } catch (_) {
@@ -367,6 +366,9 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   Future<bool> _pickPdf({String? promptTemplate}) async {
     try {
+      if (promptTemplate != null) {
+        _applyPromptTemplate(promptTemplate, focus: false);
+      }
       final result = await FilePicker.platform.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['pdf'],
@@ -445,11 +447,7 @@ class _ChatInputBarState extends State<ChatInputBar> {
         addedAny = true;
       }
       if (addedAny) {
-        if (promptTemplate != null) {
-          _applyPromptTemplate(promptTemplate);
-        } else {
-          widget.onUserInteracted?.call();
-        }
+        widget.onUserInteracted?.call();
       }
       return addedAny;
     } catch (_) {
@@ -605,49 +603,63 @@ class _ChatInputBarState extends State<ChatInputBar> {
             const SizedBox(width: 4),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: (_canSend && !isListening)
-                  ? (!hasKey
-                      ? ChatActionButton(
-                          key: ValueKey('add_key_${provider.id}'),
-                          icon: Icons.key_rounded,
-                          color: AppColors.lightWarning,
-                          tooltip: '${l10n.noKeyForModel} — ${l10n.addKey}',
-                          onTap: () {
-                            AppRoutes.navigateTo(
-                              context,
-                              AppRoutes.keySetup,
-                              arguments: KeySetupArguments(
-                                isInitialSetup: false,
-                                initialFocusProvider: provider,
-                              ),
-                            );
-                          },
-                        )
-                      : isExceeded
+              child: isGenerating
+                  ? ChatActionButton(
+                      key: const ValueKey('stop_generation'),
+                      icon: Icons.stop_rounded,
+                      color: context.isDark
+                          ? AppColors.darkError
+                          : AppColors.lightError,
+                      tooltip: l10n.stopResponse,
+                      onTap: () {
+                        context.read<ChatProvider>().stopGenerating();
+                        if (context.read<VoiceProvider>().isPlaying) {
+                          context.read<VoiceProvider>().stopSpeaking();
+                        }
+                      },
+                    )
+                  : (_canSend && !isListening)
+                      ? (!hasKey
                           ? ChatActionButton(
-                              key: const ValueKey('send_disabled'),
-                              icon: Icons.send_rounded,
-                              color: context.theme.disabledColor,
-                              tooltip: l10n.chatProviderLimitReached(
-                                  provider.displayName),
-                              onTap: null,
+                              key: ValueKey('add_key_${provider.id}'),
+                              icon: Icons.key_rounded,
+                              color: AppColors.lightWarning,
+                              tooltip: '${l10n.noKeyForModel} — ${l10n.addKey}',
+                              onTap: () {
+                                AppRoutes.navigateTo(
+                                  context,
+                                  AppRoutes.keySetup,
+                                  arguments: KeySetupArguments(
+                                    isInitialSetup: false,
+                                    initialFocusProvider: provider,
+                                  ),
+                                );
+                              },
                             )
-                          : ChatActionButton(
-                              key: const ValueKey('send'),
-                              icon: Icons.send_rounded,
-                              onTap: isGenerating ? null : _handleSend,
-                              isLoading: isGenerating,
-                              tooltip: l10n.send,
-                            ))
-                  : VoiceInputButton(
-                      key: _voiceMicKey,
-                      isTablet: isTablet,
-                      tooltip: l10n.tapToSpeak,
-                      // Called with confirmed final text when speech ends
-                      onTranscriptReady: _onTranscriptReady,
-                      // Called live on every partial result while speaking
-                      onPartialTranscript: _onPartialTranscript,
-                    ),
+                          : isExceeded
+                              ? ChatActionButton(
+                                  key: const ValueKey('send_disabled'),
+                                  icon: Icons.send_rounded,
+                                  color: context.theme.disabledColor,
+                                  tooltip: l10n.chatProviderLimitReached(
+                                      provider.displayName),
+                                  onTap: null,
+                                )
+                              : ChatActionButton(
+                                  key: const ValueKey('send'),
+                                  icon: Icons.send_rounded,
+                                  onTap: _handleSend,
+                                  tooltip: l10n.send,
+                                ))
+                      : VoiceInputButton(
+                          key: _voiceMicKey,
+                          isTablet: isTablet,
+                          tooltip: l10n.tapToSpeak,
+                          // Called with confirmed final text when speech ends
+                          onTranscriptReady: _onTranscriptReady,
+                          // Called live on every partial result while speaking
+                          onPartialTranscript: _onPartialTranscript,
+                        ),
             ),
           ],
         ),

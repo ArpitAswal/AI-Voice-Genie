@@ -7,120 +7,124 @@ environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
+  # ── Flutter Core SDK ────────────────────────────────────────────────────────
   flutter:
     sdk: flutter
+  # Official Flutter localization support for multi-language handling
   flutter_localizations:
     sdk: flutter
 
-  # ── State Management & Architecture ───────────────────────────────────────
-  # Provider for MVVM ViewModel state propagation and dependency injection
+  # ── State Management & Architecture ─────────────────────────────────────────
+  # Provider: Reactive MVVM ViewModel state propagation and dependency injection
   provider: ^6.1.2
 
-  # ── Firebase & Cloud Backend ────────────────────────────────────────────────
-  # Firebase Core initialization & credentials
+  # ── Firebase & Cloud Infrastructure ─────────────────────────────────────────
+  # Firebase Core: Firebase app initialization and platform options binding
   firebase_core: ^3.6.0
-  # Firebase Authentication for OAuth session management
+  # Firebase Auth: User session management and OAuth credential authentication
   firebase_auth: ^5.3.1
-  # Cloud Firestore for remote profile, usage metrics, and outbox chat sync
+  # Cloud Firestore: User profile storage, monthly usage telemetry, and outbox sync
   cloud_firestore: ^5.4.4
-  # Firebase Analytics for event logging and user telemetry
+  # Firebase Storage: Remote asset storage and backup for generated PDFs
+  firebase_storage: ^12.4.10
+  # Firebase Analytics: User telemetry and feature event logging
   firebase_analytics: ^11.3.3
-  # Firebase Crashlytics for automated real-time crash reporting
+  # Firebase Crashlytics: Real-time automated crash and fatal error reporting
   firebase_crashlytics: ^4.3.0
 
-  # ── OAuth Authentication Providers ──────────────────────────────────────────
-  # Google Sign-In native OAuth authentication
+  # ── Authentication Providers ────────────────────────────────────────────────
+  # Google Sign-In: Native Google OAuth sign-in flow handler
   google_sign_in: ^6.2.1
-  # Apple Sign-In native OAuth authentication for iOS & macOS
-  sign_in_with_apple: ^7.0.1
 
-  # ── UI Icons & Vector Graphics ─────────────────────────────────────────────
-  # FontAwesome icons for AI model badges and UI action controls
+  # ── UI Icons & Vector Graphics ──────────────────────────────────────────────
+  # FontAwesome: Vector brand icons for AI models (OpenAI, Gemini, Claude) & UI controls
   font_awesome_flutter: ^11.0.0
 
-  # ── Local Storage & Encryption ─────────────────────────────────────────────
-  # Hive Flutter engine initialization
-  hive_flutter: ^1.1.0
-  # Local-first Hive key-value database for conversations, messages, outbox tasks, and app settings
+  # ── Local Storage & Encryption ──────────────────────────────────────────────
+  # Hive: Zero-latency local key-value database for conversations, messages & settings
   hive: ^2.2.3
-  # Encrypted platform storage (Android Keystore / iOS Keychain) for sensitive user API keys
+  # Hive Flutter: Platform directory initialization and box extensions for Flutter
+  hive_flutter: ^1.1.0
+  # Flutter Secure Storage: Hardware-backed storage (Android Keystore / iOS Keychain) for API keys
   flutter_secure_storage: ^9.2.2
-  # AES encryption and decryption algorithms for sensitive local data payloads
+  # Encrypt: AES-256 encryption and decryption utilities for confidential local data
   encrypt: ^5.0.3
-  # Cryptographic hashing (SHA-256) for secure OAuth nonces and token verification
+  # Crypto: Cryptographic SHA-256 hashing for OAuth nonces and token verification
   crypto: ^3.0.7
 
-  # ── Security & Screen Protection ─────────────────────────────────────────
-  # Disables screenshots and screen recordings on API key management screens (FLAG_SECURE)
+  # ── Security & Screen Protection ───────────────────────────────────────────
+  # No Screenshot: Enforces native OS FLAG_SECURE to block screen capture on API key screens
   no_screenshot: ^1.2.0
 
-  # ── Networking & AI Communications ─────────────────────────────────────────
-  # HTTP client for raw REST API communications with OpenAI, Gemini, and Claude providers
+  # ── Networking & AI Communications ──────────────────────────────────────────
+  # HTTP: REST API client for OpenAI, Gemini, and Claude model communications
   http: ^1.2.2
 
-  # ── Voice Speech-to-Text & Text-to-Speech ─────────────────────────────────
-  # Device-native speech-to-text engine for continuous microphone dictation
+  # ── Voice Speech-to-Text & Text-to-Speech ───────────────────────────────────
+  # Speech to Text: Device-native continuous microphone dictation engine
   speech_to_text: ^7.0.0
-  # Device-native text-to-speech voice synthesis engine for assistant response playback
+  # Flutter TTS: Device-native text-to-speech voice synthesis for response playback
   flutter_tts: ^4.2.0
+  # Record: High-fidelity audio recording engine for voice captures
+  record: ^7.1.1
 
-  # ── File & Media Handling ─────────────────────────────────────────────────
-  # Document picker dialog for PDF text extraction and analysis
+  # ── File & Media Handling ───────────────────────────────────────────────────
+  # File Picker: Native document picker dialog for selecting PDF files
   file_picker: ^8.1.2
-  # Camera and photo library image picker for vision analysis and avatar selection
+  # Image Picker: Camera and gallery photo picker for multimodal vision prompts & avatars
   image_picker: ^1.1.2
-  # Image compression to optimize avatar uploads and vision payload byte sizes
+  # Flutter Image Compress: Byte compression optimizing avatar uploads & vision payloads
   flutter_image_compress: ^2.4.0
 
-  # ── UI Components, Animations & Rendering ─────────────────────────────────
-  # Vector Lottie animation renderer for empty history states and splash logo effects
-  lottie: ^3.1.2
-  # Network image caching with placeholder and error handling
-  cached_network_image: ^3.4.1
-  # Shimmer skeleton loader animation for loading states
-  shimmer: ^3.0.0
-  # Material 3 page route transitions and animated switchers
-  animations: ^2.0.11
-  # Extended markdown styling and table rendering support
-  flutter_markdown_plus: ^1.0.12
-
-  # ── Platform & System Utilities ───────────────────────────────────────────
-  # Unique v4 UUID generator for local conversation and message IDs
-  uuid: ^4.5.1
-  # Internationalization (i18n), date/time formatting, and number formatting
-  intl: ^0.20.2
-  # Real-time network connection monitoring for offline outbox sync status
-  connectivity_plus: ^6.1.0
-  # Package metadata getter for app version, build number, and app info screen
-  package_info_plus: ^8.1.1
-  # URL launcher for initiating mailto support email links to the developer
-  url_launcher: ^6.3.1
-  # File system path resolver for local Hive boxes and temporary media files
-  path_provider: ^2.1.5
-  # Platform runtime permission request handler for camera and microphone access
-  permission_handler: ^12.0.1
-  record: ^7.1.1
-  firebase_storage: ^12.4.10
+  # ── Document Compilation & Viewing ──────────────────────────────────────────
+  # PDF: Client-side pure-Dart binary PDF generation and layout compilation from markdown
   pdf: ^3.13.1
+  # Open Filex: Platform intent launcher to open and view compiled PDFs in native document viewers
   open_filex: ^4.7.0
+  # Share Plus: Native OS share sheet integration for exporting AI responses and PDF files
   share_plus: ^12.0.2
 
+  # ── UI Components & Rendering ───────────────────────────────────────────────
+  # Lottie: Vector animation renderer for splash screen animations and empty history states
+  lottie: ^3.1.2
+  # Shimmer: Shimmer skeleton loading effect for conversation cards and message bubbles
+  shimmer: ^3.0.0
+  # Flutter Markdown Plus: Rich markdown rendering for AI responses with code highlighting & tables
+  flutter_markdown_plus: ^1.0.12
+
+  # ── Platform & System Utilities ─────────────────────────────────────────────
+  # UUID: Unique v4 identifier generator for local conversation and message tracking
+  uuid: ^4.5.1
+  # Intl: Date/time formatting, number formatting, and localization utilities
+  intl: ^0.20.2
+  # Connectivity Plus: Real-time network monitoring for background offline outbox sync
+  connectivity_plus: ^6.1.0
+  # Package Info Plus: Retrieves app version, build number, and metadata for About screen
+  package_info_plus: ^8.1.1
+  # URL Launcher: System intent launcher for email (mailto:) developer support links
+  url_launcher: ^6.3.1
+  # Path Provider: Device file system directory resolver for Hive boxes and cache storage
+  path_provider: ^2.1.5
+  # Permission Handler: Runtime platform permission requests for microphone and camera access
+  permission_handler: ^12.0.1
+
 dev_dependencies:
+  # Flutter Test: Unit and widget testing framework
   flutter_test:
     sdk: flutter
+  # Flutter Lints: Official lint rules for Flutter code quality
   flutter_lints: ^4.0.0
-  # Code generation engine for Hive type adapters
+  # Build Runner: Code generation engine for Hive type adapters
   build_runner: ^2.4.12
-  # Hive binary type adapter generator
+  # Hive Generator: Automatically generates binary type adapters for Hive models
   hive_generator: ^2.0.1
-  # Native launcher icon generation utility
+  # Flutter Launcher Icons: Generates native app icons for Android and iOS
   flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
 
-  # ── Fonts ─────────────────────────────────────────────────────────────────
-  # Poppins — single source of truth for all typography
+  # ── Typography ──────────────────────────────────────────────────────────────
   fonts:
     - family: Poppins
       fonts:
@@ -133,7 +137,7 @@ flutter:
         - asset: assets/fonts/Poppins-Bold.ttf
           weight: 700
 
-  # ── Assets ────────────────────────────────────────────────────────────────
+  # ── Assets ──────────────────────────────────────────────────────────────────
   assets:
     - assets/images/
     - assets/fonts/

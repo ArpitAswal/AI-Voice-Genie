@@ -44,7 +44,7 @@ class AnalyticsService {
     required String requestId,
   }) async {
     await _safeLog(FirebaseCollections.eventAiRequestInitiated, {
-      FirebaseCollections.paramModelAttempted: modelAttempted.id,
+      FirebaseCollections.paramModelUsed: modelAttempted.id,
       FirebaseCollections.paramCapability: capability.id,
       FirebaseCollections.paramRequestId: requestId,
     });
@@ -69,7 +69,8 @@ class AnalyticsService {
 
   /// Log when an AI request fails.
   ///
-  /// [requestId] links this event to the matching initiated and usage event.
+  /// Response time is intentionally excluded from failure events as it is only
+  /// meaningful for completed inference latency monitoring.
   Future<void> logAiRequestFailed({
     required AiProviderId modelAttempted,
     required AiCapability capability,
@@ -78,24 +79,11 @@ class AnalyticsService {
     required String requestId,
   }) async {
     await _safeLog(FirebaseCollections.eventAiRequestFailed, {
-      FirebaseCollections.paramModelAttempted: modelAttempted.id,
+      FirebaseCollections.paramModelUsed: modelAttempted.id,
       FirebaseCollections.paramCapability: capability.id,
       FirebaseCollections.paramFailureType: failureType.value,
       FirebaseCollections.paramFailureReason: failureReason,
       FirebaseCollections.paramRequestId: requestId,
-    });
-  }
-
-  /// Log when the orchestrator triggers a fallback to another model
-  Future<void> logAiFallbackTriggered({
-    required AiProviderId fromModel,
-    required AiProviderId toModel,
-    required AiFailureType reason,
-  }) async {
-    await _safeLog(FirebaseCollections.eventAiFallbackTriggered, {
-      FirebaseCollections.paramFromModel: fromModel.id,
-      FirebaseCollections.paramToModel: toModel.id,
-      FirebaseCollections.paramReason: reason.value,
     });
   }
 
@@ -105,14 +93,14 @@ class AnalyticsService {
     required AiCapability capabilityAttempted,
   }) async {
     await _safeLog(FirebaseCollections.eventAiCapabilityGap, {
-      FirebaseCollections.paramModelAttempted: modelSelected.id,
+      FirebaseCollections.paramModelUsed: modelSelected.id,
       FirebaseCollections.paramCapability: capabilityAttempted.id,
     });
   }
 
   // ── Feature Usage Events ──────────────────────────────────────────────────
 
-  /// Log which app feature the user is actively using
+  /// Log which app feature the user is actively using (e.g. voice input, TTS output)
   Future<void> logFeatureUsed(AppFeature feature) async {
     await _safeLog(FirebaseCollections.eventFeatureUsed, {
       FirebaseCollections.paramFeature: feature.analyticsId,
@@ -126,7 +114,6 @@ class AnalyticsService {
     await _safeLog(FirebaseCollections.eventModelAdded, {
       FirebaseCollections.paramUserId: uid,
       FirebaseCollections.paramModelUsed: provider.id,
-      FirebaseCollections.paramModelFeatures: provider.features,
     });
   }
 
@@ -135,20 +122,33 @@ class AnalyticsService {
     await _safeLog(FirebaseCollections.eventModelRemoved, {
       FirebaseCollections.paramUserId: uid,
       FirebaseCollections.paramModelUsed: provider.id,
-      FirebaseCollections.paramModelFeatures: provider.features,
     });
   }
 
   // ── Auth Events ───────────────────────────────────────────────────────────
 
-  /// Log which sign-in button the user tapped — fires BEFORE the auth flow.
+  /// Log when authentication is initiated (user taps sign-in button).
   ///
-  /// This tracks button preference independently of whether auth succeeds.
-  /// Even a cancelled sign-in is counted — tells us which provider users try.
-  Future<void> authenticationButtonTapped(SocialAuthProvider provider, String userId) async {
-    await _safeLog(FirebaseCollections.eventAuthenticationButtonTapped, {
+  /// Tracks user sign-in intent independently of final outcome.
+  Future<void> logAuthInitiated(SocialAuthProvider provider,
+      {String? userId}) async {
+    await _safeLog(FirebaseCollections.eventAuthenticateUser, {
       FirebaseCollections.paramAuthProvider: provider.id,
-      FirebaseCollections.paramUserId : userId
+      if (userId != null && userId.isNotEmpty)
+        FirebaseCollections.paramUserId: userId,
+    });
+  }
+
+  /// Log when user authentication fails.
+  ///
+  /// Strictly safe parameters — no passwords, tokens, or PII.
+  Future<void> logUserAuthFailed({
+    required SocialAuthProvider authProvider,
+    required String errorCode,
+  }) async {
+    await _safeLog(FirebaseCollections.eventUserAuthFailed, {
+      FirebaseCollections.paramAuthProvider: authProvider.id,
+      FirebaseCollections.paramAuthErrorCode: errorCode,
     });
   }
 
@@ -157,7 +157,7 @@ class AnalyticsService {
     await _safeLog(FirebaseCollections.eventUserSignedIn, {
       FirebaseCollections.paramUserId: user.uid,
       FirebaseCollections.paramAuthProvider: user.authProvider.id,
-      FirebaseCollections.paramUserEmail: user.email
+      FirebaseCollections.paramUserEmail: user.email,
     });
   }
 
@@ -166,7 +166,7 @@ class AnalyticsService {
     await _safeLog(FirebaseCollections.eventUserRegistered, {
       FirebaseCollections.paramUserId: user.uid,
       FirebaseCollections.paramAuthProvider: user.authProvider.id,
-      FirebaseCollections.paramUserEmail: user.email
+      FirebaseCollections.paramUserEmail: user.email,
     });
   }
 
@@ -175,7 +175,7 @@ class AnalyticsService {
     await _safeLog(FirebaseCollections.eventUserSignedOut, {
       FirebaseCollections.paramUserId: user.uid,
       FirebaseCollections.paramAuthProvider: user.authProvider.id,
-      FirebaseCollections.paramUserEmail: user.email
+      FirebaseCollections.paramUserEmail: user.email,
     });
   }
 
@@ -184,36 +184,40 @@ class AnalyticsService {
     await _safeLog(FirebaseCollections.eventAccountDeleted, {
       FirebaseCollections.paramUserId: user.uid,
       FirebaseCollections.paramAuthProvider: user.authProvider.id,
-      FirebaseCollections.paramUserEmail: user.email
+      FirebaseCollections.paramUserEmail: user.email,
     });
   }
 
   /// Log a generated image download attempt and its outcome.
   ///
-  /// Safe parameters only — no image URL, prompt text, or user ID.
-  ///
-  /// [provider]          — AI provider that generated the image (e.g. "openai").
-  /// [result]            — "success" or "failure".
-  /// [failureReason]     — One of: permission_denied, network, invalid_image, no_space, unknown.
-  ///                       Empty string when result is "success".
-  /// [mimeType]          — Detected MIME type (e.g. "image/jpeg").
-  /// [sourceType]        — One of: remote_url, data_uri, local_file.
-  /// [imageCountInMessage] — Total generated images in the same message.
+  /// Safe parameters only — model used, result, failure reason (no image URL, prompt text, or PII).
   Future<void> logImageDownload({
     required String provider,
     required String result,
-    required String failureReason,
-    required String mimeType,
-    required String sourceType,
-    required int imageCountInMessage,
+    String failureReason = '',
   }) async {
     await _safeLog(FirebaseCollections.eventGeneratedImageDownload, {
       FirebaseCollections.paramModelUsed: provider,
       FirebaseCollections.paramDownloadResult: result,
-      FirebaseCollections.paramDownloadFailureReason: failureReason,
-      FirebaseCollections.paramDownloadMimeType: mimeType,
-      FirebaseCollections.paramDownloadSourceType: sourceType,
-      FirebaseCollections.paramImageCountInMessage: imageCountInMessage,
+      if (failureReason.isNotEmpty)
+        FirebaseCollections.paramDownloadFailureReason: failureReason,
+    });
+  }
+
+  /// Log an AI-compiled PDF document download attempt and its outcome.
+  ///
+  /// Safe parameters only — result, file size, failure reason (no file path or PII).
+  Future<void> logPdfDownload({
+    required String result,
+    int? fileSizeBytes,
+    String failureReason = '',
+  }) async {
+    await _safeLog(FirebaseCollections.eventGeneratedPdfDownload, {
+      FirebaseCollections.paramDownloadResult: result,
+      if (fileSizeBytes != null)
+        FirebaseCollections.paramFileSizeBytes: fileSizeBytes,
+      if (failureReason.isNotEmpty)
+        FirebaseCollections.paramDownloadFailureReason: failureReason,
     });
   }
 

@@ -387,6 +387,9 @@ class LocalChatStore {
     final raw = _conversationsBox.get(key);
     if (raw == null) return;
     final record = LocalConversationRecord.fromMap(raw as Map);
+    if (record.isDeleted || record.syncStatus == SyncStatus.pendingDelete) {
+      return;
+    }
     await _conversationsBox.put(
         key,
         record

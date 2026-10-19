@@ -117,9 +117,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _handleSummarizePdf() async {
-    _hideSuggestions();
     final l10n = AppLocalizations.of(context)!;
-    await _chatInputController.pickPdfWithPrompt(l10n.summarizePdfPrompt);
+    final success =
+        await _chatInputController.pickPdfWithPrompt(l10n.summarizePdfPrompt);
+    if (success) {
+      _hideSuggestions();
+    } else {
+      _showSuggestionsState();
+    }
   }
 
   void _handleGeneratePdf() {
@@ -129,9 +134,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _handleAnalyzeImage() async {
-    _hideSuggestions();
     final l10n = AppLocalizations.of(context)!;
-    await _chatInputController.pickImageWithPrompt(l10n.analyzeImagePrompt);
+    final success =
+        await _chatInputController.pickImageWithPrompt(l10n.analyzeImagePrompt);
+    if (success) {
+      _hideSuggestions();
+    } else {
+      _showSuggestionsState();
+    }
   }
 
   void _handleGenerateCode() {
@@ -419,9 +429,8 @@ class _SuggestionGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxWidth = isTablet ? 760.0 : 420.0;
-    final itemWidth = isTablet
-        ? (maxWidth - (3 * 12)) / 4
-        : (maxWidth - 12) / 2;
+    final itemWidth =
+        isTablet ? (maxWidth - (3 * 12)) / 4 : (maxWidth - 12) / 2;
     final itemHeight = isTablet ? 48.0 : 44.0;
 
     return ConstrainedBox(

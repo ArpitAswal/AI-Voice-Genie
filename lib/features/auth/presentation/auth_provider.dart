@@ -173,10 +173,6 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// Returns true on success, false on cancellation.
   /// Sets authError on failure — UI observes and shows it.
   Future<void> signInWithGoogle() async {
-    // Fire analytics BEFORE auth — tracks button taps independently of outcome
-    // _effectBus.safeEffect(() async {
-    //   _analytics.authenticationButtonTapped(SocialAuthProvider.google);
-    // });
     await _performSignIn(
       () => _repository.signInWithGoogle(),
       provider: SocialAuthProvider.google,
@@ -186,7 +182,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   // ── Apple Sign-In (disabled pending Apple Developer account) ───────────────
 
   // Future<bool> signInWithApple() async {
-  //   await _analytics.authenticationButtonTapped(SocialAuthProvider.apple);
+  //   await _analytics.logAuthInitiated(SocialAuthProvider.apple, '');
   //   debugPrint('⚠️ AuthProvider performing signInWithApple');
   //   return _performSignIn(
   //     () => _repository.signInWithApple(),
@@ -382,9 +378,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
     final resolvedPhotoUrl = photoUrl.trim();
     final resolvedEmail = email.trim();
 
-    if (user == null ||
-        resolvedDisplayName.isEmpty ||
-        resolvedEmail.isEmpty) {
+    if (user == null || resolvedDisplayName.isEmpty || resolvedEmail.isEmpty) {
       return false;
     }
 
@@ -467,7 +461,7 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       // Log analytics asynchronously without blocking or failing auth
       _effectBus.safeEffect(() async {
-        _analytics.authenticationButtonTapped(provider, user.uid);
+        await _analytics.logAuthInitiated(provider, userId: user.uid);
         if (user.isNewUser) {
           await _analytics.logUserRegistered(user);
         } else {
@@ -489,11 +483,26 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       debugPrint('❌ AuthProvider sign-in failed: ${e.technicalMessage}');
 
+      _effectBus.safeEffect(() async {
+        await _analytics.logUserAuthFailed(
+          authProvider: provider,
+          errorCode: e.code,
+        );
+      });
+
       // Set the error code for UI to display localized message
       _authError = e.code;
       _setAuthState(AuthState.unauthenticated);
     } catch (e) {
       debugPrint('❌ AuthProvider unexpected sign-in error: $e');
+
+      _effectBus.safeEffect(() async {
+        await _analytics.logUserAuthFailed(
+          authProvider: provider,
+          errorCode: AuthErrorCodes.unknown,
+        );
+      });
+
       _authError = AuthErrorCodes.unknown;
       _setAuthState(AuthState.unauthenticated);
     }

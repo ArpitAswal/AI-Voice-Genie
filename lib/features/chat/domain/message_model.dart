@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 
 import '../../../ai_layer/models/ai_response.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/firebase_collections.dart';
 import '../../../core/enums/app_enums.dart';
 import '../data/message_dto.dart';
@@ -207,6 +208,10 @@ class MessageModel {
     return imageSize!.name;
   }
 
+  /// Whether this response was stopped mid-generation by explicit user cancellation.
+  bool get isUserCancelled =>
+      finishReason == AppConstants.finishReasonUserCancellation;
+
   /// Standard constructor for [MessageModel].
   MessageModel({
     required this.lastPrompt,
@@ -281,6 +286,7 @@ class MessageModel {
     List<String>? imageUrls,
     List<PdfAttachmentInfo>? pdfInfo,
     MessageStatus status = MessageStatus.delivered,
+    String? finishReason,
     AiImageSize? imageSize,
     int? generateImageRequest,
     ImageQuality? imageQuality,
@@ -316,7 +322,7 @@ class MessageModel {
       lastPrompt: promptText,
       modelRequest: response.modelUsed,
       requestCapability: response.capability,
-      finishReason: response.finishReason ?? 'Fail',
+      finishReason: finishReason ?? response.finishReason ?? 'Fail',
       role: MessageRole.assistant,
       status: status,
       tokenCount: response.tokenCount,

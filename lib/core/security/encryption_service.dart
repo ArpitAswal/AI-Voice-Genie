@@ -26,8 +26,16 @@ class EncryptionService {
   /// To configure, run/build with:
   ///   flutter run --dart-define-from-file=secrets.json
   ///   flutter build apk --dart-define-from-file=secrets.json
+  /// Testing override for unit tests where compile-time defines may not be present.
+  static String? _testKey;
+
+  /// Sets an explicit key for test environments.
+  static void setKeyForTesting(String? key) {
+    _testKey = key;
+  }
+
   static Key get _key {
-    var keyString = AppConstants.encryptionKey;
+    var keyString = _testKey ?? AppConstants.encryptionKey;
 
     // ─── SECURITY GATE ────────────────────────────────────────────────────────
     // If the encryption key was not injected at build time, refuse to operate.
