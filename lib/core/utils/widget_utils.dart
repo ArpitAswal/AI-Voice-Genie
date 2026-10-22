@@ -99,7 +99,9 @@ extension WidgetExtensions on BuildContext {
         focusedBorder: border ??
             OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: isDark ? AppColors.primaryDark : AppColors.primaryLight),
+              borderSide: BorderSide(
+                  color:
+                      isDark ? AppColors.primaryDark : AppColors.primaryLight),
             ),
         errorBorder: errorBorder ??
             OutlineInputBorder(
@@ -141,47 +143,67 @@ extension WidgetExtensions on BuildContext {
       Color? background,
       Color? foreground,
       String? imgIcon,
-      Color? imgColor}) {
+      Color? imgColor,
+      OutlinedBorder? shape,
+      TextStyle? textStyle}) {
     final theme = Theme.of(this);
 
     return SizedBox(
       width: width ?? double.infinity,
+      height: height ?? 48.0,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: (padding != null ||
                 align != null ||
                 background != null ||
-                foreground != null)
+                foreground != null ||
+                textStyle != null)
             ? theme.elevatedButtonTheme.style?.copyWith(
                 alignment: align,
                 padding: WidgetStatePropertyAll(padding),
                 backgroundColor: WidgetStatePropertyAll(background),
-                foregroundColor: WidgetStatePropertyAll(foreground))
+                foregroundColor: WidgetStatePropertyAll(foreground),
+                textStyle: WidgetStatePropertyAll(textStyle),
+                shape: WidgetStatePropertyAll(shape))
             : theme.elevatedButtonTheme.style,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            if (icon != null) ...[
-              Icon(icon),
-              SizedBox(width: horizontalPadding),
-            ] else if (faIcon != null) ...[
-              FaIcon(faIcon),
-              SizedBox(width: horizontalPadding),
-            ] else if (imgIcon != null) ...[
-              ImageView(
-                  image: ImageViewData.asset(imgIcon),
-                  height: isTablet ? 32 : 28,
-                  width: isTablet ? 32 : 28,
-                  color: imgColor),
-              SizedBox(width: horizontalPadding),
-            ],
-            Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+        child: (icon == null && faIcon == null && imgIcon == null)
+            ? Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: textStyle,
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                    ),
+                    SizedBox(width: horizontalPadding),
+                  ] else if (faIcon != null) ...[
+                    FaIcon(faIcon),
+                    SizedBox(width: horizontalPadding),
+                  ] else if (imgIcon != null) ...[
+                    ImageView(
+                        image: ImageViewData.asset(imgIcon),
+                        height:
+                            textStyle != null ? (textStyle.fontSize! + 8) : 24,
+                        width:
+                            textStyle != null ? (textStyle.fontSize! + 8) : 24,
+                        color: imgColor),
+                    SizedBox(width: horizontalPadding / 2),
+                  ],
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: textStyle?.copyWith(color: foreground),
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

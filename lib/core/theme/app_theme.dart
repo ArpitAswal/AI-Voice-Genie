@@ -19,13 +19,21 @@ class AppTheme {
 
       // Color scheme
       colorScheme: const ColorScheme.light(
-        primary: AppColors.primaryLight,
-        secondary: AppColors.accentLight,
-        error: AppColors.lightError,
-        onPrimary: AppColors.white,
-        onSecondary: AppColors.white,
-        onSurface: AppColors.lightTextPrimary,
-        onError: AppColors.white,
+        primary: AppColors.primaryLight, // primary light brand color
+        // primaryContainer: AppColors.primaryContainerLight, // Common theme brand color
+        // onPrimary: AppColors.onPrimaryLight, // light color for widgets on top of primary
+        surface: AppColors
+            .surfaceLight, // For the BottomSheet/DialogBox background color
+        surfaceContainer: AppColors
+            .cardLight, // For any Card/Container on the BottomSheet/DialogBox/Widget when color not define
+        // surfaceTint: AppColors.iconLightColor, // Icon color for the BottomSheet/DialogBox/FormField
+        onSurface: AppColors
+            .lightTextPrimary, // For the BottomSheet/DialogBox foreground (light) color and Text theme default colors
+        // onSurfaceVariant: AppColors.onSurfaceVariantLight, // For text variant theme color
+        // outline: AppColors.outlineLight, // For borders specially for text fields and divider
+        error: AppColors.lightError, // For error or warning or remove texts
+        // secondary: AppColors.secondaryLight, // Common theme brand label color
+        // tertiary: AppColors.tertiaryLight, // Common text colors for both light and dark theme
       ),
 
       scaffoldBackgroundColor: AppColors.scaffoldLight,
@@ -105,7 +113,6 @@ class AppTheme {
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(26),
                 side: const BorderSide(color: Colors.transparent)),
-            textStyle: AppTextStyles.lightTextTheme.titleLarge,
             alignment: Alignment.center),
       ),
 
@@ -141,11 +148,13 @@ class AppTheme {
         surfaceTintColor: AppColors.transparent,
         cancelButtonStyle: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(AppColors.primaryLight),
-          textStyle: WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
+          textStyle:
+              WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
         ),
         confirmButtonStyle: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(AppColors.primaryLight),
-          textStyle: WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
+          textStyle:
+              WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
         ),
       ),
 
@@ -231,13 +240,21 @@ class AppTheme {
       brightness: Brightness.dark,
       fontFamily: AppTextStyles.fontFamily,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryDark,
-        secondary: AppColors.accentDark,
-        error: AppColors.lightError,
-        onPrimary: AppColors.white,
-        onSecondary: AppColors.black,
-        onSurface: AppColors.darkTextPrimary,
-        onError: AppColors.white,
+        primary: AppColors.primaryDark, // primary dark brand color
+        // primaryContainer: AppColors.primaryContainerDark, // Common theme brand color
+        // onPrimary: AppColors.onPrimaryDark, // dark color for widgets on top of primary
+        surface: AppColors
+            .surfaceDark, // For the BottomSheet/DialogBox background color
+        surfaceContainer: AppColors
+            .cardDark, // For any Card/Container on the BottomSheet/DialogBox
+        // surfaceTint: AppColors.iconDarkColor, // Icon color for the BottomSheet/DialogBox/FormField
+        onSurface: AppColors
+            .darkTextPrimary, // For the BottomSheet/DialogBox foreground (light) color and Text default colors
+        // onSurfaceVariant: AppColors.onSurfaceVariantDark, // For text variant theme color
+        // outline: AppColors.outlineDark, // For borders specially for text fields and divider
+        error: AppColors.darkError, // For error or warning or remove texts
+        // secondary: AppColors.secondaryDark, // Common theme brand label color
+        // tertiary: AppColors.tertiaryDark, // Common text colors for both light and dark theme
       ),
       scaffoldBackgroundColor: AppColors.scaffoldDark,
       appBarTheme: AppBarTheme(
@@ -304,7 +321,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(26),
               side: const BorderSide(color: Colors.transparent)),
-          textStyle: AppTextStyles.darkTextTheme.titleLarge,
+          alignment: Alignment.center,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -334,11 +351,13 @@ class AppTheme {
         surfaceTintColor: AppColors.transparent,
         cancelButtonStyle: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(AppColors.primaryDark),
-          textStyle: WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
+          textStyle:
+              WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
         ),
         confirmButtonStyle: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(AppColors.primaryDark),
-          textStyle: WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
+          textStyle:
+              WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
         ),
       ),
       cardTheme: CardThemeData(

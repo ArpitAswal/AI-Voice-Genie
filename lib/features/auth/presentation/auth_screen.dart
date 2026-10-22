@@ -1,18 +1,19 @@
-// import 'dart:io';
+import 'dart:io';
 
 import 'package:ai_voice_genie/core/enums/app_enums.dart';
-import 'package:ai_voice_genie/features/auth/presentation/widgets/auth_buttons.dart';
 import 'package:ai_voice_genie/shared/model/image_model.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
+import '../../../core/utils/widget_utils.dart';
 import '../../../shared/widgets/image_view.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import '../../usage/presentation/usage_provider.dart';
@@ -156,137 +157,304 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = context.isTablet;
-    final l10n = context.l10n;
-
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Stack(
-          children: [
-            ImageView(
-              image: ImageViewData.asset(
-                  context.isDark ? AppAssets.darkAuth : AppAssets.lightAuth),
-              height: context.screenHeight,
-              width: context.screenHeight,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: context.screenHeight -
-                    MediaQuery.of(context).padding.top -
-                    MediaQuery.of(context).padding.bottom,
-              ),
-              child: IntrinsicHeight(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // ── Top Spacer ───────────────────────────────────────────
-                      SizedBox(
-                          height:
-                              (context.screenHeight * (isTablet ? 0.2 : 0.1))),
+      body: LayoutBuilder(builder: (context, constraints) {
+        // debugPrint(
+        //     "maxWidth: ${constraints.maxWidth}, and minWidth: ${constraints.minWidth}");
+        // debugPrint(
+        //     "maxHeight: ${constraints.maxHeight}, and minHeight: ${constraints.minHeight}");
 
-                      // ── Welcome Text ─────────────────────────────────────────────
-                      Text(
-                        l10n.welcome,
-                        style: context.textTheme.titleLarge?.copyWith(
-                            color: context.textTheme.bodyLarge?.color),
-                        textAlign: TextAlign.center,
+        final size = MediaQuery.sizeOf(context);
+        final isLandscape = size.width > size.height;
+
+        // 1. Tablet & Desktop layouts with orientation-specific composition
+        if (size.width >= 600 && isLandscape) {
+          return _buildSideBySideView(context, constraints);
+        }
+
+        // 2. Phone layouts with orientation-specific composition
+        return _buildSingleView(context, constraints);
+      }),
+    );
+  }
+
+  Widget _buildSingleView(BuildContext context, BoxConstraints constraints) {
+    return Stack(
+      children: [
+        // ── Background Image (edge-to-edge full bleed) ───────────────
+        Positioned.fill(child: _imageView(constraints)),
+
+        // ── Foreground Content (respects device safe areas) ──────────
+        SafeArea(
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // ── Top Greeting ─────────────────────────────
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: (constraints.maxHeight * 0.05).clamp(16.0, 48.0),
                       ),
+                      child: _buildTopGreeting(context, constraints),
+                    ),
 
-                      // ── App Name ─────────────────────────────────────────────
-                      Text(
-                        l10n.appName,
-                        style: context.textTheme.displaySmall?.copyWith(
-                            color: context.textTheme.bodyLarge?.color),
-                        textAlign: TextAlign.center,
+                    // ── Bottom Authentication Actions & Privacy Note ─────────
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom:
+                            (constraints.maxHeight * 0.03).clamp(12.0, 24.0),
                       ),
-
-                      // ── Spacer pushes buttons to bottom ──────────────────────
-                      const Spacer(),
-
-                      AuthButtons(
-                          isTablet: isTablet,
-                          onTap: _handleGoogleSignIn,
-                          label: l10n.signInWithGoogle,
-                          authType: SocialAuthProvider.google),
-
-                      // Apple Sign-In is temporarily disabled pending Apple Developer account setup
-                      // if (Platform.isIOS) ...[
-                      //   SizedBox(height: isTablet ? 16 : 12),
-                      //   AuthButtons(
-                      //       isTablet: isTablet,
-                      //       onTap: _handleAppleSignIn,
-                      //       label: l10n.signInWithApple,
-                      //       authType: SocialAuthProvider.apple),
-                      // ],
-
-                      SizedBox(height: isTablet ? 16 : 12),
-
-                      // ── Privacy note ─────────────────────────────────────────
-                      _buildPrivacyNote(context),
-
-                      SizedBox(
-                          height:
-                              (context.screenHeight * (isTablet ? 0.2 : 0.06)))
-                    ],
-                  ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 24.0),
+                            child: Center(
+                              child: _buildAuthenticationAction(
+                                  context, constraints),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 24.0),
+                            child: _buildPrivacyNote(context, constraints),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildSideBySideView(
+      BuildContext context, BoxConstraints constraints) {
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(flex: 1, child: _imageView(constraints)),
+        Expanded(
+          flex: 1,
+          child: LayoutBuilder(
+            builder: (context, paneConstraints) {
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0, vertical: 16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // ── Top Greeting ───────────────────────────────────────────────
+                    _buildTopGreeting(context, paneConstraints),
+
+                    // ── Fixed Tight Spacing (Replaces 0.08 percentage gap) ─────────
+                    const SizedBox(height: 20.0),
+
+                    // ── Authentication Actions ─────────────────────────────────────
+                    _buildAuthenticationAction(context, paneConstraints),
+
+                    const SizedBox(height: 20.0),
+
+                    // ── Privacy Note ───────────────────────────────────────────────
+                    _buildPrivacyNote(context, paneConstraints),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _imageView(BoxConstraints constraints) {
+    return ImageView(
+      image: ImageViewData.asset(
+          context.isDark ? AppAssets.darkAuth : AppAssets.lightAuth),
+      height: constraints.maxHeight,
+      width: constraints.maxWidth,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+    );
+  }
+
+  Widget _buildTopGreeting(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    final subheaderStyle = context.greetingSubheaderStyle(constraints);
+    final headerStyle = context.greetingHeaderStyle(constraints);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // ── Welcome Text ─────────────────────────────────────────────
+        Text(
+          context.l10n.welcome,
+          style: subheaderStyle?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1,
+          ),
+          textAlign: TextAlign.center,
+        ),
+
+        // ── App Name ─────────────────────────────────────────────
+        Text(
+          context.l10n.appName,
+          style: headerStyle?.copyWith(
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAuthenticationAction(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: constraints.maxWidth >= 600 ? 500 : double.infinity,
+      ),
+      child: Column(
+        children: [
+          _authAction(context,
+              constraints: constraints,
+              label: context.l10n.signInWithGoogle,
+              onTap: _handleGoogleSignIn,
+              authType: SocialAuthProvider.google,
+              isBorder: constraints.maxWidth >= 600),
+          if (Platform.isIOS) ...[
+            const SizedBox(height: 15),
+            _authAction(context,
+                constraints: constraints,
+                label: context.l10n.signInWithApple,
+                onTap: () {},
+                authType: SocialAuthProvider.apple,
+                isBorder: constraints.maxWidth >= 600)
+          ],
+        ],
       ),
     );
   }
 
-  // ── Privacy Note with Clickable Legal Links ────────────────────────────────
-  Widget _buildPrivacyNote(BuildContext context) {
-    final l10n = context.l10n;
-    final linkStyle = context.textTheme.bodySmall?.copyWith(
-      color: context.primaryColor,
-      fontWeight: FontWeight.w600,
-    );
-    final normalStyle = context.textTheme.bodySmall;
+  Widget _authAction(
+    BuildContext context, {
+    required BoxConstraints constraints,
+    required Function() onTap,
+    required SocialAuthProvider authType,
+    required String label,
+    required bool isBorder,
+  }) {
+    final buttonFontStyle = context.buttonLabelStyle(constraints);
+    final buttonHeight = constraints.maxWidth >= 600 ? 56.0 : 48.0;
 
-    return RichText(
-      textAlign: TextAlign.center,
-      text: TextSpan(
-        style: normalStyle,
-        children: [
-          TextSpan(text: l10n.privacyNotePrefix),
-          TextSpan(
-            text: l10n.termsOfService,
-            style: linkStyle,
-            recognizer: TapGestureRecognizer()
-              ..onTap = () => AppRoutes.navigateTo(
-                    context,
-                    AppRoutes.terms,
-                    arguments: {
-                      'title': l10n.termsOfService,
-                      'mdFileName': 'legal/terms_of_service.md',
-                    },
-                  ),
+    return (authType.name == SocialAuthProvider.google.name)
+        ? context.themedElevatedButton(
+            label: label,
+            height: buttonHeight,
+            textStyle: buttonFontStyle,
+            width: double.infinity,
+            onPressed: () => onTap(),
+            background: AppColors.white,
+            foreground: AppColors.black,
+            imgIcon: AppAssets.googleLogo,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+                side: BorderSide(
+                    color: context.isDark && isBorder
+                        ? Colors.black
+                        : Colors.transparent)),
+            padding:
+                const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0))
+        : context.themedElevatedButton(
+            label: label,
+            height: buttonHeight,
+            textStyle: buttonFontStyle?.copyWith(color: AppColors.white),
+            width: double.infinity,
+            onPressed: () => onTap(),
+            background: AppColors.black,
+            foreground: AppColors.white,
+            imgIcon: AppAssets.appleLogo,
+            imgColor: AppColors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+                side: BorderSide(
+                    color: context.isDark && isBorder
+                        ? Colors.white
+                        : Colors.transparent)),
+            padding:
+                const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0));
+  }
+
+  // ── Privacy Note with Clickable Legal Links ────────────────────────────────
+  Widget _buildPrivacyNote(
+    BuildContext context,
+    BoxConstraints constraints,
+  ) {
+    final legalStyle = context.legalTextStyle(constraints);
+    final linkStyle = context.legalLinkStyle(constraints);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: constraints.maxWidth >= 600 ? 440 : double.infinity,
+        ),
+        child: RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: legalStyle?.copyWith(fontWeight: FontWeight.w400),
+            children: [
+              TextSpan(text: context.l10n.privacyNotePrefix),
+              TextSpan(
+                text: context.l10n.termsOfService,
+                style: linkStyle,
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => AppRoutes.navigateTo(
+                        context,
+                        AppRoutes.terms,
+                        arguments: {
+                          'title': context.l10n.termsOfService,
+                          'mdFileName': 'legal/terms_of_service.md',
+                        },
+                      ),
+              ),
+              TextSpan(text: context.l10n.privacyNoteAnd),
+              TextSpan(
+                text: context.l10n.privacyPolicy,
+                style: linkStyle,
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => AppRoutes.navigateTo(
+                        context,
+                        AppRoutes.privacy,
+                        arguments: {
+                          'title': context.l10n.privacyPolicy,
+                          'mdFileName': 'legal/privacy_policy.md',
+                        },
+                      ),
+              ),
+              TextSpan(text: context.l10n.privacyNoteSuffix),
+            ],
           ),
-          TextSpan(text: l10n.privacyNoteAnd),
-          TextSpan(
-            text: l10n.privacyPolicy,
-            style: linkStyle,
-            recognizer: TapGestureRecognizer()
-              ..onTap = () => AppRoutes.navigateTo(
-                    context,
-                    AppRoutes.privacy,
-                    arguments: {
-                      'title': l10n.privacyPolicy,
-                      'mdFileName': 'legal/privacy_policy.md',
-                    },
-                  ),
-          ),
-          TextSpan(text: l10n.privacyNoteSuffix),
-        ],
+        ),
       ),
     );
   }

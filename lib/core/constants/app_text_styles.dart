@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
 
 /// Centralized typography system for AI Voice Genie.
 ///
@@ -7,12 +6,12 @@ import 'app_colors.dart';
 /// Both light and dark themes are defined here.
 /// Usage: Theme.of(context).textTheme.bodyLarge
 ///
-/// Scale reference:
-///   display   → App name, splash hero text
-///   headline  → Screen titles, section headers
-///   title     → Card titles, button labels
-///   body      → General content, chat messages
-///   label     → Chips, badges, metadata, timestamps
+/// Material 3 Type Scale reference:
+///   displayLarge (57sp), displayMedium (45sp), displaySmall (36sp)
+///   headlineLarge (32sp), headlineMedium (28sp), headlineSmall (24sp)
+///   titleLarge (22sp), titleMedium (16sp), titleSmall (14sp)
+///   bodyLarge (16sp), bodyMedium (14sp), bodySmall (12sp)
+///   labelLarge (14sp), labelMedium (12sp), labelSmall (11sp)
 class AppTextStyles {
   // Single font family — enforced project-wide
   static const String fontFamily = 'Poppins';
@@ -21,61 +20,52 @@ class AppTextStyles {
   static const TextTheme lightTextTheme = TextTheme(
     // Display — app name, onboarding hero text, splash screen
     displayLarge: TextStyle(
-      fontSize: 36,
+      fontSize: 57,
       fontWeight: FontWeight.w700,
-      color: AppColors.primaryLight,
       fontFamily: fontFamily,
     ),
     displayMedium: TextStyle(
-      fontSize: 32,
+      fontSize: 45,
       fontWeight: FontWeight.w700,
-      color: AppColors.primaryLight,
       fontFamily: fontFamily,
     ),
     displaySmall: TextStyle(
-      fontSize: 28,
+      fontSize: 36,
       fontWeight: FontWeight.w700,
-      color: AppColors.primaryLight,
       fontFamily: fontFamily,
     ),
 
     // Headline — screen titles, section headers, AppBar titles
     headlineLarge: TextStyle(
-      fontSize: 22,
+      fontSize: 32,
       fontWeight: FontWeight.w600,
-      color: AppColors.lightTextPrimary,
       fontFamily: fontFamily,
     ),
     headlineMedium: TextStyle(
-      fontSize: 20,
+      fontSize: 28,
       fontWeight: FontWeight.w600,
-      color: AppColors.lightTextPrimary,
       fontFamily: fontFamily,
     ),
     headlineSmall: TextStyle(
-      fontSize: 16,
+      fontSize: 24,
       fontWeight: FontWeight.w600,
-      color: AppColors.lightTextPrimary,
       fontFamily: fontFamily,
     ),
 
     // Title — card titles, list item headers, button text
     titleLarge: TextStyle(
-      fontSize: 18,
+      fontSize: 22,
       fontWeight: FontWeight.w600,
-      color: AppColors.primaryLight,
       fontFamily: fontFamily,
     ),
     titleMedium: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
-      color: AppColors.primaryLight,
       fontFamily: fontFamily,
     ),
     titleSmall: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w600,
-      color: AppColors.primaryLight,
       fontFamily: fontFamily,
     ),
 
@@ -83,19 +73,16 @@ class AppTextStyles {
     bodyLarge: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
-      color: AppColors.lightTextTertiary,
       fontFamily: fontFamily,
     ),
     bodyMedium: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
-      color: AppColors.lightTextTertiary,
       fontFamily: fontFamily,
     ),
     bodySmall: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w400,
-      color: AppColors.lightTextTertiary,
       fontFamily: fontFamily,
     ),
 
@@ -103,19 +90,16 @@ class AppTextStyles {
     labelLarge: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w500,
-      color: AppColors.lightTextSecondary,
       fontFamily: fontFamily,
     ),
     labelMedium: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w500,
-      color: AppColors.lightTextSecondary,
       fontFamily: fontFamily,
     ),
     labelSmall: TextStyle(
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: FontWeight.w500,
-      color: AppColors.lightTextSecondary,
       fontFamily: fontFamily,
     ),
   );
@@ -124,61 +108,52 @@ class AppTextStyles {
   static const TextTheme darkTextTheme = TextTheme(
     // Display
     displayLarge: TextStyle(
-      fontSize: 36,
+      fontSize: 57,
       fontWeight: FontWeight.w700,
-      color: AppColors.primaryDark,
       fontFamily: fontFamily,
     ),
     displayMedium: TextStyle(
-      fontSize: 32,
+      fontSize: 45,
       fontWeight: FontWeight.w700,
-      color: AppColors.primaryDark,
       fontFamily: fontFamily,
     ),
     displaySmall: TextStyle(
-      fontSize: 28,
+      fontSize: 36,
       fontWeight: FontWeight.w700,
-      color: AppColors.primaryDark,
       fontFamily: fontFamily,
     ),
 
     // Headline
     headlineLarge: TextStyle(
-      fontSize: 22,
+      fontSize: 32,
       fontWeight: FontWeight.w600,
-      color: AppColors.darkTextPrimary,
       fontFamily: fontFamily,
     ),
     headlineMedium: TextStyle(
-      fontSize: 20,
+      fontSize: 28,
       fontWeight: FontWeight.w600,
-      color: AppColors.darkTextPrimary,
       fontFamily: fontFamily,
     ),
     headlineSmall: TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w500,
-      color: AppColors.darkTextPrimary,
+      fontSize: 24,
+      fontWeight: FontWeight.w600,
       fontFamily: fontFamily,
     ),
 
     // Title
     titleLarge: TextStyle(
-      fontSize: 18,
+      fontSize: 22,
       fontWeight: FontWeight.w600,
-      color: AppColors.primaryDark,
       fontFamily: fontFamily,
     ),
     titleMedium: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
-      color: AppColors.primaryDark,
       fontFamily: fontFamily,
     ),
     titleSmall: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w600,
-      color: AppColors.primaryDark,
       fontFamily: fontFamily,
     ),
 
@@ -186,19 +161,16 @@ class AppTextStyles {
     bodyLarge: TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextTertiary,
       fontFamily: fontFamily,
     ),
     bodyMedium: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextTertiary,
       fontFamily: fontFamily,
     ),
     bodySmall: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w400,
-      color: AppColors.darkTextTertiary,
       fontFamily: fontFamily,
     ),
 
@@ -206,19 +178,16 @@ class AppTextStyles {
     labelLarge: TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w500,
-      color: AppColors.darkTextSecondary,
       fontFamily: fontFamily,
     ),
     labelMedium: TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w500,
-      color: AppColors.darkTextSecondary,
       fontFamily: fontFamily,
     ),
     labelSmall: TextStyle(
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: FontWeight.w500,
-      color: AppColors.darkTextSecondary,
       fontFamily: fontFamily,
     ),
   );
