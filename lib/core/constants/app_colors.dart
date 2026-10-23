@@ -41,6 +41,9 @@ class AppColors {
   static const Color darkTextSecondary = Color(0xFF000000);
   static const Color darkTextTertiary = Color(0xFFDEE5FF);
 
+  // ── Muted Text Common Color ───────────────────────────────────────────────────────────
+  static const Color mutedText = Color(0xFF121212);
+
   // ── Border Colors ─────────────────────────────────────────────────────────
   static const Color lightDivider = Color(0xFFD1D1D1);
   static const Color darkDivider = Color(0xFF2B364C);

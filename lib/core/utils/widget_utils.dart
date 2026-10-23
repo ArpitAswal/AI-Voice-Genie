@@ -137,6 +137,7 @@ extension WidgetExtensions on BuildContext {
       IconData? icon,
       double? height,
       double? width,
+      double? imgSize,
       EdgeInsets? padding,
       FaIconData? faIcon,
       Alignment? align,
@@ -147,10 +148,22 @@ extension WidgetExtensions on BuildContext {
       OutlinedBorder? shape,
       TextStyle? textStyle}) {
     final theme = Theme.of(this);
+    final effectiveHeight = height ??
+        (isTablet
+            ? 56.0
+            : isSmallPhone
+                ? 40.0
+                : 48.0);
+    final double adaptiveImgSize = imgSize ??
+        ((effectiveHeight <= 42.0)
+            ? 18.0
+            : (textStyle?.fontSize != null
+                ? (textStyle!.fontSize! + 6).clamp(18.0, 24.0)
+                : 24.0));
 
     return SizedBox(
       width: width ?? double.infinity,
-      height: height ?? 48.0,
+      height: effectiveHeight,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: (padding != null ||
@@ -188,10 +201,8 @@ extension WidgetExtensions on BuildContext {
                   ] else if (imgIcon != null) ...[
                     ImageView(
                         image: ImageViewData.asset(imgIcon),
-                        height:
-                            textStyle != null ? (textStyle.fontSize! + 8) : 24,
-                        width:
-                            textStyle != null ? (textStyle.fontSize! + 8) : 24,
+                        height: adaptiveImgSize,
+                        width: adaptiveImgSize,
                         color: imgColor),
                     SizedBox(width: horizontalPadding / 2),
                   ],

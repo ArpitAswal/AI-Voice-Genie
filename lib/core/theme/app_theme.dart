@@ -29,11 +29,13 @@ class AppTheme {
         // surfaceTint: AppColors.iconLightColor, // Icon color for the BottomSheet/DialogBox/FormField
         onSurface: AppColors
             .lightTextPrimary, // For the BottomSheet/DialogBox foreground (light) color and Text theme default colors
-        // onSurfaceVariant: AppColors.onSurfaceVariantLight, // For text variant theme color
-        // outline: AppColors.outlineLight, // For borders specially for text fields and divider
+        onSurfaceVariant: AppColors.mutedText, // For text variant theme color
+        outline: AppColors
+            .lightDivider, // For borders specially for text fields and divider
         error: AppColors.lightError, // For error or warning or remove texts
         // secondary: AppColors.secondaryLight, // Common theme brand label color
-        // tertiary: AppColors.tertiaryLight, // Common text colors for both light and dark theme
+        tertiary: AppColors
+            .lightTextTertiary, // Common text colors for both light and dark theme
       ),
 
       scaffoldBackgroundColor: AppColors.scaffoldLight,
@@ -250,11 +252,13 @@ class AppTheme {
         // surfaceTint: AppColors.iconDarkColor, // Icon color for the BottomSheet/DialogBox/FormField
         onSurface: AppColors
             .darkTextPrimary, // For the BottomSheet/DialogBox foreground (light) color and Text default colors
-        // onSurfaceVariant: AppColors.onSurfaceVariantDark, // For text variant theme color
-        // outline: AppColors.outlineDark, // For borders specially for text fields and divider
+        onSurfaceVariant: AppColors.mutedText, // For text variant theme color
+        outline: AppColors
+            .darkDivider, // For borders specially for text fields and divider
         error: AppColors.darkError, // For error or warning or remove texts
         // secondary: AppColors.secondaryDark, // Common theme brand label color
-        // tertiary: AppColors.tertiaryDark, // Common text colors for both light and dark theme
+        tertiary: AppColors
+            .darkTextTertiary, // Common text colors for both light and dark theme
       ),
       scaffoldBackgroundColor: AppColors.scaffoldDark,
       appBarTheme: AppBarTheme(

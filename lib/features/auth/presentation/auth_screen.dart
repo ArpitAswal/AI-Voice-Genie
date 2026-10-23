@@ -186,6 +186,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
         // ── Foreground Content (respects device safe areas) ──────────
         SafeArea(
+          top: false,
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -197,7 +198,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     // ── Top Greeting ─────────────────────────────
                     Padding(
                       padding: EdgeInsets.only(
-                        top: (constraints.maxHeight * 0.05).clamp(16.0, 48.0),
+                        top: context.viewPadding.top + 16,
                       ),
                       child: _buildTopGreeting(context, constraints),
                     ),
@@ -205,8 +206,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     // ── Bottom Authentication Actions & Privacy Note ─────────
                     Padding(
                       padding: EdgeInsets.only(
-                        bottom:
-                            (constraints.maxHeight * 0.03).clamp(12.0, 24.0),
+                        bottom: context.viewPadding.bottom + 16,
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -219,7 +219,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   context, constraints),
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           Padding(
                             padding:
                                 const EdgeInsets.symmetric(horizontal: 24.0),
@@ -242,35 +242,45 @@ class _AuthScreenState extends State<AuthScreen> {
       BuildContext context, BoxConstraints constraints) {
     return Row(
       mainAxisSize: MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(flex: 1, child: _imageView(constraints)),
         Expanded(
           flex: 1,
           child: LayoutBuilder(
             builder: (context, paneConstraints) {
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0, vertical: 16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // ── Top Greeting ───────────────────────────────────────────────
-                    _buildTopGreeting(context, paneConstraints),
+              final isShortHeight = paneConstraints.maxHeight < 500;
+              final verticalGap = isShortHeight ? 16.0 : 32.0;
+              final privacyGap = isShortHeight ? 8.0 : 16.0;
 
-                    // ── Fixed Tight Spacing (Replaces 0.08 percentage gap) ─────────
-                    const SizedBox(height: 20.0),
+              return Center(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.horizontalPadding,
+                    vertical: context.verticalSpacing,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // ── Top Greeting ───────────────────────────────────────────────
+                        _buildTopGreeting(context, paneConstraints),
 
-                    // ── Authentication Actions ─────────────────────────────────────
-                    _buildAuthenticationAction(context, paneConstraints),
+                        SizedBox(height: verticalGap),
 
-                    const SizedBox(height: 20.0),
+                        // ── Authentication Actions ─────────────────────────────────────
+                        _buildAuthenticationAction(context, paneConstraints),
 
-                    // ── Privacy Note ───────────────────────────────────────────────
-                    _buildPrivacyNote(context, paneConstraints),
-                  ],
+                        SizedBox(height: privacyGap),
+
+                        // ── Privacy Note ───────────────────────────────────────────────
+                        _buildPrivacyNote(context, paneConstraints),
+                      ],
+                    ),
+                  ),
                 ),
               );
             },
@@ -295,8 +305,8 @@ class _AuthScreenState extends State<AuthScreen> {
     BuildContext context,
     BoxConstraints constraints,
   ) {
-    final subheaderStyle = context.greetingSubheaderStyle(constraints);
-    final headerStyle = context.greetingHeaderStyle(constraints);
+    final subheaderStyle = context.subHeaderStyle(constraints);
+    final headerStyle = context.titleHeaderStyle(constraints);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -365,7 +375,10 @@ class _AuthScreenState extends State<AuthScreen> {
     required bool isBorder,
   }) {
     final buttonFontStyle = context.buttonLabelStyle(constraints);
-    final buttonHeight = constraints.maxWidth >= 600 ? 56.0 : 48.0;
+    final isSmall = constraints.maxWidth <= 360 || constraints.maxHeight <= 550;
+    final buttonHeight =
+        constraints.maxWidth >= 600 ? 56.0 : (isSmall ? 40.0 : 48.0);
+    final verticalPadding = isSmall ? 8.0 : 12.0;
 
     return (authType.name == SocialAuthProvider.google.name)
         ? context.themedElevatedButton(
@@ -383,8 +396,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     color: context.isDark && isBorder
                         ? Colors.black
                         : Colors.transparent)),
-            padding:
-                const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0))
+            padding: EdgeInsets.symmetric(
+                vertical: verticalPadding,
+                horizontal: context.horizontalPadding))
         : context.themedElevatedButton(
             label: label,
             height: buttonHeight,
@@ -401,8 +415,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     color: context.isDark && isBorder
                         ? Colors.white
                         : Colors.transparent)),
-            padding:
-                const EdgeInsets.symmetric(vertical: 12.0, horizontal: 24.0));
+            padding: EdgeInsets.symmetric(
+                vertical: verticalPadding,
+                horizontal: context.horizontalPadding));
   }
 
   // ── Privacy Note with Clickable Legal Links ────────────────────────────────
@@ -410,8 +425,17 @@ class _AuthScreenState extends State<AuthScreen> {
     BuildContext context,
     BoxConstraints constraints,
   ) {
-    final legalStyle = context.legalTextStyle(constraints);
-    final linkStyle = context.legalLinkStyle(constraints);
+    final legalStyle = context.legalTextStyle(constraints)?.copyWith(
+          height: 1.6,
+          letterSpacing: 0.2,
+          fontWeight: FontWeight.w400,
+        );
+    final linkStyle = legalStyle?.copyWith(
+      color: context.colorScheme.primary,
+      fontWeight: FontWeight.w600,
+      decoration: TextDecoration.underline,
+      decorationColor: context.colorScheme.primary,
+    );
 
     return Center(
       child: ConstrainedBox(
@@ -421,7 +445,7 @@ class _AuthScreenState extends State<AuthScreen> {
         child: RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: legalStyle?.copyWith(fontWeight: FontWeight.w400),
+            style: legalStyle,
             children: [
               TextSpan(text: context.l10n.privacyNotePrefix),
               TextSpan(
