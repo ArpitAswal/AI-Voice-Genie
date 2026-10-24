@@ -203,14 +203,6 @@ extension ResponsiveTypographyExtension on BuildContext {
     return textTheme.bodyMedium;
   }
 
-  /// Alias for [descStyle].
-  TextStyle? descriptionStyle([BoxConstraints? constraints]) =>
-      descStyle(constraints);
-
-  /// Alias for onboarding description text style.
-  TextStyle? onboardingDescStyle([BoxConstraints? constraints]) =>
-      descStyle(constraints);
-
   /// Responsive clickable legal link style (underlined, primary color).
   TextStyle? legalLinkStyle([BoxConstraints? constraints]) {
     return legalTextStyle(constraints)?.copyWith(

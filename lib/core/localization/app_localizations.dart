@@ -35,7 +35,7 @@ class AppLocalizations {
     'en': {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI Voice Genie',
-      'app_tagline': 'Voice-first AI • ChatGPT · Gemini · Claude',
+      'app_tagline': 'Voice-First Multi-Model AI Assistant',
       'ai_assist': 'Your AI assistant is ready to help you.',
       'ask_genie_anything': 'Ask Genie Anything',
       'welcome_message': 'Welcome to',
@@ -580,7 +580,7 @@ class AppLocalizations {
     'hi': {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI वॉयस जीनी',
-      'app_tagline': 'आपका बुद्धिमान AI सहायक',
+      'app_tagline': 'Voice-First Multi-Model AI Assistant',
       'ai_assist': 'आपका एआई सहायक आपकी सहायता के लिए तैयार है।',
       'ask_genie_anything': 'जिनी से कुछ भी पूछें',
       'welcome_message': 'आपका स्वागत है',
