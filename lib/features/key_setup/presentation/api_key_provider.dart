@@ -124,7 +124,7 @@ class ApiKeyProvider extends ChangeNotifier {
     // Defensive check for unusually short keys
     if (key.length <= 10) return '••••••••';
     // Show first 4 and last 4 characters separated by masking bullets
-    return '${key.substring(0, 4)}••••••••••${key.substring(key.length - 4)}';
+    return '${key.substring(0, 4)}••••••••••••${key.substring(key.length - 4)}';
   }
 
   /// Returns the stored [ApiKeyModel] for [provider], or null if not stored.

@@ -35,7 +35,7 @@ class AppLocalizations {
     'en': {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI Voice Genie',
-      'app_tagline': 'Voice-first AI • ChatGPT · Gemini · Claude',
+      'app_tagline': 'Voice-First Multi-Model AI Assistant',
       'ai_assist': 'Your AI assistant is ready to help you.',
       'ask_genie_anything': 'Ask Genie Anything',
       'welcome_message': 'Welcome to',
@@ -123,9 +123,9 @@ class AppLocalizations {
       'key_remove_msg': 'Are you sure you want to remove this key?',
       'key_added_success': 'API key added successfully.',
       'key_removed_success': 'API key removed.',
-      'key_invalid': 'Invalid API key.',
+      'key_invalid': 'Invalid API key',
       'key_validating': 'Validating key...',
-      'key_valid': 'Key is valid',
+      'key_valid': 'Valid Key',
       'api_key_required': 'API key is required',
       'api_key_too_short': 'This doesn\'t look like a valid API key',
       'api_key_hint': 'Paste your API key here',
@@ -137,6 +137,13 @@ class AppLocalizations {
       'key_fetch_error': 'Loading AI keys failed. Please restart the app.',
       'keys': 'Keys',
       'delete_key': 'Delete Key',
+      'sync_failed': 'Sync Failed',
+      'replace_key': 'Replace',
+      'replace_key_hint': 'Enter new API key to replace current key',
+      'hardware_security': 'Hardware-Backed Security',
+      'configuration_status': 'Configuration Status',
+      'get_api_key': 'Get API Key',
+      'cloud_sync_failed_desc': 'Cloud sync failed. Active on this device only.',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'rename_conversation_name': 'Rename this conversation',
@@ -580,7 +587,7 @@ class AppLocalizations {
     'hi': {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI वॉयस जीनी',
-      'app_tagline': 'आपका बुद्धिमान AI सहायक',
+      'app_tagline': 'Voice-First Multi-Model AI Assistant',
       'ai_assist': 'आपका एआई सहायक आपकी सहायता के लिए तैयार है।',
       'ask_genie_anything': 'जिनी से कुछ भी पूछें',
       'welcome_message': 'आपका स्वागत है',
@@ -667,9 +674,9 @@ class AppLocalizations {
       'key_remove_msg': 'क्या आप वाकई इस कुंजी को हटाना चाहते हैं?',
       'key_added_success': 'API key सफलतापूर्वक जोड़ी गई।',
       'key_removed_success': 'API key हटाई गई।',
-      'key_invalid': 'अमान्य API key।',
+      'key_invalid': 'अमान्य API कुंजी',
       'key_validating': 'Key सत्यापित हो रही है...',
-      'key_valid': 'Key वैध है',
+      'key_valid': 'मान्य कुंजी',
       'api_key_required': 'API key आवश्यक है',
       'api_key_too_short': 'यह एक वैध API key नहीं लगती',
       'api_key_hint': 'अपनी API key यहाँ पेस्ट करें',
@@ -682,6 +689,13 @@ class AppLocalizations {
           'एआई कुंजी लोड करने में विफलता, कृपया ऐप को पुनः आरंभ करें।',
       'keys': 'कुंजी',
       'delete_key': 'डिलीट की',
+      'sync_failed': 'सिंक विफल',
+      'replace_key': 'बदलें',
+      'replace_key_hint': 'वर्तमान कुंजी बदलने के लिए नई API key दर्ज करें',
+      'hardware_security': 'हार्डवेयर-समर्थित सुरक्षा',
+      'configuration_status': 'कॉन्फ़िगरेशन स्थिति',
+      'get_api_key': 'API Key प्राप्त करें',
+      'cloud_sync_failed_desc': 'क्लाउड सिंक विफल। केवल इसी डिवाइस पर सक्रिय।',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'rename_conversation_name': 'बातचीत का नाम बदलें',
@@ -1221,6 +1235,18 @@ class AppLocalizations {
   String get claudeAIkey => translate('get_claude_key');
   String get keyHint => translate('api_key_hint');
   String get addKey => translate('add_key');
+  String get updateKey => translate('update_key');
+  String get syncFailed => translate('sync_failed');
+  String get replaceKey => translate('replace_key');
+  String get replaceKeyHint => translate('replace_key_hint');
+  String get hardwareSecurity => translate('hardware_security');
+  String get configurationStatus => translate('configuration_status');
+  String get getApiKey => translate('get_api_key');
+  String get cloudSyncFailedDesc => translate('cloud_sync_failed_desc');
+  String keysConfiguredProgress(int active, int total) =>
+      '$active ${translate('usage_of')} $total ${translate('keys')} ${translate('configured').toLowerCase()}';
+  String keysActiveProgress(int active, int total) =>
+      '$active ${translate('usage_of')} $total ${translate('configured').toLowerCase()}';
   String get keySecureNote => translate('api_keys_secure_note');
   String get done => translate('done');
   String get noModelKey => translate('error_no_models_with_key');

@@ -91,6 +91,6 @@ We reserve the right to amend or replace these Terms at our discretion. Any modi
 
 If you have questions, feedback, or legal inquiries concerning these Terms of Service, please contact:
 
-- **Support Email:** `arpitaswal995@gmail.com`
+- **Support Email:** `support@aivoicegenie.com`
 - **Developer:** Arpit Aswal (Independent Developer)
 - **Application:** AI Voice Genie

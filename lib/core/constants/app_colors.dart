@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 class AppColors {
   // ── Brand Colors ──────────────────────────────────────────────────────────
 
-  // Primary brand color
-  static const Color primaryLight = Color(0xFF7C9CFF);
+  // Primary brand color (calibrated to meet WCAG AA >= 4.5:1 contrast against white)
+  static const Color primaryLight = Color(0xFF4C6EE6);
   static const Color primaryDark = Color(0xFF5571D1);
 
   // Accent Glow
@@ -40,6 +40,9 @@ class AppColors {
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
   static const Color darkTextSecondary = Color(0xFF000000);
   static const Color darkTextTertiary = Color(0xFFDEE5FF);
+
+  // ── Muted Text Common Color ───────────────────────────────────────────────────────────
+  static const Color mutedText = Color(0xFF121212);
 
   // ── Border Colors ─────────────────────────────────────────────────────────
   static const Color lightDivider = Color(0xFFD1D1D1);

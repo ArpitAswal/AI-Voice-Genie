@@ -19,23 +19,34 @@ class AppTheme {
 
       // Color scheme
       colorScheme: const ColorScheme.light(
-        primary: AppColors.primaryLight,
-        secondary: AppColors.accentLight,
-        error: AppColors.lightError,
-        onPrimary: AppColors.white,
-        onSecondary: AppColors.white,
-        onSurface: AppColors.lightTextPrimary,
-        onError: AppColors.white,
+        primary: AppColors.primaryLight, // primary light brand color
+        // primaryContainer: AppColors.primaryContainerLight, // Common theme brand color
+        // onPrimary: AppColors.onPrimaryLight, // light color for widgets on top of primary
+        surface: AppColors
+            .surfaceLight, // For the BottomSheet/DialogBox background color
+        surfaceContainer: AppColors
+            .cardLight, // For any Card/Container on the BottomSheet/DialogBox/Widget when color not define
+        // surfaceTint: AppColors.iconLightColor, // Icon color for the BottomSheet/DialogBox/FormField
+        onSurface: AppColors
+            .lightTextPrimary, // For the BottomSheet/DialogBox foreground (light) color and Text theme default colors
+        onSurfaceVariant: AppColors.mutedText, // For text variant theme color
+        outline: AppColors
+            .lightDivider, // For borders specially for text fields and divider
+        error: AppColors.lightError, // For error or warning or remove texts
+        // secondary: AppColors.secondaryLight, // Common theme brand label color
+        tertiary: AppColors
+            .lightTextTertiary, // Common text colors for both light and dark theme
       ),
 
       scaffoldBackgroundColor: AppColors.scaffoldLight,
 
       // AppBar
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.appBarLight,
-        foregroundColor: AppColors.appBarTextLight,
+        backgroundColor: AppColors.scaffoldLight,
+        surfaceTintColor: AppColors.surfaceLight,
+        foregroundColor: AppColors.lightTextPrimary,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 1.5,
         centerTitle: true,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         iconTheme: IconThemeData(
@@ -52,6 +63,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.cardLight,
+        prefixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
+        suffixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -100,12 +115,12 @@ class AppTheme {
             disabledBackgroundColor:
                 AppColors.primaryLight.withValues(alpha: 0.35),
             disabledForegroundColor: AppColors.white.withValues(alpha: 0.7),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             elevation: 0,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(26),
                 side: const BorderSide(color: Colors.transparent)),
-            textStyle: AppTextStyles.lightTextTheme.titleLarge,
             alignment: Alignment.center),
       ),
 
@@ -114,7 +129,8 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.transparent,
           foregroundColor: AppColors.primaryLight,
-          padding: EdgeInsets.zero,
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(36),
@@ -128,8 +144,9 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryLight,
+          minimumSize: const Size(48, 48),
           textStyle: AppTextStyles.lightTextTheme.titleMedium,
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
 
@@ -141,11 +158,13 @@ class AppTheme {
         surfaceTintColor: AppColors.transparent,
         cancelButtonStyle: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(AppColors.primaryLight),
-          textStyle: WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
+          textStyle:
+              WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
         ),
         confirmButtonStyle: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(AppColors.primaryLight),
-          textStyle: WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
+          textStyle:
+              WidgetStateProperty.all(AppTextStyles.lightTextTheme.titleMedium),
         ),
       ),
 
@@ -175,7 +194,7 @@ class AppTheme {
       // Icon
       iconTheme: IconThemeData(
         color: AppColors.lightTextPrimary,
-        size: context.isTablet ? 28 : 24,
+        size: context.isTablet ? 32 : 24,
       ),
 
       // Divider
@@ -189,7 +208,7 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.cardLight,
         selectedItemColor: AppColors.primaryLight,
-        unselectedItemColor: AppColors.lightTextSecondary,
+        unselectedItemColor: AppColors.lightTextTertiary,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
       ),
@@ -231,20 +250,31 @@ class AppTheme {
       brightness: Brightness.dark,
       fontFamily: AppTextStyles.fontFamily,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryDark,
-        secondary: AppColors.accentDark,
-        error: AppColors.lightError,
-        onPrimary: AppColors.white,
-        onSecondary: AppColors.black,
-        onSurface: AppColors.darkTextPrimary,
-        onError: AppColors.white,
+        primary: AppColors.primaryDark, // primary dark brand color
+        // primaryContainer: AppColors.primaryContainerDark, // Common theme brand color
+        // onPrimary: AppColors.onPrimaryDark, // dark color for widgets on top of primary
+        surface: AppColors
+            .surfaceDark, // For the BottomSheet/DialogBox background color
+        surfaceContainer: AppColors
+            .cardDark, // For any Card/Container on the BottomSheet/DialogBox
+        // surfaceTint: AppColors.iconDarkColor, // Icon color for the BottomSheet/DialogBox/FormField
+        onSurface: AppColors
+            .darkTextPrimary, // For the BottomSheet/DialogBox foreground (light) color and Text default colors
+        onSurfaceVariant: AppColors.mutedText, // For text variant theme color
+        outline: AppColors
+            .darkDivider, // For borders specially for text fields and divider
+        error: AppColors.darkError, // For error or warning or remove texts
+        // secondary: AppColors.secondaryDark, // Common theme brand label color
+        tertiary: AppColors
+            .darkTextTertiary, // Common text colors for both light and dark theme
       ),
       scaffoldBackgroundColor: AppColors.scaffoldDark,
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.appBarDark,
-        foregroundColor: AppColors.appBarTextDark,
+        backgroundColor: AppColors.scaffoldDark,
+        surfaceTintColor: AppColors.surfaceDark,
+        foregroundColor: AppColors.darkTextPrimary,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 1.5,
         centerTitle: true,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         iconTheme: IconThemeData(
@@ -257,6 +287,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.cardDark,
+        prefixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
+        suffixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -299,19 +333,21 @@ class AppTheme {
           disabledBackgroundColor:
               AppColors.primaryDark.withValues(alpha: 0.35),
           disabledForegroundColor: AppColors.white.withValues(alpha: 0.7),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           elevation: 0,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(26),
               side: const BorderSide(color: Colors.transparent)),
-          textStyle: AppTextStyles.darkTextTheme.titleLarge,
+          alignment: Alignment.center,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.transparent,
           foregroundColor: AppColors.primaryDark,
-          padding: EdgeInsets.zero,
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(36),
@@ -323,8 +359,9 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryDark,
+          minimumSize: const Size(48, 48),
           textStyle: AppTextStyles.darkTextTheme.titleMedium,
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
       datePickerTheme: DatePickerThemeData(
@@ -334,11 +371,13 @@ class AppTheme {
         surfaceTintColor: AppColors.transparent,
         cancelButtonStyle: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(AppColors.primaryDark),
-          textStyle: WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
+          textStyle:
+              WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
         ),
         confirmButtonStyle: ButtonStyle(
           foregroundColor: WidgetStateProperty.all(AppColors.primaryDark),
-          textStyle: WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
+          textStyle:
+              WidgetStateProperty.all(AppTextStyles.darkTextTheme.titleMedium),
         ),
       ),
       cardTheme: CardThemeData(
@@ -362,7 +401,7 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(
         color: AppColors.darkTextPrimary,
-        size: context.isTablet ? 32 : 28,
+        size: context.isTablet ? 32 : 24,
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.darkDivider,
@@ -372,7 +411,7 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.cardDark,
         selectedItemColor: AppColors.primaryDark,
-        unselectedItemColor: AppColors.darkTextSecondary,
+        unselectedItemColor: AppColors.darkTextTertiary,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
       ),
