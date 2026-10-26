@@ -73,9 +73,14 @@ extension WidgetExtensions on BuildContext {
         labelStyle: theme.textTheme.titleSmall,
         errorText: errorText,
         counterText: maxLength != null ? null : '',
+        prefixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
+        suffixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
         prefixIcon: prefixIcon != null
             ? Icon(
                 prefixIcon,
+                size: iconStandard,
                 color: theme.colorScheme.primary.withValues(alpha: 0.7),
               )
             : null,
@@ -118,6 +123,7 @@ extension WidgetExtensions on BuildContext {
         contentPadding: contentPad ??
             const EdgeInsets.symmetric(
               horizontal: 16,
+              vertical: 14,
             ),
       ),
     );
@@ -129,11 +135,10 @@ extension WidgetExtensions on BuildContext {
 
   /// Creates a full-width themed [ElevatedButton] with optional loading state.
   ///
-  /// Primary action button — uses theme primary color.
+  /// Guarantees a minimum touch target height of 48.0dp (WCAG 2.1 AA & M3 compliant).
   Widget themedElevatedButton(
       {required String label,
       required VoidCallback? onPressed,
-      bool isLoading = false,
       IconData? icon,
       double? height,
       double? width,
@@ -148,80 +153,78 @@ extension WidgetExtensions on BuildContext {
       OutlinedBorder? shape,
       TextStyle? textStyle}) {
     final theme = Theme.of(this);
-    final effectiveHeight = height ??
-        (isTablet
-            ? 56.0
-            : isSmallPhone
-                ? 40.0
-                : 48.0);
+    final effectiveHeight =
+        (height ?? (isTablet ? 56.0 : 48.0)).clamp(48.0, double.infinity);
     final double adaptiveImgSize = imgSize ??
-        ((effectiveHeight <= 42.0)
-            ? 18.0
-            : (textStyle?.fontSize != null
-                ? (textStyle!.fontSize! + 6).clamp(18.0, 24.0)
-                : 24.0));
+        (textStyle?.fontSize != null
+            ? (textStyle!.fontSize! + 6).clamp(18.0, 24.0)
+            : 24.0);
 
-    return SizedBox(
-      width: width ?? double.infinity,
-      height: effectiveHeight,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: (padding != null ||
-                align != null ||
-                background != null ||
-                foreground != null ||
-                textStyle != null)
-            ? theme.elevatedButtonTheme.style?.copyWith(
-                alignment: align,
-                padding: WidgetStatePropertyAll(padding),
-                backgroundColor: WidgetStatePropertyAll(background),
-                foregroundColor: WidgetStatePropertyAll(foreground),
-                textStyle: WidgetStatePropertyAll(textStyle),
-                shape: WidgetStatePropertyAll(shape))
-            : theme.elevatedButtonTheme.style,
-        child: (icon == null && faIcon == null && imgIcon == null)
-            ? Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: textStyle,
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Icon(
-                      icon,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: width ?? double.infinity,
+        minHeight: effectiveHeight,
+      ),
+      child: SizedBox(
+        width: width ?? double.infinity,
+        height: effectiveHeight,
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: (padding != null ||
+                  align != null ||
+                  background != null ||
+                  foreground != null ||
+                  textStyle != null)
+              ? theme.elevatedButtonTheme.style?.copyWith(
+                  alignment: align,
+                  padding: WidgetStatePropertyAll(padding),
+                  backgroundColor: WidgetStatePropertyAll(background),
+                  foregroundColor: WidgetStatePropertyAll(foreground),
+                  textStyle: WidgetStatePropertyAll(textStyle),
+                  shape: WidgetStatePropertyAll(shape))
+              : theme.elevatedButtonTheme.style,
+          child: (icon == null && faIcon == null && imgIcon == null)
+              ? Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: textStyle,
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: iconStandard),
+                      SizedBox(width: horizontalPadding / 2),
+                    ] else if (faIcon != null) ...[
+                      FaIcon(faIcon, size: iconDense),
+                      SizedBox(width: horizontalPadding / 2),
+                    ] else if (imgIcon != null) ...[
+                      ImageView(
+                          image: ImageViewData.asset(imgIcon),
+                          height: adaptiveImgSize,
+                          width: adaptiveImgSize,
+                          color: imgColor),
+                      SizedBox(width: horizontalPadding / 2),
+                    ],
+                    Flexible(
+                      child: Text(
+                        label,
+                        overflow: TextOverflow.ellipsis,
+                        style: textStyle?.copyWith(color: foreground),
+                      ),
                     ),
-                    SizedBox(width: horizontalPadding),
-                  ] else if (faIcon != null) ...[
-                    FaIcon(faIcon),
-                    SizedBox(width: horizontalPadding),
-                  ] else if (imgIcon != null) ...[
-                    ImageView(
-                        image: ImageViewData.asset(imgIcon),
-                        height: adaptiveImgSize,
-                        width: adaptiveImgSize,
-                        color: imgColor),
-                    SizedBox(width: horizontalPadding / 2),
                   ],
-                  Flexible(
-                    child: Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: textStyle?.copyWith(color: foreground),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+        ),
       ),
     );
   }
 
   /// Creates a full-width themed [OutlinedButton].
   ///
-  /// Secondary action button — uses theme primary color outline.
+  /// Guarantees a minimum touch target height of 48.0dp (WCAG 2.1 AA & M3 compliant).
   Widget themedOutlinedButton(
       {required String label,
       required VoidCallback? onPressed,
@@ -230,15 +233,17 @@ extension WidgetExtensions on BuildContext {
       double? width,
       Color? color}) {
     final theme = Theme.of(this);
-    height = isTablet ? 62 : 44;
+    final effectiveHeight =
+        (height ?? (isTablet ? 56.0 : 48.0)).clamp(48.0, double.infinity);
 
     return SizedBox(
       width: width ?? double.infinity,
-      height: height,
+      height: effectiveHeight,
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: color ?? theme.colorScheme.primary,
+          minimumSize: const Size(48, 48),
           side: BorderSide(
             color: color?.withValues(alpha: 0.4) ??
                 theme.colorScheme.primary.withValues(
@@ -252,16 +257,20 @@ extension WidgetExtensions on BuildContext {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: isTablet ? 32 : 21),
+              Icon(icon, size: iconStandard),
               const SizedBox(width: 8),
             ],
-            Text(
-              label,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: color ?? theme.colorScheme.primary,
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: color ?? theme.colorScheme.primary,
+                ),
               ),
             ),
           ],
@@ -272,7 +281,7 @@ extension WidgetExtensions on BuildContext {
 
   /// Creates a full-width danger/destructive button (e.g., Sign Out, Delete).
   ///
-  /// Uses error color palette.
+  /// Guarantees a minimum touch target height of 48.0dp (WCAG 2.1 AA & M3 compliant).
   Widget themedDangerButton({
     required String label,
     required VoidCallback? onPressed,
@@ -280,13 +289,15 @@ extension WidgetExtensions on BuildContext {
     double? height,
     double? width,
   }) {
-    height = isTablet ? 62 : 44;
+    final effectiveHeight =
+        (height ?? (isTablet ? 56.0 : 48.0)).clamp(48.0, double.infinity);
     return SizedBox(
       width: width ?? double.infinity,
-      height: height,
+      height: effectiveHeight,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
+          minimumSize: const Size(48, 48),
           backgroundColor: isDark
               ? AppColors.darkError.withValues(
                   alpha: 0.2,
@@ -302,17 +313,21 @@ extension WidgetExtensions on BuildContext {
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: isTablet ? 32 : 21),
+              Icon(icon, size: iconStandard),
               const SizedBox(width: 8),
             ],
-            Text(
-              label,
-              style: Theme.of(this).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.lightError,
-                  ),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(this).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.lightError,
+                    ),
+              ),
             ),
           ],
         ),
@@ -322,7 +337,7 @@ extension WidgetExtensions on BuildContext {
 
   /// Creates a themed button for tab switching or segmented control.
   ///
-  /// [isSelected] - Toggles between Elevated (selected) and Outlined (unselected) styles.
+  /// Guarantees a minimum touch target height of 48.0dp.
   Widget themedTabButton({
     required String label,
     required bool isSelected,
@@ -335,8 +350,9 @@ extension WidgetExtensions on BuildContext {
       return ElevatedButton(
         onPressed: onPressed,
         style: theme.elevatedButtonTheme.style?.copyWith(
+          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
           padding:
-              const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 4)),
+              const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
           shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(borderRadius: borderRadius)),
         ),
@@ -346,8 +362,9 @@ extension WidgetExtensions on BuildContext {
       return OutlinedButton(
         onPressed: onPressed,
         style: theme.outlinedButtonTheme.style?.copyWith(
+          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
           padding:
-              const WidgetStatePropertyAll(EdgeInsets.symmetric(vertical: 4)),
+              const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
           shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(borderRadius: borderRadius)),
         ),

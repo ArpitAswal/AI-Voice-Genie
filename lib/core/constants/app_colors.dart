@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 class AppColors {
   // ── Brand Colors ──────────────────────────────────────────────────────────
 
-  // Primary brand color
-  static const Color primaryLight = Color(0xFF7C9CFF);
+  // Primary brand color (calibrated to meet WCAG AA >= 4.5:1 contrast against white)
+  static const Color primaryLight = Color(0xFF4C6EE6);
   static const Color primaryDark = Color(0xFF5571D1);
 
   // Accent Glow

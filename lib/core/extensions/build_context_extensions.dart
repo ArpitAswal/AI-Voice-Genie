@@ -1,39 +1,90 @@
 import 'package:flutter/material.dart';
 
-/// BuildContext extensions for responsive layout detection.
+/// Material 3 Window Size Classes based on viewport width:
+/// - [compact]: Phone viewports in portrait (< 600dp)
+/// - [medium]: Foldables, tablet portrait viewports (600dp - 839dp)
+/// - [expanded]: Large tablets in landscape, desktop viewports (>= 840dp)
+enum WindowSizeClass {
+  /// Width < 600dp: compact phones in portrait
+  compact,
+
+  /// Width 600dp - 839dp: tablets in portrait, foldables
+  medium,
+
+  /// Width >= 840dp: tablets in landscape, desktop displays
+  expanded,
+}
+
+/// BuildContext extensions for Material 3 responsive layout detection and spacing.
 ///
-/// Follows Material 3 Window Size Class breakpoints:
-///   - Compact (< 600dp): phones in portrait
-///   - Medium (600dp - 839dp): tablets in portrait, large foldables
-///   - Expanded (>= 840dp): tablets in landscape, desktop viewports
+/// Follows Material 3 Breakpoints and the 8dp Grid System:
+/// - Compact (< 600dp): 16dp margins/spacing
+/// - Medium (600dp - 839dp): 24dp margins/spacing
+/// - Expanded (>= 840dp): 24dp margins/spacing
 ///
-/// Usage: context.isTablet, context.screenWidth, context.responsive(...)
+/// Usage: `context.isCompact`, `context.isMedium`, `context.isExpanded`, `context.horizontalPadding`
 extension ResponsiveExtension on BuildContext {
+  /// Current screen width in logical pixels.
   double get screenWidth => MediaQuery.sizeOf(this).width;
+
+  /// Current screen height in logical pixels.
   double get screenHeight => MediaQuery.sizeOf(this).height;
 
-  /// Tablet: width >= 600px (Material 3 medium window size class breakpoint)
-  bool get isTablet => screenWidth >= 600;
+  /// Material 3 Window Size Class computed dynamically from viewport width.
+  WindowSizeClass get windowSizeClass {
+    final width = screenWidth;
+    if (width < 600.0) return WindowSizeClass.compact;
+    if (width < 840.0) return WindowSizeClass.medium;
+    return WindowSizeClass.expanded;
+  }
 
-  /// Small phone or height-constrained device: width <= 360px or height <= 550px
-  bool get isSmallPhone => screenWidth <= 360 || screenHeight <= 550;
+  /// Compact viewport: width < 600dp (standard phones in portrait).
+  bool get isCompact => screenWidth < 600.0;
 
-  /// Returns responsive value based on device type
+  /// Medium viewport: 600dp <= width < 840dp (tablets in portrait, large foldables).
+  bool get isMedium => screenWidth >= 600.0 && screenWidth < 840.0;
+
+  /// Expanded viewport: width >= 840dp (tablets in landscape, desktop).
+  bool get isExpanded => screenWidth >= 840.0;
+
+  /// Backwards-compatible tablet check: width >= 600dp (medium or expanded).
+  bool get isTablet => screenWidth >= 600.0;
+
+  /// Height-constrained or narrow display check for vertical scaling fallbacks.
+  @Deprecated('Use windowSizeClass, isCompact, or local BoxConstraints')
+  bool get isSmallPhone => screenWidth <= 360.0 || screenHeight <= 550.0;
+
+  /// Returns responsive value based on device type.
   T responsive<T>({required T mobile, T? tablet}) {
     if (isTablet && tablet != null) return tablet;
     return mobile;
   }
 
-  /// Responsive horizontal padding
-  double get horizontalPadding => isTablet ? 32.0 : 24.0;
+  /// Normalized horizontal padding based on the 8dp grid:
+  /// - Compact (< 600dp): 16.0dp
+  /// - Medium / Expanded (>= 600dp): 24.0dp
+  double get horizontalPadding => isCompact ? 16.0 : 24.0;
 
-  /// Responsive vertical spacing
-  double get verticalSpacing => isTablet ? 24.0 : 16.0;
+  /// Normalized vertical spacing based on the 8dp grid:
+  /// - Compact (< 600dp): 16.0dp
+  /// - Medium / Expanded (>= 600dp): 24.0dp
+  double get verticalSpacing => isCompact ? 16.0 : 24.0;
+
+  // ── Stepped Icon Size Tokens ──────────────────────────────────────────────
+
+  /// Dense icon token (18.0dp) for inline badges, tags, compact chips.
+  double get iconDense => 18.0;
+
+  /// Standard icon token (24.0dp) for app bar actions, button icons, form suffixes.
+  double get iconStandard => 24.0;
+
+  /// Avatar icon token (40.0dp on compact, 48.0dp on medium/expanded) for brand marks and avatars.
+  double get iconAvatar => isCompact ? 40.0 : 48.0;
 }
 
 /// BuildContext extensions for theme and color access.
 ///
-/// Usage: context.primaryColor, context.isDark, context.textTheme
+/// Usage: `context.primaryColor`, `context.isDark`, `context.textTheme`
 extension ThemeExtension on BuildContext {
   ThemeData get theme => Theme.of(this);
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
@@ -44,12 +95,10 @@ extension ThemeExtension on BuildContext {
   Color get backgroundColor => Theme.of(this).scaffoldBackgroundColor;
 }
 
-/// BuildContext extensions for MediaQuery shortcuts.
+/// BuildContext extensions for fine-grained MediaQuery shortcuts.
 ///
-/// Uses fine-grained MediaQuery methods ([paddingOf], [viewInsetsOf], [viewPaddingOf])
-/// to avoid unnecessary widget rebuilds when unrelated MediaQuery metrics change.
-///
-/// Usage: context.topPadding, context.bottomPadding, context.isKeyboardVisible
+/// Uses fine-grained MediaQuery methods ([viewPaddingOf], [viewInsetsOf], [paddingOf])
+/// to avoid unnecessary widget rebuilds when unrelated metrics change.
 extension MediaQueryExtension on BuildContext {
   EdgeInsets get viewPadding => MediaQuery.viewPaddingOf(this);
   EdgeInsets get viewInsets => MediaQuery.viewInsetsOf(this);
@@ -61,17 +110,15 @@ extension MediaQueryExtension on BuildContext {
 
 /// BuildContext extensions for responsive typography scaling across devices and orientations.
 ///
-/// Follows Material 3 role-based scaling considering available layout space from [LayoutBuilder]:
-///   - Tablet portrait (spacious width >= 600px & height >= 750px): steps up within role family
-///   - Tablet landscape (side-by-side pane) or phone: stays in compact role family to fit available width
-///   - Short screen / tight height (< 550px): scales down to prevent vertical crowding
+/// Steps cleanly through Material 3 semantic roles (`display`, `headline`, `title`, `body`, `label`)
+/// based on local [BoxConstraints] first, falling back to window size metrics if null.
 extension ResponsiveTypographyExtension on BuildContext {
-  /// Responsive welcome/subheading greeting style ("Welcome to") considering layout constraints and orientation.
+  /// Responsive greeting/subheading style ("Welcome to").
   ///
-  /// Takes [BoxConstraints] from [LayoutBuilder] to differentiate between:
-  /// - Tablet Portrait (wide >= 600, tall >= 750, and vertical): [headlineSmall] (24sp)
-  /// - Tablet Landscape pane or phone: [titleLarge] (22sp)
-  /// - Ultra-short height (<= 550) or narrow phone (<= 360): [titleMedium] (16sp)
+  /// Steps through M3 semantic roles:
+  /// - Tight constraints (maxHeight <= 550 or maxWidth <= 360): [titleMedium] (16sp)
+  /// - Tablet portrait (spacious width >= 600, height >= 750, vertical): [headlineSmall] (24sp)
+  /// - Standard / default viewport: [titleLarge] (22sp)
   TextStyle? subHeaderStyle([BoxConstraints? constraints]) {
     final size = MediaQuery.sizeOf(this);
     final isLandscape = size.width > size.height;
@@ -87,6 +134,7 @@ extension ResponsiveTypographyExtension on BuildContext {
       }
       return textTheme.titleLarge;
     }
+
     // Fallback if called without LayoutBuilder constraints:
     if (size.height <= 550 || size.width <= 360) {
       return textTheme.titleMedium;
@@ -97,11 +145,12 @@ extension ResponsiveTypographyExtension on BuildContext {
     return textTheme.titleLarge;
   }
 
-  /// Responsive app title/headline style ("AI Voice Genie") considering layout constraints and orientation.
+  /// Responsive app title/headline style ("AI Voice Genie").
   ///
-  /// - Tablet Portrait (wide >= 600, tall >= 750, and vertical): [displaySmall] (36sp)
-  /// - Tablet Landscape pane or phone: [headlineLarge] (32sp)
-  /// - Ultra-short height (< 550) or narrow phone (<= 360): [headlineMedium] (28sp)
+  /// Steps through M3 semantic roles:
+  /// - Tight constraints (maxHeight <= 550 or maxWidth <= 360): [headlineMedium] (28sp)
+  /// - Tablet portrait (spacious width >= 600, height >= 750, vertical): [displaySmall] (36sp)
+  /// - Standard / default viewport: [headlineLarge] (32sp)
   TextStyle? titleHeaderStyle([BoxConstraints? constraints]) {
     final size = MediaQuery.sizeOf(this);
     final isLandscape = size.width > size.height;
@@ -117,6 +166,7 @@ extension ResponsiveTypographyExtension on BuildContext {
       }
       return textTheme.headlineLarge;
     }
+
     // Fallback if called without LayoutBuilder constraints:
     if (size.height <= 550 || size.width <= 360) {
       return textTheme.headlineMedium;
@@ -127,10 +177,11 @@ extension ResponsiveTypographyExtension on BuildContext {
     return textTheme.headlineLarge;
   }
 
-  /// Responsive button label considering layout constraints and orientation.
+  /// Responsive button label style.
   ///
-  /// - Standard phones & tablets: [titleMedium] (16sp, bold/w600) for strong CTA prominence
-  /// - Ultra-short screens (< 550px) or narrow phones (<= 360px): [labelLarge] (14sp, bold/w600) to conserve height
+  /// Steps through M3 semantic roles:
+  /// - Tight constraints (maxHeight <= 550 or maxWidth <= 360): [labelLarge] (14sp, bold/w600)
+  /// - Standard / default viewport: [titleMedium] (16sp, w500)
   TextStyle? buttonLabelStyle([BoxConstraints? constraints]) {
     final size = MediaQuery.sizeOf(this);
 
@@ -140,6 +191,7 @@ extension ResponsiveTypographyExtension on BuildContext {
       }
       return textTheme.titleMedium;
     }
+
     // Fallback if called without LayoutBuilder constraints:
     if (size.height <= 550 || size.width <= 360) {
       return textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600);
@@ -147,10 +199,12 @@ extension ResponsiveTypographyExtension on BuildContext {
     return textTheme.titleMedium;
   }
 
-  /// Responsive legal / disclaimer note considering layout constraints and orientation.
+  /// Responsive legal / disclaimer note style.
   ///
-  /// - Tablet Portrait: [bodyMedium] (14sp)
-  /// - Tablet Landscape pane or phone: [bodySmall] (12sp)
+  /// Steps through M3 semantic roles:
+  /// - Tablet portrait: [bodyLarge] (16sp)
+  /// - Landscape pane: [bodyMedium] (14sp)
+  /// - Compact / standard: [bodySmall] (12sp)
   TextStyle? legalTextStyle([BoxConstraints? constraints]) {
     final size = MediaQuery.sizeOf(this);
     final isLandscape = size.width > size.height;
@@ -165,6 +219,7 @@ extension ResponsiveTypographyExtension on BuildContext {
       }
       return textTheme.bodySmall;
     }
+
     // Fallback if called without LayoutBuilder constraints:
     if (size.width >= 600 && !isLandscape && size.height >= 750) {
       return textTheme.bodyMedium;
@@ -172,12 +227,12 @@ extension ResponsiveTypographyExtension on BuildContext {
     return textTheme.bodySmall;
   }
 
-  /// Responsive body/description text style considering layout constraints and orientation.
+  /// Responsive body/description text style.
   ///
-  /// Takes [BoxConstraints] from [LayoutBuilder] to differentiate between:
-  /// - Tablet Portrait (wide >= 600, tall >= 750, and vertical): [bodyLarge] (16sp)
-  /// - Tablet Landscape pane or normal phone: [bodyMedium] (14sp)
-  /// - Ultra-short height (< 550) or narrow phone (<= 360): [bodySmall] (12sp)
+  /// Steps through M3 semantic roles:
+  /// - Tight constraints (maxHeight <= 550 or maxWidth <= 360): [bodySmall] (12sp)
+  /// - Tablet portrait (spacious width >= 600, height >= 750, vertical): [bodyLarge] (16sp)
+  /// - Standard viewport: [bodyMedium] (14sp)
   TextStyle? descStyle([BoxConstraints? constraints]) {
     final size = MediaQuery.sizeOf(this);
     final isLandscape = size.width > size.height;
@@ -193,6 +248,7 @@ extension ResponsiveTypographyExtension on BuildContext {
       }
       return textTheme.bodyMedium;
     }
+
     // Fallback if called without LayoutBuilder constraints:
     if (size.height <= 550 || size.width <= 360) {
       return textTheme.bodySmall;

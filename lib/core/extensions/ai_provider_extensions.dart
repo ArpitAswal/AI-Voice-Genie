@@ -22,6 +22,18 @@ extension AiProviderColorExtension on AiProviderId {
             : AppColors.claudeBrand;
     }
   }
+
+  /// Returns the brand gradient for this provider, adapting to the current theme brightness.
+  LinearGradient brandGradient(BuildContext context) {
+    switch (this) {
+      case AiProviderId.openAi:
+       return AppColors.openAIGradient;
+      case AiProviderId.gemini:
+         return AppColors.geminiGradient;
+      case AiProviderId.claude:
+        return AppColors.claudeGradient;
+    }
+  }
 }
 
 extension AiProviderModelInfoExtension on AiProviderId {
@@ -66,10 +78,4 @@ extension AiProviderModelInfoExtension on AiProviderId {
         return l10n.claudeModelPurposes;
     }
   }
-
-  /// Alias for [modelPurposes] to maintain backward compatibility across existing screens.
-  String technicalSpecs(AppLocalizations l10n) => modelPurposes(l10n);
-
-  /// Alias for [capabilitiesInfo] to maintain backward compatibility across existing screens.
-  String pricingAndEfficiency(AppLocalizations l10n) => capabilitiesInfo(l10n);
 }

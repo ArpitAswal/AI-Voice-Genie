@@ -79,6 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // ── Reusable Sub-Widgets ───────────────────────────────────────────────────
 
+  /// Builds accessible "Skip" button adhering to WCAG 48×48dp minimum touch bounds.
   Widget _buildSkipButton(BuildContext context, [BoxConstraints? constraints]) {
     final l10n = context.l10n;
     final skipStyle = context.buttonLabelStyle(constraints);
@@ -98,11 +99,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Semantics(
                 button: true,
                 label: l10n.skip,
-                child: TextButton(
-                  onPressed: _handleGetStarted,
-                  child: Text(
-                    l10n.skip,
-                    style: skipStyle,
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(minWidth: 48.0, minHeight: 48.0),
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48.0, 48.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: 8.0,
+                      ),
+                    ),
+                    onPressed: _handleGetStarted,
+                    child: Text(
+                      l10n.skip,
+                      style: skipStyle,
+                    ),
                   ),
                 ),
               ),
@@ -113,6 +125,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  /// Builds responsive page indicator dots with accessible hitboxes (>= 48x48dp).
   Widget _buildPageIndicators(
     BuildContext context, [
     BoxConstraints? constraints,
@@ -161,8 +174,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   behavior: HitTestBehavior.opaque,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(
-                      minWidth: 44.0,
-                      minHeight: 44.0,
+                      minWidth: 48.0,
+                      minHeight: 48.0,
                     ),
                     child: Center(
                       child: AnimatedContainer(
@@ -185,6 +198,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  /// Builds primary action CTA button with minimum 48dp touch height.
   Widget _buildActionButton(
     BuildContext context, {
     BoxConstraints? constraints,
@@ -206,6 +220,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  /// Builds high-fidelity hero image for onboarding slide.
   Widget _buildHeroImage(String image) {
     return ImageView(
       image: ImageViewData.asset(image),
@@ -225,9 +240,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         top: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final size = MediaQuery.sizeOf(context);
-            final isLandscape = size.width > size.height;
-            final isTabletLandscape = size.width >= 600 && isLandscape;
+            // Material 3 Responsive layout switching:
+            // Side-by-side mode activated on Expanded viewports (width >= 840dp)
+            final isExpanded = constraints.maxWidth >= 840.0;
 
             return PageView.builder(
               controller: _pageController,
@@ -235,7 +250,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               itemCount: _totalPages,
               itemBuilder: (context, index) {
                 final page = _pages[index];
-                return isTabletLandscape
+                return isExpanded
                     ? _buildSideBySidePage(context, constraints, page)
                     : _buildSinglePage(context, constraints, page);
               },
@@ -275,14 +290,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth:
-                    constraints.maxWidth >= 600 ? 550 : double.infinity,
+                maxWidth: constraints.maxWidth >= 600 ? 550 : double.infinity,
               ),
               child: Padding(
                 padding: EdgeInsets.only(
                   top: context.viewPadding.top,
-                  bottom: (context.viewPadding.bottom + 32.0)
-                      .clamp(16.0, 32.0),
+                  bottom: (context.viewPadding.bottom + 32.0).clamp(16.0, 32.0),
                   left: context.horizontalPadding,
                   right: context.horizontalPadding,
                 ),
@@ -292,8 +305,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     SliverFillRemaining(
                       hasScrollBody: false,
                       child: Column(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Column(
                             mainAxisSize: MainAxisSize.min,
@@ -320,8 +332,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              _buildPageIndicators(
-                                  context, constraints),
+                              _buildPageIndicators(context, constraints),
                               SizedBox(height: indicatorToButtonGap),
                               _buildActionButton(
                                 context,
@@ -339,8 +350,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ),
         Positioned(
-          top:
-              context.viewPadding.top + (isTabletPortrait ? 12.0 : 4.0),
+          top: context.viewPadding.top + (isTabletPortrait ? 12.0 : 4.0),
           right: context.horizontalPadding,
           child: _buildSkipButton(context, constraints),
         ),
@@ -445,4 +455,3 @@ class _OnboardingPageData {
     required this.image,
   });
 }
-

@@ -42,10 +42,11 @@ class AppTheme {
 
       // AppBar
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.appBarLight,
-        foregroundColor: AppColors.appBarTextLight,
+        backgroundColor: AppColors.scaffoldLight,
+        surfaceTintColor: AppColors.surfaceLight,
+        foregroundColor: AppColors.lightTextPrimary,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 1.5,
         centerTitle: true,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         iconTheme: IconThemeData(
@@ -62,6 +63,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.cardLight,
+        prefixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
+        suffixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -110,7 +115,8 @@ class AppTheme {
             disabledBackgroundColor:
                 AppColors.primaryLight.withValues(alpha: 0.35),
             disabledForegroundColor: AppColors.white.withValues(alpha: 0.7),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             elevation: 0,
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(26),
@@ -123,7 +129,8 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.transparent,
           foregroundColor: AppColors.primaryLight,
-          padding: EdgeInsets.zero,
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(36),
@@ -137,8 +144,9 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryLight,
+          minimumSize: const Size(48, 48),
           textStyle: AppTextStyles.lightTextTheme.titleMedium,
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
 
@@ -186,7 +194,7 @@ class AppTheme {
       // Icon
       iconTheme: IconThemeData(
         color: AppColors.lightTextPrimary,
-        size: context.isTablet ? 28 : 24,
+        size: context.isTablet ? 32 : 24,
       ),
 
       // Divider
@@ -200,7 +208,7 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.cardLight,
         selectedItemColor: AppColors.primaryLight,
-        unselectedItemColor: AppColors.lightTextSecondary,
+        unselectedItemColor: AppColors.lightTextTertiary,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
       ),
@@ -262,10 +270,11 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: AppColors.scaffoldDark,
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.appBarDark,
-        foregroundColor: AppColors.appBarTextDark,
+        backgroundColor: AppColors.scaffoldDark,
+        surfaceTintColor: AppColors.surfaceDark,
+        foregroundColor: AppColors.darkTextPrimary,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 1.5,
         centerTitle: true,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
         iconTheme: IconThemeData(
@@ -278,6 +287,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.cardDark,
+        prefixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
+        suffixIconConstraints:
+            const BoxConstraints(minWidth: 48, minHeight: 48),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -320,7 +333,8 @@ class AppTheme {
           disabledBackgroundColor:
               AppColors.primaryDark.withValues(alpha: 0.35),
           disabledForegroundColor: AppColors.white.withValues(alpha: 0.7),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           elevation: 0,
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(26),
@@ -332,7 +346,8 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           backgroundColor: AppColors.transparent,
           foregroundColor: AppColors.primaryDark,
-          padding: EdgeInsets.zero,
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(36),
@@ -344,8 +359,9 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryDark,
+          minimumSize: const Size(48, 48),
           textStyle: AppTextStyles.darkTextTheme.titleMedium,
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),
       datePickerTheme: DatePickerThemeData(
@@ -385,7 +401,7 @@ class AppTheme {
       ),
       iconTheme: IconThemeData(
         color: AppColors.darkTextPrimary,
-        size: context.isTablet ? 32 : 28,
+        size: context.isTablet ? 32 : 24,
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.darkDivider,
@@ -395,7 +411,7 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.cardDark,
         selectedItemColor: AppColors.primaryDark,
-        unselectedItemColor: AppColors.darkTextSecondary,
+        unselectedItemColor: AppColors.darkTextTertiary,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
       ),
