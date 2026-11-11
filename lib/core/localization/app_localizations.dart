@@ -35,7 +35,7 @@ class AppLocalizations {
     'en': {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI Voice Genie',
-      'app_tagline': 'Voice-first AI • ChatGPT · Gemini · Claude',
+      'app_tagline': 'Voice-First Multi-Model AI Assistant',
       'ai_assist': 'Your AI assistant is ready to help you.',
       'ask_genie_anything': 'Ask Genie Anything',
       'welcome_message': 'Welcome to',
@@ -49,6 +49,7 @@ class AppLocalizations {
       'update': 'Update',
       'delete': 'Delete',
       'edit': 'Edit',
+      'paste': 'Paste',
       'close': 'Close',
       'retry': 'Retry',
       'skip': 'Skip',
@@ -123,9 +124,9 @@ class AppLocalizations {
       'key_remove_msg': 'Are you sure you want to remove this key?',
       'key_added_success': 'API key added successfully.',
       'key_removed_success': 'API key removed.',
-      'key_invalid': 'Invalid API key.',
+      'key_invalid': 'Invalid API key',
       'key_validating': 'Validating key...',
-      'key_valid': 'Key is valid',
+      'key_valid': 'Valid Key',
       'api_key_required': 'API key is required',
       'api_key_too_short': 'This doesn\'t look like a valid API key',
       'api_key_hint': 'Paste your API key here',
@@ -137,6 +138,14 @@ class AppLocalizations {
       'key_fetch_error': 'Loading AI keys failed. Please restart the app.',
       'keys': 'Keys',
       'delete_key': 'Delete Key',
+      'sync_failed': 'Sync Failed',
+      'replace_key': 'Replace',
+      'replace_key_hint': 'Enter new API key to replace current key',
+      'hardware_security': 'Hardware-Backed Security',
+      'configuration_status': 'Configuration Status',
+      'get_api_key': 'Get API Key',
+      'cloud_sync_failed_desc':
+          'Cloud sync failed. Active on this device only.',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'rename_conversation_name': 'Rename this conversation',
@@ -387,6 +396,8 @@ class AppLocalizations {
       'account': 'Account',
       'app_settings': 'App Settings',
       'ai_preferences': 'AI Preferences',
+      'more_preferences': 'More',
+      'fewer_preferences': 'Fewer',
       'ai_intelligence': 'AI Intelligence',
       'support': 'Support',
       'edit_profile': 'Edit Profile',
@@ -411,6 +422,8 @@ class AppLocalizations {
       'email_address': 'Email address',
       'fake_name': 'John Doe',
       'fake_address': 'john@gmail.com',
+      'fake_email': 'john@gmail.com',
+      'new_user': 'New User',
 
       // ── Usage Tracking ─────────────────────────────────────────────────────
       'usage_this_month': 'Estimated usage this month',
@@ -462,7 +475,7 @@ class AppLocalizations {
       'about_app': 'About AI Voice Genie',
       'development_build': 'Development Build',
       'production_build': 'Production Ready',
-      'about_mission_title': 'About This App',
+      'about_mission_title': 'Our Mission',
       'about_mission_body':
           'AI Voice Genie is a personal, voice-first AI workspace built by an independent developer. It unifies ChatGPT, Gemini, and Claude in one place — with your own API keys, so you stay in full control of your data and costs.',
       'legal': 'Legal',
@@ -580,7 +593,7 @@ class AppLocalizations {
     'hi': {
       // ── App General ────────────────────────────────────────────────────────
       'app_name': 'AI वॉयस जीनी',
-      'app_tagline': 'आपका बुद्धिमान AI सहायक',
+      'app_tagline': 'वॉयस-फर्स्ट मल्टी-मॉडल AI सहायक',
       'ai_assist': 'आपका एआई सहायक आपकी सहायता के लिए तैयार है।',
       'ask_genie_anything': 'जिनी से कुछ भी पूछें',
       'welcome_message': 'आपका स्वागत है',
@@ -589,11 +602,12 @@ class AppLocalizations {
       'afternoon': 'शुभ दोपहर',
       'ok': 'ठीक है',
       'cancel': 'रद्द करें',
-      'user': 'User',
+      'user': 'उपयोगकर्ता',
       'save': 'सहेजें',
       'update': 'अपडेट करें',
       'delete': 'हटाएं',
       'edit': 'संपादित करें',
+      'paste': 'पेस्ट करें',
       'close': 'बंद करें',
       'retry': 'पुनः प्रयास करें',
       'skip': 'छोड़ें',
@@ -618,7 +632,7 @@ class AppLocalizations {
       'privacy_note_suffix': ' से सहमत होते हैं।',
       'ask_user_todo': 'आप क्या करना चाहेंगे?',
       'ask_question': 'प्रश्न पूछें',
-      'intelligent_models': 'INTELLIGENT AI MODELS',
+      'intelligent_models': 'इंटेलिजेंट AI मॉडल',
       'create_image': 'चित्र बनाएं',
       'generate_code': 'कोड जनरेट करें',
       'analyze_image': 'चित्र का विश्लेषण करें',
@@ -653,35 +667,43 @@ class AppLocalizations {
       'onboarding_title_2': 'चित्र बनाएं और उनका वर्णन करें',
       'onboarding_desc_2':
           'चित्र बनाएं, तस्वीरों का विश्लेषण करें और पीडीएफ से उत्तर प्राप्त करें।',
-      'onboarding_title_3': 'चस्पीच टू टेक्स्ट और टेक्स्ट टू स्पीच',
+      'onboarding_title_3': 'स्पीच टू टेक्स्ट और टेक्स्ट टू स्पीच',
       'onboarding_desc_3':
           'अपने प्रॉम्प्ट बोलें और AI के जवाब स्वाभाविक आवाज में सुनें।',
       'get_started': 'शुरू करें',
 
       // ── API Key Setup ──────────────────────────────────────────────────────
       'setup_title': 'अपना AI कनेक्ट करें',
-      'setup_subtitle': 'AI मॉडल उपयोग करने के लिए API key जोड़ें।',
-      'add_key': 'API Key जोड़ें',
-      'update_key': 'API Key अपडेट करें',
-      'remove_key': 'कुंजी हटाना',
+      'setup_subtitle': 'AI मॉडल उपयोग करने के लिए अपनी API कुंजी जोड़ें।',
+      'add_key': 'API कुंजी जोड़ें',
+      'update_key': 'API कुंजी अपडेट करें',
+      'remove_key': 'कुंजी हटाएं',
       'key_remove_msg': 'क्या आप वाकई इस कुंजी को हटाना चाहते हैं?',
-      'key_added_success': 'API key सफलतापूर्वक जोड़ी गई।',
-      'key_removed_success': 'API key हटाई गई।',
-      'key_invalid': 'अमान्य API key।',
-      'key_validating': 'Key सत्यापित हो रही है...',
-      'key_valid': 'Key वैध है',
-      'api_key_required': 'API key आवश्यक है',
-      'api_key_too_short': 'यह एक वैध API key नहीं लगती',
-      'api_key_hint': 'अपनी API key यहाँ पेस्ट करें',
-      'get_openai_key': 'OpenAI key: platform.openai.com',
-      'get_gemini_key': 'Gemini key: aistudio.google.com',
-      'get_claude_key': 'Claude key: console.anthropic.com',
-      'no_key_added': 'Key नहीं जोड़ी गई',
-      'key_added': 'Key जोड़ी गई',
+      'key_added_success': 'API कुंजी सफलतापूर्वक जोड़ी गई।',
+      'key_removed_success': 'API कुंजी हटाई गई।',
+      'key_invalid': 'अमान्य API कुंजी',
+      'key_validating': 'कुंजी सत्यापित हो रही है...',
+      'key_valid': 'मान्य कुंजी',
+      'api_key_required': 'API कुंजी आवश्यक है',
+      'api_key_too_short': 'यह एक वैध API कुंजी नहीं लगती',
+      'api_key_hint': 'अपनी API कुंजी यहाँ पेस्ट करें',
+      'get_openai_key': 'platform.openai.com पर अपनी OpenAI कुंजी प्राप्त करें',
+      'get_gemini_key': 'aistudio.google.com पर अपनी Gemini कुंजी प्राप्त करें',
+      'get_claude_key':
+          'console.anthropic.com पर अपनी Claude कुंजी प्राप्त करें',
+      'no_key_added': 'कोई कुंजी नहीं जोड़ी गई',
+      'key_added': 'कुंजी जोड़ी गई',
       'key_fetch_error':
-          'एआई कुंजी लोड करने में विफलता, कृपया ऐप को पुनः आरंभ करें।',
+          'AI कुंजियाँ लोड करने में विफल। कृपया ऐप को पुनः प्रारंभ करें।',
       'keys': 'कुंजी',
-      'delete_key': 'डिलीट की',
+      'delete_key': 'कुंजी हटाएं',
+      'sync_failed': 'सिंक विफल',
+      'replace_key': 'बदलें',
+      'replace_key_hint': 'वर्तमान कुंजी बदलने के लिए नई API कुंजी दर्ज करें',
+      'hardware_security': 'हार्डवेयर-समर्थित सुरक्षा',
+      'configuration_status': 'कॉन्फ़िगरेशन स्थिति',
+      'get_api_key': 'API कुंजी प्राप्त करें',
+      'cloud_sync_failed_desc': 'क्लाउड सिंक विफल। केवल इसी डिवाइस पर सक्रिय।',
 
       // ── Chat / Conversation ────────────────────────────────────────────────
       'rename_conversation_name': 'बातचीत का नाम बदलें',
@@ -695,7 +717,8 @@ class AppLocalizations {
       'copy_response': 'कॉपी करें',
       'copied_to_clipboard': 'क्लिपबोर्ड में कॉपी हो गया',
       'delete_conversation': 'बातचीत हटाएं',
-      'delete_conversation_confirm': 'क्या आप इस बातचीत को हटाना चाहते हैं?',
+      'delete_conversation_confirm':
+          'क्या आप इस बातचीत को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।',
       'conversation_deleted': 'बातचीत हटाई गई।',
       'delete_all_conversations': 'सभी बातचीत हटाएं',
       'delete_all_confirm_message':
@@ -737,11 +760,11 @@ class AppLocalizations {
       'select_model': 'AI मॉडल चुनें',
       'current_model': 'वर्तमान मॉडल',
       'switch_model': 'मॉडल बदलें',
-      'model_switched': 'बदल गया',
-      'no_key_for_model': 'इस मॉडल के लिए API key नहीं जोड़ी गई।',
-      'add_key_for_model': 'Key जोड़ें',
+      'model_switched': 'स्विच किया गया',
+      'no_key_for_model': 'इस मॉडल के लिए कोई API कुंजी नहीं जोड़ी गई।',
+      'add_key_for_model': 'कुंजी जोड़ें',
       'api_keys_secure_note':
-          'आपकी API की (key) सुरक्षित है। केवल कंपनी को ही आपकी व्यक्तिगत की (key) सहेजने का अधिकार है।',
+          'आपकी API कुंजियाँ सुरक्षित रूप से संग्रहीत हैं। केवल आपके पास अपनी व्यक्तिगत कुंजियों को एक्सेस और प्रबंधित करने का अधिकार है।',
       // ── Home Screen: Marketing Value Proposition (Hindi) ───────────────────
       'openai_marketing_pitch':
           'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्मार्ट दस्तावेज़ तैयार करें और रचनात्मक सामग्री बनाएं।',
@@ -787,11 +810,11 @@ class AppLocalizations {
       // ── Capability Gap Messages ────────────────────────────────────────────
       'capability_gap_title': 'समर्थित नहीं',
       'capability_gap_image_gen':
-          'Claude चित्र नहीं बना सकता। ChatGPT या Gemini का उपयोग करें।',
+          'Claude इमेज जनरेशन का समर्थन नहीं करता है। ChatGPT या Gemini का उपयोग करें।',
       'capability_gap_stt':
-          'Claude वॉयस इनपुट नहीं करता। ChatGPT या Gemini का उपयोग करें।',
+          'Claude वॉयस इनपुट का समर्थन नहीं करता है। ChatGPT या Gemini का उपयोग करें।',
       'capability_gap_tts':
-          'Claude वॉयस आउटपुट नहीं करता। ChatGPT या Gemini का उपयोग करें।',
+          'Claude वॉयस आउटपुट का समर्थन नहीं करता है। ChatGPT या Gemini का उपयोग करें।',
       'use_another_model': 'दूसरा मॉडल उपयोग करें',
       'available_models': 'इस सुविधा के लिए उपलब्ध मॉडल',
 
@@ -807,8 +830,8 @@ class AppLocalizations {
       'download_image': 'चित्र डाउनलोड करें',
       'image_save_failed': 'चित्र सहेजा नहीं जा सका। पुनः प्रयास करें।',
       'image_save_permission_denied':
-          'स्तोरेज अनुमति अस्वीकृत। सेटिंग्स में एक्सेस दें।',
-      'image_save_no_space': 'चित्र सहेजने के लिए पर्याप्त स्तोरेज नहीं है।',
+          'स्टोरेज अनुमति अस्वीकृत। सेटिंग्स में एक्सेस दें।',
+      'image_save_no_space': 'चित्र सहेजने के लिए पर्याप्त स्टोरेज नहीं है।',
       'image_download_failed':
           'चित्र डाउनलोड नहीं हो सका। अपना कनेक्शन जांचें।',
       'image_prompt_required': 'कृपया चित्र का वर्णन करें',
@@ -820,7 +843,7 @@ class AppLocalizations {
       'attach_file': 'फ़ाइल जोड़ें',
       'take_photo': 'फ़ोटो लें',
       'choose_from_gallery': 'गैलरी से चुनें',
-      'analyzing_image': 'चित्र विश्लेषण हो रहा है...',
+      'analyzing_image': 'चित्र का विश्लेषण हो रहा है...',
       'cannot_mix_images_and_pdfs':
           'आप एक ही अनुरोध में इमेज और PDF को साथ नहीं जोड़ सकते।',
       'max_image_attachments': 'अधिकतम {count} इमेज अटैचमेंट की अनुमति है',
@@ -831,12 +854,12 @@ class AppLocalizations {
       'failed_to_load_image': 'इमेज लोड नहीं हो सकी',
 
       // ── AI Preferences ─────────────────────────────────────────────────────
-      'response_length': 'उत्तर लंबाई',
+      'response_length': 'उत्तर की लंबाई',
       'response_length_hint': 'मॉडल के उत्तर की अधिकतम लंबाई बदलें।',
-      'gemini_thinking_level': 'सोचने का स्तर (Reasoning)',
+      'gemini_thinking_level': 'सोचने का स्तर (तर्क)',
       'gemini_thinking_level_hint':
           'Gemini 3.8 Flash के लिए तर्क क्षमता और थिंकिंग बजट चुनें।',
-      'gemini_aspect_ratio': 'इमेज पहलू अनुपात (Aspect Ratio)',
+      'gemini_aspect_ratio': 'इमेज पहलू अनुपात',
       'gemini_aspect_ratio_hint':
           'इमेज का आकार चुनें: चौकोर (1:1), लैंडस्केप (16:9), या पोर्ट्रेट (9:16)।',
       'gemini_info_title': 'विशेष नोट: Gemini इमेज जनरेशन',
@@ -892,7 +915,7 @@ class AppLocalizations {
       'microphone_permission_denied':
           'वॉयस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
       'open_settings': 'सेटिंग खोलें',
-      'speech_text_unavailable': 'भाषण का पाठ उपलब्ध नहीं है।',
+      'speech_text_unavailable': 'स्पीच-टू-टेक्स्ट उपलब्ध नहीं है।',
       'voice_assistant': 'वॉयस असिस्टेंट',
       // Tooltip shown on the Home mic button — guides users to tap for voice chat
       'tap_to_start_voice_chat': 'वॉयस चैट शुरू करने के लिए टैप करें',
@@ -916,12 +939,12 @@ class AppLocalizations {
       'notifications': 'सूचनाएं',
       'notifications_enabled': 'सूचनाएं सक्षम करें',
       'ai_models': 'AI मॉडल',
-      'manage_api_keys': 'API Keys प्रबंधित करें',
+      'manage_api_keys': 'API कुंजियाँ प्रबंधित करें',
       'voice_settings': 'वॉयस सेटिंग',
       'use_ai_tts': 'AI आवाज़ उपयोग करें (बेहतर गुणवत्ता)',
       'use_ai_stt': 'AI स्पीच रिकग्निशन उपयोग करें',
       'tts_speed': 'बोलने की गति',
-      'about': 'के बारे में',
+      'about': 'ऐप के बारे में',
       'app_version': 'ऐप संस्करण',
       'privacy_policy': 'गोपनीयता नीति',
       'terms_of_service': 'सेवा की शर्तें',
@@ -931,11 +954,15 @@ class AppLocalizations {
       'account': 'खाता',
       'app_settings': 'ऐप सेटिंग',
       'ai_preferences': 'AI प्राथमिकताएं',
+      'more_preferences': 'अधिक',
+      'fewer_preferences': 'कम',
       'ai_intelligence': 'AI इंटेलिजेंस',
-      'active_user': 'तब से सक्रिय उपयोगकर्ता,',
+      'active_user': 'सक्रिय उपयोगकर्ता',
       'email_address': 'मेल पता',
       'fake_name': 'जॉन डो',
       'fake_address': 'जॉन@gmail.com',
+      'fake_email': 'जॉन@gmail.com',
+      'new_user': 'नया उपयोगकर्ता',
 
       // ── Usage Tracking ─────────────────────────────────────────────────────────
       'usage_this_month': 'इस महीने का अनुमानित उपयोग',
@@ -952,7 +979,8 @@ class AppLocalizations {
       'usage_set_budget': 'मासिक बजट सेट करें',
       'usage_set_budget_subtitle':
           'अनुमानित खर्च को व्यक्तिगत मासिक सीमा से ट्रैक करें।',
-      'usage_disclaimer': 'उपयोग केवल AI Voice Genie अनुरोधों से अनुमानित है।',
+      'usage_disclaimer':
+          'उपयोग केवल AI Voice Genie अनुरोधों से अनुमानित है। यह आपके प्रदाता बिलिंग डैशबोर्ड से भिन्न हो सकता है।',
       'usage_of': 'में से',
       'budget_saved': 'बजट सफलतापूर्वक सहेजा गया!',
       'budget_save_failed': 'बजट सहेजने में विफल। कृपया पुनः प्रयास करें।',
@@ -969,7 +997,7 @@ class AppLocalizations {
           'नोट: Voice Genie टोकन लागत की गणना स्थानीय रूप से करता है। अपना शेष बजट सटीक रखने के लिए, कृपया वह राशि दर्ज करें जो आप पहले ही खर्च कर चुके हैं।',
       'update_budget': 'बजट अपडेट करें',
       'remove_budget': 'बजट हटाएं',
-      'set_budget': 'बजट सेट करे',
+      'set_budget': 'बजट सेट करें',
       // Budget: new total-spend terminology
       'set_total_budget': 'कुल बजट सेट करें',
       'edit_total_budget': 'कुल बजट संपादित करें',
@@ -994,10 +1022,10 @@ class AppLocalizations {
           'प्रोफ़ाइल अपडेट नहीं हो सकी। कृपया पुनः प्रयास करें।',
       'activate_models': 'AI मॉडल सक्रिय करें',
       'activate_models_message':
-          'शुरू करने के लिए अपनी API कीज़ कनेक्ट करें। मॉडल को एक्टिवेट करने से एडवांस्ड रीज़निंग स्टाइल, कस्टम फ़ीचर कवरेज और AI-पावर्ड वर्कफ़्लो का इस्तेमाल किया जा सकेगा।',
+          'शुरू करने के लिए अपनी API कुंजियाँ जोड़ें। मॉडल सक्रिय करने से उन्नत तर्क क्षमता, विस्तृत सुविधाएं और AI-संचालित कार्यप्रणाली अनलॉक होती हैं।',
       'activate_more_models': 'और AI मॉडल चालू करें',
       'activate_more_models_message':
-          'अपने सेटअप को बेहतर बनाने के लिए और API कीज़ का इस्तेमाल करें। ज़्यादा एक्टिव मॉडल होने से स्मार्ट फ़ॉलबैक रूटिंग, खास समस्याओं को हल करने की क्षमता और बिना रुकावट के अपटाइम मिलता है।',
+          'अपने सेटअप को बेहतर बनाने के लिए और अधिक API कुंजियाँ जोड़ें। अधिक सक्रिय मॉडल होने से स्मार्ट फ़ॉलबैक रूटिंग, विशेष समस्याओं का समाधान और निर्बाध सेवा मिलती है।',
       'enabled': 'सक्षम',
       'not_active': 'सक्रिय नहीं',
       'configure': 'कॉन्फ़िगर करें',
@@ -1006,9 +1034,9 @@ class AppLocalizations {
       'about_app': 'AI Voice Genie के बारे में',
       'development_build': 'डेवलपमेंट बिल्ड',
       'production_build': 'प्रोडक्शन रेडी',
-      'about_mission_title': 'इस ऐप के बारे में',
+      'about_mission_title': 'हमारा उद्देश्य',
       'about_mission_body':
-          'AI Voice Genie एक स्वतंत्र डेवलपर द्वारा बनाया गया voice-first AI वर्कस्पेस है। यह ChatGPT, Gemini और Claude को एक ही जगह लाता है — आपकी अपनी API कीज़ के साथ, ताकि डेटा और खर्च पर पूरा नियंत्रण आपका हो।',
+          'AI Voice Genie एक स्वतंत्र डेवलपर द्वारा बनाया गया वॉयस-फर्स्ट AI वर्कस्पेस है। यह ChatGPT, Gemini और Claude को एक ही जगह लाता है — आपकी अपनी API कुंजियों के साथ, ताकि डेटा और खर्च पर पूरा नियंत्रण आपका हो।',
       'legal': 'कानूनी',
       'credits_attribution': 'क्रेडिट और एट्रिब्यूशन',
       'open_source_licenses': 'ओपन-सोर्स लाइसेंस',
@@ -1029,7 +1057,7 @@ class AppLocalizations {
       'could_not_open_link': 'यह लिंक नहीं खुल सका।',
       'delete_account': 'खाता हटाएं',
       'delete_account_confirm':
-          'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा।',
+          'यह आपके खाते और सभी बातचीत को स्थायी रूप से हटा देगा। यह क्रिया पूर्ववत नहीं की जा सकती।',
       'account_deleted': 'खाता हटा दिया गया।',
       'deleting_account': 'आपका खाता हटाया जा रहा है...',
       'session_expired': 'आपका सत्र समाप्त हो गया है। कृपया पुनः साइन इन करें।',
@@ -1049,7 +1077,7 @@ class AppLocalizations {
       'auto_prefer_model': 'ऑटो पसंदीदा मॉडल',
       'preferred_model': 'पसंदीदा मॉडल',
       'preferred_model_hint':
-          'चैट के लिए मॉडल जल्दी बदलें। उपलब्ध न होने पर fallback होगा।',
+          'चैट के लिए इस्तेमाल होने वाले मॉडल को तुरंत बदलें। उपलब्ध न होने पर दूसरा मॉडल इस्तेमाल होगा।',
       'auto_tts': 'ऑटो टेक्स्ट-टू-स्पीच',
       'auto_tts_hint': 'AI प्रतिक्रियाओं को स्वचालित रूप से बोलकर सुनाएं',
       'image_quality': 'इमेज गुणवत्ता',
@@ -1058,6 +1086,8 @@ class AppLocalizations {
       'image_size_hint': 'इमेज का डिफ़ॉल्ट आउटपुट आकार चुनें।',
       'image_count': 'इमेज संख्या',
       'image_count_hint': 'प्रति अनुरोध कितनी इमेज बनानी हैं चुनें।',
+      'image_background': 'इमेज बैकग्राउंड',
+      'image_background_hint': 'इमेज के लिए डिफ़ॉल्ट बैकग्राउंड सेट करें।',
       'quality_low': 'कम',
       'quality_medium': 'मध्यम',
       'quality_high': 'उच्च',
@@ -1087,7 +1117,7 @@ class AppLocalizations {
           'दर सीमा पहुंच गई। कृपया कुछ देर बाद पुनः प्रयास करें।',
       'error_quota_exceeded':
           'API कोटा समाप्त हो गया है। कृपया अपना बिलिंग या प्लान जांचें।',
-      'error_invalid_key': 'अमान्य API key। सेटिंग में अपडेट करें।',
+      'error_invalid_key': 'अमान्य API कुंजी। सेटिंग में अपडेट करें।',
       'error_invalid_ai_request':
           'चयनित AI मॉडल इस अनुरोध को प्रोसेस नहीं कर सका।',
       'error_all_models_failed':
@@ -1099,7 +1129,7 @@ class AppLocalizations {
       'error_region_not_supported':
           'यह AI मॉडल आपके क्षेत्र में उपलब्ध नहीं है।',
       'error_permission_denied':
-          'अनुमति अस्वीकृत। कृपया अपनी API key अनुमतियाँ जांचें।',
+          'अनुमति अस्वीकृत। कृपया अपनी API कुंजी अनुमतियाँ जांचें।',
       'error_unexpected_ai':
           'चयनित AI मॉडल ने अनपेक्षित त्रुटि लौटाई। कृपया पुनः प्रयास करें।',
       'error_safety_violation':
@@ -1109,10 +1139,10 @@ class AppLocalizations {
       'error_pdf_too_large': 'PDF 10MB की सीमा से अधिक है।',
       'error_image_too_large': 'चित्र 5MB की सीमा से अधिक है।',
       'error_no_models_with_key':
-          'AI सुविधाएं उपयोग करने के लिए सेटिंग में कम से कम एक API key जोड़ें।',
+          'AI सुविधाएं उपयोग करने के लिए कम से कम एक API कुंजी जोड़ें।',
       'error_microphone': 'इस डिवाइस पर माइक्रोफ़ोन उपलब्ध नहीं है।',
       'model_rate_limit':
-          'की दर सीमा पार हो गई है। कृपया कुछ देर बाद पुनः प्रयास करें।',
+          'दर सीमा पार हो गई है। कृपया कुछ देर बाद पुनः प्रयास करें।',
       'press_back_again_to_exit': 'ऐप बंद करने के लिए एक बार फिर वापस दबाएं',
       'server_busy':
           'ज़्यादा ट्रैफ़िक की वजह से हमारा सर्वर व्यस्त है। कृपया बाद में फिर से कोशिश करें!',
@@ -1221,6 +1251,18 @@ class AppLocalizations {
   String get claudeAIkey => translate('get_claude_key');
   String get keyHint => translate('api_key_hint');
   String get addKey => translate('add_key');
+  String get updateKey => translate('update_key');
+  String get syncFailed => translate('sync_failed');
+  String get replaceKey => translate('replace_key');
+  String get replaceKeyHint => translate('replace_key_hint');
+  String get hardwareSecurity => translate('hardware_security');
+  String get configurationStatus => translate('configuration_status');
+  String get getApiKey => translate('get_api_key');
+  String get cloudSyncFailedDesc => translate('cloud_sync_failed_desc');
+  String keysConfiguredProgress(int active, int total) =>
+      '$active ${translate('usage_of')} $total ${translate('keys')} ${translate('configured').toLowerCase()}';
+  String keysActiveProgress(int active, int total) =>
+      '$active ${translate('usage_of')} $total ${translate('configured').toLowerCase()}';
   String get keySecureNote => translate('api_keys_secure_note');
   String get done => translate('done');
   String get noModelKey => translate('error_no_models_with_key');
@@ -1296,6 +1338,8 @@ class AppLocalizations {
   String get unAuthenticate => translate('unauthenticate_profile');
   String get appSettings => translate('app_settings');
   String get aiPreferences => translate('ai_preferences');
+  String get morePreferences => translate('more_preferences');
+  String get fewerPreferences => translate('fewer_preferences');
   String get aiIntelligence => translate('ai_intelligence');
   String get usageThisMonth => translate('usage_this_month');
   String get usageTokens => translate('usage_tokens');

@@ -34,8 +34,8 @@
 
 > [!IMPORTANT]
 > **Device & Platform Compatibility**
-> - **Platform Tested**: Rigorously validated on **Android physical hardware**. The architecture is fully cross-platform (iOS compatible), with native channel verification in progress.
-> - **Form Factor Focus**: Engineered specifically for **mobile phone form factors** to guarantee peak performance and ergonomic touch interactions.
+> - **Platform Tested & Supported**: Fully tested and running on both **Android** and **iOS** physical devices and environments.
+> - **Form Factor Focus**: Engineered and optimized specifically for **mobile phone form factors**. Dedicated **tablet device UI layouts** will be available in a new release mode.
 
 **AI Voice Genie** is an enterprise-grade mobile application that consolidates the world's most advanced AI ecosystems into a single, high-performance interface. Rather than forcing users to juggle fragmented subscriptions across siloed applications, AI Voice Genie unites **OpenAI**, **Google Gemini**, and **Anthropic Claude** within a private, local-first mobile client.
 
@@ -48,17 +48,17 @@ Built with a **Local-First Architecture** utilizing **Hive NoSQL**, all conversa
 
 ---
 
-## 📱 Product Preview
+## 📱 APP Design Preview
 
 Meticulously crafted with responsive, adaptive Light and Dark themes:
 
 | Light Theme | Dark Theme |
 |:---:|:---:|
-| **Home Discovery**<br><img src="assets/app_preview/light_home_screen.png" width="250"/> | **Home Discovery**<br><img src="assets/app_preview/dark_home_screen.png" width="250"/> |
-| **Interactive Chat**<br><img src="assets/app_preview/light_prompt_screen.png" width="250"/> | **Interactive Chat**<br><img src="assets/app_preview/dark_prompt_screen.png" width="250"/> |
-| **Intelligence & Settings**<br><img src="assets/app_preview/light_profile_screen.png" width="250"/> | **Intelligence & Settings**<br><img src="assets/app_preview/dark_profile_screen.png" width="250"/> |
-| **BYOK Key Management**<br><img width="250" alt="light_provider_key_management" src="https://github.com/user-attachments/assets/853b82b6-9179-4f90-a54c-133bb94840c7" /> | **BYOK Key Management**<br><img width="250" alt="dark_key_management" src="https://github.com/user-attachments/assets/d97d16c0-3f80-4552-8ee8-c7768149a399" /> |
-| **Conversation History**<br><img width="250" alt="light_conversation_history" src="https://github.com/user-attachments/assets/6fa297bb-19d6-4aef-84a4-dd41c657ae33" /> | **Conversation History**<br><img width="250" alt="dark_history_conversation" src="https://github.com/user-attachments/assets/71d967d7-d773-4ece-b4d9-376f37e802cf" /> |
+| **Home Discovery**<br><img width="250" alt="Light_Home_Discovery" src="https://github.com/user-attachments/assets/f02baf14-196d-42fc-9627-c79ad07d7417" /> | **Home Discovery**<br><img width="250" alt="Dark_Home_Discovery" src="https://github.com/user-attachments/assets/00977ab7-80b1-41d2-b385-014226e30f3d" /> |
+| **Interactive Chat**<br><img width="250" alt="Light_Chat_Interactive" src="https://github.com/user-attachments/assets/7719bf50-20d5-40f3-95af-e8ba2b96b712" /> | **Interactive Chat**<br> <img width="250" alt="Dark_Chat_Interactive" src="https://github.com/user-attachments/assets/606593b3-7215-405e-85ca-9c7e14721884" /> |
+| **Intelligence & Settings**<br><img width="250" alt="Light_Intelligence" src="https://github.com/user-attachments/assets/661bec01-056d-4958-9394-6c6e00b1beaa" /> | **Intelligence & Settings**<br><img width="250" alt="Dark_Intelligence" src="https://github.com/user-attachments/assets/4dcacff7-dadc-4d72-b2fa-f99f5f02b65d" /> |
+| **BYOK Key Management**<br><img width="250" alt="Light_KeySetup_Management" src="https://github.com/user-attachments/assets/21004280-8725-40fe-bf2a-6b7aca88b2fb" /> | **BYOK Key Management**<br><img width="250" alt="Dark_KeySetup_Management" src="https://github.com/user-attachments/assets/a9e42846-96eb-4f5d-9ea2-603460f8f855" /> |
+| **Conversation History**<br><img width="250" alt="Light_History_Conversation" src="https://github.com/user-attachments/assets/b4383c3c-5656-4feb-a1c8-7a81ff557b38" /> | **Conversation History**<br><img width="250" alt="Dark_History_Conversation" src="https://github.com/user-attachments/assets/ff766144-26f4-4756-b26a-d16351ce07da" /> |
 
 | **Voice Assistant Demonstration** |
 |:---:|

@@ -45,8 +45,13 @@ void main() async {
   }
 
   // ── Firebase ────────────────────────────────────────────────────────────────
-  // Uncomment after running: flutterfire configure
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('⚠️ Firebase initialization notice: $e');
+  }
 
   // ── Crashlytics ─────────────────────────────────────────────────────────────
   // Pass all uncaught "fatal" errors from the framework to Crashlytics
@@ -78,10 +83,32 @@ void main() async {
 
   // ── Orientation ───────────────────────────────────────────────────────────────
   // Lock to portrait only (portrait-up and portrait-down)
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+
+  // Get the primary window metrics
+  final view = PlatformDispatcher.instance.views.first;
+  final size = view.physicalSize / view.devicePixelRatio;
+
+  // Choose a breakpoint (typical tablet width starts around 600 dp)
+  const double tabletBreakpoint = 600.0;
+
+  // Use the shortest side to determine the device category reliably
+  final bool isTabletOrDesktop = size.shortestSide >= tabletBreakpoint;
+
+  if (isTabletOrDesktop) {
+    // Allow both portrait and landscape for tablets/desktops
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  } else {
+    // Lock mobile phones strictly to portrait mode
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
 
   runApp(const AiVoiceGenieApp());
 }

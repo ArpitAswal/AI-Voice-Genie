@@ -73,7 +73,10 @@ class DefaultValueDropdownSelector<T> extends StatelessWidget {
                   Expanded(
                     child: Text(
                       fullTitle,
-                      style: context.textTheme.bodyMedium?.copyWith(
+                      style: (context.isTablet
+                              ? context.textTheme.bodyLarge
+                              : context.textTheme.bodyMedium)
+                          ?.copyWith(
                         fontWeight: option == selectedValue
                             ? FontWeight.w700
                             : FontWeight.w500,
@@ -89,7 +92,10 @@ class DefaultValueDropdownSelector<T> extends StatelessWidget {
                       color: context.isDark
                           ? AppColors.white
                           : AppColors.primaryLight,
-                      size: context.textTheme.bodyMedium?.fontSize,
+                      size: (context.isTablet
+                              ? context.textTheme.bodyLarge
+                              : context.textTheme.bodyMedium)
+                          ?.fontSize,
                     ),
                 ],
               ),
@@ -97,11 +103,13 @@ class DefaultValueDropdownSelector<T> extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: context.textTheme.bodySmall?.copyWith(
+                  style: (context.isTablet
+                          ? context.textTheme.bodySmall
+                          : context.textTheme.labelSmall)
+                      ?.copyWith(
                     color: context.isDark
                         ? AppColors.darkTextTertiary
                         : AppColors.lightTextTertiary,
-                    fontSize: 11,
                   ),
                 ),
               ],
@@ -111,28 +119,39 @@ class DefaultValueDropdownSelector<T> extends StatelessWidget {
       }).toList(),
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: context.horizontalPadding / 2,
-          vertical: 4,
+          horizontal: context.horizontalPadding,
+          vertical: context.verticalSpacing / 4,
         ),
         decoration: BoxDecoration(
-          color: context.primaryColor.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(context.screenWidth * 0.05),
+          color: context.isDark
+              ? context.primaryColor.withValues(alpha: 0.2)
+              : context.primaryColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: context.isDark
-                ? context.theme.colorScheme.primary
-                : context.theme.colorScheme.secondary,
+                ? Colors.transparent
+                : context.primaryColor.withValues(alpha: 0.22),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(getTitle(selectedValue),
-                style: context.textTheme.bodySmall
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              getTitle(selectedValue),
+              style: (context.isCompact
+                      ? context.textTheme.bodyMedium
+                      : context.textTheme.bodySmall)
+                  ?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.isDark ? Colors.white : context.primaryColor,
+              ),
+            ),
             const SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down_rounded,
-                size: context.textTheme.bodySmall?.fontSize,
-                color: context.textTheme.bodySmall?.color),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: (context.isCompact ? 18 : 21),
+              color: context.isDark ? Colors.white : context.primaryColor,
+            ),
           ],
         ),
       ),

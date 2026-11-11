@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../constants/app_colors.dart';
 import '../extensions/build_context_extensions.dart';
 
 /// A reusable, consistently styled AlertDialog for the application.
@@ -28,8 +27,7 @@ class AppAlertDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor:
-          context.isDark ? AppColors.cardDark : AppColors.cardLight,
+      backgroundColor: context.colorScheme.surfaceContainer,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: title,
       content: content,
@@ -39,6 +37,8 @@ class AppAlertDialog extends StatelessWidget {
       actionsPadding: actionsPadding ??
           const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 8.0),
       insetPadding: insetPadding,
+      titleTextStyle: context.subHeaderStyle()?.copyWith(color: context.colorScheme.primary),
+      contentTextStyle: context.descStyle()?.copyWith(color: context.colorScheme.tertiary),
     );
   }
 }

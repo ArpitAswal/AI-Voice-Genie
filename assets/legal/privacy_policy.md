@@ -105,6 +105,6 @@ We may update this Privacy Policy from time to time to reflect enhancements in a
 
 For questions, feedback, or privacy-related inquiries regarding this policy, please reach out to:
 
-- **Support Email:** `arpitaswal995@gmail.com`
+- **Support Email:** `support@aivoicegenie.com`
 - **Developer:** Arpit Aswal (Independent Developer)
 - **Application:** AI Voice Genie

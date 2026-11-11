@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/analytics_service.dart';
 import '../../chat/presentation/chat_history_screen.dart';
 import '../../profile/presentation/profile_view.dart';
 
@@ -134,12 +135,27 @@ class _TabBarScreenState extends State<TabBarScreen> {
         ),
       );
 
+  void _onTabSelected(int index) {
+    if (_currentIndex == index) return;
+    setState(() => _currentIndex = index);
+    final (screenName, screenClass) = switch (index) {
+      0 => ('Home Screen', 'IntroScreen'),
+      1 => ('Conversation History Screen', 'ConversationHistoryScreen'),
+      2 => ('Profile Screen', 'ProfileScreen'),
+      _ => ('Home Screen', 'TabBarScreen'),
+    };
+    AnalyticsService.instance.logScreenView(
+      screenName: screenName,
+      screenClass: screenClass,
+    );
+  }
+
   Widget _buildNavItem(
       int index, IconData icon, String label, BuildContext context) {
     final isSelected = _currentIndex == index;
 
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () => _onTabSelected(index),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 600),
