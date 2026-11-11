@@ -27,13 +27,21 @@ firebase.json
 
 # Local project operating docs stay off the public repository.
 *.md
+*.toml
+*.yaml
 !/README.md
 !/CHANGELOG.md
-!/agentPlan/app_flow.md
-!agentPlan/app_summary.md
-!agentPlan/architecture.md
-!agentPlan/mvvm_architecture.md
+!/pubspec.yaml
+!/analysis_options.yaml
 !assets/legal/*.md
+
+# Local agent / persona / rule configs
+.agent/
+.codex/
+.gemini/
+personas/
+rules/
+skills/
 
 # ===============================
 # 🧱 Flutter / Dart

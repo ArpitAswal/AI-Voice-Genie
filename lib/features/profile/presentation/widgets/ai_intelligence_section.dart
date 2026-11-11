@@ -17,7 +17,9 @@ import '../../../usage/presentation/widgets/budget_editor_sheet.dart';
 import 'profile_common_widgets.dart';
 
 class ProfileAiIntelligenceSection extends StatelessWidget {
-  const ProfileAiIntelligenceSection({super.key});
+  const ProfileAiIntelligenceSection({super.key, this.isShortHeight = false});
+
+  final bool isShortHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +30,17 @@ class ProfileAiIntelligenceSection extends StatelessWidget {
             .where((provider) => !activeProviders.contains(provider))
             .toList();
 
+        final List<Widget> cards = [];
+        for (final provider in activeProviders) {
+          cards.add(_ModelIntelligenceCard(provider: provider));
+        }
+        if (inactiveProviders.isNotEmpty) {
+          cards.add(_ActivationPanel(inactiveProviders: inactiveProviders));
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               mainAxisSize: MainAxisSize.max,
@@ -43,30 +54,43 @@ class ProfileAiIntelligenceSection extends StatelessWidget {
                     arguments: const KeySetupArguments(isInitialSetup: false),
                   ),
                   style: context.theme.elevatedButtonTheme.style?.copyWith(
-                      padding: const WidgetStatePropertyAll(
-                          EdgeInsets.symmetric(
-                              horizontal: 16.0, vertical: 0.0))),
-                  icon: Icon(Icons.key_rounded,
-                      size: context.textTheme.headlineSmall?.fontSize),
-                  label: Text(context.l10n.keys,
-                      style: context.textTheme.headlineSmall
-                          ?.copyWith(color: Colors.white)),
+                    padding: const WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    ),
+                    minimumSize: const WidgetStatePropertyAll(
+                      Size(32, 32),
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.key_rounded,
+                    size: context.isTablet ? 21 : 18,
+                  ),
+                  label: Text(
+                    context.l10n.keys,
+                    style: (context.isCompact
+                            ? context.textTheme.labelMedium
+                            : context.textTheme.labelLarge)
+                        ?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            if (activeProviders.isEmpty)
+            const SizedBox(height: 16),
+            if (cards.isEmpty)
               _ActivationPanel(inactiveProviders: inactiveProviders)
-            else ...[
-              ...activeProviders.map(
-                (provider) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: _ModelIntelligenceCard(provider: provider),
-                ),
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: cards.map((card) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 14.0),
+                    child: card,
+                  );
+                }).toList(),
               ),
-              if (inactiveProviders.isNotEmpty)
-                _ActivationPanel(inactiveProviders: inactiveProviders),
-            ],
           ],
         );
       },
@@ -93,20 +117,19 @@ class _ModelIntelligenceCard extends StatelessWidget {
         final uid = authProvider.currentUser?.uid;
 
         return Container(
-          padding: EdgeInsets.symmetric(
-              horizontal: context.horizontalPadding,
-              vertical: context.verticalSpacing),
+          padding: const EdgeInsets.all(16.0),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                ProfileUiHelpers.panelColor(context),
-                ProfileUiHelpers.panelColor(context),
-                color.withValues(alpha: context.isDark ? 0.2 : 0.8),
+                context.theme.cardColor,
+                context.theme.cardColor,
+                color.withValues(alpha: context.isDark ? 0.4 : 0.8),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: context.theme.dividerTheme.color!),
             boxShadow: ProfileUiHelpers.softShadow(context),
           ),
           child: Column(
@@ -115,19 +138,29 @@ class _ModelIntelligenceCard extends StatelessWidget {
               // ── Header Row ────────────────────────────────────────────────
               Row(
                 mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  ProfileProviderLogo(provider: provider),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      provider.displayName,
-                      style: context.textTheme.headlineLarge
-                          ?.copyWith(color: color),
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ProfileProviderLogo(
+                        provider: provider,
+                        size: context.isTablet ? 44.0 : 36.0,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        provider.displayName,
+                        style: (context.isCompact
+                                ? context.textTheme.titleLarge
+                                : context.textTheme.headlineSmall)
+                            ?.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 14),
                   // Spend badge
                   _SpendBadge(
                     spent: spent,
@@ -169,7 +202,10 @@ class _ModelIntelligenceCard extends StatelessWidget {
               // that this specific provider can perform for the user.
               Text(
                 provider.capabilitiesInfo(context.l10n),
-                style: context.textTheme.bodySmall?.copyWith(
+                style: (context.isCompact
+                        ? context.textTheme.bodySmall
+                        : context.textTheme.bodyMedium)
+                    ?.copyWith(
                   height: 1.5,
                   color: color,
                   fontWeight: FontWeight.w500,
@@ -219,12 +255,17 @@ class _SpendBadge extends StatelessWidget {
             isExceeded
                 ? context.l10n.usageBudgetExceeded
                 : '$percentage% ${context.l10n.usageBudgetRemaining}',
-            style: context.textTheme.labelSmall?.copyWith(
+            style: (context.isCompact
+                    ? context.textTheme.labelMedium
+                    : context.textTheme.labelLarge)
+                ?.copyWith(
               color: isExceeded
                   ? (context.isDark
                       ? AppColors.darkError
                       : AppColors.lightError)
-                  : color,
+                  : (context.isDark)
+                      ? Colors.white
+                      : color,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -250,7 +291,9 @@ class _UsageStatsRow extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 8.0),
         child: Text(
           context.l10n.usageNoActivity,
-          style: context.textTheme.bodySmall,
+          style: context.isCompact
+              ? context.textTheme.bodyMedium
+              : context.textTheme.bodyLarge,
         ),
       );
     }
@@ -317,14 +360,16 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = context.isCompact
+        ? context.textTheme.bodyMedium
+        : context.textTheme.bodyLarge;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon,
-            size: context.textTheme.bodySmall?.fontSize,
-            color: context.textTheme.bodySmall?.color),
+        Icon(icon, size: style?.fontSize, color: style?.color),
         const SizedBox(width: 4),
-        Text(label, style: context.textTheme.bodySmall)
+        Text(label, style: style)
       ],
     );
   }
@@ -379,20 +424,27 @@ class _BudgetProgressBar extends StatelessWidget {
                     },
               child: Icon(
                 Icons.token_rounded,
-                size: context.textTheme.bodySmall!.fontSize! * 2,
+                size: context.isCompact ? 18.0 : 21.0,
                 color: context.primaryColor,
               ),
             ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: Text(context.l10n.usageEstimatedSpend,
-                    style: context.textTheme.bodyLarge),
+                child: Text(
+                  context.l10n.usageEstimatedSpend,
+                  style: context.isCompact
+                      ? context.textTheme.titleSmall
+                      : context.textTheme.titleMedium,
+                ),
               ),
             ),
             Text(
               '\$${spent.toStringAsFixed(2)} ${context.l10n.usageOf} $formattedBudget',
-              style: context.textTheme.bodySmall?.copyWith(
+              style: (context.isCompact
+                      ? context.textTheme.bodySmall
+                      : context.textTheme.bodyMedium)
+                  ?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: isExceeded
                     ? (context.isDark
@@ -449,11 +501,12 @@ class _SetBudgetCta extends StatelessWidget {
             },
       child: Container(
         padding: EdgeInsets.symmetric(
-            horizontal: context.horizontalPadding,
-            vertical: context.verticalSpacing / 2),
+          horizontal: context.isTablet ? 14 : 12,
+          vertical: context.isTablet ? 9 : 8,
+        ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(context.screenWidth * 0.02),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: color.withValues(alpha: 0.5),
           ),
@@ -461,11 +514,15 @@ class _SetBudgetCta extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add_chart_rounded, color: color, size: 16),
+            Icon(Icons.add_chart_rounded,
+                color: color, size: context.isTablet ? 18 : 16),
             const SizedBox(width: 8),
             Text(
               context.l10n.usageSetBudget,
-              style: context.textTheme.labelSmall?.copyWith(
+              style: (context.isCompact
+                      ? context.textTheme.labelSmall
+                      : context.textTheme.labelMedium)
+                  ?.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,
               ),
@@ -492,14 +549,20 @@ class _ActivationPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const ProfileIconTile(icon: Icons.key, size: 36),
+              ProfileIconTile(
+                icon: Icons.key,
+                size: context.isTablet ? 44.0 : 36.0,
+              ),
               const SizedBox(width: 14),
               Flexible(
                 child: Text(
                   (AiProviderId.values.length == inactiveProviders.length)
                       ? context.l10n.activateModels
                       : context.l10n.activateMoreModels,
-                  style: context.textTheme.titleMedium?.copyWith(
+                  style: (context.isCompact
+                          ? context.textTheme.titleLarge
+                          : context.textTheme.headlineSmall)
+                      ?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -511,7 +574,10 @@ class _ActivationPanel extends StatelessWidget {
             (AiProviderId.values.length == inactiveProviders.length)
                 ? context.l10n.activateModelsMessage
                 : context.l10n.activateMoreModelsMessage,
-            style: context.textTheme.bodySmall?.copyWith(
+            style: (context.isCompact
+                    ? context.textTheme.bodySmall
+                    : context.textTheme.bodyMedium)
+                ?.copyWith(
               height: 1.4,
             ),
           ),
@@ -553,7 +619,10 @@ class _InactiveModelChip extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.horizontalPadding / 2,
+          vertical: context.verticalSpacing / 2,
+        ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(22),
@@ -562,12 +631,18 @@ class _InactiveModelChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            FaIcon(ProfileUiHelpers.providerIcon(provider),
-                color: color, size: 16),
+            FaIcon(
+              ProfileUiHelpers.providerIcon(provider),
+              color: color,
+              size: context.isTablet ? 18 : 14,
+            ),
             const SizedBox(width: 8),
             Text(
               provider.displayName,
-              style: context.textTheme.labelMedium?.copyWith(
+              style: (context.isTablet
+                      ? context.textTheme.labelMedium
+                      : context.textTheme.labelSmall)
+                  ?.copyWith(
                 color: color,
                 fontWeight: FontWeight.w700,
               ),

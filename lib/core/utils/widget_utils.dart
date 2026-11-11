@@ -188,7 +188,8 @@ extension WidgetExtensions on BuildContext {
                   label,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: textStyle,
+                  style: textStyle?.copyWith(
+                      color: foreground, fontWeight: FontWeight.w600),
                 )
               : Row(
                   mainAxisSize: MainAxisSize.min,
@@ -351,8 +352,8 @@ extension WidgetExtensions on BuildContext {
         onPressed: onPressed,
         style: theme.elevatedButtonTheme.style?.copyWith(
           minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
-          padding:
-              const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+          padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
           shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(borderRadius: borderRadius)),
         ),
@@ -363,8 +364,8 @@ extension WidgetExtensions on BuildContext {
         onPressed: onPressed,
         style: theme.outlinedButtonTheme.style?.copyWith(
           minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
-          padding:
-              const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+          padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
           shape: WidgetStatePropertyAll(
               RoundedRectangleBorder(borderRadius: borderRadius)),
         ),

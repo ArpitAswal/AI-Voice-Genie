@@ -53,7 +53,6 @@ class AppTheme {
           color: AppColors.lightTextPrimary,
           size: context.isTablet ? 32 : 28,
         ),
-        titleTextStyle: AppTextStyles.lightTextTheme.headlineMedium,
       ),
 
       // Text Theme
@@ -281,7 +280,6 @@ class AppTheme {
           color: AppColors.darkTextPrimary,
           size: context.isTablet ? 28 : 24,
         ),
-        titleTextStyle: AppTextStyles.darkTextTheme.headlineMedium,
       ),
       textTheme: AppTextStyles.darkTextTheme,
       inputDecorationTheme: InputDecorationTheme(

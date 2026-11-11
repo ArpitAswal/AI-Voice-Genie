@@ -7,16 +7,21 @@ import '../../../../core/extensions/build_context_extensions.dart';
 
 class ProfileSectionTitle extends StatelessWidget {
   final String label;
+  final bool isShortHeight;
 
-  const ProfileSectionTitle({super.key, required this.label});
+  const ProfileSectionTitle(
+      {super.key, required this.label, this.isShortHeight = false});
 
   @override
   Widget build(BuildContext context) {
     return Text(
       label.toUpperCase(),
-      style: context.textTheme.bodyLarge?.copyWith(
+      style: (isShortHeight
+              ? context.textTheme.titleMedium
+              : context.textTheme.titleLarge)
+          ?.copyWith(
         fontWeight: FontWeight.w600,
-        letterSpacing: 4,
+        letterSpacing: 3.5,
       ),
     );
   }
@@ -24,19 +29,23 @@ class ProfileSectionTitle extends StatelessWidget {
 
 class ProfilePanel extends StatelessWidget {
   final Widget child;
+  final double? maxWidth;
+  final EdgeInsetsGeometry? padding;
 
-  const ProfilePanel({super.key, required this.child});
+  const ProfilePanel({
+    super.key,
+    required this.child,
+    this.maxWidth,
+    this.padding,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-          horizontal: context.horizontalPadding,
-          vertical: context.verticalSpacing),
+    Widget content = Container(
+      padding: padding ?? const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: ProfileUiHelpers.panelColor(context),
-        borderRadius: BorderRadius.circular(context.screenWidth * 0.05),
+        color: context.theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color:
               context.isDark ? AppColors.darkDivider : AppColors.lightDivider,
@@ -45,6 +54,14 @@ class ProfilePanel extends StatelessWidget {
       ),
       child: child,
     );
+
+    if (maxWidth != null) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth!),
+        child: content,
+      );
+    }
+    return content;
   }
 }
 
@@ -60,11 +77,9 @@ class ProfileIconTile extends StatelessWidget {
     this.size,
   });
 
-  static const double defaultSize = 36;
-
   @override
   Widget build(BuildContext context) {
-    final resolvedSize = size ?? defaultSize;
+    final resolvedSize = size ?? (context.isTablet ? 36.0 : 30.0);
 
     return Container(
       width: resolvedSize,
@@ -72,7 +87,7 @@ class ProfileIconTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: (color ?? context.theme.colorScheme.primary)
             .withValues(alpha: context.isDark ? 0.18 : 0.12),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(
         icon,
@@ -86,17 +101,19 @@ class ProfileIconTile extends StatelessWidget {
 
 class ProfileProviderLogo extends StatelessWidget {
   final AiProviderId provider;
+  final double size;
 
   const ProfileProviderLogo({
     super.key,
     required this.provider,
+    this.size = 42.0,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: context.screenWidth * 0.1,
-      height: context.screenWidth * 0.1,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         gradient: ProfileUiHelpers.providerGradient(provider),
         shape: BoxShape.circle,
@@ -105,6 +122,7 @@ class ProfileProviderLogo extends StatelessWidget {
         child: FaIcon(
           ProfileUiHelpers.providerIcon(provider),
           color: AppColors.white,
+          size: size * 0.6,
         ),
       ),
     );
@@ -144,9 +162,6 @@ abstract final class ProfileUiHelpers {
         return 0.81;
     }
   }
-
-  static Color panelColor(BuildContext context) =>
-      context.isDark ? AppColors.cardDark : AppColors.cardLight;
 
   static List<BoxShadow> softShadow(BuildContext context) => [
         BoxShadow(
@@ -195,7 +210,10 @@ class ProfileListTile extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: context.textTheme.titleMedium?.copyWith(
+                style: (context.isCompact
+                        ? context.textTheme.titleSmall
+                        : context.textTheme.titleMedium)
+                    ?.copyWith(
                   color: titleColor,
                   fontWeight: FontWeight.w600,
                 ),
@@ -204,7 +222,10 @@ class ProfileListTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle!,
-                  style: context.textTheme.bodySmall?.copyWith(
+                  style: (context.isCompact
+                          ? context.textTheme.bodySmall
+                          : context.textTheme.bodyMedium)
+                      ?.copyWith(
                     color: subtitleColor ??
                         (context.isDark
                             ? AppColors.darkWarning

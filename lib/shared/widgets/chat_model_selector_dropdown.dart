@@ -44,9 +44,8 @@ class ChatModelSelectorDropdown extends StatelessWidget {
       ),
       itemBuilder: (context) => providers.map(
         (provider) {
-          final summary = showStatusIndicators
-              ? usageProvider.summaryFor(provider)
-              : null;
+          final summary =
+              showStatusIndicators ? usageProvider.summaryFor(provider) : null;
           final isExceeded =
               showStatusIndicators && summary != null && summary.isExceeded();
           final hasKey = !showStatusIndicators ||
@@ -103,8 +102,8 @@ class _SelectorPill extends StatelessWidget {
 
     final pillWidget = Container(
       padding: EdgeInsets.symmetric(
-        horizontal: context.horizontalPadding / 2,
-        vertical: 4.0,
+        horizontal: context.isTablet ? 14.0 : 10.0,
+        vertical: context.isTablet ? 6.0 : 4.0,
       ),
       decoration: BoxDecoration(
         color: bgColor,
@@ -129,28 +128,30 @@ class _SelectorPill extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             provider?.displayName ?? l10n.selectModel,
-            style: context.textTheme.bodySmall
+            style: (context.isTablet
+                    ? context.textTheme.bodyMedium
+                    : context.textTheme.bodySmall)
                 ?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
           ),
           if (isExceeded) ...[
             const SizedBox(width: 4),
-            const Icon(
+            Icon(
               Icons.warning_amber_rounded,
-              size: 14,
+              size: context.isTablet ? 16 : 14,
               color: Colors.white,
             ),
           ] else if (!hasKey) ...[
             const SizedBox(width: 4),
-            const Icon(
+            Icon(
               Icons.vpn_key_off_rounded,
-              size: 14,
+              size: context.isTablet ? 16 : 14,
               color: Colors.white,
             ),
           ],
           const SizedBox(width: 4),
-          const Icon(
+          Icon(
             Icons.keyboard_arrow_down_rounded,
-            size: 16,
+            size: context.isTablet ? 18 : 16,
             color: Colors.white,
           ),
         ],
@@ -208,7 +209,10 @@ class _ProviderMenuItem extends StatelessWidget {
             children: [
               Text(
                 provider.displayName,
-                style: context.textTheme.bodyMedium?.copyWith(
+                style: (context.isTablet
+                        ? context.textTheme.bodyLarge
+                        : context.textTheme.bodyMedium)
+                    ?.copyWith(
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   color:
                       context.isDark ? AppColors.white : AppColors.primaryLight,
@@ -217,8 +221,10 @@ class _ProviderMenuItem extends StatelessWidget {
               if (isExceeded)
                 Text(
                   l10n.usageBudgetExceeded,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
+                  style: (context.isTablet
+                          ? context.textTheme.bodySmall
+                          : context.textTheme.labelSmall)
+                      ?.copyWith(
                     color: AppColors.lightError,
                     fontWeight: FontWeight.w600,
                   ),
@@ -226,8 +232,10 @@ class _ProviderMenuItem extends StatelessWidget {
               else if (!hasKey)
                 Text(
                   l10n.noKeyForModel,
-                  style: context.textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
+                  style: (context.isTablet
+                          ? context.textTheme.bodySmall
+                          : context.textTheme.labelSmall)
+                      ?.copyWith(
                     color: AppColors.lightWarning,
                     fontWeight: FontWeight.w600,
                   ),
@@ -240,7 +248,10 @@ class _ProviderMenuItem extends StatelessWidget {
           Icon(
             Icons.check_rounded,
             color: context.isDark ? AppColors.white : AppColors.primaryLight,
-            size: context.textTheme.bodyMedium?.fontSize,
+            size: (context.isTablet
+                    ? context.textTheme.bodyLarge
+                    : context.textTheme.bodyMedium)
+                ?.fontSize,
           )
         else if (isExceeded)
           const Icon(
