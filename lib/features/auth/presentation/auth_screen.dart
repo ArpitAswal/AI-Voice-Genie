@@ -1,18 +1,18 @@
-// import 'dart:io';
+import 'dart:io';
 
-import 'package:ai_voice_genie/core/enums/app_enums.dart';
-import 'package:ai_voice_genie/features/auth/presentation/widgets/auth_buttons.dart';
-import 'package:ai_voice_genie/shared/model/image_model.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_assets.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/enums/app_enums.dart';
 import '../../../core/extensions/build_context_extensions.dart';
 import '../../../core/localization/app_localizations.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
+import '../../../core/utils/widget_utils.dart';
+import '../../../shared/model/image_model.dart';
 import '../../../shared/widgets/image_view.dart';
 import '../../key_setup/presentation/api_key_provider.dart';
 import '../../usage/presentation/usage_provider.dart';
@@ -25,11 +25,7 @@ import 'auth_provider.dart';
 ///   - "Continue with Google" button (always visible)
 ///   - "Continue with Apple" button (iOS only — guarded by Platform.isIOS)
 ///
-/// Auth errors are observed from AuthProvider and shown via
-/// MessageUtils (context extension) after the loading overlay hides.
-///
-/// Navigation after successful auth is handled entirely by SplashScreen
-/// observing AuthState — this screen does NOT navigate anywhere.
+/// Auth errors are observed from AuthProvider and shown via MessageUtils.
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
@@ -41,7 +37,6 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   void initState() {
     super.initState();
-    // Check if session was terminated remotely or expired, and alert user upon landing on login screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final authProvider = context.read<AuthProvider>();
@@ -58,61 +53,28 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     final authProvider = context.read<AuthProvider>();
-
-    // Show loading before async gap — context is valid here
     context.showLoading(message: context.l10n.signingIn);
 
     try {
       await authProvider.signInWithGoogle();
     } finally {
-      // Hide loading — guaranteed to run even if an exception occurs
-      if (mounted) {
-        context.hideLoading();
-      }
+      if (mounted) context.hideLoading();
     }
 
-    // Show error if one was set — check mounted before using context
     if (!mounted) return;
 
-    // If sign-in succeeded, navigate to the correct screen
     if (authProvider.authState == AuthState.authenticated) {
       _navigateAfterAuth(authProvider);
       return;
     }
 
-    // Otherwise show the localized error message
     _consumeError(authProvider);
   }
 
-  // Apple Sign-In is temporarily disabled pending Apple Developer account setup
-  // Future<void> _handleAppleSignIn() async {
-  //   final authProvider = context.read<AuthProvider>();
-  //   context.showLoading(message: context.l10n.signingIn);
-  //   try {
-  //     await authProvider.signInWithApple();
-  //   } finally {
-  //     if (mounted) {
-  //       context.hideLoading();
-  //     }
-  //   }
-  //   if (!mounted) return;
-  //   if (authProvider.authState == AuthState.authenticated) {
-  //     _navigateAfterAuth(authProvider);
-  //     return;
-  //   }
-  //   _consumeError(authProvider);
-  // }
-
-  /// Check if AuthProvider has an error, show it, then clear it.
   /// Show and clear any auth error set by AuthProvider.
-  ///
-  /// Not called on cancellation — cancelled sign-in sets no error.
-  /// Check if AuthProvider has an error, show localized message, then clear it.
-  /// Not called on cancellation — cancelled sign-in sets no error.
   void _consumeError(AuthProvider authProvider) {
     final error = authProvider.authError;
     if (error != null && error.isNotEmpty) {
-      // Look up localized text for the auth error code
       context.showError(context.l10n.translate(error));
       authProvider.clearAuthError();
     }
@@ -120,173 +82,398 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // ── Navigation After Successful Auth ───────────────────────────────────────
 
-  /// Routes to the correct screen based on the user's setup flags.
-  ///
-  /// This mirrors the same logic in SplashScreen._navigateAuthenticated()
-  /// and is intentionally duplicated here — SplashScreen is no longer
-  /// mounted when LoginScreen is on screen.
-  ///
-  /// Stack is cleared so the user cannot press back into LoginScreen.
   void _navigateAfterAuth(AuthProvider authProvider) {
     final user = authProvider.currentUser;
 
     if (user == null) {
-      // Safety guard — authenticated state with no user model is unexpected
-      // Stay on LoginScreen and show localized generic error
       context.showError(context.l10n.somethingWentWrong);
       return;
-    } else {
-      if (user.keySetupDone) {
-        context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
-        context.read<UsageProvider>().loadForMonth(user.uid);
-      }
+    }
+
+    if (user.keySetupDone) {
+      context.read<ApiKeyProvider>().loadExistingKeys(user.uid);
+      context.read<UsageProvider>().loadForMonth(user.uid);
     }
 
     if (!user.onboardingDone) {
-      // Brand new user — show onboarding first
       AppRoutes.navigateAndRemoveUntil(context, AppRoutes.onboarding);
     } else if (!user.keySetupDone) {
-      // Onboarding done but no AI keys configured yet
       AppRoutes.navigateAndRemoveUntil(context, AppRoutes.keySetup);
     } else {
-      // Fully set up returning user
       AppRoutes.navigateAndRemoveUntil(context, AppRoutes.tabBar);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = context.isTablet;
-    final l10n = context.l10n;
-
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Stack(
-          children: [
-            ImageView(
-              image: ImageViewData.asset(
-                  context.isDark ? AppAssets.darkAuth : AppAssets.lightAuth),
-              height: context.screenHeight,
-              width: context.screenHeight,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.high,
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: context.screenHeight -
-                    MediaQuery.of(context).padding.top -
-                    MediaQuery.of(context).padding.bottom,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Material 3 Responsive layout switching:
+          // Side-by-side mode on Expanded viewports (>= 840dp) or landscape tablet with sufficient height
+          final isSideBySide = constraints.maxWidth >= 840.0 ||
+              (constraints.maxWidth >= 600.0 &&
+                  constraints.maxWidth > constraints.maxHeight &&
+                  constraints.maxHeight >= 500.0);
+          debugPrint(
+              "constraint width: ${constraints.maxWidth}, height: ${constraints.maxHeight}");
+
+          return isSideBySide
+              ? _buildSideBySideView(context, constraints)
+              : _buildSingleView(context, constraints);
+        },
+      ),
+    );
+  }
+
+  // ── Portrait / Compact Layout ─────────────────────────────────────────────
+
+  Widget _buildSingleView(BuildContext context, BoxConstraints constraints) {
+    debugPrint("singleview height: ${constraints.maxHeight}");
+    return Stack(
+      children: [
+        Positioned.fill(child: _AuthBackground(constraints: constraints)),
+        SafeArea(
+          top: false,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: context.viewPadding.top + 16,
+                      ),
+                      child: _AuthTopGreeting(constraints: constraints),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: context.viewPadding.bottom + 16,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 24.0),
+                            child: Center(
+                              child: _AuthActions(
+                                constraints: constraints,
+                                onGoogleSignIn: _handleGoogleSignIn,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                              height:
+                                  (constraints.maxHeight < 650) ? 8.0 : 16.0),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 24.0),
+                            child:
+                                _PrivacyPolicyFooter(constraints: constraints),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: IntrinsicHeight(
-                child: Padding(
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Landscape / Tablet Side-by-Side Layout ──────────────────────────────────
+
+  Widget _buildSideBySideView(
+      BuildContext context, BoxConstraints constraints) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _AuthBackground(constraints: constraints)),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, paneConstraints) {
+              final isShort = paneConstraints.maxHeight < 500;
+
+              return Center(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
                   padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // ── Top Spacer ───────────────────────────────────────────
-                      SizedBox(
-                          height:
-                              (context.screenHeight * (isTablet ? 0.2 : 0.1))),
+                    horizontal: context.horizontalPadding,
+                    vertical: context.verticalSpacing,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _AuthTopGreeting(constraints: paneConstraints),
+                        SizedBox(height: isShort ? 16.0 : 32.0),
+                        _AuthActions(
+                          constraints: paneConstraints,
+                          onGoogleSignIn: _handleGoogleSignIn,
+                        ),
+                        SizedBox(height: isShort ? 8.0 : 16.0),
+                        _PrivacyPolicyFooter(constraints: paneConstraints),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
 
-                      // ── Welcome Text ─────────────────────────────────────────────
-                      Text(
-                        l10n.welcome,
-                        style: context.textTheme.titleLarge?.copyWith(
-                            color: context.textTheme.bodyLarge?.color),
-                        textAlign: TextAlign.center,
-                      ),
+// =============================================================================
+// SUB-WIDGET COMPONENTS
+// =============================================================================
 
-                      // ── App Name ─────────────────────────────────────────────
-                      Text(
-                        l10n.appName,
-                        style: context.textTheme.displaySmall?.copyWith(
-                            color: context.textTheme.bodyLarge?.color),
-                        textAlign: TextAlign.center,
-                      ),
+/// Background artwork with high-quality scaling and theme support.
+class _AuthBackground extends StatelessWidget {
+  final BoxConstraints constraints;
 
-                      // ── Spacer pushes buttons to bottom ──────────────────────
-                      const Spacer(),
+  const _AuthBackground({required this.constraints});
 
-                      AuthButtons(
-                          isTablet: isTablet,
-                          onTap: _handleGoogleSignIn,
-                          label: l10n.signInWithGoogle,
-                          authType: SocialAuthProvider.google),
+  @override
+  Widget build(BuildContext context) {
+    return ImageView(
+      image: ImageViewData.asset(
+        context.isDark ? AppAssets.darkAuth : AppAssets.lightAuth,
+      ),
+      height: constraints.maxHeight,
+      width: constraints.maxWidth,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.high,
+    );
+  }
+}
 
-                      // Apple Sign-In is temporarily disabled pending Apple Developer account setup
-                      // if (Platform.isIOS) ...[
-                      //   SizedBox(height: isTablet ? 16 : 12),
-                      //   AuthButtons(
-                      //       isTablet: isTablet,
-                      //       onTap: _handleAppleSignIn,
-                      //       label: l10n.signInWithApple,
-                      //       authType: SocialAuthProvider.apple),
-                      // ],
+/// Responsive greeting and app title header using container-aware typography.
+class _AuthTopGreeting extends StatelessWidget {
+  final BoxConstraints constraints;
 
-                      SizedBox(height: isTablet ? 16 : 12),
+  const _AuthTopGreeting({required this.constraints});
 
-                      // ── Privacy note ─────────────────────────────────────────
-                      _buildPrivacyNote(context),
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          context.l10n.welcome,
+          style: context.subHeaderStyle(constraints)?.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1,
+              ),
+          textAlign: TextAlign.center,
+        ),
+        Text(
+          context.l10n.appName,
+          style: context.titleHeaderStyle(constraints)?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
 
-                      SizedBox(
-                          height:
-                              (context.screenHeight * (isTablet ? 0.2 : 0.06)))
-                    ],
+/// Authentication action buttons with guaranteed 48dp minimum touch targets.
+class _AuthActions extends StatelessWidget {
+  final BoxConstraints constraints;
+  final VoidCallback onGoogleSignIn;
+
+  const _AuthActions({
+    required this.constraints,
+    required this.onGoogleSignIn,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isTablet = constraints.maxWidth >= 600;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: isTablet ? 500 : double.infinity,
+      ),
+      child: Column(
+        children: [
+          _SocialAuthButton(
+            constraints: constraints,
+            label: context.l10n.signInWithGoogle,
+            onTap: onGoogleSignIn,
+            authType: SocialAuthProvider.google,
+            isBorder: isTablet,
+          ),
+          if (Platform.isIOS) ...[
+            const SizedBox(height: 16),
+            _SocialAuthButton(
+              constraints: constraints,
+              label: context.l10n.signInWithApple,
+              onTap: () {},
+              authType: SocialAuthProvider.apple,
+              isBorder: isTablet,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Social authentication button respecting WCAG 48×48dp touch targets.
+class _SocialAuthButton extends StatelessWidget {
+  final BoxConstraints constraints;
+  final VoidCallback onTap;
+  final SocialAuthProvider authType;
+  final String label;
+  final bool isBorder;
+
+  const _SocialAuthButton({
+    required this.constraints,
+    required this.onTap,
+    required this.authType,
+    required this.label,
+    required this.isBorder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final buttonFontStyle = context.buttonLabelStyle(constraints);
+    // Strict adherence to >= 48dp touch target across all breakpoints
+    final buttonHeight = constraints.maxWidth >= 600 ? 56.0 : 48.0;
+    final isGoogle = authType == SocialAuthProvider.google;
+
+    return context.themedElevatedButton(
+      label: label,
+      height: buttonHeight,
+      textStyle: isGoogle
+          ? buttonFontStyle
+          : buttonFontStyle?.copyWith(color: AppColors.white),
+      width: double.infinity,
+      onPressed: onTap,
+      background: isGoogle ? AppColors.white : AppColors.black,
+      foreground: isGoogle ? AppColors.black : AppColors.white,
+      imgIcon: isGoogle ? AppAssets.googleLogo : AppAssets.appleLogo,
+      imgColor: isGoogle ? null : AppColors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(26),
+        side: BorderSide(
+          color: context.isDark && isBorder
+              ? (isGoogle ? Colors.black : Colors.white)
+              : Colors.transparent,
+        ),
+      ),
+      padding: EdgeInsets.symmetric(
+        vertical: 12.0,
+        horizontal: context.horizontalPadding,
+      ),
+    );
+  }
+}
+
+/// Privacy Policy & Terms of Service footer with 48×48dp accessible tap targets.
+class _PrivacyPolicyFooter extends StatelessWidget {
+  final BoxConstraints constraints;
+
+  const _PrivacyPolicyFooter({required this.constraints});
+
+  @override
+  Widget build(BuildContext context) {
+    final legalStyle = context.legalTextStyle(constraints)?.copyWith(
+          height: 1.5,
+          letterSpacing: 0.2,
+          fontWeight: FontWeight.w400,
+        );
+    final linkStyle = legalStyle?.copyWith(
+      color: context.colorScheme.primary,
+      fontWeight: FontWeight.w600,
+      decoration: TextDecoration.underline,
+      decorationColor: context.colorScheme.primary,
+    );
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: constraints.maxWidth >= 600 ? 460 : double.infinity,
+        ),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 2.0,
+          runSpacing: 0.0,
+          runAlignment: WrapAlignment.center,
+          children: [
+            Text(
+              context.l10n.privacyNotePrefix.trim(),
+              style: legalStyle,
+              textAlign: TextAlign.center,
+            ),
+            const Text(" "),
+            Semantics(
+              button: true,
+              label: context.l10n.termsOfService,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => AppRoutes.navigateTo(
+                  context,
+                  AppRoutes.terms,
+                  arguments: {
+                    'title': context.l10n.termsOfService,
+                    'mdFileName': 'legal/terms_of_service.md',
+                  },
+                ),
+                child: Center(
+                  widthFactor: 1.0,
+                  child: Text(
+                    context.l10n.termsOfService,
+                    style: linkStyle,
+                  ),
+                ),
+              ),
+            ),
+            const Text(" "),
+            Text(
+              context.l10n.privacyNoteAnd.trim(),
+              style: legalStyle,
+            ),
+            const Text(" "),
+            Semantics(
+              button: true,
+              label: context.l10n.privacyPolicy,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => AppRoutes.navigateTo(
+                  context,
+                  AppRoutes.privacy,
+                  arguments: {
+                    'title': context.l10n.privacyPolicy,
+                    'mdFileName': 'legal/privacy_policy.md',
+                  },
+                ),
+                child: Center(
+                  widthFactor: 1.0,
+                  child: Text(
+                    context.l10n.privacyPolicy,
+                    style: linkStyle,
                   ),
                 ),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ── Privacy Note with Clickable Legal Links ────────────────────────────────
-  Widget _buildPrivacyNote(BuildContext context) {
-    final l10n = context.l10n;
-    final linkStyle = context.textTheme.bodySmall?.copyWith(
-      color: context.primaryColor,
-      fontWeight: FontWeight.w600,
-    );
-    final normalStyle = context.textTheme.bodySmall;
-
-    return RichText(
-      textAlign: TextAlign.center,
-      text: TextSpan(
-        style: normalStyle,
-        children: [
-          TextSpan(text: l10n.privacyNotePrefix),
-          TextSpan(
-            text: l10n.termsOfService,
-            style: linkStyle,
-            recognizer: TapGestureRecognizer()
-              ..onTap = () => AppRoutes.navigateTo(
-                    context,
-                    AppRoutes.terms,
-                    arguments: {
-                      'title': l10n.termsOfService,
-                      'mdFileName': 'legal/terms_of_service.md',
-                    },
-                  ),
-          ),
-          TextSpan(text: l10n.privacyNoteAnd),
-          TextSpan(
-            text: l10n.privacyPolicy,
-            style: linkStyle,
-            recognizer: TapGestureRecognizer()
-              ..onTap = () => AppRoutes.navigateTo(
-                    context,
-                    AppRoutes.privacy,
-                    arguments: {
-                      'title': l10n.privacyPolicy,
-                      'mdFileName': 'legal/privacy_policy.md',
-                    },
-                  ),
-          ),
-          TextSpan(text: l10n.privacyNoteSuffix),
-        ],
       ),
     );
   }

@@ -143,8 +143,8 @@ class UsageFirestoreDao {
     String? docId,
     String? keyHint,
   }) async {
-    final targetDocId = docId ??
-        (keyHint != null ? '${providerId}_$keyHint' : providerId);
+    final targetDocId =
+        docId ?? (keyHint != null ? '${providerId}_$keyHint' : providerId);
     final docRef =
         _firestore.doc(FirebaseCollections.usageSummaryDoc(uid, targetDocId));
     var snapshot = await docRef.get();
@@ -161,8 +161,8 @@ class UsageFirestoreDao {
   Future<List<UsageSummaryDto>> getAllSummariesCollection({
     required String uid,
   }) async {
-    final colRef =
-        _firestore.collection(FirebaseCollections.usageSummariesCollection(uid));
+    final colRef = _firestore
+        .collection(FirebaseCollections.usageSummariesCollection(uid));
     final snapshot = await colRef.get();
     return snapshot.docs
         .where((doc) => doc.data().isNotEmpty)
@@ -174,8 +174,8 @@ class UsageFirestoreDao {
   Stream<List<UsageSummaryDto>> watchSummariesCollection({
     required String uid,
   }) {
-    final colRef =
-        _firestore.collection(FirebaseCollections.usageSummariesCollection(uid));
+    final colRef = _firestore
+        .collection(FirebaseCollections.usageSummariesCollection(uid));
     return colRef.snapshots().map((snapshot) {
       return snapshot.docs
           .where((doc) => doc.data().isNotEmpty)

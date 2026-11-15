@@ -1,0 +1,4 @@
+name = "tdd"
+description = "Runs the strict RED → GREEN → REFACTOR test-driven development cycle: writes a single failing test first, confirms it fails, writes the minimum production code to pass it, then refactors for immutability and clarity while keeping all tests green."
+instructions_file = "personas/tdd-guide.md"
+workflow_file = ".agent/workflows/tdd.md"

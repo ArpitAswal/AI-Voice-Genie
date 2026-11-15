@@ -22,6 +22,18 @@ extension AiProviderColorExtension on AiProviderId {
             : AppColors.claudeBrand;
     }
   }
+
+  /// Returns the brand gradient for this provider, adapting to the current theme brightness.
+  LinearGradient brandGradient(BuildContext context) {
+    switch (this) {
+      case AiProviderId.openAi:
+        return AppColors.openAIGradient;
+      case AiProviderId.gemini:
+        return AppColors.geminiGradient;
+      case AiProviderId.claude:
+        return AppColors.claudeGradient;
+    }
+  }
 }
 
 extension AiProviderModelInfoExtension on AiProviderId {
@@ -39,6 +51,34 @@ extension AiProviderModelInfoExtension on AiProviderId {
     }
   }
 
+  /// Home Screen (Discovery & Superpower):
+  /// Returns a concise, punchy superpower badge text for the provider.
+  String superpower(AppLocalizations l10n) {
+    switch (this) {
+      case AiProviderId.openAi:
+        return l10n.openAiSuperpower;
+      case AiProviderId.gemini:
+        return l10n.geminiSuperpower;
+      case AiProviderId.claude:
+        return l10n.claudeSuperpower;
+    }
+  }
+
+  /// Home Screen (Core Highlights):
+  /// Returns discrete, localized bullet points for the provider's showcase card.
+  List<String> introBulletPoints(AppLocalizations l10n) {
+    final raw = switch (this) {
+      AiProviderId.openAi => l10n.openAiIntroBullets,
+      AiProviderId.gemini => l10n.geminiIntroBullets,
+      AiProviderId.claude => l10n.claudeIntroBullets,
+    };
+    return raw
+        .split('\n')
+        .map((s) => s.replaceFirst(RegExp(r'^[•\-*]\s*'), '').trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+  }
+
   /// Profile Tab (AI Intelligence Section):
   /// Returns clean bullet points highlighting active user-facing capabilities
   /// (e.g. Image Generation, Voice Transcription, Code, Vision).
@@ -52,24 +92,4 @@ extension AiProviderModelInfoExtension on AiProviderId {
         return l10n.claudeCapabilitiesInfo;
     }
   }
-
-  /// Key Setup Screen:
-  /// Returns a transparent model-to-purpose mapping so users understand
-  /// exactly which underlying model is invoked for chat, images, and audio.
-  String modelPurposes(AppLocalizations l10n) {
-    switch (this) {
-      case AiProviderId.openAi:
-        return l10n.openAiModelPurposes;
-      case AiProviderId.gemini:
-        return l10n.geminiModelPurposes;
-      case AiProviderId.claude:
-        return l10n.claudeModelPurposes;
-    }
-  }
-
-  /// Alias for [modelPurposes] to maintain backward compatibility across existing screens.
-  String technicalSpecs(AppLocalizations l10n) => modelPurposes(l10n);
-
-  /// Alias for [capabilitiesInfo] to maintain backward compatibility across existing screens.
-  String pricingAndEfficiency(AppLocalizations l10n) => capabilitiesInfo(l10n);
 }

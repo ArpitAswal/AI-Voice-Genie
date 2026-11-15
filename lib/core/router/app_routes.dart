@@ -10,6 +10,7 @@ import '../../features/chat/presentation/chat_detail_screen.dart';
 import '../../features/home/presentation/tab_bar_screen.dart';
 import '../../features/key_setup/presentation/key_setup_screen.dart';
 import '../enums/app_enums.dart';
+import '../services/analytics_service.dart';
 
 /// Centralized route management for AI Voice Genie.
 ///
@@ -177,6 +178,7 @@ class AppRoutes {
   /// All routes are matched here. Unknown routes fall through to ExceptionScreen.
   static Route<dynamic> generateRoute(RouteSettings settings) {
     debugPrint('🔀 Route: ${settings.name}');
+    _trackScreenView(settings.name);
 
     final arguments = settings.arguments;
 
@@ -229,10 +231,13 @@ class AppRoutes {
 
       // ── Chat ───────────────────────────────────────────────────────────────
       case chat:
-        // Extract optional ChatArguments to honour voice auto-start from Home.
+        // Extract optional ChatArguments to honour voice auto-start or initial intent action.
         final chatArgs = arguments is ChatArguments ? arguments : null;
         return _buildRoute(
-          ChatScreen(startMode: chatArgs?.startMode ?? ChatStartMode.normal),
+          ChatScreen(
+            startMode: chatArgs?.startMode ?? ChatStartMode.normal,
+            initialAction: chatArgs?.initialAction ?? ChatInitialAction.none,
+          ),
           settings,
           TransitionType.fade,
         );
@@ -279,6 +284,31 @@ class AppRoutes {
       default:
         return _buildErrorRoute(settings);
     }
+  }
+
+  /// Dispatches human-readable screen view events to Firebase Analytics.
+  static void _trackScreenView(String? routeName) {
+    if (routeName == null) return;
+
+    final (screenName, screenClass) = switch (routeName) {
+      splash => ('Splash Screen', 'SplashScreen'),
+      login => ('Authentication Screen', 'AuthScreen'),
+      onboarding => ('Onboarding Screen', 'OnboardingScreen'),
+      keySetup => ('BYOK Key Management Screen', 'KeySetupScreen'),
+      tabBar => ('Home Screen', 'TabBarScreen'),
+      chat => ('New Chat Screen', 'ChatScreen'),
+      chatDetail => ('Chat Detail Screen', 'ChatDetailScreen'),
+      profileEdit => ('Edit Profile Screen', 'EditProfileScreen'),
+      about => ('About App Screen', 'AboutScreen'),
+      privacy => ('Privacy Policy Screen', 'LegalScreen'),
+      terms => ('Terms of Service Screen', 'LegalScreen'),
+      _ => (routeName, 'UnknownRoute'),
+    };
+
+    AnalyticsService.instance.logScreenView(
+      screenName: screenName,
+      screenClass: screenClass,
+    );
   }
 
   // ── Private Route Builders ─────────────────────────────────────────────────
@@ -445,7 +475,7 @@ typedef ApiKeyManagementArguments = KeySetupArguments;
 
 /// Arguments for [ChatScreen] — controls whether the screen opens in
 /// voice-dictation mode (mic starts automatically) or in the default
-/// text-compose mode.
+/// text-compose mode, and optional initial exploration intent action.
 class ChatArguments extends RouteArguments {
   /// Determines how the chat screen initializes after navigation.
   ///
@@ -455,5 +485,12 @@ class ChatArguments extends RouteArguments {
   /// [ChatStartMode.normal] — default; user types manually.
   final ChatStartMode startMode;
 
-  const ChatArguments({this.startMode = ChatStartMode.normal});
+  /// Optional action payload triggered automatically upon screen open
+  /// (e.g. summarizing a PDF, creating an image, or focusing for a question).
+  final ChatInitialAction initialAction;
+
+  const ChatArguments({
+    this.startMode = ChatStartMode.normal,
+    this.initialAction = ChatInitialAction.none,
+  });
 }

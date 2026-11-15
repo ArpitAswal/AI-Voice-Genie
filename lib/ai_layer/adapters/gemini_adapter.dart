@@ -91,8 +91,7 @@ class GeminiAdapter extends AiProviderAdapter {
         },
       };
 
-      final bool isLightweightInternal =
-          request.disableSearchGrounding &&
+      final bool isLightweightInternal = request.disableSearchGrounding &&
           request.responseLength == ResponseLength.short;
 
       final primary = isLightweightInternal

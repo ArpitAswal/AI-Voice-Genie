@@ -26,7 +26,7 @@ class AppConstants {
   static const String copyrightOwner = 'AI Voice Genie';
 
   // Fill these before publishing the app on Google Play.
-  static const String supportEmail = 'arpitaswal995@gmail.com';
+  static const String supportEmail = 'support@aivoicegenie.com';
   static const String helpCenterUrl = '';
 
   // ── Legal Versioning ──────────────────────────────────────────────────────

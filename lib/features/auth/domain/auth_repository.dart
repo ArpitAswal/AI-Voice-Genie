@@ -106,6 +106,9 @@ class AuthErrorCodes {
   /// Generic sign-in failure
   static const String signInFailed = 'sign_in_failed';
 
+  /// Sign-in provider is misconfigured (e.g. SHA-1 missing in Firebase, ApiException 10/12500)
+  static const String configurationError = 'auth_configuration_error';
+
   /// Firebase credential was invalid or expired
   static const String invalidCredential = 'invalid_credential';
 

@@ -1,0 +1,7 @@
+Skills (skills/) — "How do we do this specific process?"
+
+Purpose: Reusable, step-by-step procedures.
+
+What goes inside: Workflows that never change. tdd-workflow/SKILL.md holds the exact steps for Red-Green-Refactor testing.
+
+When to make a new one: When you find yourself repeating a multi-step process manually, like setting up a new Firebase environment.

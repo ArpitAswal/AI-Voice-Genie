@@ -385,8 +385,7 @@ Title:''';
         final cleaned = text
             .replaceAll(RegExp(r'^["\s]+|["\s.]+$'), '')
             .replaceAll(
-                RegExp(r'^(Title|Subject|Topic):\s*', caseSensitive: false),
-                '')
+                RegExp(r'^(Title|Subject|Topic):\s*', caseSensitive: false), '')
             .trim();
         if (cleaned.isNotEmpty) {
           return cleaned.length > 50
@@ -541,7 +540,8 @@ Title:''';
 
       // Derive non-secret key fingerprint: last 6 characters of the raw API key.
       // 6 chars of a 39–51 char key cannot be reversed or used to reconstruct the original.
-      final keyHint = apiKey.length >= 6 ? apiKey.substring(apiKey.length - 6) : null;
+      final keyHint =
+          apiKey.length >= 6 ? apiKey.substring(apiKey.length - 6) : null;
 
       // Attachment count determination based on capability requested
       final imageCount = (capability == AiCapability.imageGeneration)

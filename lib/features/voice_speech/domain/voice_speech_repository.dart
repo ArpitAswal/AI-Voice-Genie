@@ -62,10 +62,10 @@ abstract class VoiceRepository {
   /// If TTS is already speaking, stops current playback first.
   /// [onComplete] — called when TTS finishes naturally.
   Future<void> speak(
-      String text, {
-        double speed = 1.0,
-        void Function()? onComplete,
-      });
+    String text, {
+    double speed = 1.0,
+    void Function()? onComplete,
+  });
 
   /// Stop TTS playback immediately.
   Future<void> stopSpeaking();

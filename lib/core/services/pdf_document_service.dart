@@ -24,7 +24,8 @@ class PdfDocumentService {
   }) async {
     pw.ThemeData? theme;
     try {
-      final fontData = await rootBundle.load('assets/fonts/Poppins-Regular.ttf');
+      final fontData =
+          await rootBundle.load('assets/fonts/Poppins-Regular.ttf');
       final boldData = await rootBundle.load('assets/fonts/Poppins-Bold.ttf');
       final regularFont = pw.Font.ttf(fontData);
       final boldFont = pw.Font.ttf(boldData);
@@ -407,9 +408,11 @@ class PdfDocumentService {
   static String sanitizeTypography(String raw) {
     return raw
         // Curly single quotes, apostrophes, primes
-        .replaceAll(RegExp(r'[\u2018\u2019\u201A\u201B\u2032\u2035\u00B4]'), "'")
+        .replaceAll(
+            RegExp(r'[\u2018\u2019\u201A\u201B\u2032\u2035\u00B4]'), "'")
         // Curly double quotes, low-9 quotes, guillemets, double primes
-        .replaceAll(RegExp(r'[\u201C\u201D\u201E\u201F\u00AB\u00BB\u2033]'), '"')
+        .replaceAll(
+            RegExp(r'[\u201C\u201D\u201E\u201F\u00AB\u00BB\u2033]'), '"')
         // Em dash, horizontal bar -> standard spaced dash
         .replaceAll(RegExp(r'[\u2014\u2015]'), ' - ')
         // En dash, figure dash, minus sign -> standard hyphen
@@ -437,16 +440,15 @@ class PdfDocumentService {
         .replaceAllMapped(RegExp(r'`(.*?)`'), (m) => m[1] ?? '')
         // Clean markdown links [Title](url) -> if url is long/redirect, show only Title
         .replaceAllMapped(RegExp(r'\[([^\]]+)\]\(([^)]+)\)'), (m) {
-          final label = m[1] ?? '';
-          final url = m[2] ?? '';
-          if (url.contains('grounding-api-redirect') ||
-              url.contains('vertexaisearch') ||
-              url.length > 80) {
-            return label;
-          }
-          return '$label ($url)';
-        })
-        .trim();
+      final label = m[1] ?? '';
+      final url = m[2] ?? '';
+      if (url.contains('grounding-api-redirect') ||
+          url.contains('vertexaisearch') ||
+          url.length > 80) {
+        return label;
+      }
+      return '$label ($url)';
+    }).trim();
   }
 
   /// Extracts a human-friendly document title from the markdown text or user prompt.

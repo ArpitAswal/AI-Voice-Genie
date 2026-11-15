@@ -1,0 +1,4 @@
+version: 1
+name: tdd-workflow
+display_name: TDD Workflow
+description: Guides RED-GREEN-REFACTOR implementation.

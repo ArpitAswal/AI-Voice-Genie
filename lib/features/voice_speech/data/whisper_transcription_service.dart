@@ -42,8 +42,7 @@ class WhisperTranscriptionService {
     required String apiKey,
     String language = 'en',
   }) async {
-    debugPrint(
-        '🎙️ Whisper: uploading ${audioFile.path.split('/').last} '
+    debugPrint('🎙️ Whisper: uploading ${audioFile.path.split('/').last} '
         '(${(audioFile.lengthSync() / 1024).toStringAsFixed(1)} KB)');
 
     final request = http.MultipartRequest(
@@ -65,23 +64,20 @@ class WhisperTranscriptionService {
       audioFile.path,
     ));
 
-    final streamedResponse = await _client
-        .send(request)
-        .timeout(AppConstants.aiRequestTimeout);
+    final streamedResponse =
+        await _client.send(request).timeout(AppConstants.aiRequestTimeout);
 
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final text = data['text'] as String? ?? '';
-      debugPrint('🎙️ Whisper: transcript="${text.length > 80
-          ? "${text.substring(0, 80)}…"
-          : text}"');
+      debugPrint(
+          '🎙️ Whisper: transcript="${text.length > 80 ? "${text.substring(0, 80)}…" : text}"');
       return text;
     }
 
-    debugPrint(
-        '⚠️ Whisper error ${response.statusCode}: ${response.body}');
+    debugPrint('⚠️ Whisper error ${response.statusCode}: ${response.body}');
     throw Exception(
         'Whisper transcription failed (HTTP ${response.statusCode})');
   }

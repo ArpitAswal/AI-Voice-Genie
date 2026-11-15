@@ -67,7 +67,8 @@ class UsageRepositoryImpl implements UsageRepository {
       );
       return dto?.toDomain();
     } catch (e) {
-      debugPrint('⚠️ UsageRepositoryImpl.getSummary failed for [${provider.id}]: $e');
+      debugPrint(
+          '⚠️ UsageRepositoryImpl.getSummary failed for [${provider.id}]: $e');
       return null;
     }
   }

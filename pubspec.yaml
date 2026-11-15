@@ -73,8 +73,6 @@ dependencies:
   file_picker: ^8.1.2
   # Image Picker: Camera and gallery photo picker for multimodal vision prompts & avatars
   image_picker: ^1.1.2
-  # Flutter Image Compress: Byte compression optimizing avatar uploads & vision payloads
-  flutter_image_compress: ^2.4.0
 
   # ── Document Compilation & Viewing ──────────────────────────────────────────
   # PDF: Client-side pure-Dart binary PDF generation and layout compilation from markdown

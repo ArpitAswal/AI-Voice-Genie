@@ -1,0 +1,4 @@
+name = "adaptive-ui"
+description = "Creates or refactors Flutter screens into responsive layouts across Mobile (Compact), Tablet Portrait (Medium), and Tablet Landscape/Desktop (Expanded) without touching business logic, ChangeNotifiers, or navigation."
+instructions_file = "personas/flutter-adaptive-screen.md"
+workflow_file = ".agent/workflows/adaptive-ui.md"

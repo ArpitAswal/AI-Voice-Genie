@@ -79,7 +79,7 @@ class _LanguagePopupButton extends StatelessWidget {
         : context.l10n.languageHi;
 
     return PopupMenuButton<Locale>(
-      color: ProfileUiHelpers.panelColor(context),
+      color: context.theme.cardColor,
       tooltip: context.l10n.language,
       onSelected: (locale) => context.read<LocaleProvider>().setLocale(locale),
       elevation: 8,
@@ -99,7 +99,10 @@ class _LanguagePopupButton extends StatelessWidget {
                   locale.languageCode == 'en'
                       ? context.l10n.languageEn
                       : context.l10n.languageHi,
-                  style: context.textTheme.headlineSmall?.copyWith(
+                  style: (context.isTablet
+                          ? context.textTheme.labelLarge
+                          : context.textTheme.labelMedium)
+                      ?.copyWith(
                     fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                     color: isActive
                         ? context.primaryColor
@@ -122,13 +125,17 @@ class _LanguagePopupButton extends StatelessWidget {
           children: [
             Text(
               currentLabel,
-              style: context.textTheme.bodyMedium?.copyWith(
+              style: (context.isTablet
+                      ? context.textTheme.labelLarge
+                      : context.textTheme.labelMedium)
+                  ?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(width: 8),
             Icon(
               Icons.expand_more_rounded,
+              size: context.isTablet ? 21.0 : 18.0,
               color: context.textTheme.bodySmall?.color,
             ),
           ],
@@ -152,18 +159,24 @@ class _ThemeOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(20),
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: EdgeInsets.symmetric(
+          horizontal: context.isTablet ? 14 : 10,
+          vertical: context.isTablet ? 7 : 6,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? context.primaryColor : AppColors.transparent,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
-          style: context.textTheme.labelSmall?.copyWith(
+          style: (context.isTablet
+                  ? context.textTheme.labelLarge
+                  : context.textTheme.labelMedium)
+              ?.copyWith(
             color: isSelected
                 ? AppColors.white
                 : (context.isDark

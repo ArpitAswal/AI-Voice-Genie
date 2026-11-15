@@ -1,0 +1,4 @@
+version: 1
+name: context-and-decisions
+display_name: Context & Decisions
+description: Tracks architectural decision records and project state.

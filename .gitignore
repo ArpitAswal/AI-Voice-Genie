@@ -25,15 +25,23 @@ firebase.json
 **/google_maps_keys.json
 **/maps_keys.json
 
-# Local project operating docs stay off the public repository.
-*.md
+# Whitelisted project documentation
 !/README.md
 !/CHANGELOG.md
-!/agentPlan/app_flow.md
-!agentPlan/app_summary.md
-!agentPlan/architecture.md
-!agentPlan/mvvm_architecture.md
+!/AGENTS.md
+!/COMMANDS_GUIDE.md
+!/context.md
+!/pubspec.yaml
+!/analysis_options.yaml
 !assets/legal/*.md
+
+# Whitelisted AI agent workflows, personas, rules, and skills
+!.agent/**
+!.codex/**
+!.gemini/**
+!personas/**
+!rules/**
+!skills/**
 
 # ===============================
 # 🧱 Flutter / Dart

@@ -86,9 +86,9 @@ class ModelSelector {
   /// Used in capability gap messages:
   /// "image generation is supported by: ChatGPT, Gemini"
   static List<String> providerNamesFor(
-      AiCapability capability, {
-        ProviderRegistry? registry,
-      }) {
+    AiCapability capability, {
+    ProviderRegistry? registry,
+  }) {
     final reg = registry ?? ProviderRegistry.instance;
     return reg
         .providersFor(capability)

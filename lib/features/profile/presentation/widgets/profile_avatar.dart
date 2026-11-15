@@ -15,7 +15,7 @@ class ProfileAvatar extends StatefulWidget {
   final Function(File)? onImagePicked;
   final String? displayName;
   final String? photoUrl;
-  final double? size;
+  final double size;
   final bool? canUpdate;
 
   const ProfileAvatar(
@@ -24,7 +24,7 @@ class ProfileAvatar extends StatefulWidget {
       this.onImagePicked,
       this.displayName,
       this.photoUrl,
-      this.size,
+      required this.size,
       this.canUpdate});
 
   @override
@@ -118,83 +118,84 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     final displayName =
         widget.displayName ?? user?.displayName ?? context.l10n.user;
     final photoUrl = widget.photoUrl ?? user?.photoUrl ?? '';
-    final size = widget.size ?? (context.isTablet ? 140.0 : 116.0);
 
     return Center(
-      child: Stack(
-        children: [
-          Container(
-            width: size,
-            height: size,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  context.isDark
-                      ? AppColors.primaryLight
-                      : AppColors.primaryDark,
-                  AppColors.tealAccent,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: context.primaryColor.withValues(alpha: 0.28),
-                  blurRadius: 28,
-                  offset: const Offset(0, 10),
-                ),
+        child: Stack(
+      children: [
+        Container(
+          width: widget.size,
+          height: widget.size,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                context.isDark ? AppColors.primaryLight : AppColors.primaryDark,
+                AppColors.tealAccent,
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: CircleAvatar(
-              backgroundColor:
-                  context.isDark ? AppColors.cardDark : AppColors.cardLight,
-              child: ClipOval(
-                child: widget.pickedFile != null
-                    ? Image.file(
-                        widget.pickedFile!,
-                        width: size,
-                        height: size,
-                        fit: BoxFit.cover,
-                      )
-                    : _buildAvatarImage(photoUrl, displayName, size),
+            boxShadow: [
+              BoxShadow(
+                color: context.primaryColor.withValues(alpha: 0.24),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: CircleAvatar(
+            backgroundColor:
+                context.isDark ? AppColors.cardDark : AppColors.cardLight,
+            child: ClipOval(
+              child: widget.pickedFile != null
+                  ? Image.file(
+                      widget.pickedFile!,
+                      width: widget.size,
+                      height: widget.size,
+                      fit: BoxFit.cover,
+                    )
+                  : _buildAvatarImage(photoUrl, displayName, widget.size),
+            ),
+          ),
+        ),
+        if (widget.canUpdate == true)
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: _showPickerOptions,
+              child: Container(
+                width: (widget.size * 0.30).clamp(24.0, 30.0),
+                height: (widget.size * 0.30).clamp(24.0, 30.0),
+                decoration: BoxDecoration(
+                  color: context.primaryColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: context.theme.scaffoldBackgroundColor,
+                    width: 2.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.camera_alt_rounded,
+                    color: Colors.white,
+                    size: ((widget.size * 0.30).clamp(24.0, 30.0) * 0.52)
+                        .clamp(12.0, 16.0),
+                  ),
+                ),
               ),
             ),
           ),
-          if (widget.canUpdate == true)
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: _showPickerOptions,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: context.isDark
-                        ? context.theme.colorScheme.onPrimary
-                        : context.theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: context.isDark
-                          ? context.theme.colorScheme.primary
-                          : context.theme.colorScheme.onPrimary,
-                      width: 3,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.camera_alt,
-                    color: context.isDark
-                        ? context.theme.colorScheme.primary
-                        : context.theme.colorScheme.onPrimary,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+      ],
+    ));
   }
 
   Widget _buildAvatarImage(String photoUrl, String displayName, double size) {

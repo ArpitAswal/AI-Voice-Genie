@@ -1,0 +1,4 @@
+version: 1
+name: verification-loop
+display_name: Verification Loop
+description: Runs static analysis, formatting, and tests before task completion.

@@ -38,6 +38,7 @@ class BudgetEditorSheet extends StatefulWidget {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       showDragHandle: false,
+      constraints: const BoxConstraints(maxWidth: 560.0),
       builder: (_) => BudgetEditorSheet(
         provider: provider,
         existingBudget: existingBudget,
@@ -161,79 +162,137 @@ class _BudgetEditorSheetState extends State<BudgetEditorSheet> {
     final hasExisting = widget.existingBudget != null;
 
     return Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: SafeArea(
-          bottom: false,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.cardDark : AppColors.cardLight,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(32)),
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                                hasExisting
-                                    ? context.l10n.editTotalBudget
-                                    : context.l10n.setTotalBudget,
-                                style: context.textTheme.titleLarge),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$providerName • ${context.l10n.totalSpendingLimit}',
-                              style: context.textTheme.bodySmall?.copyWith(
-                                color: context.isDark
-                                    ? AppColors.darkTextPrimary
-                                        .withValues(alpha: 0.6)
-                                    : AppColors.lightTextPrimary
-                                        .withValues(alpha: 0.55),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                  hasExisting
+                                      ? context.l10n.editTotalBudget
+                                      : context.l10n.setTotalBudget,
+                                  style: context.textTheme.titleLarge),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$providerName • ${context.l10n.totalSpendingLimit}',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: context.isDark
+                                      ? AppColors.darkTextPrimary
+                                          .withValues(alpha: 0.6)
+                                      : AppColors.lightTextPrimary
+                                          .withValues(alpha: 0.55),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icon(
+                            Icons.close,
+                            color: context.isDark
+                                ? AppColors.darkTextPrimary
+                                    .withValues(alpha: 0.6)
+                                : AppColors.lightTextPrimary
+                                    .withValues(alpha: 0.55),
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Budget input field
+                    Text(
+                      context.l10n.totalSpendingLimit,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.isDark
+                            ? AppColors.darkTextPrimary.withValues(alpha: 0.6)
+                            : AppColors.lightTextPrimary
+                                .withValues(alpha: 0.55),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Form(
+                      key: _formKey,
+                      child: TextFormField(
+                        controller: _controller,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d+\.?\d{0,2}')),
+                        ],
+                        decoration: InputDecoration(
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.only(left: 16, right: 8),
+                            child: Text(
+                              '\$',
+                              style: context.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: context.primaryColor,
                               ),
                             ),
-                          ],
+                          ),
+                          prefixIconConstraints:
+                              const BoxConstraints(minWidth: 0),
+                          hintText: '10.00',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 18,
+                          ),
                         ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return context.l10n.enterBudgetAmount;
+                          }
+                          final parsed = double.tryParse(v.trim());
+                          if (parsed == null || parsed <= 0) {
+                            return context.l10n.enterValidAmount;
+                          }
+                          return null;
+                        },
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(
-                          Icons.close,
-                          color: context.isDark
-                              ? AppColors.darkTextPrimary.withValues(alpha: 0.6)
-                              : AppColors.lightTextPrimary
-                                  .withValues(alpha: 0.55),
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Budget input field
-                  Text(
-                    context.l10n.totalSpendingLimit,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.isDark
-                          ? AppColors.darkTextPrimary.withValues(alpha: 0.6)
-                          : AppColors.lightTextPrimary.withValues(alpha: 0.55),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Form(
-                    key: _formKey,
-                    child: TextFormField(
-                      controller: _controller,
+                    const SizedBox(height: 16),
+                    Text(
+                      context.l10n.alreadyUsedCredits,
+                      style: context.textTheme.bodySmall?.copyWith(
+                        color: context.isDark
+                            ? AppColors.darkTextPrimary.withValues(alpha: 0.6)
+                            : AppColors.lightTextPrimary
+                                .withValues(alpha: 0.55),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _usedController,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
@@ -253,7 +312,7 @@ class _BudgetEditorSheetState extends State<BudgetEditorSheet> {
                         ),
                         prefixIconConstraints:
                             const BoxConstraints(minWidth: 0),
-                        hintText: '10.00',
+                        hintText: context.l10n.enterAlreadyUsedAmount,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -263,172 +322,124 @@ class _BudgetEditorSheetState extends State<BudgetEditorSheet> {
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return context.l10n.enterBudgetAmount;
-                        }
-                        final parsed = double.tryParse(v.trim());
-                        if (parsed == null || parsed <= 0) {
-                          return context.l10n.enterValidAmount;
+                        if (v != null && v.trim().isNotEmpty) {
+                          final parsed = double.tryParse(v.trim());
+                          if (parsed == null || parsed < 0) {
+                            return context.l10n.enterValidAmount;
+                          }
                         }
                         return null;
                       },
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    context.l10n.alreadyUsedCredits,
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.isDark
-                          ? AppColors.darkTextPrimary.withValues(alpha: 0.6)
-                          : AppColors.lightTextPrimary.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _usedController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d+\.?\d{0,2}')),
-                    ],
-                    decoration: InputDecoration(
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 8),
-                        child: Text(
-                          '\$',
-                          style: context.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: context.primaryColor,
-                          ),
-                        ),
-                      ),
-                      prefixIconConstraints: const BoxConstraints(minWidth: 0),
-                      hintText: context.l10n.enterAlreadyUsedAmount,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 18,
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v != null && v.trim().isNotEmpty) {
-                        final parsed = double.tryParse(v.trim());
-                        if (parsed == null || parsed < 0) {
-                          return context.l10n.enterValidAmount;
-                        }
-                      }
-                      return null;
-                    },
-                  ),
 
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: context.isDark
-                          ? AppColors.darkError.withValues(alpha: 0.1)
-                          : AppColors.lightError.withValues(alpha: 0.1),
-                      border: Border.all(
-                          color: (context.isDark
-                                  ? AppColors.darkError
-                                  : AppColors.lightError)
-                              .withValues(alpha: 0.5)),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline,
-                            color: context.isDark
-                                ? AppColors.darkError
-                                : AppColors.lightError,
-                            size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            context.l10n.budgetCalculationWarning,
-                            style: context.textTheme.bodySmall?.copyWith(
-                              color: context.isDark
-                                  ? AppColors.darkTextPrimary
-                                      .withValues(alpha: 0.8)
-                                  : AppColors.lightTextPrimary
-                                      .withValues(alpha: 0.9),
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Action buttons
-                  ValueListenableBuilder<bool>(
-                    valueListenable: _isSaving,
-                    builder: (context, isSaving, _) {
-                      return Column(
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: context.isDark
+                            ? AppColors.darkError.withValues(alpha: 0.1)
+                            : AppColors.lightError.withValues(alpha: 0.1),
+                        border: Border.all(
+                            color: (context.isDark
+                                    ? AppColors.darkError
+                                    : AppColors.lightError)
+                                .withValues(alpha: 0.5)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(
-                            width: double.infinity,
-                            height: 52,
-                            child: ElevatedButton(
-                              onPressed: isSaving ? null : _save,
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
+                          Icon(Icons.info_outline,
+                              color: context.isDark
+                                  ? AppColors.darkError
+                                  : AppColors.lightError,
+                              size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              context.l10n.budgetCalculationWarning,
+                              style: context.textTheme.bodySmall?.copyWith(
+                                color: context.isDark
+                                    ? AppColors.darkTextPrimary
+                                        .withValues(alpha: 0.8)
+                                    : AppColors.lightTextPrimary
+                                        .withValues(alpha: 0.9),
+                                height: 1.4,
                               ),
-                              child: isSaving
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    )
-                                  : Text(
-                                      hasExisting
-                                          ? context.l10n.updateBudget
-                                          : context.l10n.setBudget,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
                             ),
                           ),
-                          if (hasExisting) ...[
-                            const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Action buttons
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _isSaving,
+                      builder: (context, isSaving, _) {
+                        return Column(
+                          children: [
                             SizedBox(
                               width: double.infinity,
                               height: 52,
-                              child: TextButton(
-                                onPressed: isSaving ? null : _confirmDelete,
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.lightError,
+                              child: ElevatedButton(
+                                onPressed: isSaving ? null : _save,
+                                style: ElevatedButton.styleFrom(
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
-                                child: Text(
-                                  context.l10n.removeBudget,
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600),
-                                ),
+                                child: isSaving
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      )
+                                    : Text(
+                                        hasExisting
+                                            ? context.l10n.updateBudget
+                                            : context.l10n.setBudget,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                               ),
                             ),
+                            if (hasExisting) ...[
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: TextButton(
+                                  onPressed: isSaving ? null : _confirmDelete,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppColors.lightError,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    context.l10n.removeBudget,
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
-                      );
-                    },
-                  ),
-                ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ));
+        ),
+      ),
+    );
   }
 }

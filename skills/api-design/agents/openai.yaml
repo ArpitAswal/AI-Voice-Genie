@@ -1,0 +1,4 @@
+version: 1
+name: api-design
+display_name: API Design
+description: Enforces DTO/domain separation, typed error handling, and offline caching.

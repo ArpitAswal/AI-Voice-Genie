@@ -1,0 +1,4 @@
+name = "verify"
+description = "Runs the 5-gate pre-completion verification loop: git diff + secret scan, dart format, Hive codegen check (build_runner if @HiveType was touched), flutter analyze (auto-heals via build-error-resolver), and flutter test. Reports READY TO COMMIT or BLOCKED."
+instructions_file = "skills/verification-loop/SKILL.md"
+workflow_file = ".agent/workflows/verify.md"

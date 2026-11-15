@@ -33,6 +33,21 @@ class AnalyticsService {
     return FirebaseAnalyticsObserver(analytics: _analytics);
   }
 
+  /// Log a screen view with human-readable name and class for dashboard analytics.
+  Future<void> logScreenView({
+    required String screenName,
+    String? screenClass,
+  }) async {
+    try {
+      await _analytics.logScreenView(
+        screenName: screenName,
+        screenClass: screenClass,
+      );
+    } catch (e) {
+      debugPrint('⚠️ Analytics logScreenView failed: $e');
+    }
+  }
+
   // ── AI Request Events ─────────────────────────────────────────────────────
 
   /// Log when a user initiates an AI request (before the API call).

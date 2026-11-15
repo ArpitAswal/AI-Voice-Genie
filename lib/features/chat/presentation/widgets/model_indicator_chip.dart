@@ -35,7 +35,8 @@ class ModelIndicatorChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FaIcon(icon, size: context.textTheme.labelSmall?.fontSize, color: color),
+          FaIcon(icon,
+              size: context.textTheme.labelSmall?.fontSize, color: color),
           const SizedBox(width: 4),
           Text(
             provider.displayName,

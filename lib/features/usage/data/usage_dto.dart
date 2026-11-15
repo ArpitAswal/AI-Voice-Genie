@@ -168,7 +168,8 @@ class UsageEventDto {
     final inputTokens =
         (data[FirebaseCollections.usageFieldInputTokens] as num?)?.toInt() ?? 0;
     final outputTokens =
-        (data[FirebaseCollections.usageFieldOutputTokens] as num?)?.toInt() ?? 0;
+        (data[FirebaseCollections.usageFieldOutputTokens] as num?)?.toInt() ??
+            0;
     final totalTokens =
         (data[FirebaseCollections.usageFieldTotalTokens] as num?)?.toInt() ??
             (inputTokens + outputTokens);
@@ -181,12 +182,10 @@ class UsageEventDto {
 
     return UsageEventDto(
       eventId: resolvedEventId,
-      providerId:
-          data[FirebaseCollections.usageFieldProvider] as String? ?? '',
+      providerId: data[FirebaseCollections.usageFieldProvider] as String? ?? '',
       model: data[FirebaseCollections.usageFieldModel] as String? ?? '',
-      capability:
-          data[FirebaseCollections.usageFieldCapability] as String? ??
-              AiCapability.textGeneration.id,
+      capability: data[FirebaseCollections.usageFieldCapability] as String? ??
+          AiCapability.textGeneration.id,
       requestId: resolvedRequestId,
       conversationId:
           data[FirebaseCollections.usageFieldConversationId] as String?,
@@ -221,8 +220,7 @@ class UsageEventDto {
       FirebaseCollections.usageFieldRequestId: requestId,
       if (conversationId != null)
         FirebaseCollections.usageFieldConversationId: conversationId,
-      if (messageId != null)
-        FirebaseCollections.usageFieldMessageId: messageId,
+      if (messageId != null) FirebaseCollections.usageFieldMessageId: messageId,
       FirebaseCollections.usageFieldInputTokens: inputTokens,
       FirebaseCollections.usageFieldOutputTokens: outputTokens,
       FirebaseCollections.usageFieldTotalTokens: totalTokens,
@@ -326,7 +324,8 @@ class UsageSummaryDto {
     // 1. Resolve Provider ID: prefer docId prefix (e.g. 'gemini_f7cK2A' -> 'gemini'), fallback to data['provider']
     final resolvedProviderId = docId.contains('_')
         ? docId.split('_').first
-        : (data[FirebaseCollections.usageFieldProvider] as String? ?? (docId.isNotEmpty ? docId : ''));
+        : (data[FirebaseCollections.usageFieldProvider] as String? ??
+            (docId.isNotEmpty ? docId : ''));
 
     // 2. Parse nested monthlyData map defensively
     final rawMonthly = data['monthlyData'] as Map<dynamic, dynamic>? ?? {};
@@ -364,8 +363,9 @@ class UsageSummaryDto {
     }
 
     // 6. Resolve encryptedApiKey
-    final resolvedEncryptedApiKey = data[FirebaseCollections.fieldApiKey] as String? ??
-        data['encryptedApiKey'] as String?;
+    final resolvedEncryptedApiKey =
+        data[FirebaseCollections.fieldApiKey] as String? ??
+            data['encryptedApiKey'] as String?;
 
     return UsageSummaryDto(
       providerId: resolvedProviderId,

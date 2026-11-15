@@ -1,0 +1,7 @@
+Personas (personas/) — "Who is the AI?"
+
+Purpose: Defines the role, mindset, and strict boundaries for the agent.
+
+What goes inside: Instructions on how to behave. For example, architect.md tells the AI to challenge bad ideas and design systems. orchestrator.md tells it to ask you what to do and route the task.
+
+When to make a new one: When you need the AI to wear a completely new hat (e.g., a database-expert.md if you start doing complex SQL tuning).

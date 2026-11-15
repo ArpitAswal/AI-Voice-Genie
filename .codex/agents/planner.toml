@@ -1,0 +1,4 @@
+name = "plan"
+description = "Creates a 5-part implementation blueprint before coding: Problem Scope, Impact & Dependency Analysis (with Hive build_runner gate), Interface Contracts (ChangeNotifier state, Hive typeId, HTTP contracts, typed failures), Phased TDD Phases, and Verification commands."
+instructions_file = "personas/planner.md"
+workflow_file = ".agent/workflows/plan.md"
