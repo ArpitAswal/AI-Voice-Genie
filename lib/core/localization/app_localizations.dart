@@ -91,6 +91,8 @@ class AppLocalizations {
       'signing_in': 'Signing you in...',
       'signing_out': "Signing you out...",
       'sign_in_failed': 'Sign in failed. Please try again.',
+      'auth_configuration_error':
+          'Sign-in blocked: Google Cloud / Firebase API key restrictions rejected this client. Verify SHA-1 in Google Cloud Console credentials.',
       'user_disabled': 'This account has been disabled.',
       'invalid_credential': 'Invalid credentials. Please try again.',
       'user_not_found': 'Account not found.',
@@ -213,6 +215,15 @@ class AppLocalizations {
           'Lightning-fast answers, instant image creation, and effortless large-file analysis powered by Google.',
       'claude_marketing_pitch':
           'Tackle complex coding, solve difficult logic problems, and digest dense documents with expert precision.',
+      'openai_superpower': 'Image Studio & Smart PDF',
+      'gemini_superpower': 'Ultra-Fast Multimodal & 2M Context',
+      'claude_superpower': 'Complex Logic & Code Architecture',
+      'openai_intro_bullets':
+          '• Studio-quality image creation\n• Smart PDF & document generation\n• Conversational chat & creative writing',
+      'gemini_intro_bullets':
+          '• Fast multimodal chat & search\n• Visual image creation\n• 2M context large-file analysis',
+      'claude_intro_bullets':
+          '• Advanced code & logic reasoning\n• Deep document & vision analysis\n• Complex logic & problem solving',
       'gpt_model_message':
           'Create studio-quality images, generate smart PDF documents, and craft creative content.',
       'gemini_model_message':
@@ -226,26 +237,6 @@ class AppLocalizations {
       'gemini_capabilities_info':
           '• Fast Multimodal Chat & Search\n• Visual Image Generation\n• Inline PDF & Document Parsing',
       'claude_capabilities_info':
-          '• Advanced Code & Logical Reasoning\n• Deep Document & Vision Analysis\n• Voice & Image Gen not supported',
-
-      // ── Key Setup Screen: Model-to-Purpose Mapping ─────────────────────────
-      'openai_model_purposes':
-          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation',
-      'gemini_model_purposes':
-          '• gemini-3.5-flash-lite: Text, Vision & PDF Analysis\n• gemini-3.1-flash-lite-image: Image Generation',
-      'claude_model_purposes':
-          '• claude-haiku-4-5-20251001: Coding, Analytical Chat, PDFs & Vision',
-      'openai_tech_specs':
-          '• gpt-6-luna: Chat, Vision & Deep Reasoning\n• gpt-image-2.5-flare: Image Generation',
-      'gemini_tech_specs':
-          '• gemini-3.5-flash-lite: Text, Vision & PDF Analysis\n• gemini-3.1-flash-lite-image: Image Generation',
-      'claude_tech_specs':
-          '• claude-haiku-4-5-20251001: Coding, Analytical Chat, PDFs & Vision',
-      'openai_pricing_info':
-          '• Conversational Chat & Creative Writing\n• Visual Image Generation\n• PDF & Document Intelligence',
-      'gemini_pricing_info':
-          '• Fast Multimodal Chat & Search\n• Visual Image Generation\n• Inline PDF & Document Parsing',
-      'claude_pricing_info':
           '• Advanced Code & Logical Reasoning\n• Deep Document & Vision Analysis\n• Voice & Image Gen not supported',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
@@ -427,6 +418,7 @@ class AppLocalizations {
 
       // ── Usage Tracking ─────────────────────────────────────────────────────
       'usage_this_month': 'Estimated usage this month',
+      'usage_spent_badge': '{0} spent',
       'usage_tokens': 'tokens',
       'usage_requests': 'requests',
       'usage_images': 'images',
@@ -648,6 +640,8 @@ class AppLocalizations {
       'signing_in': 'साइन इन हो रहा है...',
       'signing_out': "साइन आउट हो रहा है...",
       'sign_in_failed': 'साइन इन विफल। कृपया पुनः प्रयास करें।',
+      'auth_configuration_error':
+          'साइन-इन सेटअप समस्या: फायरबेस में गूगल प्रमाणीकरण गलत कॉन्फ़िगर है (SHA-1 फ़िंगरप्रिंट गायब है)।',
       'user_disabled': 'यह खाता अक्षम कर दिया गया है।',
       'invalid_credential': 'अमान्य क्रेडेंशियल। कृपया पुनः प्रयास करें।',
       'user_not_found': 'खाता नहीं मिला।',
@@ -772,6 +766,15 @@ class AppLocalizations {
           'Google द्वारा संचालित त्वरित उत्तर, तुरंत चित्र निर्माण और बड़ी फाइलों का आसान विश्लेषण।',
       'claude_marketing_pitch':
           'जटिल कोडिंग करें, कठिन तार्किक समस्याओं को हल करें और बड़े दस्तावेजों को विशेषज्ञ सटीकता से समझें।',
+      'openai_superpower': 'चित्र निर्माण और स्मार्ट पीडीएफ',
+      'gemini_superpower': 'अल्ट्रा-फास्ट मल्टीमॉडल और संदर्भ',
+      'claude_superpower': 'जटिल तर्क और कोड वास्तुकला',
+      'openai_intro_bullets':
+          '• स्टूडियो-गुणवत्ता चित्र निर्माण\n• स्मार्ट पीडीएफ और दस्तावेज़ निर्माण\n• संवादात्मक चैट और रचनात्मक लेखन',
+      'gemini_intro_bullets':
+          '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• बड़ी फाइलों का 2M संदर्भ विश्लेषण',
+      'claude_intro_bullets':
+          '• उन्नत कोडिंग और तार्किक तर्क\n• गहन दस्तावेज़ और दृष्टि समझ\n• जटिल समस्या निवारण',
       'gpt_model_message':
           'स्टूडियो-गुणवत्ता वाले चित्र बनाएं, स्मार्ट दस्तावेज़ तैयार करें और रचनात्मक सामग्री बनाएं।',
       'gemini_model_message':
@@ -785,26 +788,6 @@ class AppLocalizations {
       'gemini_capabilities_info':
           '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• इनलाइन पीडीएफ और दस्तावेज विश्लेषण',
       'claude_capabilities_info':
-          '• उन्नत कोडिंग और तार्किक तर्क\n• गहन दस्तावेज और दृष्टि समझ\n• वॉयस और चित्र निर्माण समर्थित नहीं',
-
-      // ── Key Setup Screen: Model-to-Purpose Mapping (Hindi) ───────────────────
-      'openai_model_purposes':
-          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण',
-      'gemini_model_purposes':
-          '• gemini-3.5-flash-lite: पाठ, दृष्टि और पीडीएफ विश्लेषण\n• gemini-3.1-flash-lite-image: चित्र निर्माण',
-      'claude_model_purposes':
-          '• claude-haiku-4-5-20251001: कोडिंग, विश्लेषणात्मक चैट, पीडीएफ और दृष्टि',
-      'openai_tech_specs':
-          '• gpt-6-luna: चैट, दृष्टि और गहन तर्क\n• gpt-image-2.5-flare: चित्र निर्माण',
-      'gemini_tech_specs':
-          '• gemini-3.5-flash-lite: पाठ, दृष्टि और पीडीएफ विश्लेषण\n• gemini-3.1-flash-lite-image: चित्र निर्माण',
-      'claude_tech_specs':
-          '• claude-haiku-4-5-20251001: कोडिंग, विश्लेषणात्मक चैट, पीडीएफ और दृष्टि',
-      'openai_pricing_info':
-          '• संवादात्मक चैट और रचनात्मक लेखन\n• दृश्य चित्र निर्माण\n• पीडीएफ और दस्तावेज़ विश्लेषण',
-      'gemini_pricing_info':
-          '• तीव्र मल्टीमॉडल चैट और खोज\n• दृश्य चित्र निर्माण\n• इनलाइन पीडीएफ और दस्तावेज विश्लेषण',
-      'claude_pricing_info':
           '• उन्नत कोडिंग और तार्किक तर्क\n• गहन दस्तावेज और दृष्टि समझ\n• वॉयस और चित्र निर्माण समर्थित नहीं',
 
       // ── Capability Gap Messages ────────────────────────────────────────────
@@ -966,6 +949,7 @@ class AppLocalizations {
 
       // ── Usage Tracking ─────────────────────────────────────────────────────────
       'usage_this_month': 'इस महीने का अनुमानित उपयोग',
+      'usage_spent_badge': '{0} खर्च हुआ',
       'usage_tokens': 'टोकन',
       'usage_requests': 'अनुरोध',
       'usage_images': 'चित्र',
@@ -1191,6 +1175,7 @@ class AppLocalizations {
   String get signInWithGoogle => translate('sign_in_with_google');
   String get signInWithApple => translate('sign_in_with_apple');
   String get signInFailed => translate('sign_in_failed');
+  String get authConfigurationError => translate('auth_configuration_error');
   String get userDisabled => translate('user_disabled');
   String get invalidCredential => translate('invalid_credential');
   String get userNotFound => translate('user_not_found');
@@ -1297,6 +1282,12 @@ class AppLocalizations {
   String get openAiMarketingPitch => translate('openai_marketing_pitch');
   String get geminiMarketingPitch => translate('gemini_marketing_pitch');
   String get claudeMarketingPitch => translate('claude_marketing_pitch');
+  String get openAiSuperpower => translate('openai_superpower');
+  String get geminiSuperpower => translate('gemini_superpower');
+  String get claudeSuperpower => translate('claude_superpower');
+  String get openAiIntroBullets => translate('openai_intro_bullets');
+  String get geminiIntroBullets => translate('gemini_intro_bullets');
+  String get claudeIntroBullets => translate('claude_intro_bullets');
   String get chatGPTModelMessage => translate('gpt_model_message');
   String get geminiModelMessage => translate('gemini_model_message');
   String get claudeModelMessage => translate('claude_model_message');
@@ -1307,15 +1298,6 @@ class AppLocalizations {
   String get claudeCapabilitiesInfo => translate('claude_capabilities_info');
 
   // Key Setup Screen model-to-purpose getters
-  String get openAiModelPurposes => translate('openai_model_purposes');
-  String get geminiModelPurposes => translate('gemini_model_purposes');
-  String get claudeModelPurposes => translate('claude_model_purposes');
-  String get openAiTechSpecs => translate('openai_tech_specs');
-  String get geminiTechSpecs => translate('gemini_tech_specs');
-  String get claudeTechSpecs => translate('claude_tech_specs');
-  String get openAiPricingInfo => translate('openai_pricing_info');
-  String get geminiPricingInfo => translate('gemini_pricing_info');
-  String get claudePricingInfo => translate('claude_pricing_info');
   String get user => translate('user');
   String get startConversation => translate('start_conversation');
   String get createImage => translate('create_image');
@@ -1342,6 +1324,8 @@ class AppLocalizations {
   String get fewerPreferences => translate('fewer_preferences');
   String get aiIntelligence => translate('ai_intelligence');
   String get usageThisMonth => translate('usage_this_month');
+  String usageSpentBadge(String amount) =>
+      translate('usage_spent_badge').replaceAll('{0}', amount);
   String get usageTokens => translate('usage_tokens');
   String get usageRequests => translate('usage_requests');
   String get usageImages => translate('usage_images');

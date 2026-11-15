@@ -1,0 +1,4 @@
+name = "run"
+description = "Master entry-point orchestrator. Presents a 2-question intake (What to do? Which scope?), then auto-loads the matching platform rules, personas, and skills, executes the full workflow, runs the self-healing verification loop, and delivers a Final Handover Report."
+instructions_file = "personas/orchestrator.md"
+workflow_file = ".agent/workflows/run.md"

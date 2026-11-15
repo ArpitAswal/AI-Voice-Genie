@@ -37,8 +37,11 @@ class AppAlertDialog extends StatelessWidget {
       actionsPadding: actionsPadding ??
           const EdgeInsets.symmetric(horizontal: 16).copyWith(bottom: 8.0),
       insetPadding: insetPadding,
-      titleTextStyle: context.subHeaderStyle()?.copyWith(color: context.colorScheme.primary),
-      contentTextStyle: context.descStyle()?.copyWith(color: context.colorScheme.tertiary),
+      titleTextStyle: context
+          .subHeaderStyle()
+          ?.copyWith(color: context.colorScheme.primary),
+      contentTextStyle:
+          context.descStyle()?.copyWith(color: context.colorScheme.tertiary),
     );
   }
 }

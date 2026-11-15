@@ -302,6 +302,32 @@ enum ChatStartMode {
   voice,
 }
 
+/// Optional initial action to trigger automatically when [ChatScreen] opens.
+///
+/// Dispatched by Quick Action chips on the Intro / Home screen.
+enum ChatInitialAction {
+  /// Default empty state — no action auto-triggered.
+  none,
+
+  /// Focus the text composer ready for immediate query typing.
+  askQuestion,
+
+  /// Pre-fill the document summarization prompt ready for PDF attachment.
+  summarizePdf,
+
+  /// Pre-fill the image creation prompt ready for user creative detail.
+  generateImage,
+
+  /// Pre-fill the image analysis prompt ready for photo / image attachment.
+  analyzeImage,
+
+  /// Pre-fill the PDF report generation prompt template.
+  generatePdf,
+
+  /// Pre-fill the code generation prompt template.
+  generateCode,
+}
+
 /// Social authentication provider used to sign in.
 ///
 /// Stored in Firestore user document and used in analytics.

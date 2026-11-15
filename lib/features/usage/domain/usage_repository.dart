@@ -62,4 +62,3 @@ abstract interface class UsageRepository {
     required String uid,
   });
 }
-

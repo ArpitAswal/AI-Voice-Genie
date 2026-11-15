@@ -43,5 +43,5 @@ class AiProviderConfig {
   @override
   String toString() =>
       'AiProviderConfig(${providerId.id}, priority: $priority, '
-          'capabilities: ${supportedCapabilities.map((c) => c.id).join(", ")})';
+      'capabilities: ${supportedCapabilities.map((c) => c.id).join(", ")})';
 }

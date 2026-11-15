@@ -1,0 +1,28 @@
+# OpenAI Codex Workspace Configuration
+
+approval_policy = "on-request"
+sandbox_mode    = "workspace-write"
+
+[project]
+root_instructions = "AGENTS.md"
+context_file      = "context.md"
+skills_dir        = "skills"
+agents_dir        = ".codex/agents"
+workflows_dir     = ".agent/workflows"
+
+# ── Registered Agents ─────────────────────────────────────────────────────────
+# Each entry maps a slash-command name to its .toml definition in agents_dir.
+# Format: command_name = "agents/<file>.toml"
+
+[agents]
+run            = ".codex/agents/run.toml"
+analyze        = ".codex/agents/analyzer.toml"
+plan           = ".codex/agents/planner.toml"
+fix            = ".codex/agents/fix.toml"
+tdd            = ".codex/agents/tdd.toml"
+adaptive-ui    = ".codex/agents/adaptive-ui.toml"
+code-review    = ".codex/agents/reviewer.toml"
+security       = ".codex/agents/security.toml"
+build-fix      = ".codex/agents/build-resolver.toml"
+verify         = ".codex/agents/verifier.toml"
+document       = ".codex/agents/document.toml"

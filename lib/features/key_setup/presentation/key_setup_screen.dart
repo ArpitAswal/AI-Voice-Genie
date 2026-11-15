@@ -139,8 +139,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
               elevation: 0,
               scrolledUnderElevation: 1.5,
               leading: IconButton(
-                constraints:
-                    const BoxConstraints(minWidth: 48, minHeight: 48),
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 icon: Icon(
                   Icons.arrow_back_rounded,
                   color: context.colorScheme.onSurface,
@@ -1016,92 +1015,125 @@ class _ModernProviderCardState extends State<_ModernProviderCard> {
               if (showActiveState) ...[
                 Selector<ApiKeyProvider, String?>(
                   selector: (_, p) => p.maskedKeyFor(widget.provider),
-                  builder: (context, maskedKey, _) => Container(
-                    decoration: BoxDecoration(
-                      color: context.colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: brandColor.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.vpn_key_rounded,
-                                size: context.iconDense,
-                                color: brandColor,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  _formatMaskedKey(maskedKey),
-                                  style: context.textTheme.titleSmall?.copyWith(
-                                    fontFamily: 'monospace',
-                                    fontWeight: FontWeight.bold,
-                                    color: brandColor,
-                                    letterSpacing: 1.1,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
+                  builder: (context, maskedKey, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: context.colorScheme.surfaceContainer,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: brandColor.withValues(alpha: 0.5),
                           ),
                         ),
-                        // 48×48dp hit-tested action cluster for Replace and Delete
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            IconButton(
-                              constraints: const BoxConstraints(
-                                minWidth: 48,
-                                minHeight: 48,
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.vpn_key_rounded,
+                                    size: context.iconDense,
+                                    color: brandColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      _formatMaskedKey(maskedKey),
+                                      style: context.textTheme.titleSmall
+                                          ?.copyWith(
+                                        fontFamily: 'monospace',
+                                        fontWeight: FontWeight.bold,
+                                        color: brandColor,
+                                        letterSpacing: 1.1,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              padding: EdgeInsets.zero,
-                              tooltip: context.l10n.replaceKeyHint,
-                              icon: Icon(
-                                Icons.sync_rounded,
-                                size: context.iconStandard,
-                                color: context.colorScheme.tertiary,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _isReplacing = true;
-                                  _keyController.clear();
-                                });
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  _focusNode.requestFocus();
-                                });
-                              },
                             ),
-                            const SizedBox(width: 4),
-                            IconButton(
-                              constraints: const BoxConstraints(
-                                minWidth: 48,
-                                minHeight: 48,
-                              ),
-                              padding: EdgeInsets.zero,
-                              tooltip: context.l10n.delete,
-                              icon: Image.asset(
-                                AppAssets.deleteIcon,
-                                width: context.iconDense,
-                                height: context.iconDense,
-                              ),
-                              onPressed: _handleDelete,
+                            // 48×48dp hit-tested action cluster for Replace and Delete
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 48,
+                                    minHeight: 48,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  tooltip: context.l10n.replaceKeyHint,
+                                  icon: Icon(
+                                    Icons.sync_rounded,
+                                    size: context.iconStandard,
+                                    color: context.colorScheme.tertiary,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isReplacing = true;
+                                      _keyController.clear();
+                                    });
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      _focusNode.requestFocus();
+                                    });
+                                  },
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 48,
+                                    minHeight: 48,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  tooltip: context.l10n.delete,
+                                  icon: Image.asset(
+                                    AppAssets.deleteIcon,
+                                    width: context.iconDense,
+                                    height: context.iconDense,
+                                  ),
+                                  onPressed: _handleDelete,
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 6),
+                      // Hardware keystore security indicator
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.lock_outline_rounded,
+                              size: 13,
+                              color: context.isDark
+                                  ? AppColors.darkSuccess
+                                  : AppColors.lightSuccess,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              context.l10n.hardwareSecurity,
+                              style: context.textTheme.labelSmall?.copyWith(
+                                color: context.isDark
+                                    ? AppColors.darkSuccess
+                                    : AppColors.lightSuccess,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -1323,25 +1355,55 @@ class _CapabilityTagCloud extends StatelessWidget {
         .where((s) => s.isNotEmpty)
         .toList();
 
-    return Wrap(
-      spacing: 6.0,
-      runSpacing: 6.0,
+    final brandColor = provider.brandColor(context);
+    final gapColor =
+        context.isDark ? AppColors.darkWarning : AppColors.lightWarning;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: tags.map((tag) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0),
-          decoration: BoxDecoration(
-            color: context.colorScheme.surface.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(6.0),
-            border: Border.all(
-              color: context.colorScheme.outline,
-            ),
-          ),
-          child: Text(
-            tag,
-            style: context.textTheme.labelSmall?.copyWith(
-              color: context.colorScheme.tertiary,
-              fontWeight: FontWeight.w500,
-            ),
+        final isGap = tag.toLowerCase().contains('not supported') ||
+            tag.contains('समर्थित नहीं');
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4.5),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (isGap) ...[
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 13,
+                  color: gapColor,
+                ),
+                const SizedBox(width: 7),
+              ] else ...[
+                Container(
+                  width: 5,
+                  height: 5,
+                  margin: const EdgeInsets.only(right: 8, left: 3),
+                  decoration: BoxDecoration(
+                    color: brandColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+              Expanded(
+                child: Text(
+                  tag,
+                  style: context.textTheme.labelSmall?.copyWith(
+                    color: isGap
+                        ? gapColor
+                        : (context.isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.lightTextSecondary),
+                    fontWeight: isGap ? FontWeight.w600 : FontWeight.w500,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       }).toList(),

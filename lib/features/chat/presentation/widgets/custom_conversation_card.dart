@@ -32,10 +32,9 @@ class CustomConversationCard extends StatelessWidget {
     );
 
     // Time formatting with local timezone
-    final localDate = (conversation.lastMessageAt ??
-            conversation.createdAt ??
-            DateTime.now())
-        .toLocal();
+    final localDate =
+        (conversation.lastMessageAt ?? conversation.createdAt ?? DateTime.now())
+            .toLocal();
     final now = DateTime.now();
     final isToday = localDate.year == now.year &&
         localDate.month == now.month &&

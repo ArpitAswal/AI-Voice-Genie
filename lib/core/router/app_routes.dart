@@ -231,10 +231,13 @@ class AppRoutes {
 
       // ── Chat ───────────────────────────────────────────────────────────────
       case chat:
-        // Extract optional ChatArguments to honour voice auto-start from Home.
+        // Extract optional ChatArguments to honour voice auto-start or initial intent action.
         final chatArgs = arguments is ChatArguments ? arguments : null;
         return _buildRoute(
-          ChatScreen(startMode: chatArgs?.startMode ?? ChatStartMode.normal),
+          ChatScreen(
+            startMode: chatArgs?.startMode ?? ChatStartMode.normal,
+            initialAction: chatArgs?.initialAction ?? ChatInitialAction.none,
+          ),
           settings,
           TransitionType.fade,
         );
@@ -472,7 +475,7 @@ typedef ApiKeyManagementArguments = KeySetupArguments;
 
 /// Arguments for [ChatScreen] — controls whether the screen opens in
 /// voice-dictation mode (mic starts automatically) or in the default
-/// text-compose mode.
+/// text-compose mode, and optional initial exploration intent action.
 class ChatArguments extends RouteArguments {
   /// Determines how the chat screen initializes after navigation.
   ///
@@ -482,5 +485,12 @@ class ChatArguments extends RouteArguments {
   /// [ChatStartMode.normal] — default; user types manually.
   final ChatStartMode startMode;
 
-  const ChatArguments({this.startMode = ChatStartMode.normal});
+  /// Optional action payload triggered automatically upon screen open
+  /// (e.g. summarizing a PDF, creating an image, or focusing for a question).
+  final ChatInitialAction initialAction;
+
+  const ChatArguments({
+    this.startMode = ChatStartMode.normal,
+    this.initialAction = ChatInitialAction.none,
+  });
 }

@@ -1,366 +1,185 @@
-import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
-import 'package:ai_voice_genie/core/localization/app_localizations.dart';
-import 'package:ai_voice_genie/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:provider/provider.dart';
 
-import '../../../core/constants/app_colors.dart';
-import '../../../core/enums/app_enums.dart';
-import '../../../core/extensions/ai_provider_extensions.dart';
-import '../../../core/utils/status_message_utils.dart';
-import '../../voice_speech/presentation/voice_speech_provider.dart';
+import '../../../core/extensions/build_context_extensions.dart';
+import 'viewmodel/intro_viewmodel.dart';
+import 'widgets/ai_engines_section.dart';
+import 'widgets/intro_header_section.dart';
+import 'widgets/quick_actions_section.dart';
+import 'widgets/voice_mic_section.dart';
 
-class IntroScreen extends StatelessWidget {
+/// Adaptive Home/Intro landing screen for AI Voice Genie.
+///
+/// Responsive Architecture:
+/// - Compact (< 600dp or height <= 550dp): Single scrollable column with centered Voice Mic CTA at the bottom.
+/// - Medium & Expanded (>= 600dp):
+///   - Natural top-to-bottom reading flow: Greeting -> Action Chips -> Full-width Responsive Model Cards.
+///   - Eliminates dead zones: Cards breathe across the full width in a 2 or 3-column grid.
+///   - Anchors Voice Assistant to a prominent Floating Action Button (FAB) at the bottom-right.
+///
+/// Engineering Guardrails:
+/// - Uses [LayoutBuilder] constraints for adaptive composition.
+/// - Tactical [SafeArea]: Handles top status bar insets cleanly while letting Scaffold handle bottom navigation.
+/// - Dynamic keyboard handling: Content safely scrolls when virtual keyboard appears.
+/// - Memory-safe MVVM lifecycle via [IntroViewModel].
+class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
 
   @override
+  State<IntroScreen> createState() => _IntroScreenState();
+}
+
+class _IntroScreenState extends State<IntroScreen> {
+  late final IntroViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize scoped ViewModel to guarantee zero memory leaks
+    _viewModel = IntroViewModel();
+  }
+
+  @override
+  void dispose() {
+    // Explicit ViewModel disposal
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Top status bar inset; bottom is handled by Scaffold in compact or custom FAB spacing
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return SafeArea(
+      top:
+          false, // Custom header padding manages status bar for an immersive look
+      bottom:
+          false, // Prevent duplicate padding with TabBarScreen navigation bar
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final height = constraints.maxHeight;
+
+          // Compact screen guard (Mobile phones in portrait or landscape phones <= 550dp)
+          if (width < 600.0 || height <= 550.0) {
+            return _buildCompactLayout(
+              context,
+              topPadding: topPadding,
+              keyboardInset: keyboardInset,
+              isShortHeight: height <= 550.0,
+            );
+          }
+
+          // Tablet Portrait, Tablet Landscape & Desktop (>= 600dp)
+          // Visual balance: Full-width breathing cards + Bottom-Right anchored Voice Assistant FAB
+          return _buildTabletLayout(
+            context,
+            topPadding: topPadding,
+            keyboardInset: keyboardInset,
+            isExpanded: width >= 840.0,
+          );
+        },
+      ),
+    );
+  }
+
+  // ── 1. Compact Layout (< 600dp or height <= 550dp: Mobile) ─────────────────
+  Widget _buildCompactLayout(
+    BuildContext context, {
+    required double topPadding,
+    required double keyboardInset,
+    required bool isShortHeight,
+  }) {
+    final verticalSpacing = isShortHeight ? 16.0 : 26.0;
+
     return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top, // Top Nav space
-        bottom: MediaQuery.of(context).padding.bottom + 80, // Bottom Nav space
+        top: topPadding + (isShortHeight ? 10.0 : 16.0),
+        bottom: 24.0 + keyboardInset,
         left: context.horizontalPadding,
         right: context.horizontalPadding,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // The selected tab body
-          SizedBox(height: (context.isTablet) ? 24 : 16),
-          _buildTopNavBar(context),
-          SizedBox(height: (context.isTablet) ? 40 : 30),
-          _buildQuickActions(context),
-          SizedBox(height: (context.isTablet) ? 40 : 30),
-          _buildIntelligentEngines(context),
-          SizedBox(height: (context.isTablet) ? 30 : 20),
-          _buildTapToSpeak(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHero(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(_getGreeting(context),
-            style: Theme.of(context).textTheme.displayMedium),
-        const SizedBox(height: 4),
-        Text(
-          context.l10n.aiAssist,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(context.l10n.askTodo,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _QuickActionButton(
-                icon: Icons.question_answer_rounded,
-                label: context.l10n.askQuestion,
-                iconColor: AppColors.tealAccent),
-            _QuickActionButton(
-                icon: Icons.upload_file_rounded,
-                label: context.l10n.summarizePdf,
-                iconColor: AppColors.voiceActive),
-            _QuickActionButton(
-                icon: Icons.palette_rounded,
-                label: context.l10n.generateImage,
-                iconColor: AppColors.purpleAccent),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIntelligentEngines(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(context.l10n.intelligentModels,
-            style: Theme.of(context)
-                .textTheme
-                .bodySmall
-                ?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        ListView(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          children: [
-            // OpenAI Intelligence Card: Displays marketing pitch and key capabilities
-            _EngineCard(
-                title: AiProviderId.openAi.displayName,
-                description: AiProviderId.openAi.marketingPitch(context.l10n),
-                capability: AiProviderId.openAi.capabilitiesInfo(context.l10n),
-                faIcon: FontAwesomeIcons.openai,
-                gradient: AppColors.openAIGradient),
-            const SizedBox(height: 16),
-            // Google Gemini Card: Highlights fast multimodal search and image creation
-            _EngineCard(
-                title: AiProviderId.gemini.displayName,
-                description: AiProviderId.gemini.marketingPitch(context.l10n),
-                capability: AiProviderId.gemini.capabilitiesInfo(context.l10n),
-                faIcon: FontAwesomeIcons.gemini,
-                gradient: AppColors.geminiGradient),
-            const SizedBox(height: 16),
-            // Anthropic Claude Card: Highlights expert reasoning, coding, and document analysis
-            _EngineCard(
-                title: AiProviderId.claude.displayName,
-                description: AiProviderId.claude.marketingPitch(context.l10n),
-                capability: AiProviderId.claude.capabilitiesInfo(context.l10n),
-                faIcon: FontAwesomeIcons.claude,
-                gradient: AppColors.claudeGradient),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTapToSpeak(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    // Semantic tooltip informs screen readers what this button does
-    final voiceTooltip = l10n.tapToStartVoiceChat;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Wrap the mic button in Semantics for accessibility and InkWell for
-          // the ripple tap response, navigating to ChatScreen in voice mode.
-          Semantics(
-            label: voiceTooltip,
-            button: true,
-            child: Tooltip(
-              message: voiceTooltip,
-              child: InkWell(
-                onTap: () {
-                  final voiceProvider = context.read<VoiceProvider>();
-                  // Guard: If STT is known to be unavailable on this device, do NOT
-                  // navigate to ChatScreen in voice mode. Show an error instead.
-                  if (!voiceProvider.isSttAvailable ||
-                      voiceProvider.isUnavailable) {
-                    context.showError(
-                      l10n.speechTextUnavailable,
-                    );
-                    return;
-                  }
-                  // Navigate to ChatScreen with ChatStartMode.voice so STT
-                  // starts automatically once the screen is mounted.
-                  AppRoutes.navigateTo(
-                    context,
-                    AppRoutes.chat,
-                    arguments:
-                        const ChatArguments(startMode: ChatStartMode.voice),
-                  );
-                },
-                borderRadius: BorderRadius.circular(80),
-                splashColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 110,
-                      height: 110,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: context.isDark
-                            ? AppColors.purpleAccent.withValues(alpha: 0.1)
-                            : AppColors.tealAccent.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: (context.isDark)
-                            ? AppColors.darkVoiceGradient
-                            : AppColors.lightVoiceGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (context.isDark)
-                                ? AppColors.primaryDark.withValues(alpha: 0.4)
-                                : AppColors.primaryLight.withValues(alpha: 0.4),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Icon(Icons.mic_rounded,
-                            color: Colors.white,
-                            size: context.isTablet ? 44 : 36),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          IntroHeaderSection(
+              greeting: _viewModel.getGreeting(context),
+              onOpenChat: () => _viewModel.openDirectChat(context),
+              isShortHeight: isShortHeight),
+          SizedBox(height: verticalSpacing),
+          QuickActionsSection(
+              onActionSelected: (action) =>
+                  _viewModel.handleQuickAction(context, action: action),
+              isShortHeight: isShortHeight),
+          SizedBox(height: verticalSpacing),
+          AiEnginesSection(
+              onEngineSelected: (provider) =>
+                  _viewModel.selectEngineAndChat(context, provider: provider),
+              isShortHeight: isShortHeight),
+          SizedBox(height: verticalSpacing),
+          VoiceMicSection(
+            onTap: () => _viewModel.handleVoiceAssistantTap(context),
           ),
-          SizedBox(height: context.isTablet ? 16 : 8),
-          Text(l10n.voiceAssistant.toUpperCase(),
-              style: context.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              )),
         ],
       ),
     );
   }
 
-  Widget _buildTopNavBar(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(child: _buildHero(context)),
-        const SizedBox(width: 16),
-        Container(
-          decoration: BoxDecoration(
-              gradient: context.isDark
-                  ? AppColors.darkVoiceGradient
-                  : AppColors.lightVoiceGradient,
-              shape: BoxShape.circle),
-          child: IconButton(
-              onPressed: () {
-                AppRoutes.navigateTo(context, AppRoutes.chat);
-              },
-              icon: const FaIcon(
-                FontAwesomeIcons.solidMessage,
-                color: Colors.white,
-              )),
-        )
-      ],
-    );
-  }
+  // ── 2. Tablet & Desktop Layout (>= 600dp: Real Estate Optimized) ───────────
+  Widget _buildTabletLayout(
+    BuildContext context, {
+    required double topPadding,
+    required double keyboardInset,
+    required bool isExpanded,
+  }) {
+    final horizontalPadding = isExpanded ? 32.0 : context.horizontalPadding;
 
-  String _getGreeting(BuildContext context) {
-    final hour = DateTime.now().hour;
-
-    if (hour < 12) {
-      return context.l10n.morning;
-    } else if (hour < 17) {
-      return context.l10n.afternoon;
-    } else {
-      return context.l10n.evening;
-    }
-  }
-}
-
-class _QuickActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color iconColor;
-
-  const _QuickActionButton(
-      {required this.icon, required this.label, required this.iconColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: (context.isDark) ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-            color: context.theme.dividerTheme.color ?? AppColors.grey),
+    return SingleChildScrollView(
+      physics: const ClampingScrollPhysics(),
+      padding: EdgeInsets.only(
+        top: topPadding + 20.0,
+        // Extra bottom clearance so content never gets obscured under the floating action button
+        bottom: keyboardInset + 40.0,
+        left: horizontalPadding,
+        right: horizontalPadding,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 20),
-          const SizedBox(width: 8),
-          Text(label, style: Theme.of(context).textTheme.headlineSmall),
+          // Top: Greeting & direct chat button
+          IntroHeaderSection(
+            greeting: _viewModel.getGreeting(context),
+            onOpenChat: () => _viewModel.openDirectChat(context),
+          ),
+          const SizedBox(height: 20),
+          // Directly Below: Quick actions spanning horizontally across the width
+          QuickActionsSection(
+            onActionSelected: (action) =>
+                _viewModel.handleQuickAction(context, action: action),
+          ),
+          const SizedBox(height: 26),
+          // Full-Width Responsive AI Model Cards (2-column in portrait, 3-column in landscape)
+          AiEnginesSection(
+            onEngineSelected: (provider) =>
+                _viewModel.selectEngineAndChat(context, provider: provider),
+          ),
+          const SizedBox(height: 26),
+          // Primary Voice Assistant Action: Anchored as a large FAB at the bottom-right
+          Align(
+              alignment: context.isTablet && context.isExpanded
+                  ? Alignment.bottomRight
+                  : Alignment.center,
+              child: context.isTablet && context.isExpanded
+                  ? VoiceMicFab(
+                      onTap: () => _viewModel.handleVoiceAssistantTap(context),
+                    )
+                  : VoiceMicSection(
+                      onTap: () => _viewModel.handleVoiceAssistantTap(context),
+                    )),
         ],
-      ),
-    );
-  }
-}
-
-class _EngineCard extends StatelessWidget {
-  final String title;
-  final String description;
-  final String capability;
-  final FaIconData faIcon;
-  final LinearGradient gradient;
-
-  const _EngineCard(
-      {required this.title,
-      required this.description,
-      required this.capability,
-      required this.faIcon,
-      required this.gradient});
-
-  @override
-  Widget build(BuildContext context) {
-    final AiProviderId provider = (title == AiProviderId.openAi.displayName)
-        ? AiProviderId.openAi
-        : (title == AiProviderId.gemini.displayName)
-            ? AiProviderId.gemini
-            : AiProviderId.claude;
-    final Color modelColor = provider.brandColor(context);
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(context.horizontalPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: gradient,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: modelColor.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Center(child: FaIcon(faIcon, color: Colors.white)),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    title,
-                    style: context.textTheme.headlineLarge
-                        ?.copyWith(color: modelColor),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: context.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              capability,
-              style: context.textTheme.labelMedium?.copyWith(color: modelColor),
-            ),
-          ],
-        ),
       ),
     );
   }

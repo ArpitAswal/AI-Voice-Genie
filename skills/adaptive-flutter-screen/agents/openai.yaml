@@ -1,0 +1,4 @@
+version: 1
+name: adaptive-flutter-screen
+display_name: Adaptive Flutter Screen (Mobile/Tablet/Desktop)
+description: Creates or refactors Flutter screens into responsive layouts across Compact, Medium, and Expanded viewports while preserving business logic.

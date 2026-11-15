@@ -9,8 +9,8 @@ enum AppImageSource {
 
 class ImageViewData {
   final AppImageSource source;
-  final String? path;           // asset / network / file
-  final Uint8List? bytes;       // memory
+  final String? path; // asset / network / file
+  final Uint8List? bytes; // memory
   final Map<String, String>? headers;
 
   const ImageViewData.asset(this.path)

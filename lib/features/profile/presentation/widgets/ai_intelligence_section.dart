@@ -141,42 +141,51 @@ class _ModelIntelligenceCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ProfileProviderLogo(
-                        provider: provider,
-                        size: context.isTablet ? 44.0 : 36.0,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        provider.displayName,
-                        style: (context.isCompact
-                                ? context.textTheme.titleLarge
-                                : context.textTheme.headlineSmall)
-                            ?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ProfileProviderLogo(
+                          provider: provider,
+                          size: context.isTablet ? 44.0 : 36.0,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        Flexible(
+                          child: Text(
+                            provider.displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: (context.isCompact
+                                    ? context.textTheme.titleLarge
+                                    : context.textTheme.headlineSmall)
+                                ?.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  // Spend badge
-                  _SpendBadge(
-                    spent: spent,
-                    summary: summary,
-                    color: color,
+                  const SizedBox(width: 8),
+                  // Spend badge wrapped flexibly to eliminate overflow risk
+                  Flexible(
+                    flex: 0,
+                    child: _SpendBadge(
+                      spent: spent,
+                      summary: summary,
+                      color: color,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
 
-              // ── Usage stats ───────────────────────────────────────────────
-              if (hasBudget) ...[
-                _UsageStatsRow(
-                    summary: summary,
-                    currentMonthKey: usageProvider.currentMonthKey),
-              ],
+              // ── Usage stats (Tokens & Activity) ──────────────────────────
+              _UsageStatsRow(
+                summary: summary,
+                currentMonthKey: usageProvider.currentMonthKey,
+              ),
 
               // ── Budget section ────────────────────────────────────────────
               if (hasBudget) ...[
@@ -272,7 +281,28 @@ class _SpendBadge extends StatelessWidget {
         ],
       );
     }
-    return const SizedBox.shrink();
+
+    // When no budget is set, display the current spend amount so the user always knows "What did it cost?"
+    final formattedSpent = '\$${spent.toStringAsFixed(2)}';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        context.l10n.usageSpentBadge(formattedSpent),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: (context.isCompact
+                ? context.textTheme.labelMedium
+                : context.textTheme.labelLarge)
+            ?.copyWith(
+          color: context.isDark ? Colors.white : color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 }
 

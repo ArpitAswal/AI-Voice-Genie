@@ -1,15 +1,23 @@
-import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
-import 'package:ai_voice_genie/core/localization/app_localizations.dart';
-import 'package:ai_voice_genie/features/intro/presentation/intro_screen.dart';
 import 'package:flutter/material.dart';
-
 import 'package:flutter/services.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../core/services/analytics_service.dart';
+import '../../../core/extensions/build_context_extensions.dart';
+import '../../../core/localization/app_localizations.dart';
 import '../../chat/presentation/chat_history_screen.dart';
+import '../../intro/presentation/intro_screen.dart';
 import '../../profile/presentation/profile_view.dart';
+import 'viewmodel/home_nav_viewmodel.dart';
+import 'widgets/adaptive_bottom_nav_bar.dart';
+import 'widgets/adaptive_nav_rail.dart';
 
+/// Root tab navigation shell for AI Voice Genie.
+///
+/// Implements responsive Material 3 navigation:
+/// - Compact & Medium (< 840dp): Persistent bottom navigation bar with rounded top corners.
+/// - Expanded (>= 840dp): Vertical side NavigationRail to maximize vertical canvas space.
+/// - Handles Android back button double-press to exit gracefully with debounce.
+/// - MVVM architecture via [HomeNavViewModel] with zero memory leaks.
 class TabBarScreen extends StatefulWidget {
   const TabBarScreen({super.key});
 
@@ -18,10 +26,26 @@ class TabBarScreen extends StatefulWidget {
 }
 
 class _TabBarScreenState extends State<TabBarScreen> {
-  int _currentIndex = 0;
-  DateTime? _lastPressedAt;
+  late final HomeNavViewModel _viewModel;
 
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the ViewModel scoped to this screen's lifecycle
+    _viewModel = HomeNavViewModel();
+  }
+
+  @override
+  void dispose() {
+    // Dispose ViewModel explicitly to eliminate memory leaks
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  /// Displays floating warning snackbar requesting second back-press to exit
   void _showExitSnackbar() {
+    if (!mounted) return;
+
     final backgroundColor =
         context.isDark ? AppColors.cardDark : AppColors.cardLight;
     final textColor = context.isDark ? Colors.white : Colors.black;
@@ -42,8 +66,9 @@ class _TabBarScreenState extends State<TabBarScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
-            color: context.isDark ? AppColors.darkDivider : AppColors.lightDivider
-          )
+            color:
+                context.isDark ? AppColors.darkDivider : AppColors.lightDivider,
+          ),
         ),
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),
@@ -52,141 +77,70 @@ class _TabBarScreenState extends State<TabBarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Adaptive check: Wide viewports (Tablets in landscape / Desktop >= 840dp) use NavigationRail
+    final isExpanded = context.isExpanded;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
-        final now = DateTime.now();
-        if (_lastPressedAt == null ||
-            now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
-          _lastPressedAt = now;
-          _showExitSnackbar();
-        } else {
+        // Delegate double-back logic to the ViewModel
+        final shouldExit = _viewModel.handleBackPress(
+          onShowExitWarning: () {
+            if (mounted) _showExitSnackbar();
+          },
+        );
+
+        if (shouldExit) {
           await SystemNavigator.pop();
         }
       },
-      child: Scaffold(
-        bottomNavigationBar: _buildBottomNavBar(),
-        body: Stack(
-          children: [
-            // The selected tab body
-            SafeArea(child: _buildBody()),
+      child: ListenableBuilder(
+        listenable: _viewModel,
+        builder: (context, _) {
+          final activeIndex = _viewModel.currentIndex;
 
-            // Floating Top Navbar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: _buildTopNavBar(),
+          if (isExpanded) {
+            // ── Expanded Layout (>= 840dp): Side Navigation Rail ─────────────
+            return Scaffold(
+              body: Row(
+                children: [
+                  AdaptiveNavRail(
+                    currentIndex: activeIndex,
+                    onTabSelected: _viewModel.selectTab,
+                  ),
+                  Expanded(
+                    child: _buildBody(activeIndex),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // ── Compact / Medium Layout (< 840dp): Bottom Navigation Bar ───────
+          return Scaffold(
+            // Bottom navigation bar automatically consumes bottom safe area insets
+            bottomNavigationBar: AdaptiveBottomNavBar(
+              currentIndex: activeIndex,
+              onTabSelected: _viewModel.selectTab,
             ),
-          ],
-        ),
+            body: _buildBody(activeIndex),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildBody() {
+  /// Preserves screen state across tab switches via [IndexedStack]
+  Widget _buildBody(int activeIndex) {
     return IndexedStack(
-      index: _currentIndex,
+      index: activeIndex,
       children: const [
         IntroScreen(),
         ConversationHistoryScreen(),
         ProfileScreen(),
       ],
-    );
-  }
-
-  Widget _buildTopNavBar() {
-    return Container(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top,
-          left: 24,
-          right: 24,
-          bottom: MediaQuery.of(context).padding.bottom,
-        ),
-        decoration: BoxDecoration(
-            gradient: context.isDark ? AppColors.primaryGradientDark : null),
-        child: const SizedBox());
-  }
-
-  Widget _buildBottomNavBar() => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        child: Container(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).padding.bottom,
-            top: 6,
-          ),
-          decoration: BoxDecoration(
-            gradient: context.isDark
-                ? AppColors.primaryGradientDark
-                : AppColors.primaryGradientLight,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildNavItem(0, Icons.home_outlined, context.l10n.home, context),
-              _buildNavItem(1, Icons.chat_bubble_outline,
-                  context.l10n.conversationHistory, context),
-              _buildNavItem(2, Icons.account_circle_outlined,
-                  context.l10n.profile, context),
-            ],
-          ),
-        ),
-      );
-
-  void _onTabSelected(int index) {
-    if (_currentIndex == index) return;
-    setState(() => _currentIndex = index);
-    final (screenName, screenClass) = switch (index) {
-      0 => ('Home Screen', 'IntroScreen'),
-      1 => ('Conversation History Screen', 'ConversationHistoryScreen'),
-      2 => ('Profile Screen', 'ProfileScreen'),
-      _ => ('Home Screen', 'TabBarScreen'),
-    };
-    AnalyticsService.instance.logScreenView(
-      screenName: screenName,
-      screenClass: screenClass,
-    );
-  }
-
-  Widget _buildNavItem(
-      int index, IconData icon, String label, BuildContext context) {
-    final isSelected = _currentIndex == index;
-
-    return GestureDetector(
-      onTap: () => _onTabSelected(index),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 600),
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (context.isDark
-                  ? AppColors.cardDark.withValues(alpha: 0.5)
-                  : AppColors.cardLight.withValues(alpha: 0.5))
-              : null,
-          borderRadius: BorderRadius.circular(32),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                color: context.isDark
-                    ? AppColors.primaryLight
-                    : AppColors.primaryDark),
-            const SizedBox(height: 4),
-            Text(
-              label.toUpperCase(),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: (context.isDark
-                      ? AppColors.primaryLight
-                      : AppColors.primaryDark),
-                  fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

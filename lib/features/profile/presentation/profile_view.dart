@@ -56,7 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _handleLogout() async {
-    final viewModel = context.read<ProfileViewModel>();
+    final viewModel = _viewModel;
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AppAlertDialog(
@@ -106,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _handleDeleteAccount() async {
-    final viewModel = context.read<ProfileViewModel>();
+    final viewModel = _viewModel;
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AppAlertDialog(

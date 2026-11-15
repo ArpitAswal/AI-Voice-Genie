@@ -1,0 +1,4 @@
+name = "code-review"
+description = "Reviews git diffs or specified files for correctness, concurrency hazards, lifecycle leaks, security vulnerabilities, and test coverage gaps. Groups findings by [CRITICAL], [HIGH], [MEDIUM], [LOW/NIT] with exact file:line and fix snippets."
+instructions_file = "personas/code-reviewer.md"
+workflow_file = ".agent/workflows/code-review.md"

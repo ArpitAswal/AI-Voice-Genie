@@ -1,0 +1,7 @@
+Rules (rules/) — "What are the laws?"
+
+Purpose: The non-negotiable standards of your project.
+
+What goes inside: Hard facts. coding-style.md dictates clean code rules. android-kotlin.md forces specific Jetpack Compose standards.
+
+When to make a new one: When you add a new tech stack (e.g., rules/platforms/python-backend.md) or adopt a new team standard. Edit existing ones if the AI keeps making the same styling mistake.

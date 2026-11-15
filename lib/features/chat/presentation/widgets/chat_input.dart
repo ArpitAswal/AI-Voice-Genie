@@ -65,6 +65,12 @@ class ChatInputController {
   void startVoiceInput() {
     _state?._startVoiceInputProgrammatically();
   }
+
+  /// Request focus on the chat text input field.
+  void requestFocus() {
+    _state?._focusNode.requestFocus();
+    _state?.widget.onUserInteracted?.call();
+  }
 }
 
 /// Chat input bar with text, media attachment preview, send, and voice actions.

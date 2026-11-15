@@ -93,7 +93,8 @@ class _AnimatedMessageOverlay extends StatefulWidget {
   });
 
   @override
-  State<_AnimatedMessageOverlay> createState() => _AnimatedMessageOverlayState();
+  State<_AnimatedMessageOverlay> createState() =>
+      _AnimatedMessageOverlayState();
 }
 
 class _AnimatedMessageOverlayState extends State<_AnimatedMessageOverlay>

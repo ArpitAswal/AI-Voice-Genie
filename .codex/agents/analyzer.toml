@@ -1,0 +1,4 @@
+name = "analyze"
+description = "Deeply analyzes a new requirement against the current architecture, challenges assumptions, evaluates edge cases, and proposes 2-3 solutions with Pros/Cons before writing any code. Outputs a structured Architectural Report with a declared winning approach."
+instructions_file = "personas/analyzer.md"
+workflow_file = ".agent/workflows/analyze.md"

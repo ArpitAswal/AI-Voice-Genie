@@ -38,7 +38,14 @@ class ChatScreen extends StatefulWidget {
   /// How the chat was opened. Defaults to [ChatStartMode.normal].
   final ChatStartMode startMode;
 
-  const ChatScreen({super.key, this.startMode = ChatStartMode.normal});
+  /// Optional initial intent action triggered on launch.
+  final ChatInitialAction initialAction;
+
+  const ChatScreen({
+    super.key,
+    this.startMode = ChatStartMode.normal,
+    this.initialAction = ChatInitialAction.none,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -73,6 +80,51 @@ class _ChatScreenState extends State<ChatScreen> {
       if (widget.startMode == ChatStartMode.voice && !_didAutoStartVoice) {
         _didAutoStartVoice = true;
         _chatInputController.startVoiceInput();
+      }
+
+      // Dispatch initial exploration intent payload if navigated from Home quick actions
+      switch (widget.initialAction) {
+        case ChatInitialAction.summarizePdf:
+          _handleSummarizePdfPrompt();
+          break;
+        case ChatInitialAction.generateImage:
+          _handleCreateImage();
+          break;
+        case ChatInitialAction.analyzeImage:
+          _handleAnalyzeImagePrompt();
+          break;
+        case ChatInitialAction.generatePdf:
+          _handleGeneratePdf();
+          break;
+        case ChatInitialAction.generateCode:
+          _handleGenerateCode();
+          break;
+        case ChatInitialAction.askQuestion:
+          _chatInputController.requestFocus();
+          break;
+        case ChatInitialAction.none:
+          break;
+      }
+
+      // Gracefully alert user if active model is not configured with an API key
+      final preferredProvider =
+          context.read<AiPreferencesProvider>().preferredProvider;
+      final apiKeyProvider = context.read<ApiKeyProvider>();
+      if (!apiKeyProvider.validProviders.contains(preferredProvider)) {
+        MessageUtils.showErrorToast(
+          context,
+          context.l10n.noKeyForModel,
+        );
+      } else {
+        final usageProvider = context.read<UsageProvider>();
+        final summary = usageProvider.summaryFor(preferredProvider);
+        if (summary != null && summary.isExceeded()) {
+          MessageUtils.showErrorToast(
+            context,
+            context.l10n
+                .chatProviderLimitReached(preferredProvider.displayName),
+          );
+        }
       }
     });
   }
@@ -114,6 +166,18 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_showSuggestions) return;
     debugPrint('⚠️ Showing suggestions');
     setState(() => _showSuggestions = true);
+  }
+
+  void _handleSummarizePdfPrompt() {
+    _hideSuggestions();
+    final l10n = AppLocalizations.of(context)!;
+    _chatInputController.setPrompt(l10n.summarizePdfPrompt);
+  }
+
+  void _handleAnalyzeImagePrompt() {
+    _hideSuggestions();
+    final l10n = AppLocalizations.of(context)!;
+    _chatInputController.setPrompt(l10n.analyzeImagePrompt);
   }
 
   Future<void> _handleSummarizePdf() async {

@@ -1,0 +1,4 @@
+name = "build-fix"
+description = "Diagnoses and resolves Dart compiler, flutter analyze, Hive codegen (build_runner), and Firebase configuration errors with minimal diffs — never suppresses warnings or uses force-unwraps."
+instructions_file = "personas/build-error-resolver.md"
+workflow_file = ".agent/workflows/build-fix.md"

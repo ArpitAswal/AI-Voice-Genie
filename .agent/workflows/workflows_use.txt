@@ -1,0 +1,1 @@
+Purpose: These are the trigger commands (/plan, /run) for your specific IDE (Antigravity or Codex). They tell the IDE which Personas and Rules to pull from the folders above.

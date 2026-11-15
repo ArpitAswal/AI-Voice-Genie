@@ -124,18 +124,43 @@ class AuthRepositoryImpl implements AuthRepository {
     } on TimeoutException {
       throw const AuthException(AuthErrorCodes.noInternet);
     } on PlatformException catch (e) {
-      // Google Sign-In throws PlatformException on native dialog cancellation or network failure
+      // Google Sign-In throws PlatformException on native dialog cancellation, network failure, or developer configuration error
+      final message = e.message ?? '';
       if (e.code == 'sign_in_canceled' || e.code == '12501') {
         // User cancelled native Google account picker — return null silently
         return null;
       } else if (e.code == 'network_error' || e.code == '7') {
         throw const AuthException(AuthErrorCodes.noInternet);
+      } else if (message.contains('ApiException: 10') ||
+          message.contains('DEVELOPER_ERROR')) {
+        // Developer configuration error: SHA-1 / SHA-256 fingerprint mismatch or missing in Firebase
+        throw AuthException(
+          AuthErrorCodes.configurationError,
+          technicalMessage:
+              'PlatformException: ${e.code} — ${e.message} (SHA-1 / OAuth misconfigured in Firebase Console)',
+        );
+      } else if (message.contains('ApiException: 12500')) {
+        // General Google Play Services configuration error
+        throw AuthException(
+          AuthErrorCodes.configurationError,
+          technicalMessage:
+              'PlatformException: ${e.code} — ${e.message} (Google Play Services configuration error)',
+        );
       }
       throw AuthException(
         AuthErrorCodes.signInFailed,
         technicalMessage: 'PlatformException: ${e.code} — ${e.message}',
       );
     } on FirebaseAuthException catch (e) {
+      final message = e.message ?? '';
+      if (message.contains('Requests from this Android client application') ||
+          message.contains('blocked')) {
+        throw AuthException(
+          AuthErrorCodes.configurationError,
+          technicalMessage:
+              'FirebaseAuthException: ${e.code} — ${e.message} (API Key application restrictions in Google Cloud Console blocked this SHA-1/package)',
+        );
+      }
       throw AuthException(
         _mapFirebaseAuthError(e.code),
         technicalMessage: 'FirebaseAuthException: ${e.code} — ${e.message}',

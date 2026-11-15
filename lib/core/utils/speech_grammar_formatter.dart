@@ -77,16 +77,75 @@ class SpeechGrammarFormatter {
 
   /// Common question-starting two-word phrases that indicate a new clause or sentence.
   static const List<String> _questionStarters = [
-    'what is', 'what are', 'what makes', 'what do', 'what does', 'what can', 'what will', 'what should', 'what would',
-    'who is', 'who are', 'who has', 'who can', 'who will', 'who should', 'who would',
-    'why is', 'why do', 'why does', 'why are', 'why did', 'why should', 'why would', 'why can',
-    'how is', 'how are', 'how do', 'how does', 'how can', 'how will', 'how should', 'how would', 'how to', 'how much', 'how many',
-    'where is', 'where are', 'where do', 'where does', 'where can', 'where will',
-    'when is', 'when will', 'when do', 'when does', 'when can',
-    'which is', 'which are', 'which can', 'which will',
-    'can you', 'could you', 'would you', 'will you', 'should you',
-    'do you', 'did you', 'have you', 'has it', 'is it', 'are you', 'is there', 'are there',
-    'can i', 'could i', 'should i', 'may i', 'will i', 'am i',
+    'what is',
+    'what are',
+    'what makes',
+    'what do',
+    'what does',
+    'what can',
+    'what will',
+    'what should',
+    'what would',
+    'who is',
+    'who are',
+    'who has',
+    'who can',
+    'who will',
+    'who should',
+    'who would',
+    'why is',
+    'why do',
+    'why does',
+    'why are',
+    'why did',
+    'why should',
+    'why would',
+    'why can',
+    'how is',
+    'how are',
+    'how do',
+    'how does',
+    'how can',
+    'how will',
+    'how should',
+    'how would',
+    'how to',
+    'how much',
+    'how many',
+    'where is',
+    'where are',
+    'where do',
+    'where does',
+    'where can',
+    'where will',
+    'when is',
+    'when will',
+    'when do',
+    'when does',
+    'when can',
+    'which is',
+    'which are',
+    'which can',
+    'which will',
+    'can you',
+    'could you',
+    'would you',
+    'will you',
+    'should you',
+    'do you',
+    'did you',
+    'have you',
+    'has it',
+    'is it',
+    'are you',
+    'is there',
+    'are there',
+    'can i',
+    'could i',
+    'should i',
+    'may i',
+    'will i',
+    'am i',
   ];
 
   /// Enhances the raw transcribed [text] by applying grammar cleanup, proper noun
@@ -126,16 +185,23 @@ class SpeechGrammarFormatter {
   /// Converts spoken punctuation words into actual symbols.
   static String _replaceSpokenPunctuation(String input) {
     String out = input;
-    out = out.replaceAll(RegExp(r'\b(full stop|period)\b', caseSensitive: false), '.');
-    out = out.replaceAll(RegExp(r'\b(question mark)\b', caseSensitive: false), '?');
-    out = out.replaceAll(RegExp(r'\b(exclamation mark|exclamation point)\b', caseSensitive: false), '!');
+    out = out.replaceAll(
+        RegExp(r'\b(full stop|period)\b', caseSensitive: false), '.');
+    out = out.replaceAll(
+        RegExp(r'\b(question mark)\b', caseSensitive: false), '?');
+    out = out.replaceAll(
+        RegExp(r'\b(exclamation mark|exclamation point)\b',
+            caseSensitive: false),
+        '!');
     out = out.replaceAll(RegExp(r'\b(comma)\b', caseSensitive: false), ',');
-    out = out.replaceAll(RegExp(r'\b(new line|next line)\b', caseSensitive: false), '\n');
+    out = out.replaceAll(
+        RegExp(r'\b(new line|next line)\b', caseSensitive: false), '\n');
     // Spacing cleanup:
     // 1. Remove extraneous whitespace before punctuation (e.g., "word  ." -> "word.")
     out = out.replaceAllMapped(RegExp(r'\s+([.,!?])'), (m) => m[1]!);
     // 2. Ensure standard single space after punctuation when directly followed by alphanumeric text (e.g., "word.Next" -> "word. Next")
-    out = out.replaceAllMapped(RegExp(r'([.,!?])(?=[a-zA-Z0-9])'), (m) => '${m[1]} ');
+    out = out.replaceAllMapped(
+        RegExp(r'([.,!?])(?=[a-zA-Z0-9])'), (m) => '${m[1]} ');
     return out;
   }
 
@@ -163,7 +229,8 @@ class SpeechGrammarFormatter {
       final currentWord = words[i];
       // Check if this word and the next form a known question starter phrase
       if (i > 2 && i < words.length - 1) {
-        final phrase = '${currentWord.toLowerCase()} ${words[i + 1].toLowerCase()}';
+        final phrase =
+            '${currentWord.toLowerCase()} ${words[i + 1].toLowerCase()}';
         if (_questionStarters.contains(phrase)) {
           // Check if previous word already has punctuation
           final prevWord = processed.last;
@@ -230,7 +297,8 @@ class SpeechGrammarFormatter {
     bool isQuestion = false;
 
     // Check if the sentence starts with a question word or after the last punctuation starts with one
-    final lastClause = trimmed.split(RegExp(r'[.!?,]\s*')).last.trim().toLowerCase();
+    final lastClause =
+        trimmed.split(RegExp(r'[.!?,]\s*')).last.trim().toLowerCase();
     for (final starter in _questionStarters) {
       if (lastClause.startsWith(starter) || lower.startsWith(starter)) {
         isQuestion = true;
@@ -239,7 +307,24 @@ class SpeechGrammarFormatter {
     }
 
     // Also check single question words at the start of the last clause
-    final singleStarters = ['who ', 'what ', 'where ', 'when ', 'why ', 'how ', 'which ', 'can ', 'could ', 'would ', 'will ', 'is ', 'are ', 'do ', 'does ', 'did '];
+    final singleStarters = [
+      'who ',
+      'what ',
+      'where ',
+      'when ',
+      'why ',
+      'how ',
+      'which ',
+      'can ',
+      'could ',
+      'would ',
+      'will ',
+      'is ',
+      'are ',
+      'do ',
+      'does ',
+      'did '
+    ];
     for (final starter in singleStarters) {
       if (lastClause.startsWith(starter)) {
         isQuestion = true;

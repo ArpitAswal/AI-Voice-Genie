@@ -1,0 +1,4 @@
+name = "fix"
+description = "Applies a fast, surgical targeted fix to a known bug — touches only the exact file and lines responsible, never suppresses warnings, and re-runs dart format + flutter analyze to confirm the fix is clean."
+instructions_file = "personas/build-error-resolver.md"
+workflow_file = ".agent/workflows/fix.md"
