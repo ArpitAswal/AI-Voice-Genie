@@ -40,8 +40,34 @@ class ImageView extends StatelessWidget {
   Widget _error(BuildContext c) =>
       errorBuilder?.call(c, '', null) ?? ImageBuilders.error(c);
 
-  Widget Function(BuildContext, Widget, int?, bool) _frame() =>
-      frameBuilder ?? ImageBuilders.fadeFrame;
+  Widget Function(BuildContext, Widget, int?, bool) _frame() {
+    if (frameBuilder != null) return frameBuilder!;
+    return (context, child, frame, wasSynchronouslyLoaded) {
+      if (wasSynchronouslyLoaded) return child;
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        layoutBuilder: (currentChild, previousChildren) {
+          return Stack(
+            fit: StackFit.passthrough,
+            alignment: alignment,
+            children: [
+              ...previousChildren,
+              if (currentChild != null) currentChild,
+            ],
+          );
+        },
+        child: frame != null
+            ? KeyedSubtree(
+                key: const ValueKey('loaded_image'),
+                child: child,
+              )
+            : KeyedSubtree(
+                key: const ValueKey('loading_placeholder'),
+                child: _loading(context),
+              ),
+      );
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,8 +105,14 @@ class ImageView extends StatelessWidget {
             frameBuilder: _frame(),
             errorBuilder: (c, e, s) => _error(c),
             loadingBuilder: (c, child, progress) {
-              if (progress == null) return child;
-              return _loading(c);
+              // frameBuilder manages displaying the loading placeholder immediately
+              // from frame 0 until the image frame is decoded.
+              // If a custom loadingBuilder is provided that consumes progress updates,
+              // delegate to it only when progress is non-null.
+              if (loadingBuilder != null && progress != null) {
+                return loadingBuilder!(c, child, progress);
+              }
+              return child;
             },
           ),
         );

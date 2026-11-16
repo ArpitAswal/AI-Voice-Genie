@@ -28,9 +28,12 @@ import '../../features/image_download/presentation/image_download_provider.dart'
 /// Accessibility: semantic label + tooltip + minimum 44×44 tap target.
 class GeneratedImageDownloadButton extends StatelessWidget {
   /// Raw image source: HTTPS URL, data-URI, or local file path.
-  final String imageSource;
+  final String? imageSource;
 
-  /// Unique key for this image: typically "{messageId}_{imageIndex}".
+  /// Multiple image sources for batch downloading.
+  final List<String>? imageSources;
+
+  /// Unique key for this image: typically "{messageId}_{imageIndex}" or "{messageId}_all".
   final String imageKey;
 
   /// AI provider name for analytics (e.g. "openai", "gemini").
@@ -38,7 +41,8 @@ class GeneratedImageDownloadButton extends StatelessWidget {
 
   const GeneratedImageDownloadButton({
     super.key,
-    required this.imageSource,
+    this.imageSource,
+    this.imageSources,
     required this.imageKey,
     required this.provider,
   });
@@ -48,15 +52,11 @@ class GeneratedImageDownloadButton extends StatelessWidget {
     return Consumer<ImageDownloadProvider>(
       builder: (context, downloadProvider, _) {
         final state = downloadProvider.stateFor(imageKey);
-        return Positioned(
-          top: 4,
-          right: 4,
-          child: _DownloadButtonCore(
-            state: state,
-            onTap: state == ImageDownloadState.loading
-                ? null
-                : () => _onTap(context, downloadProvider),
-          ),
+        return _DownloadButtonCore(
+          state: state,
+          onTap: state == ImageDownloadState.loading
+              ? null
+              : () => _onTap(context, downloadProvider),
         );
       },
     );
@@ -66,11 +66,23 @@ class GeneratedImageDownloadButton extends StatelessWidget {
     BuildContext context,
     ImageDownloadProvider downloadProvider,
   ) async {
-    await downloadProvider.downloadImage(
-      imageSource: imageSource,
-      imageKey: imageKey,
-      provider: provider,
-    );
+    final sources = imageSources ??
+        (imageSource != null ? [imageSource!] : <String>[]);
+    if (sources.isEmpty) return;
+
+    if (sources.length > 1) {
+      await downloadProvider.downloadAllImages(
+        imageSources: sources,
+        batchKey: imageKey,
+        provider: provider,
+      );
+    } else {
+      await downloadProvider.downloadImage(
+        imageSource: sources.first,
+        imageKey: imageKey,
+        provider: provider,
+      );
+    }
 
     // Read result after awaiting — use the state that the provider has settled into
     final finalState = downloadProvider.stateFor(imageKey);
@@ -83,7 +95,11 @@ class GeneratedImageDownloadButton extends StatelessWidget {
         finalState == ImageDownloadState.idle && failure == null) {
       // Success toast
       final path = Platform.isIOS ? 'Photos' : 'Pictures/AI Voice Genie';
-      context.showSuccessToast(context.l10n.imageSaved(path));
+      if (sources.length > 1) {
+        context.showSuccessToast('Saved ${sources.length} images to $path');
+      } else {
+        context.showSuccessToast(context.l10n.imageSaved(path));
+      }
     } else if (failure != null) {
       // Failure toast with a specific message per failure reason
       final message = _failureMessage(context, failure);
@@ -151,7 +167,7 @@ class _DownloadButtonCore extends StatelessWidget {
     final isDark = context.isDark;
 
     // Semi-transparent surface so the button is readable on any image background
-    final bg = isDark ? AppColors.scaffoldDark : AppColors.scaffoldLight;
+    final bg = isDark ? Colors.black54 : Colors.white70;
 
     final iconColor = isDark ? AppColors.white : context.primaryColor;
 
@@ -160,10 +176,11 @@ class _DownloadButtonCore extends StatelessWidget {
       case ImageDownloadState.loading:
         // Small spinner — only for this specific image
         icon = SizedBox(
-          width: 18,
-          height: 18,
+          width: context.isCompact ? 15 : 24,
+          height: context.isCompact ? 15 : 24,
           child: CircularProgressIndicator(
             strokeWidth: 2,
+            backgroundColor: bg,
             color: iconColor,
           ),
         );
@@ -173,40 +190,29 @@ class _DownloadButtonCore extends StatelessWidget {
         // Temporary check icon after successful save
         icon = Icon(Icons.check_rounded,
             color: isDark ? AppColors.darkSuccess : AppColors.lightSuccess,
-            size: 20);
+            size: context.isCompact ? 18 : 28);
         break;
 
       default:
         // Idle and failed both show the download icon
-        icon = Icon(Icons.download_rounded, color: iconColor, size: 20);
+        icon = Icon(Icons.download_rounded,
+            color: iconColor, size: context.isCompact ? 18 : 28);
     }
 
     return Tooltip(
-      message: 'Download image',
-      child: Semantics(
-        label: 'Download generated image',
-        button: true,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            // Minimum 44×44 tap target for accessibility compliance
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: bg,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.black.withValues(alpha: 0.15),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Center(child: icon),
+      message: 'Download the image',
+      child: IconButton(
+          // Minimum 44×44 tap target for accessibility compliance
+          constraints: BoxConstraints(
+              minWidth: context.isTablet ? 44 : 30,
+              minHeight: context.isTablet ? 44 : 30),
+          padding: EdgeInsets.zero,
+          style: IconButton.styleFrom(
+            backgroundColor: bg,
+            shape: const CircleBorder(),
           ),
-        ),
-      ),
+          icon: icon,
+          onPressed: onTap),
     );
   }
 }

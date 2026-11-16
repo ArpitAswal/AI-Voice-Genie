@@ -396,26 +396,26 @@ enum ImageQuality {
 
 /// Desired image size for generation requests.
 enum AiImageSize {
-  /// 1024×1024 — default square format
+  /// 1024×1024 — default square format (1:1)
   square(
       width: 1024,
       height: 1024,
       apiValue: '1024x1024',
       name: 'Square (1024x1024)'),
 
-  /// 1024×1536 — portrait
+  /// 1024×1792 — portrait (9:16)
   portrait(
       width: 1024,
-      height: 1536,
-      apiValue: '1024x1536',
-      name: 'Portrait (1024x1536)'),
+      height: 1792,
+      apiValue: '1024x1792',
+      name: 'Portrait (1024x1792)'),
 
-  /// 1536×1024 — landscape / widescreen
+  /// 1792×1024 — landscape / widescreen (16:9)
   landscape(
-      width: 1536,
+      width: 1792,
       height: 1024,
-      apiValue: '1536x1024',
-      name: 'Landscape (1536x1024)');
+      apiValue: '1792x1024',
+      name: 'Landscape (1792x1024)');
 
   const AiImageSize(
       {required this.width,
@@ -428,18 +428,28 @@ enum AiImageSize {
   final String apiValue;
   final String name;
 
-  double get aspectRatio => width / height;
+  /// Aspect ratio as width / height (1.0 for square, 9/16 for portrait, 16/9 for landscape).
+  double get aspectRatio {
+    switch (this) {
+      case AiImageSize.square:
+        return 1.0;
+      case AiImageSize.portrait:
+        return 9 / 16;
+      case AiImageSize.landscape:
+        return 16 / 9;
+    }
+  }
 
   static AiImageSize fromValue(String value) {
     final lower = value.toLowerCase();
     if (lower.contains('landscape') ||
         lower.contains('16:9') ||
-        lower.contains('1536x1024')) {
+        lower.contains('1792x1024')) {
       return AiImageSize.landscape;
     }
     if (lower.contains('portrait') ||
         lower.contains('9:16') ||
-        lower.contains('1024x1536')) {
+        lower.contains('1024x1792')) {
       return AiImageSize.portrait;
     }
     if (lower.contains('square') ||

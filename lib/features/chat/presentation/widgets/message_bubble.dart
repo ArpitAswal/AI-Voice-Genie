@@ -23,6 +23,7 @@ import '../../../../core/services/pdf_document_service.dart';
 import '../../../../core/utils/status_message_utils.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../shared/model/image_model.dart';
+import '../../../../shared/widgets/full_screen_image_gallery.dart';
 import '../../../../shared/widgets/generated_image_download_button.dart';
 import '../../../../shared/widgets/image_view.dart';
 import '../../../voice_speech/presentation/widgets/tts_play_button.dart';
@@ -122,7 +123,8 @@ class MessageBubble extends StatelessWidget {
         // AI model chip — shown above AI responses
         if (!_isUser && message.modelRequest != null) ...[
           Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 4),
+            padding: EdgeInsets.symmetric(
+                horizontal: context.horizontalPadding / 2, vertical: 8.0),
             child: ModelIndicatorChip(
               provider: message.modelRequest!,
               isTablet: isTablet,
@@ -135,29 +137,81 @@ class MessageBubble extends StatelessWidget {
           onLongPress: () => _copyToClipboard(context),
           child: Container(
             constraints: BoxConstraints(
-              maxWidth:
-                  MediaQuery.of(context).size.width * (isTablet ? 0.65 : 0.85),
+              maxWidth: MediaQuery.sizeOf(context).width *
+                  (context.isTablet
+                      ? (MediaQuery.sizeOf(context).width > 900 ? 0.65 : 0.75)
+                      : 0.85),
             ),
-            padding: const EdgeInsets.all(10),
+            padding: (message.imageUrls?.isNotEmpty ??
+                    message.pdfInfo?.isEmpty ??
+                    false)
+                ? EdgeInsets.symmetric(
+                    horizontal: context.isCompact ? 4.0 : 8.0,
+                    vertical: context.isCompact ? 4.0 : 6.0)
+                : EdgeInsets.symmetric(
+                    horizontal: isTablet ? 18.0 : 14.0,
+                    vertical: isTablet ? 14.0 : 10.0,
+                  ),
+            margin: EdgeInsets.symmetric(
+              horizontal: context.horizontalPadding / 2,
+              // vertical: context.verticalSpacing
+            ),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  begin: AlignmentGeometry.topLeft,
-                  end: AlignmentGeometry.bottomRight,
-                  colors: (context.isDark)
-                      ? [
-                          AppColors.messageBubbleDark,
-                          AppColors.scaffoldDark,
-                        ]
-                      : [
-                          AppColors.messageBubbleLight,
-                          AppColors.primaryLight,
-                        ]),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(_isUser ? 24 : 4),
-                topRight: Radius.circular(_isUser ? 4 : 24),
-                bottomLeft: const Radius.circular(24),
-                bottomRight: const Radius.circular(24),
+              gradient: _isUser
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: context.isDark
+                          ? [
+                              AppColors.primaryDark,
+                              const Color(0xFF4358A4),
+                            ]
+                          : [
+                              AppColors.primaryLight,
+                              const Color(0xFF3B5BDB),
+                            ],
+                    )
+                  : LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: context.isDark
+                          ? [
+                              AppColors.cardDark,
+                              AppColors.surfaceDark,
+                            ]
+                          : [
+                              AppColors.surfaceLight,
+                              AppColors.cardLight,
+                            ],
+                    ),
+              borderRadius: (message.imageUrls?.isNotEmpty ??
+                      message.pdfInfo?.isEmpty ??
+                      false)
+                  ? BorderRadius.circular(12)
+                  : BorderRadius.only(
+                      topLeft: Radius.circular(_isUser ? 24 : 6),
+                      topRight: Radius.circular(_isUser ? 6 : 24),
+                      bottomLeft: const Radius.circular(24),
+                      bottomRight: const Radius.circular(24),
+                    ),
+              border: Border.all(
+                color: (context.isDark
+                    ? AppColors.darkDivider
+                    : AppColors.lightDivider),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: _isUser
+                      ? AppColors.primaryLight.withValues(
+                          alpha: context.isDark ? 0.30 : 0.20,
+                        )
+                      : Colors.black.withValues(
+                          alpha: context.isDark ? 0.25 : 0.05,
+                        ),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: _MessageBubbleContent(
               message: message,
@@ -171,6 +225,7 @@ class MessageBubble extends StatelessWidget {
         // Timestamp + status row displayed underneath the bubble
         _MessageTimestampRow(
           message: message,
+          isTablet: isTablet,
           // Pass TTS button alongside the timestamp for eligible AI messages.
           // Placing it here keeps the action row compact and accessible.
           ttsButton: _canSpeakMessage
@@ -181,7 +236,6 @@ class MessageBubble extends StatelessWidget {
                 )
               : null,
         ),
-        const SizedBox(height: 4)
       ],
     );
   }
@@ -202,36 +256,48 @@ class MessageBubble extends StatelessWidget {
 /// text responses without adding extra vertical spacing.
 class _MessageTimestampRow extends StatelessWidget {
   final MessageModel message;
+  final bool isTablet;
 
   /// Optional TTS action widget rendered next to the timestamp.
   /// Null for user messages and non-speakable AI responses.
   final Widget? ttsButton;
 
-  const _MessageTimestampRow({required this.message, this.ttsButton});
+  const _MessageTimestampRow({
+    required this.message,
+    this.ttsButton,
+    this.isTablet = false,
+  });
 
   bool get _isUser => message.role == MessageRole.user;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+      padding: EdgeInsets.symmetric(
+          vertical: 8, horizontal: context.horizontalPadding),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Display the localized time string (e.g. 10:42 AM)
           Text(
             message.timestamp.toTimeString,
-            style: context.textTheme.bodySmall,
+            style: (context.isCompact
+                    ? context.textTheme.labelSmall
+                    : context.textTheme.labelMedium)
+                ?.copyWith(
+              color: context.colorScheme.onSurface,
+            ),
           ),
           // For AI messages stopped by user, display a subtle Stopped badge
           if (!_isUser && message.isUserCancelled) ...[
             const SizedBox(width: 4),
             Text(
               '• ${AppLocalizations.of(context)?.responseStopped ?? "Stopped"}',
-              style: context.textTheme.bodySmall?.copyWith(
-                color:
-                    context.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                fontSize: 11,
+              style: (context.isCompact
+                      ? context.textTheme.labelSmall
+                      : context.textTheme.labelMedium)
+                  ?.copyWith(
+                color: context.colorScheme.onSurface,
               ),
             ),
           ],
@@ -272,10 +338,15 @@ class _MessageBubbleContent extends StatelessWidget {
     // response. For user messages, always use plain Text (no animation).
     Widget? textWidget;
     if (text.isNotEmpty) {
-      final baseStyle = context.textTheme.bodySmall?.copyWith(
-        height: 1.5,
-        fontWeight: FontWeight.w500,
-        color: context.isDark ? AppColors.white : AppColors.black,
+      final baseStyle = (isTablet
+              ? context.textTheme.bodyLarge
+              : context.textTheme.bodyMedium)
+          ?.copyWith(
+        height: 1.55,
+        fontWeight: isUser ? FontWeight.w500 : FontWeight.w400,
+        color: isUser
+            ? AppColors.white
+            : (context.isDark ? AppColors.white : AppColors.lightTextPrimary),
       );
 
       if (!isUser) {
@@ -286,6 +357,7 @@ class _MessageBubbleContent extends StatelessWidget {
               return MarkdownBody(
                 data: text,
                 selectable: false,
+                fitContent: true,
                 onTapLink: (text, href, title) =>
                     TypewriterText.launchUrlSafely(href),
                 styleSheet:
@@ -319,7 +391,31 @@ class _MessageBubbleContent extends StatelessWidget {
           },
         );
       } else {
-        textWidget = Text(text, style: baseStyle);
+        // For user messages, wrap in LayoutBuilder to shrink-wrap the text box
+        // to the exact width of the longest line. This prevents Flutter's
+        // multi-line RenderParagraph from greedily expanding to constraints.maxWidth,
+        // allowing the bubble container to tightly hug its largest child.
+        textWidget = LayoutBuilder(
+          builder: (context, constraints) {
+            final tp = TextPainter(
+              text: TextSpan(text: text, style: baseStyle),
+              textDirection: Directionality.of(context),
+            )..layout(maxWidth: constraints.maxWidth);
+
+            final lines = tp.computeLineMetrics();
+            final maxLineWidth = lines.isEmpty
+                ? 0.0
+                : lines.map((l) => l.width).reduce((a, b) => a > b ? a : b);
+
+            return SizedBox(
+              width: maxLineWidth.ceilToDouble(),
+              child: Text(
+                text,
+                style: baseStyle,
+              ),
+            );
+          },
+        );
       }
     }
 
@@ -334,6 +430,7 @@ class _MessageBubbleContent extends StatelessWidget {
           messageId: message.messageId,
           provider:
               message.modelRequest?.id ?? (isUser ? 'user_upload' : 'unknown'),
+          isTablet: isTablet,
         ),
 
       // 2. If PDFs are present, render the PDF cards.
@@ -341,6 +438,7 @@ class _MessageBubbleContent extends StatelessWidget {
         _PdfAttachmentCard(
           pdfInfo: message.pdfInfo!,
           isUser: isUser,
+          isTablet: isTablet,
         ),
 
       // 3. If there is text, render it below the attachments (with padding if media exists).
@@ -352,12 +450,17 @@ class _MessageBubbleContent extends StatelessWidget {
       ],
     ];
 
+    final hasImages =
+        message.imageUrls != null && message.imageUrls!.isNotEmpty;
+    final hasPdfs = message.pdfInfo != null && message.pdfInfo!.isNotEmpty;
+
     // If there's no media, just return the text widget directly to avoid an extra Column
-    if (children.isEmpty) {
+    if (!hasImages && !hasPdfs) {
       return textWidget ?? const SizedBox.shrink();
     }
 
-    // Wrap the content in a column so attachments sit above the text
+    // Wrap the content in a column so attachments sit above the text.
+    // User bubble contents align to the right, AI response contents align to the left.
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment:
@@ -374,30 +477,37 @@ class _ChatImage extends StatelessWidget {
   /// Null for user-attached images — download button is not shown.
   final String? messageId;
   final String? provider;
+  final bool isTablet;
 
   const _ChatImage({
     required this.images,
     required this.size,
     this.messageId,
     this.provider,
+    this.isTablet = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    switch (images.length) {
-      case 1:
-        return _OneAttachmentView(
-          type: ChatAttachmentType.image,
-          image: images.first,
-          size: size,
-          pdf: null,
-          msgId: messageId,
-          provider: provider,
-          totalImages: images.length,
-        );
+    if (images.isEmpty) return const SizedBox.shrink();
 
+    if (images.length == 1) {
+      return _OneAttachmentView(
+        type: ChatAttachmentType.image,
+        image: images.first,
+        size: size,
+        pdf: null,
+        msgId: messageId,
+        provider: provider,
+        totalImages: images.length,
+        isTablet: isTablet,
+      );
+    }
+
+    final Widget collage;
+    switch (images.length) {
       case 2:
-        return _TwoAttachmentView(
+        collage = _TwoAttachmentView(
           type: ChatAttachmentType.image,
           images: images,
           size: size,
@@ -405,10 +515,12 @@ class _ChatImage extends StatelessWidget {
           provider: provider,
           msgId: messageId,
           totalImages: images.length,
+          isTablet: isTablet,
         );
+        break;
 
       case 3:
-        return _ThreeAttachmentView(
+        collage = _ThreeAttachmentView(
           type: ChatAttachmentType.image,
           images: images,
           size: size,
@@ -416,22 +528,45 @@ class _ChatImage extends StatelessWidget {
           msgId: messageId,
           provider: provider,
           totalImages: images.length,
+          isTablet: isTablet,
         );
-
-      case 4:
-        return _FourAttachmentView(
-          type: ChatAttachmentType.image,
-          images: images,
-          size: size,
-          pdfs: null,
-          msgId: messageId,
-          provider: provider,
-          totalImages: images.length,
-        );
+        break;
 
       default:
-        return const SizedBox.shrink();
+        // Handles 4 or more images gracefully (with +N overlay on cell 4)
+        collage = _FourAttachmentView(
+          type: ChatAttachmentType.image,
+          images: images,
+          size: size,
+          pdfs: null,
+          msgId: messageId,
+          provider: provider,
+          totalImages: images.length,
+          isTablet: isTablet,
+        );
+        break;
     }
+
+    // Pinned single circular download button for the entire multi-image collage
+    if (messageId != null && provider != null) {
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          collage,
+          Positioned(
+            top: context.isCompact ? 0 : 4,
+            right: context.isCompact ? 0 : 4,
+            child: GeneratedImageDownloadButton(
+              imageSources: images,
+              imageKey: '${messageId}_all',
+              provider: provider!,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return collage;
   }
 }
 
@@ -465,10 +600,14 @@ Widget _buildImageWithDownload({
   return Stack(
     children: [
       _buildImage(url),
-      GeneratedImageDownloadButton(
-        imageSource: url,
-        imageKey: imageKey,
-        provider: provider,
+      Positioned(
+        right: 0,
+        top: 0,
+        child: GeneratedImageDownloadButton(
+          imageSource: url,
+          imageKey: imageKey,
+          provider: provider,
+        ),
       ),
     ],
   );
@@ -485,7 +624,7 @@ class _SmartAsyncImageViewer extends StatefulWidget {
 class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
   static final Map<String, Uint8List> _base64Cache = {};
   Uint8List? _decodedBytes;
-  bool _isLoading = false;
+  bool _isLoading = true;
   bool _hasError = false;
 
   @override
@@ -644,11 +783,6 @@ class _ImageFallback extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // final shortestSide = constraints.biggest.shortestSide;
-        // final fallbackSize = shortestSide.isFinite
-        //     ? shortestSide.clamp(32.0, 120.0).toDouble()
-        //     : 64.0;
-
         // Calculate proportional sizes based on available space
         final availableHeight = constraints.maxHeight;
 
@@ -686,154 +820,155 @@ class _ImageFallback extends StatelessWidget {
 Widget _pdfView(
   BuildContext context,
   PdfAttachmentInfo pdfInfo, {
-  bool squareView = false,
+  bool isTablet = false,
+  bool isUser = true,
 }) {
-  const spacing = 8.0;
+  const spacing = 10.0;
+
+  // Determine card container & text colors:
+  // For user messages, the bubble background is always brand blue ([primaryLight, 0xFF3B5BDB]
+  // or [primaryDark, 0xFF4358A4]). Therefore, the PDF card inside a user bubble must always
+  // use a deep, high-contrast dark slate container (0xFF0F172A) with crisp white text to
+  // guarantee WCAG AAA (> 14:1 contrast ratio) in BOTH light and dark mode.
+  final Color cardBg;
+  final Color borderColor;
+  final Color pdfForeground;
+
+  cardBg = context.isDark
+      ? AppColors.pdfBackgroundDark
+      : AppColors.pdfBackgroundLight;
+  borderColor = Colors.white.withValues(alpha: context.isDark ? 0.16 : 0.24);
+  pdfForeground =
+      (context.isDark ? Colors.white : Colors.black).withValues(alpha: 0.85);
+
   final pdfView = Container(
-    width: 32,
-    height: 32,
+    width: 38,
+    height: 38,
     decoration: BoxDecoration(
-      color: context.isDark
-          ? AppColors.darkError.withValues(alpha: 0.2)
-          : AppColors.lightError.withValues(alpha: 0.3),
-      borderRadius: BorderRadius.circular(8),
+      color: (isUser || context.isDark)
+          ? AppColors.darkError.withValues(alpha: 0.25)
+          : AppColors.lightError.withValues(alpha: 0.20),
+      borderRadius: BorderRadius.circular(10),
     ),
     child: Icon(
-      size: 24,
       Icons.picture_as_pdf_rounded,
-      color: context.isDark ? AppColors.lightError : AppColors.darkError,
+      size: 24,
+      color: (isUser || context.isDark)
+          ? AppColors.lightError
+          : AppColors.darkError,
     ),
   );
 
-  final openButton = IconButton(
-    padding: EdgeInsets.zero,
-    constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-    icon: Icon(
-      Icons.visibility_outlined,
-      color: context.isDark ? AppColors.primaryLight : AppColors.white,
-      size: 19,
-    ),
-    tooltip: 'View PDF',
-    onPressed: () => _openOrDownloadPdf(context, pdfInfo),
-  );
-
-  final shareButton = (pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
-          pdfInfo.path.isNotEmpty)
-      ? IconButton(
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-          icon: Icon(
+  final Widget shareButton;
+  if ((pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
+      pdfInfo.path.isNotEmpty)) {
+    shareButton = Material(
+      color: Colors.transparent,
+      child: Tooltip(
+        message: 'Share PDF',
+        child: InkWell(
+          onTap: () => _sharePdf(context, pdfInfo),
+          child: Icon(
             Icons.share_outlined,
-            color: context.isDark ? AppColors.primaryLight : AppColors.white,
-            size: 18,
+            color: pdfForeground,
+            size: context.isCompact ? 18 : 21,
           ),
-          tooltip: 'Share PDF',
-          onPressed: () => _sharePdf(context, pdfInfo),
-        )
-      : const SizedBox.shrink();
+        ),
+      ),
+    );
+  } else {
+    shareButton = const SizedBox.shrink();
+  }
 
-  final downloadButton = (pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
-          pdfInfo.path.isNotEmpty)
-      ? IconButton(
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
-          icon: Icon(
+  final Widget downloadButton;
+  if ((pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
+      pdfInfo.path.isNotEmpty)) {
+    downloadButton = Material(
+      color: Colors.transparent,
+      child: Tooltip(
+        message: 'Download PDF',
+        child: InkWell(
+          onTap: () => _downloadPdfToDevice(context, pdfInfo),
+          child: Icon(
             Icons.file_download_outlined,
-            color: context.isDark ? AppColors.primaryLight : AppColors.white,
-            size: 20,
+            color: pdfForeground,
+            size: context.isCompact ? 18 : 21,
           ),
-          tooltip: 'Download PDF',
-          onPressed: () => _downloadPdfToDevice(context, pdfInfo),
-        )
-      : const SizedBox.shrink();
+        ),
+      ),
+    );
+  } else {
+    downloadButton = const SizedBox.shrink();
+  }
 
-  final actionRow = Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      openButton,
-      const SizedBox(width: 2),
-      shareButton,
-      const SizedBox(width: 2),
-      downloadButton,
-    ],
+  final actionRow = Padding(
+    padding: EdgeInsets.symmetric(horizontal: isTablet ? 16 : 8.0),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        shareButton,
+        SizedBox(width: isTablet ? 16 : 8.0),
+        downloadButton,
+      ],
+    ),
   );
 
   return Material(
     color: Colors.transparent,
     child: InkWell(
       onTap: () => _openOrDownloadPdf(context, pdfInfo),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        constraints: BoxConstraints(
-          minHeight: (squareView) ? 100 : 60,
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: BoxDecoration(
-          color: context.isDark
-              ? AppColors.pdfBackgroundDark
-              : AppColors.pdfBackgroundLight,
-          borderRadius: BorderRadius.circular(10),
+          color: cardBg,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: context.isDark ? Colors.black54 : Colors.white70,
-              width: 1),
+            color: borderColor,
+            width: 1,
+          ),
         ),
-        child: (squareView)
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.start,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            pdfView,
+            const SizedBox(width: spacing),
+            Flexible(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      pdfView,
-                      const SizedBox(width: spacing),
-                      actionRow,
-                    ],
-                  ),
-                  const SizedBox(height: spacing / 2),
-                  Text(pdfInfo.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textTheme.bodySmall?.copyWith(
-                          color: Colors.white, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: spacing / 2),
-                  if (pdfInfo.fileSizeLabel.isNotEmpty)
-                    Text(pdfInfo.fileSizeLabel,
-                        style: context.textTheme.bodySmall?.copyWith(
-                            color: Colors.white, fontWeight: FontWeight.w500))
-                ],
-              )
-            : Row(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  pdfView,
-                  const SizedBox(width: spacing),
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(pdfInfo.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.textTheme.bodySmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500)),
-                        const SizedBox(height: spacing / 2),
-                        if (pdfInfo.fileSizeLabel.isNotEmpty)
-                          Text(pdfInfo.fileSizeLabel,
-                              style: context.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500))
-                      ],
+                  Text(
+                    pdfInfo.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: (isTablet
+                            ? context.textTheme.bodyMedium
+                            : context.textTheme.bodySmall)
+                        ?.copyWith(
+                      color: pdfForeground,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: spacing),
-                  actionRow,
+                  if (pdfInfo.fileSizeLabel.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      pdfInfo.fileSizeLabel,
+                      style: context.textTheme.labelSmall?.copyWith(
+                        color: pdfForeground,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
+            ),
+            actionRow,
+          ],
+        ),
       ),
     ),
   );
@@ -985,6 +1120,7 @@ class _OneAttachmentView extends StatelessWidget {
     this.provider,
     this.msgId,
     this.totalImages = 1,
+    this.isTablet = false,
   });
 
   final String? image;
@@ -994,30 +1130,65 @@ class _OneAttachmentView extends StatelessWidget {
   final String? provider;
   final String? msgId;
   final int totalImages;
+  final bool isTablet;
 
   @override
   Widget build(BuildContext context) {
     if (type == ChatAttachmentType.image) {
       final img = image;
-      final sz = size;
+      final sz = size ?? AiImageSize.square;
       final prov = provider;
-      if (img != null && sz != null) {
-        return AspectRatio(
+      if (img != null) {
+        final isShortHeight = context.screenHeight <= 550.0;
+        final double maxWidth;
+        final double maxHeight;
+        switch (sz) {
+          case AiImageSize.portrait:
+            maxWidth = isTablet ? 360.0 : 240.0;
+            maxHeight = isTablet ? 580.0 : (isShortHeight ? 220.0 : 400.0);
+            break;
+          case AiImageSize.square:
+            maxWidth = isTablet ? 440.0 : 280.0;
+            maxHeight = isTablet ? 440.0 : (isShortHeight ? 200.0 : 280.0);
+            break;
+          case AiImageSize.landscape:
+            maxWidth = isTablet ? 580.0 : 300.0;
+            maxHeight = isTablet ? 360.0 : (isShortHeight ? 180.0 : 200.0);
+            break;
+        }
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: maxWidth,
+            maxHeight: maxHeight,
+          ),
+          child: AspectRatio(
             aspectRatio: sz.aspectRatio,
-            // Show download button only on AI-generated images (messageId is non-null)
-            child: msgId != null && prov != null
-                ? _buildImageWithDownload(
-                    url: img,
-                    imageKey: '${msgId}_0',
-                    provider: prov,
-                    totalImages: totalImages,
-                  )
-                : _buildImage(img));
+            child: GestureDetector(
+              onTap: () => FullScreenImageGallery.open(
+                context,
+                images: [img],
+                initialIndex: 0,
+                messageId: msgId,
+                provider: prov,
+              ),
+              // Show download button only on AI-generated images (messageId is non-null)
+              child: msgId != null && prov != null
+                  ? _buildImageWithDownload(
+                      url: img,
+                      imageKey: '${msgId}_0',
+                      provider: prov,
+                      totalImages: totalImages,
+                    )
+                  : _buildImage(img),
+            ),
+          ),
+        );
       }
     } else {
       final p = pdf;
       if (p != null) {
-        return _pdfView(context, p);
+        return _pdfView(context, p, isTablet: isTablet);
       }
     }
     return const SizedBox.shrink();
@@ -1033,6 +1204,7 @@ class _TwoAttachmentView extends StatelessWidget {
     this.provider,
     this.msgId,
     this.totalImages = 2,
+    this.isTablet = false,
   });
 
   final List<String>? images;
@@ -1042,56 +1214,82 @@ class _TwoAttachmentView extends StatelessWidget {
   final String? provider;
   final String? msgId;
   final int totalImages;
+  final bool isTablet;
 
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
-    final sz = size;
+    final sz = size ?? AiImageSize.square;
     final landscape = sz == AiImageSize.landscape;
     final prov = provider;
+    final isShortHeight = context.screenHeight <= 550.0;
 
     if (type == ChatAttachmentType.image) {
       final imgs = images;
-      if (imgs != null && imgs.length >= 2 && sz != null) {
-        // Helper to build image at index with optional download overlay
-        Widget img(int i) => msgId != null && prov != null
-            ? _buildImageWithDownload(
-                url: imgs[i],
-                imageKey: '${msgId}_$i',
+      if (imgs != null && imgs.length >= 2) {
+        // Clean image tile that opens the full-screen interactive gallery on tap
+        Widget img(int i) => GestureDetector(
+              onTap: () => FullScreenImageGallery.open(
+                context,
+                images: imgs,
+                initialIndex: i,
+                messageId: msgId,
                 provider: prov,
-                totalImages: totalImages,
-              )
-            : _buildImage(imgs[i]);
+              ),
+              child: _buildImage(imgs[i]),
+            );
 
-        if (landscape) {
-          return Column(
-            children: [
-              AspectRatio(aspectRatio: sz.aspectRatio, child: img(0)),
-              const SizedBox(height: spacing),
-              AspectRatio(aspectRatio: sz.aspectRatio, child: img(1)),
-            ],
+        if (landscape && !isTablet && !isShortHeight) {
+          // Mobile Portrait phone (normal height): 2 rows x 1 column vertical stack
+          return ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AspectRatio(aspectRatio: sz.aspectRatio, child: img(0)),
+                const SizedBox(height: spacing),
+                AspectRatio(aspectRatio: sz.aspectRatio, child: img(1)),
+              ],
+            ),
           );
         }
 
-        return Row(
-          children: [
-            Expanded(
-                child: AspectRatio(aspectRatio: sz.aspectRatio, child: img(0))),
-            const SizedBox(width: spacing),
-            Expanded(
-                child: AspectRatio(aspectRatio: sz.aspectRatio, child: img(1))),
-          ],
+        // Tablet Landscape, Mobile Landscape (short height), OR Portrait & Square:
+        // 1 row x 2 columns side-by-side
+        final double maxWidth;
+        if (isTablet) {
+          maxWidth = landscape ? 680.0 : 560.0;
+        } else if (isShortHeight) {
+          maxWidth = landscape ? 420.0 : 240.0;
+        } else {
+          maxWidth = 300.0;
+        }
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: Row(
+            children: [
+              Expanded(
+                child: AspectRatio(aspectRatio: sz.aspectRatio, child: img(0)),
+              ),
+              const SizedBox(width: spacing),
+              Expanded(
+                child: AspectRatio(aspectRatio: sz.aspectRatio, child: img(1)),
+              ),
+            ],
+          ),
         );
       }
     } else {
       final p = pdfs;
       if (p != null && p.length >= 2) {
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _pdfView(context, p[0]),
-            const SizedBox(height: spacing / 2),
-            _pdfView(context, p[1]),
+            _pdfView(context, p[0], isTablet: isTablet),
+            const SizedBox(height: spacing),
+            _pdfView(context, p[1], isTablet: isTablet),
           ],
         );
       }
@@ -1109,6 +1307,7 @@ class _ThreeAttachmentView extends StatelessWidget {
     this.msgId,
     this.provider,
     this.totalImages = 3,
+    this.isTablet = false,
   });
 
   final List<String>? images;
@@ -1118,59 +1317,115 @@ class _ThreeAttachmentView extends StatelessWidget {
   final String? provider;
   final String? msgId;
   final int totalImages;
+  final bool isTablet;
 
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
-    final sz = size;
+    final sz = size ?? AiImageSize.square;
     final prov = provider;
+    final isShortHeight = context.screenHeight <= 550.0;
 
     if (type == ChatAttachmentType.image) {
       final imgs = images;
-      if (imgs != null && imgs.length >= 3 && sz != null) {
-        Widget img(int i) => msgId != null && prov != null
-            ? _buildImageWithDownload(
-                url: imgs[i],
-                imageKey: '${msgId}_$i',
+      if (imgs != null && imgs.length >= 3) {
+        // Clean image tile that opens the full-screen interactive gallery on tap
+        Widget img(int i) => GestureDetector(
+              onTap: () => FullScreenImageGallery.open(
+                context,
+                images: imgs,
+                initialIndex: i,
+                messageId: msgId,
                 provider: prov,
-                totalImages: totalImages,
-              )
-            : _buildImage(imgs[i]);
+              ),
+              child: _buildImage(imgs[i]),
+            );
 
-        return Column(
-          children: [
-            AspectRatio(aspectRatio: sz.aspectRatio, child: img(0)),
-            const SizedBox(height: spacing),
-            Row(
+        // 1 Row x 3 Columns strip for Portrait (both mobile & tablet)
+        final isThreeStrip = sz == AiImageSize.portrait;
+
+        if (isThreeStrip) {
+          final double maxWidth =
+              isTablet ? 600.0 : (isShortHeight ? 240.0 : 320.0);
+
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Row(
               children: [
                 Expanded(
-                    child: AspectRatio(
-                        aspectRatio: sz.aspectRatio, child: img(1))),
+                  child:
+                      AspectRatio(aspectRatio: sz.aspectRatio, child: img(0)),
+                ),
                 const SizedBox(width: spacing),
                 Expanded(
-                    child: AspectRatio(
-                        aspectRatio: sz.aspectRatio, child: img(2))),
+                  child:
+                      AspectRatio(aspectRatio: sz.aspectRatio, child: img(1)),
+                ),
+                const SizedBox(width: spacing),
+                Expanded(
+                  child:
+                      AspectRatio(aspectRatio: sz.aspectRatio, child: img(2)),
+                ),
               ],
             ),
-          ],
+          );
+        }
+
+        // Hero top (16:9) + 2 sub items bottom (for Landscape and Square)
+        final bottomAspectRatio =
+            sz == AiImageSize.landscape ? sz.aspectRatio : 1.0;
+        final double collageWidth;
+        if (isTablet) {
+          collageWidth = sz == AiImageSize.landscape ? 480.0 : 440.0;
+        } else if (isShortHeight) {
+          collageWidth = 220.0;
+        } else {
+          collageWidth = 300.0;
+        }
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: collageWidth),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: img(0),
+              ),
+              const SizedBox(height: spacing),
+              Row(
+                children: [
+                  Expanded(
+                    child: AspectRatio(
+                      aspectRatio: bottomAspectRatio,
+                      child: img(1),
+                    ),
+                  ),
+                  const SizedBox(width: spacing),
+                  Expanded(
+                    child: AspectRatio(
+                      aspectRatio: bottomAspectRatio,
+                      child: img(2),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       }
     } else {
       final p = pdfs;
       if (p != null && p.length >= 3) {
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _pdfView(context, p[0]),
-            const SizedBox(height: spacing / 2),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(child: _pdfView(context, p[1], squareView: true)),
-                const SizedBox(width: spacing),
-                Expanded(child: _pdfView(context, p[2], squareView: true)),
-              ],
-            ),
+            _pdfView(context, p[0], isTablet: isTablet),
+            const SizedBox(height: spacing),
+            _pdfView(context, p[1], isTablet: isTablet),
+            const SizedBox(height: spacing),
+            _pdfView(context, p[2], isTablet: isTablet),
           ],
         );
       }
@@ -1188,6 +1443,7 @@ class _FourAttachmentView extends StatelessWidget {
     this.msgId,
     this.provider,
     this.totalImages = 4,
+    this.isTablet = false,
   });
 
   final List<String>? images;
@@ -1197,84 +1453,182 @@ class _FourAttachmentView extends StatelessWidget {
   final String? provider;
   final String? msgId;
   final int totalImages;
+  final bool isTablet;
 
   @override
   Widget build(BuildContext context) {
     const spacing = 8.0;
-    final sz = size;
     final prov = provider;
+    final isShortHeight = context.screenHeight <= 550.0;
 
     if (type == ChatAttachmentType.image) {
       final imgs = images;
-      if (imgs != null && imgs.length >= 4 && sz != null) {
-        Widget img(int i) => msgId != null && prov != null
-            ? _buildImageWithDownload(
-                url: imgs[i],
-                imageKey: '${msgId}_$i',
+      if (imgs != null && imgs.length >= 4) {
+        // Clean image tile that opens the full-screen interactive gallery on tap
+        Widget img(int i) => GestureDetector(
+              onTap: () => FullScreenImageGallery.open(
+                context,
+                images: imgs,
+                initialIndex: i,
+                messageId: msgId,
                 provider: prov,
-                totalImages: totalImages,
-              )
-            : _buildImage(imgs[i]);
+              ),
+              child: _buildImage(imgs[i]),
+            );
 
-        return Column(
-          children: [
-            Row(
+        final hasMore = imgs.length > 4;
+        final extraCount = imgs.length - 3;
+        final sz = size ?? AiImageSize.square;
+        final cellAspectRatio = sz.aspectRatio;
+
+        // Tablet Portrait 4-strip when exactly 4 images are present (no overflow badge)
+        if (isTablet && sz == AiImageSize.portrait && !hasMore) {
+          return ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600.0),
+            child: Row(
               children: [
-                Expanded(
+                for (int i = 0; i < 4; i++) ...[
+                  if (i > 0) const SizedBox(width: spacing),
+                  Expanded(
                     child: AspectRatio(
-                        aspectRatio: sz.aspectRatio, child: img(0))),
-                const SizedBox(width: spacing),
-                Expanded(
-                    child: AspectRatio(
-                        aspectRatio: sz.aspectRatio, child: img(1))),
+                      aspectRatio: cellAspectRatio,
+                      child: img(i),
+                    ),
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: spacing),
-            Row(
-              children: [
-                Expanded(
+          );
+        }
+
+        final double maxWidth;
+        if (isTablet) {
+          switch (sz) {
+            case AiImageSize.portrait:
+              maxWidth = 540.0;
+              break;
+            case AiImageSize.square:
+              maxWidth = 600.0;
+              break;
+            case AiImageSize.landscape:
+              maxWidth = 680.0;
+              break;
+          }
+        } else if (isShortHeight) {
+          switch (sz) {
+            case AiImageSize.portrait:
+              maxWidth = 200.0;
+              break;
+            case AiImageSize.square:
+            case AiImageSize.landscape:
+              maxWidth = 240.0;
+              break;
+          }
+        } else {
+          switch (sz) {
+            case AiImageSize.portrait:
+              maxWidth = 280.0;
+              break;
+            case AiImageSize.square:
+            case AiImageSize.landscape:
+              maxWidth = 300.0;
+              break;
+          }
+        }
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
                     child: AspectRatio(
-                        aspectRatio: sz.aspectRatio, child: img(2))),
-                const SizedBox(width: spacing),
-                Expanded(
+                      aspectRatio: cellAspectRatio,
+                      child: img(0),
+                    ),
+                  ),
+                  const SizedBox(width: spacing),
+                  Expanded(
                     child: AspectRatio(
-                        aspectRatio: sz.aspectRatio, child: img(3))),
-              ],
-            ),
-          ],
+                      aspectRatio: cellAspectRatio,
+                      child: img(1),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: spacing),
+              Row(
+                children: [
+                  Expanded(
+                    child: AspectRatio(
+                      aspectRatio: cellAspectRatio,
+                      child: img(2),
+                    ),
+                  ),
+                  const SizedBox(width: spacing),
+                  Expanded(
+                    child: AspectRatio(
+                      aspectRatio: cellAspectRatio,
+                      child: hasMore
+                          ? GestureDetector(
+                              onTap: () => FullScreenImageGallery.open(
+                                context,
+                                images: imgs,
+                                initialIndex: 3,
+                                messageId: msgId,
+                                provider: prov,
+                              ),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  _buildImage(imgs[3]),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: context.isDark
+                                          ? Colors.black.withValues(alpha: 0.55)
+                                          : Colors.white
+                                              .withValues(alpha: 0.62),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '+$extraCount',
+                                        style: TextStyle(
+                                          color: context.isDark
+                                              ? Colors.white
+                                              : context.primaryColor
+                                                  .withValues(alpha: 0.6),
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : img(3),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       }
     } else {
       final p = pdfs;
       if (p != null && p.length >= 4) {
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _pdfView(context, p[0], squareView: true),
-                ),
-                const SizedBox(width: spacing),
-                Expanded(
-                  child: _pdfView(context, p[1], squareView: true),
-                ),
-              ],
-            ),
-            const SizedBox(height: spacing),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: _pdfView(context, p[2], squareView: true),
-                ),
-                const SizedBox(width: spacing),
-                Expanded(
-                  child: _pdfView(context, p[3], squareView: true),
-                ),
-              ],
-            )
+            for (int i = 0; i < p.length; i++) ...[
+              if (i > 0) const SizedBox(height: spacing),
+              _pdfView(context, p[i], isTablet: isTablet),
+            ],
           ],
         );
       }
@@ -1286,46 +1640,34 @@ class _FourAttachmentView extends StatelessWidget {
 class _PdfAttachmentCard extends StatelessWidget {
   final List<PdfAttachmentInfo> pdfInfo;
   final bool isUser;
+  final bool isTablet;
 
   const _PdfAttachmentCard({
     required this.pdfInfo,
     required this.isUser,
+    this.isTablet = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    switch (pdfInfo.length) {
-      case 1:
-        return _OneAttachmentView(
-            type: ChatAttachmentType.pdf,
-            pdf: pdfInfo.first,
-            image: null,
-            size: null);
+    if (pdfInfo.isEmpty) return const SizedBox.shrink();
 
-      case 2:
-        return _TwoAttachmentView(
-            type: ChatAttachmentType.pdf,
-            pdfs: pdfInfo,
-            images: null,
-            size: null);
-
-      case 3:
-        return _ThreeAttachmentView(
-            type: ChatAttachmentType.pdf,
-            pdfs: pdfInfo,
-            images: null,
-            size: null);
-
-      case 4:
-        return _FourAttachmentView(
-            type: ChatAttachmentType.pdf,
-            pdfs: pdfInfo,
-            images: null,
-            size: null);
-
-      default:
-        return const SizedBox.shrink();
-    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment:
+          isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < pdfInfo.length; i++) ...[
+          if (i > 0) const SizedBox(height: 8.0),
+          _pdfView(
+            context,
+            pdfInfo[i],
+            isTablet: isTablet,
+            isUser: isUser,
+          ),
+        ],
+      ],
+    );
   }
 }
 
@@ -1337,13 +1679,23 @@ class _StatusIcon extends StatelessWidget {
   final MessageStatus status;
   const _StatusIcon({required this.status});
 
+  double _statusIconSize(BuildContext context) {
+    if (context.isCompact) {
+      return 14.0;
+    } else if (context.isTablet && context.isExpanded) {
+      return 21.0;
+    } else {
+      return 16.0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     switch (status) {
       case MessageStatus.sending:
         return SizedBox(
-          width: 12,
-          height: 12,
+          width: _statusIconSize(context),
+          height: _statusIconSize(context),
           child: CircularProgressIndicator(
             strokeWidth: 1.5,
             color: context.theme.primaryColor,
@@ -1352,20 +1704,20 @@ class _StatusIcon extends StatelessWidget {
       case MessageStatus.delivered:
         return Icon(
           Icons.done_all_rounded,
-          size: 16,
+          size: _statusIconSize(context),
           color:
               context.isDark ? AppColors.darkSuccess : AppColors.lightSuccess,
         );
       case MessageStatus.failed:
         return Icon(
           Icons.error_outline_rounded,
-          size: 16,
+          size: _statusIconSize(context),
           color: context.isDark ? AppColors.darkError : AppColors.lightError,
         );
       case MessageStatus.partial:
         return Icon(
           Icons.schedule_rounded,
-          size: 16,
+          size: _statusIconSize(context),
           color:
               context.isDark ? AppColors.darkWarning : AppColors.lightWarning,
         );
@@ -1416,21 +1768,28 @@ class _TypingIndicatorState extends State<TypingIndicator>
             vertical: context.isTablet ? 14 : 10,
           ),
           decoration: BoxDecoration(
-            color: context.isDark
-                ? AppColors.messageBubbleDark
-                : AppColors.messageBubbleLight,
+            color: context.isDark ? AppColors.cardDark : AppColors.surfaceLight,
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-              bottomRight: Radius.circular(16),
-              bottomLeft: Radius.circular(4),
+              topLeft: Radius.circular(6),
+              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
             ),
             border: Border.all(
               color: context.isDark
                   ? AppColors.darkDivider
-                  : AppColors.lightDivider,
+                  : AppColors.lightDivider.withValues(alpha: 0.85),
               width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: context.isDark ? 0.25 : 0.05,
+                ),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1475,8 +1834,8 @@ class _AnimatedDot extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: (context.isDark
-                    ? AppColors.messageBubbleLight
-                    : AppColors.messageBubbleDark)
+                    ? AppColors.primaryLight
+                    : AppColors.primaryDark)
                 .withValues(alpha: opacity),
           ),
         );

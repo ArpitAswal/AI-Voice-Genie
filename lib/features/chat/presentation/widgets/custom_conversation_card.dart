@@ -28,6 +28,7 @@ class CustomConversationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final modelBadge = _modelBadgeIcon(
+      context,
       conversation.lastProvider?.displayName ?? '',
     );
 
@@ -45,12 +46,6 @@ class CustomConversationCard extends StatelessWidget {
         ? '$timeStr $tz'
         : '${DateFormat('yyyy-MM-dd').format(localDate)}, $timeStr $tz';
 
-    final effectiveCardColor = isSelected
-        ? (context.isDark
-            ? context.primaryColor.withValues(alpha: 0.18)
-            : context.primaryColor.withValues(alpha: 0.10))
-        : (context.isDark ? AppColors.cardDark : AppColors.cardLight);
-
     return InkWell(
       onTap: onTap,
       onLongPress: onLongPress,
@@ -59,110 +54,126 @@ class CustomConversationCard extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: effectiveCardColor,
+          color: context.colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? context.primaryColor : Colors.transparent,
-            width: 1.5,
+            color: isSelected ? context.primaryColor : context.colorScheme.primary.withValues(alpha:
+            context.isDark ? 0.5 : 0.7),
+            width: 1.2,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: (context.isDark)
-                  ? AppColors.tealAccent.withValues(alpha: 0.5)
-                  : AppColors.cyanAccent.withValues(alpha: 0.3),
-              blurRadius: 3.0,
-              spreadRadius: 1,
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    if (isSelectionMode) ...[
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        child: Icon(
+                          isSelected
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          key: ValueKey(isSelected),
+                          color: isSelected
+                              ? context.primaryColor
+                              : context.colorScheme.tertiary,
+                          size: context.isCompact ? 18.0 : 22.0,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: Text(
+                        conversation.title.isEmpty
+                            ? context.l10n.newConversation
+                            : conversation.title,
+                        style: (context.isCompact
+                                ? context.textTheme.titleSmall
+                                : context.textTheme.titleMedium)
+                            ?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // ── Sync status indicators ─────────────────────────────────
+                    if (conversation.syncStatus == SyncStatus.syncFailed)
+                      Tooltip(
+                        message: context.l10n.syncFailedTooltip,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(
+                            Icons.warning_amber_rounded,
+                            size: context.isCompact ? 14.0 : 16.0,
+                            color: context.isDark
+                                ? AppColors.darkWarning
+                                : AppColors.lightWarning,
+                          ),
+                        ),
+                      )
+                    else if (conversation.syncStatus ==
+                            SyncStatus.pendingCreate ||
+                        conversation.syncStatus == SyncStatus.pendingUpdate)
+                      Tooltip(
+                        message: context.l10n.waitingToSyncTooltip,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(
+                            Icons.cloud_off_rounded,
+                            size: context.isCompact ? 14.0 : 16.0,
+                            color: AppColors.info,
+                          ),
+                        ),
+                      ),
+                    if (!isSelectionMode)
+                      Icon(
+                        Icons.chevron_right,
+                        color: context.isDark
+                            ? AppColors.darkTextTertiary
+                            : AppColors.lightTextTertiary,
+                        size: context.isCompact ? 18.0 : 20.0,
+                      ),
+                  ],
+                ),
+                if (conversation.lastMessage.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    conversation.lastMessage,
+                    style: (context.isCompact
+                            ? context.textTheme.bodySmall
+                            : context.textTheme.bodyMedium)
+                        ?.copyWith(
+                      color: context.colorScheme.tertiary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 6),
             Row(
               children: [
-                if (isSelectionMode) ...[
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    child: Icon(
-                      isSelected
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
-                      key: ValueKey(isSelected),
-                      color: isSelected
-                          ? context.primaryColor
-                          : (context.isDark
-                              ? AppColors.darkTextTertiary
-                              : AppColors.lightTextTertiary),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                ],
+                modelBadge,
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    conversation.title.isEmpty
-                        ? context.l10n.newConversation
-                        : conversation.title,
-                    style: context.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    formatDate,
+                    style: (context.isCompact
+                            ? context.textTheme.labelSmall
+                            : context.textTheme.bodySmall)
+                        ?.copyWith(color: context.colorScheme.tertiary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // ── Sync status indicators ─────────────────────────────────
-                if (conversation.syncStatus == SyncStatus.syncFailed)
-                  Tooltip(
-                    message: context.l10n.syncFailedTooltip,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Icon(
-                        Icons.warning_amber_rounded,
-                        size: 16,
-                        color: context.isDark
-                            ? AppColors.darkWarning
-                            : AppColors.lightWarning,
-                      ),
-                    ),
-                  )
-                else if (conversation.syncStatus == SyncStatus.pendingCreate ||
-                    conversation.syncStatus == SyncStatus.pendingUpdate)
-                  Tooltip(
-                    message: context.l10n.waitingToSyncTooltip,
-                    child: const Padding(
-                      padding: EdgeInsets.only(right: 4),
-                      child: Icon(
-                        Icons.cloud_off_rounded,
-                        size: 16,
-                        color: AppColors.info,
-                      ),
-                    ),
-                  ),
-                if (!isSelectionMode)
-                  Icon(
-                    Icons.chevron_right,
-                    color: context.isDark
-                        ? AppColors.darkTextTertiary
-                        : AppColors.lightTextTertiary,
-                    size: 20,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (conversation.lastMessage.isNotEmpty) ...[
-              Text(
-                conversation.lastMessage,
-                style: context.textTheme.bodyMedium,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8)
-            ],
-            Row(
-              children: [
-                modelBadge,
-                const SizedBox(width: 12),
-                Text(formatDate, style: context.textTheme.bodyMedium),
               ],
             ),
           ],
@@ -171,7 +182,7 @@ class CustomConversationCard extends StatelessWidget {
     );
   }
 
-  Widget _modelBadgeIcon(String model) {
+  Widget _modelBadgeIcon(BuildContext context, String model) {
     Gradient gradColor = AppColors.geminiGradient;
     FaIconData icon = FontAwesomeIcons.gemini;
     switch (model) {
@@ -188,19 +199,21 @@ class CustomConversationCard extends StatelessWidget {
         icon = FontAwesomeIcons.claude;
         break;
     }
+    final badgeSize = context.isTablet ? 32.0 : 24.0;
     return Container(
-      width: 24,
-      height: 24,
+      width: badgeSize,
+      height: badgeSize,
       decoration: BoxDecoration(
         gradient: gradColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(badgeSize * 0.35),
       ),
       child: Center(
-          child: FaIcon(
-        icon,
-        color: Colors.white,
-        size: 14,
-      )),
+        child: FaIcon(
+          icon,
+          color: Colors.white,
+          size: badgeSize * 0.55,
+        ),
+      ),
     );
   }
 }

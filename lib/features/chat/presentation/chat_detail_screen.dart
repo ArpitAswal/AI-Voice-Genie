@@ -468,7 +468,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               titleStr.isEmpty ? l10n.newConversation : titleStr,
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
-              style: context.textTheme.headlineSmall,
+              style: context.isCompact
+                  ? context.textTheme.titleMedium
+                  : context.textTheme.titleLarge,
             );
           },
         ),
@@ -476,201 +478,273 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         actions: [
           IconButton(
             onPressed: _handleEditTitle,
-            icon: const Icon(
+            tooltip: l10n.rename,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            icon: Icon(
               Icons.edit,
               color: AppColors.info,
+              size: context.isCompact ? 18 : 28,
             ),
           ),
-          GestureDetector(
-            onTap: _handleDelete,
-            child: const ImageView(
-              image: ImageViewData.asset(AppAssets.deleteIcon),
-              width: 24,
-              height: 24,
+          IconButton(
+            onPressed: _handleDelete,
+            padding: EdgeInsets.zero,
+            tooltip: l10n.deleteConversation,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            icon: ImageView(
+              image: const ImageViewData.asset(AppAssets.deleteIcon),
+              width: context.isCompact ? 18 : 28,
+              height: context.isCompact ? 18 : 28,
             ),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stack(
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isTablet
+                  ? MediaQuery.sizeOf(context).width * 0.65
+                  : double.infinity,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Consumer<ChatProvider>(
-                  builder: (context, chatProvider, _) {
-                    final messages = chatProvider.messages;
-                    if (chatProvider.isLoadingMessages && messages.isEmpty) {
-                      return const Center(
-                        child: CircularProgressIndicator.adaptive(),
-                      );
-                    }
-
-                    return NotificationListener<ScrollNotification>(
-                      onNotification: (notification) {
-                        if (notification is ScrollUpdateNotification) {
-                          if (notification.dragDetails != null) {
-                            if (notification.scrollDelta != null &&
-                                notification.scrollDelta! < 0) {
-                              _isAutoScrollActive = false;
-                            } else if (notification.scrollDelta != null &&
-                                notification.scrollDelta! > 0) {
-                              final dist =
-                                  notification.metrics.maxScrollExtent -
-                                      notification.metrics.pixels;
-                              if (dist <= 20) {
-                                _isAutoScrollActive = true;
-                              }
-                            }
-                          }
-                        } else if (notification is UserScrollNotification) {
-                          if (notification.direction ==
-                              ScrollDirection.forward) {
-                            _isAutoScrollActive = false;
-                          }
-                        }
-
-                        final metrics = notification.metrics;
-                        final distanceFromBottom =
-                            metrics.maxScrollExtent - metrics.pixels;
-                        final shouldShowFab = distanceFromBottom > 60;
-                        if (shouldShowFab != _showScrollToBottom) {
-                          setState(() {
-                            _showScrollToBottom = shouldShowFab;
-                          });
-                        }
-                        return false;
-                      },
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.symmetric(
-                          vertical: isTablet ? 16 : 12,
-                          horizontal: isTablet ? 16 : 12,
-                        ),
-                        itemCount: messages.length +
-                            (chatProvider.isWaitingForAiResponse ? 1 : 0) +
-                            (chatProvider.isLoadingMoreMessages ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          // Load more indicator at top
-                          if (index == 0 &&
-                              chatProvider.isLoadingMoreMessages) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                ),
-                              ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Consumer<ChatProvider>(
+                        builder: (context, chatProvider, _) {
+                          final messages = chatProvider.messages;
+                          if (chatProvider.isLoadingMessages &&
+                              messages.isEmpty) {
+                            return const Center(
+                              child: CircularProgressIndicator.adaptive(),
                             );
                           }
 
-                          final adjustedIndex =
-                              chatProvider.isLoadingMoreMessages
-                                  ? index - 1
-                                  : index;
+                          return NotificationListener<ScrollNotification>(
+                            onNotification: (notification) {
+                              if (notification is ScrollUpdateNotification) {
+                                if (notification.dragDetails != null) {
+                                  if (notification.scrollDelta != null &&
+                                      notification.scrollDelta! < 0) {
+                                    _isAutoScrollActive = false;
+                                  } else if (notification.scrollDelta != null &&
+                                      notification.scrollDelta! > 0) {
+                                    final dist =
+                                        notification.metrics.maxScrollExtent -
+                                            notification.metrics.pixels;
+                                    if (dist <= 20) {
+                                      _isAutoScrollActive = true;
+                                    }
+                                  }
+                                }
+                              } else if (notification
+                                  is UserScrollNotification) {
+                                if (notification.direction ==
+                                    ScrollDirection.forward) {
+                                  _isAutoScrollActive = false;
+                                }
+                              }
 
-                          // Typing indicator at bottom (only while waiting for initial response)
-                          if (adjustedIndex == messages.length &&
-                              chatProvider.isWaitingForAiResponse) {
-                            return const TypingIndicator();
-                          }
+                              final metrics = notification.metrics;
+                              final distanceFromBottom =
+                                  metrics.maxScrollExtent - metrics.pixels;
+                              final shouldShowFab = distanceFromBottom > 60;
+                              if (shouldShowFab != _showScrollToBottom) {
+                                setState(() {
+                                  _showScrollToBottom = shouldShowFab;
+                                });
+                              }
+                              return false;
+                            },
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              // padding: EdgeInsets.fromLTRB(
+                              //   isTablet ? 16 : 14,
+                              //   isTablet ? 16 : 12,
+                              //   isTablet ? 16 : 14,
+                              //   isTablet ? 36 : 28,
+                              // ),
+                              itemCount: messages.length +
+                                  (chatProvider.isWaitingForAiResponse
+                                      ? 1
+                                      : 0) +
+                                  (chatProvider.isLoadingMoreMessages ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                // Load more indicator at top
+                                if (index == 0 &&
+                                    chatProvider.isLoadingMoreMessages) {
+                                  return const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2),
+                                      ),
+                                    ),
+                                  );
+                                }
 
-                          if (adjustedIndex < 0 ||
-                              adjustedIndex >= messages.length) {
-                            return const SizedBox.shrink();
-                          }
+                                final adjustedIndex =
+                                    chatProvider.isLoadingMoreMessages
+                                        ? index - 1
+                                        : index;
 
-                          return MessageBubble(
-                            key: ValueKey(messages[adjustedIndex].messageId),
-                            message: messages[adjustedIndex],
-                            isTablet: isTablet,
-                            onTypewriterTick: _onTypewriterTick,
+                                // Typing indicator at bottom (only while waiting for initial response)
+                                if (adjustedIndex == messages.length &&
+                                    chatProvider.isWaitingForAiResponse) {
+                                  return const TypingIndicator();
+                                }
+
+                                if (adjustedIndex < 0 ||
+                                    adjustedIndex >= messages.length) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                return MessageBubble(
+                                  key: ValueKey(
+                                      messages[adjustedIndex].messageId),
+                                  message: messages[adjustedIndex],
+                                  isTablet: isTablet,
+                                  onTypewriterTick: _onTypewriterTick,
+                                );
+                              },
+                            ),
                           );
                         },
+                      ),
+                      // Glass-style Scroll to Bottom Floating Action Button
+                      // Centered horizontally with comfortable vertical spacing above bottom input bar
+                      Positioned(
+                        bottom: isTablet ? 24 : 16,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: _buildScrollToBottomButton(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // ── Input Bar ──────────────────────────────────────────────────────
+                Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
+                  builder: (
+                    _,
+                    apiKeyProvider,
+                    chatProvider,
+                    preferences,
+                    __,
+                  ) {
+                    final selectedProvider = preferences.preferredProvider;
+                    final bool isShortHeight = context.screenHeight <= 550.0;
+                    final bool isFloatingCard = isTablet && !isShortHeight;
+
+                    return Container(
+                      margin: isFloatingCard
+                          ? EdgeInsets.only(
+                              left: 0.0,
+                              right: 0.0,
+                              bottom: context.bottomPadding,
+                            )
+                          : EdgeInsets.zero,
+                      decoration: BoxDecoration(
+                        color: context.theme.cardTheme.color ??
+                            (context.isDark
+                                ? AppColors.cardDark
+                                : AppColors.cardLight),
+                        borderRadius: isFloatingCard
+                            ? BorderRadius.circular(24)
+                            : const BorderRadius.vertical(
+                                top: Radius.circular(20),
+                              ),
+                        border: Border.all(
+                          color: context.theme.dividerTheme.color ??
+                              (context.isDark
+                                  ? AppColors.darkDivider
+                                  : AppColors.lightDivider),
+                          width: 1,
+                        ),
+                        boxShadow: isFloatingCard
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha: context.isDark ? 0.35 : 0.08,
+                                  ),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isShortHeight
+                              ? 0.0
+                              : isFloatingCard
+                                  ? 21.0
+                                  : 14.0,
+                          vertical: isShortHeight
+                              ? 6.0
+                              : isFloatingCard
+                                  ? 14.0
+                                  : 10.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ChatModelSelectorDropdown(
+                            providers: AiProviderId.values,
+                            selectedProvider: selectedProvider,
+                            isEnabled: !chatProvider.isGenerating,
+                            onChanged: (provider) {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              preferences.setPreferredProvider(provider);
+
+                              final apiKeyProvider =
+                                  context.read<ApiKeyProvider>();
+                              if (!apiKeyProvider.validProviders
+                                  .contains(provider)) {
+                                MessageUtils.showErrorToast(
+                                  context,
+                                  context.l10n.noKeyForModel,
+                                );
+                              } else {
+                                final usageProvider =
+                                    context.read<UsageProvider>();
+                                final summary =
+                                    usageProvider.summaryFor(provider);
+                                if (summary != null && summary.isExceeded()) {
+                                  MessageUtils.showErrorToast(
+                                    context,
+                                    context.l10n.chatProviderLimitReached(
+                                        provider.displayName),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                          SizedBox(height: isTablet ? 8.0 : 2.0),
+                          Flexible(
+                            child: ChatInputBar(
+                              onSend: _handleSend,
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
                 ),
-                // Glass-style Scroll to Bottom Floating Action Button
-                Positioned(
-                  bottom: 12,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _buildScrollToBottomButton(context),
-                  ),
-                ),
               ],
             ),
           ),
-          // ── Input Bar ──────────────────────────────────────────────────────
-          Consumer3<ApiKeyProvider, ChatProvider, AiPreferencesProvider>(
-            builder: (
-              _,
-              apiKeyProvider,
-              chatProvider,
-              preferences,
-              __,
-            ) {
-              final selectedProvider = preferences.preferredProvider;
-
-              return Container(
-                decoration: BoxDecoration(
-                  color: context.theme.cardTheme.color,
-                  borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(context.isTablet ? 30 : 20)),
-                  border: Border.all(
-                      color: context.theme.dividerTheme.color!, width: 1),
-                ),
-                padding: EdgeInsets.symmetric(
-                    horizontal: context.horizontalPadding / 2,
-                    vertical: context.verticalSpacing / 2),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ChatModelSelectorDropdown(
-                      providers: AiProviderId.values,
-                      selectedProvider: selectedProvider,
-                      isEnabled: !chatProvider.isGenerating,
-                      onChanged: (provider) {
-                        FocusManager.instance.primaryFocus?.unfocus();
-                        preferences.setPreferredProvider(provider);
-
-                        final apiKeyProvider = context.read<ApiKeyProvider>();
-                        if (!apiKeyProvider.validProviders.contains(provider)) {
-                          MessageUtils.showErrorToast(
-                            context,
-                            context.l10n.noKeyForModel,
-                          );
-                        } else {
-                          final usageProvider = context.read<UsageProvider>();
-                          final summary = usageProvider.summaryFor(provider);
-                          if (summary != null && summary.isExceeded()) {
-                            MessageUtils.showErrorToast(
-                              context,
-                              context.l10n.chatProviderLimitReached(
-                                  provider.displayName),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 4.0),
-                    Flexible(
-                      child: ChatInputBar(
-                        onSend: _handleSend,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -695,17 +769,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                   onTap: _scrollToBottomAnimated,
                   customBorder: const CircleBorder(),
                   child: Container(
-                    width: 38,
-                    height: 38,
+                    width: context.isCompact ? 32 : 40,
+                    height: context.isCompact ? 32 : 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: context.isDark
-                          ? Colors.white.withValues(alpha: 0.12)
-                          : Colors.black.withValues(alpha: 0.07),
+                          ? Colors.white.withValues(alpha: 0.02)
+                          : Colors.black.withValues(alpha: 0.04),
                       border: Border.all(
                         color: context.isDark
-                            ? Colors.white.withValues(alpha: 0.20)
-                            : Colors.black.withValues(alpha: 0.12),
+                            ? Colors.white.withValues(alpha: 0.12)
+                            : Colors.black.withValues(alpha: 0.15),
                         width: 1.0,
                       ),
                       boxShadow: [
@@ -720,9 +794,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     child: Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 24,
-                      color: context.isDark
-                          ? Colors.white.withValues(alpha: 0.90)
-                          : Colors.black87,
+                      color: context.isDark ? Colors.white70 : Colors.black87,
                     ),
                   ),
                 ),

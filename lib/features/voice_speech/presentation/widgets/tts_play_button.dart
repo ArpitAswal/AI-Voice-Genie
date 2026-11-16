@@ -105,13 +105,20 @@ class _TtsPlaybackButtonState extends State<TtsPlaybackButton>
     );
   }
 
+  double _statusIconSize(BuildContext context) {
+    if (context.isCompact) {
+      return 14.0;
+    } else if (context.isTablet && context.isExpanded) {
+      return 21.0;
+    } else {
+      return 16.0;
+    }
+  }
+
   Widget _buildButton(
     BuildContext context, {
     required bool isThisMessagePlaying,
   }) {
-    final size = widget.isTablet ? 32.0 : 24.0;
-    final iconSize = widget.isTablet ? 20.0 : 16.0;
-
     // Color logic
     Color bgColor;
     Color iconColor;
@@ -129,15 +136,15 @@ class _TtsPlaybackButtonState extends State<TtsPlaybackButton>
             messageId: widget.messageId,
           ),
       child: Container(
-        width: size,
-        height: size,
+        width: _statusIconSize(context) + 6,
+        height: _statusIconSize(context) + 6,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: bgColor,
         ),
         child: Icon(
           isThisMessagePlaying ? Icons.stop_rounded : Icons.volume_up_rounded,
-          size: iconSize,
+          size: _statusIconSize(context),
           color: iconColor,
         ),
       ),
