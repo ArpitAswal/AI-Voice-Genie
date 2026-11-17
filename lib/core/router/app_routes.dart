@@ -250,10 +250,10 @@ class AppRoutes {
                   initialTitle: arguments.initialTitle),
               settings,
               TransitionType.fade,
-              const Duration(milliseconds: 700));
+              const Duration(milliseconds: 400));
         } else {
           return _buildRoute(const ChatDetailScreen(), settings,
-              TransitionType.fade, const Duration(milliseconds: 700));
+              TransitionType.fade, const Duration(milliseconds: 400));
         }
 
       // ── Profile Edit ───────────────────────────────────────────────────────

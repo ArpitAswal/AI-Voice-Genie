@@ -65,6 +65,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   double _previousMaxScrollExtent = 0;
   bool _showScrollToBottom = false;
   bool _isAutoScrollActive = true;
+  bool _hasPerformedInitialScroll = false;
 
   @override
   void initState() {
@@ -78,8 +79,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (_chatProvider!.messages.isNotEmpty) {
-        _scrollToBottom(animated: false);
+      if (!_hasPerformedInitialScroll &&
+          _chatProvider!.messages.isNotEmpty &&
+          !_chatProvider!.isLoadingMessages) {
+        _performInitialSmoothScroll();
       }
       final uid = context.read<AuthProvider>().currentUser?.uid;
       if (uid != null) {
@@ -134,11 +137,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         _showScrollToBottom = false;
       });
     }
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-    );
+    _scrollToBottom(animated: true);
   }
 
   /// Called on every character/token revealed during typewriter animation.
@@ -223,6 +222,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       });
     }
 
+    // If initial messages just finished loading, trigger initial smooth glide
+    if (!_hasPerformedInitialScroll &&
+        !currentLoading &&
+        currentMessageCount > 0) {
+      _lastMessageCount = currentMessageCount;
+      _wasGenerating = currentGenerating;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _performInitialSmoothScroll();
+      });
+      return;
+    }
+
     bool shouldScroll = false;
 
     final isLastMessageFromUser = _chatProvider!.messages.isNotEmpty &&
@@ -260,6 +271,44 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     }
   }
 
+  /// Performs smooth, natural initial scrolling to the bottom of the conversation.
+  ///
+  /// Emulates top-tier messaging apps (WhatsApp, Telegram, ChatGPT):
+  /// - Waits a brief moment for the route transition to begin revealing the screen and for layout to settle.
+  /// - If the conversation is long, anchors the initial viewport slightly above the bottom
+  ///   (rendering the latest few messages without wasting frames on off-screen history items).
+  /// - Smoothly glides the remaining ~380-420px to the bottom with an ease-out deceleration curve,
+  ///   providing an elegant, responsive arrival ("fast, but not too fast") with zero dropped frames.
+  Future<void> _performInitialSmoothScroll() async {
+    if (_hasPerformedInitialScroll || !mounted) return;
+    _hasPerformedInitialScroll = true;
+
+    // Brief coordination delay so the route fade animation commences and ListView mounts/stabilizes
+    await Future.delayed(const Duration(milliseconds: 60));
+    if (!mounted || !_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll <= 10.0) return;
+
+    // Anchor starting position close to the bottom (within a comfortable glide distance)
+    // so offscreen history widgets are not needlessly built/measured during the entrance.
+    const double maxGlideDistance = 420.0;
+    if (maxScroll > maxGlideDistance) {
+      final startOffset = maxScroll - maxGlideDistance;
+      _scrollController.jumpTo(startOffset);
+    }
+
+    try {
+      await _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 380),
+        curve: Curves.easeOutCubic,
+      );
+    } catch (_) {
+      // Gracefully catch if interrupted by user touch or navigation
+    }
+  }
+
   void _loadConversation() {
     final id = widget.conversationId;
     if (id == null || id.isEmpty) return;
@@ -280,14 +329,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
     if (distance <= 10.0) return;
 
-    if (!animated || distance > 2000) {
+    if (!animated) {
       _scrollController.jumpTo(target);
       return;
     }
 
+    // If distance is large (e.g. user scrolled far up and tapped scroll-to-bottom),
+    // clamp the animated portion to avoid frame drops or jarring warp-speed scrolling.
+    const double maxAnimatedDistance = 500.0;
+    if (distance > maxAnimatedDistance) {
+      _scrollController.jumpTo(target - maxAnimatedDistance);
+    }
+
     _scrollController.animateTo(
       target,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
     );
   }
@@ -321,7 +377,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               l10n.cancel,
-              style: TextStyle(color: context.textTheme.headlineSmall!.color),
+              style: TextStyle(color: ctx.colorScheme.onSurface),
             ),
           ),
           TextButton(
@@ -329,9 +385,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             child: Text(
               l10n.delete,
               style: TextStyle(
-                  color: context.isDark
-                      ? AppColors.darkError
-                      : AppColors.lightError),
+                color: ctx.isDark ? AppColors.darkError : AppColors.lightError,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -506,9 +562,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: isTablet
-                  ? MediaQuery.sizeOf(context).width * 0.65
-                  : double.infinity,
+              maxWidth: MediaQuery.sizeOf(context).width *
+                  (context.isTablet
+                      ? (MediaQuery.sizeOf(context).width > 900 ? 0.65 : 0.7)
+                      : double.infinity),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -564,12 +621,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                             },
                             child: ListView.builder(
                               controller: _scrollController,
-                              // padding: EdgeInsets.fromLTRB(
-                              //   isTablet ? 16 : 14,
-                              //   isTablet ? 16 : 12,
-                              //   isTablet ? 16 : 14,
-                              //   isTablet ? 36 : 28,
-                              // ),
                               itemCount: messages.length +
                                   (chatProvider.isWaitingForAiResponse
                                       ? 1

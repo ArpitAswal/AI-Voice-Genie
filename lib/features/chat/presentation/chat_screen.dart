@@ -180,32 +180,10 @@ class _ChatScreenState extends State<ChatScreen> {
     _chatInputController.setPrompt(l10n.analyzeImagePrompt);
   }
 
-  Future<void> _handleSummarizePdf() async {
-    final l10n = AppLocalizations.of(context)!;
-    final success =
-        await _chatInputController.pickPdfWithPrompt(l10n.summarizePdfPrompt);
-    if (success) {
-      _hideSuggestions();
-    } else {
-      _showSuggestionsState();
-    }
-  }
-
   void _handleGeneratePdf() {
     _hideSuggestions();
     final l10n = AppLocalizations.of(context)!;
     _chatInputController.setPrompt(l10n.generatePdfPrompt);
-  }
-
-  Future<void> _handleAnalyzeImage() async {
-    final l10n = AppLocalizations.of(context)!;
-    final success =
-        await _chatInputController.pickImageWithPrompt(l10n.analyzeImagePrompt);
-    if (success) {
-      _hideSuggestions();
-    } else {
-      _showSuggestionsState();
-    }
   }
 
   void _handleGenerateCode() {
@@ -280,10 +258,10 @@ class _ChatScreenState extends State<ChatScreen> {
                           isTablet: isTablet,
                           isShortHeight: isShortHeight,
                           showSuggestions: _showSuggestions,
-                          onSummarizePdf: _handleSummarizePdf,
+                          onSummarizePdf: _handleSummarizePdfPrompt,
                           onGeneratePdf: _handleGeneratePdf,
                           onGenerateCode: _handleGenerateCode,
-                          onAnalyzeImage: _handleAnalyzeImage,
+                          onAnalyzeImage: _handleAnalyzeImagePrompt,
                           onCreateImage: _handleCreateImage,
                         ),
                       ),

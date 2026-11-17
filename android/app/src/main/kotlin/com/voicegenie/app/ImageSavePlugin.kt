@@ -35,6 +35,7 @@ object ImageSavePlugin {
     fun register(context: Context, channel: MethodChannel) {
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
+                "getSdkVersion" -> result.success(Build.VERSION.SDK_INT)
                 "saveImageBytes" -> handleSave(context, call, result)
                 "saveDocumentBytes" -> handleSaveDocument(context, call, result)
                 else -> result.notImplemented()

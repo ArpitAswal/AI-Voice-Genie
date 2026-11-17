@@ -1,4 +1,3 @@
-import 'package:ai_voice_genie/core/extensions/build_context_extensions.dart';
 import 'package:flutter/material.dart';
 
 /// ✨ NEW: Global loading overlay that blocks user interaction
@@ -108,56 +107,76 @@ class _LoadingOverlayWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth >= 600 && screenWidth < 900;
+    final size = MediaQuery.sizeOf(context);
+    final isShortHeight = size.height <= 550.0;
+    final isTablet = size.width >= 600.0 && !isShortHeight;
+
+    final indicatorSize = isTablet ? 40.0 : 32.0;
+    final strokeWidth = isTablet ? 3.5 : 3.0;
 
     return Material(
       type: MaterialType.transparency,
       child: Center(
-        child: Container(
-          width: context.screenWidth * 0.5,
-          padding: EdgeInsets.symmetric(
-            horizontal: isTablet ? 48 : 16,
-            vertical: isTablet ? 36 : 32,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: isTablet ? 200.0 : 160.0,
+            maxWidth: isTablet ? 260.0 : 220.0,
           ),
-          decoration: BoxDecoration(
-            color: theme.scaffoldBackgroundColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isTablet ? 28.0 : 20.0,
+              vertical: isTablet ? 28.0 : 22.0,
+            ),
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(isTablet ? 20.0 : 16.0),
+              border: Border.all(
+                color: isDark
+                    ? theme.colorScheme.outlineVariant.withValues(alpha: 0.2)
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                width: 1.0,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Circular Progress Indicator
-              SizedBox(
-                width: isTablet ? 60 : 30,
-                height: isTablet ? 60 : 30,
-                child: CircularProgressIndicator(
-                  strokeWidth: isTablet ? 4 : 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    theme.colorScheme.primary,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.15),
+                  blurRadius: 16.0,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Circular Progress Indicator
+                SizedBox(
+                  width: indicatorSize,
+                  height: indicatorSize,
+                  child: CircularProgressIndicator(
+                    strokeWidth: strokeWidth,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      theme.colorScheme.primary,
+                    ),
                   ),
                 ),
-              ),
 
-              SizedBox(height: isTablet ? 24 : 24),
+                const SizedBox(height: 18.0),
 
-              // Loading text
-              Text(
-                message ?? 'Loading...',
-                style: (theme.textTheme.bodyLarge)?.copyWith(
-                  fontWeight: FontWeight.w500,
+                // Loading text
+                Text(
+                  message ?? 'Loading...',
+                  style: (isTablet
+                          ? theme.textTheme.titleSmall
+                          : theme.textTheme.bodyMedium)
+                      ?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

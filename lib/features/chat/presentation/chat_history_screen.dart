@@ -136,18 +136,26 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     final count = _selectedConversationIds.length;
     if (count == 0) return;
 
+    final isTablet = context.isTablet;
+    final isDark = context.isDark;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AppAlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: AppColors.lightError, size: 28),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: isDark ? AppColors.darkError : AppColors.lightError,
+              size: isTablet ? 32 : 28,
+            ),
             const SizedBox(width: 12),
             Flexible(
               child: Text(
                 context.l10n.deleteSelectedConversations,
-                style: context.textTheme.titleLarge
+                style: (isTablet
+                        ? context.textTheme.headlineSmall
+                        : context.textTheme.titleLarge)
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
@@ -155,25 +163,28 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
         ),
         content: Text(
           context.l10n.deleteSelectedConfirm(count),
-          style: context.textTheme.bodyMedium?.copyWith(
+          style: (isTablet
+                  ? context.textTheme.bodyLarge
+                  : context.textTheme.bodyMedium)
+              ?.copyWith(
             height: 1.4,
           ),
         ),
-        actionsPadding:
-            const EdgeInsets.symmetric(vertical: 18.0, horizontal: 24.0),
         actions: [
           Row(
             children: [
               Expanded(
                 child: context.themedOutlinedButton(
                   label: context.l10n.cancel,
+                  height: isTablet ? 50.0 : 44.0,
                   onPressed: () => Navigator.of(context).pop(false),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: context.themedDangerButton(
                   label: context.l10n.delete,
+                  height: isTablet ? 50.0 : 44.0,
                   onPressed: () => Navigator.of(context).pop(true),
                 ),
               ),
@@ -392,8 +403,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                                                 : context.textTheme.bodyMedium)
                                             : context.textTheme.bodyLarge)
                                         ?.copyWith(
-                                      color:
-                                          context.colorScheme.onSurface,
+                                      color: context.colorScheme.onSurface,
                                     ),
                                   ),
                                 ],

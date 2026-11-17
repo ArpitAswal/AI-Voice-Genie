@@ -35,53 +35,50 @@ class _ChangeTitleDialogState extends State<ChangeTitleDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = context.theme;
+    final isTablet = context.isTablet;
 
     return AppAlertDialog(
-      title: Text(
-        l10n.renameConversationName,
-        style: theme.textTheme.titleLarge,
-      ),
-      insetPadding: const EdgeInsets.all(20),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24.0),
-      titlePadding:
-          const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      actionsPadding:
-          const EdgeInsets.symmetric(horizontal: 24.0, vertical: 18.0),
+      title: Text(l10n.renameConversationName),
+      scrollable: true,
       content: SizedBox(
         width: double.maxFinite,
         child: context.themedTextField(
-            controller: _controller,
-            textCapitalization: TextCapitalization.sentences,
-            hint: l10n.renameConversationName,
-            border: OutlineInputBorder(
-              borderSide: BorderSide(color: context.primaryColor),
-              borderRadius: BorderRadius.circular(14),
-            )),
+          controller: _controller,
+          textCapitalization: TextCapitalization.sentences,
+          hint: l10n.renameConversationName,
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: context.primaryColor),
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
       ),
       actions: [
-        Row(children: [
-          Expanded(
-            child: context.themedOutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              label: l10n.cancel,
+        Row(
+          children: [
+            Expanded(
+              child: context.themedOutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                label: l10n.cancel,
+                height: isTablet ? 50.0 : 44.0,
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: context.themedOutlinedButton(
-              onPressed: () {
-                final newTitle = _controller.text.trim();
-                if (newTitle.isNotEmpty && newTitle != widget.initialTitle) {
-                  Navigator.of(context).pop(newTitle);
-                } else {
-                  Navigator.of(context).pop();
-                }
-              },
-              label: l10n.rename,
+            const SizedBox(width: 12),
+            Expanded(
+              child: context.themedElevatedButton(
+                onPressed: () {
+                  final newTitle = _controller.text.trim();
+                  if (newTitle.isNotEmpty && newTitle != widget.initialTitle) {
+                    Navigator.of(context).pop(newTitle);
+                  } else {
+                    Navigator.of(context).pop();
+                  }
+                },
+                label: l10n.rename,
+                height: isTablet ? 50.0 : 44.0,
+              ),
             ),
-          )
-        ])
+          ],
+        ),
       ],
     );
   }

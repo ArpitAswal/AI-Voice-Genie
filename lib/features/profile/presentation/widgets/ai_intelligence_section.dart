@@ -282,27 +282,7 @@ class _SpendBadge extends StatelessWidget {
       );
     }
 
-    // When no budget is set, display the current spend amount so the user always knows "What did it cost?"
-    final formattedSpent = '\$${spent.toStringAsFixed(2)}';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        context.l10n.usageSpentBadge(formattedSpent),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: (context.isCompact
-                ? context.textTheme.labelMedium
-                : context.textTheme.labelLarge)
-            ?.copyWith(
-          color: context.isDark ? Colors.white : color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
 

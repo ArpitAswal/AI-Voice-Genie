@@ -398,13 +398,28 @@ class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
 
       if (!success) return false;
 
-      // Re-fetch the user from repository to get the updated photoUrl (Base64)
-      // and other server-calculated fields if any.
-      final updatedUser = await _repository.getCurrentUser();
-      if (updatedUser != null) {
-        _currentUser = updatedUser;
-        notifyListeners();
-      }
+      // Update in-memory user immediately so UI consumers update synchronously
+      _currentUser = user.copyWith(
+        displayName: resolvedDisplayName,
+        photoUrl: resolvedPhotoUrl,
+        email: resolvedEmail,
+        dateOfBirth: dateOfBirth,
+        age: age,
+        gender: gender,
+        country: country,
+        state: state,
+        lastUpdatedAt: DateTime.now(),
+      );
+      notifyListeners();
+
+      // Re-fetch the user from repository to get server-calculated fields if any
+      try {
+        final updatedUser = await _repository.getCurrentUser();
+        if (updatedUser != null) {
+          _currentUser = updatedUser;
+          notifyListeners();
+        }
+      } catch (_) {}
 
       return true;
     } on AuthException catch (e) {

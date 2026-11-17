@@ -68,16 +68,22 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.cancel),
+            child: Text(
+              context.l10n.cancel,
+              style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+            ),
           ),
           TextButton(
             onPressed: () {
-              // Note: Using image_picker doesn't provide a direct "Open Settings"
-              // but we can suggest it or use another package if strict requirement.
-              // For now, following plan's instruction.
               Navigator.pop(context);
             },
-            child: Text(context.l10n.ok),
+            child: Text(
+              context.l10n.ok,
+              style: TextStyle(
+                color: context.primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -161,13 +167,15 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
         ),
         if (widget.canUpdate == true)
           Positioned(
-            bottom: 0,
-            right: 0,
+            bottom: context.isCompact || context.isExpanded ? 0 : 4,
+            right: context.isCompact || context.isExpanded ? 0 : 4,
             child: GestureDetector(
               onTap: _showPickerOptions,
               child: Container(
-                width: (widget.size * 0.30).clamp(24.0, 30.0),
-                height: (widget.size * 0.30).clamp(24.0, 30.0),
+                width: (widget.size * (context.isCompact ? 0.3 : 0.35))
+                    .clamp(24.0, 40.0),
+                height: (widget.size * (context.isCompact ? 0.3 : 0.35))
+                    .clamp(24.0, 40.0),
                 decoration: BoxDecoration(
                   color: context.primaryColor,
                   shape: BoxShape.circle,
@@ -184,12 +192,9 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
                   ],
                 ),
                 child: Center(
-                  child: Icon(
-                    Icons.camera_alt_rounded,
-                    color: Colors.white,
-                    size: ((widget.size * 0.30).clamp(24.0, 30.0) * 0.52)
-                        .clamp(12.0, 16.0),
-                  ),
+                  child: Icon(Icons.camera_alt_rounded,
+                      color: Colors.white,
+                      size: (widget.size * (context.isExpanded ? 0.2 : 0.15))),
                 ),
               ),
             ),

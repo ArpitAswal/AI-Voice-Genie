@@ -158,8 +158,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   final bool isWide = width >= 600.0;
 
                   // Proportional avatar sizing matching device context
-                  final double avatarSize =
-                      isShortHeight ? 64.0 : (isWide ? 100.0 : 80.0);
+                  final avatarSize = (context.isCompact
+                      ? isShortHeight
+                          ? 60.0
+                          : 90.0
+                      : (context.isExpanded)
+                          ? 120.0
+                          : 140.0);
                   // Top padding: slightly more generous on tablet portrait for visual balance
                   final double verticalPadding = isShortHeight
                       ? 12.0

@@ -40,6 +40,8 @@
 | 2026-11 | `flutter_secure_storage` for API keys | Hardware-backed encryption; mandatory for production key storage |
 | 2026-11 | `no_screenshot` on key screens | Prevent clipboard/screenshot key exposure on shared devices |
 | 2026-11 | Firebase for backend | Auth + Firestore + Crashlytics in one SDK; reduces backend maintenance |
+| 2026-11 | Scoped Storage & Granular Media | Android 13+ removes monolithic storage; PDF downloads use MediaStore with zero prompt; Photos & Camera use granular permissions |
+| 2026-11 | Adaptive Dialog & Overlay System | Unified AppAlertDialog & LoadingOverlay across mobile & tablet with max-width clamping (380dp/460dp), M3 button overflow wrapping, and >=44-48dp touch targets |
 
 ## Current Focus
 - Stabilise voice capture → AI response pipeline (`voice_speech` + `chat` features).

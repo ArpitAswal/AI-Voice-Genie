@@ -49,10 +49,9 @@ class AiEnginesSection extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-
             // Compute column count dynamically to fill the width without cramping
             final int crossAxisCount =
-                width >= 800.0 ? 3 : (width >= 500.0 ? 2 : 1);
+                width >= 1100.0 ? 3 : (width >= 500.0 ? 2 : 1);
 
             const providers = AiProviderId.values;
 
@@ -276,7 +275,7 @@ class _EngineCard extends StatelessWidget {
                                     ? context.textTheme.bodySmall
                                     : context.textTheme.bodyMedium)
                                 ?.copyWith(
-                              color: context.colorScheme.onSurfaceVariant,
+                              color: context.colorScheme.tertiary,
                               height: 1.3,
                             ),
                           ),

@@ -9,7 +9,6 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../core/widgets/app_alert_dialog.dart';
-import '../../auth/domain/user_model.dart';
 import '../../auth/presentation/auth_provider.dart';
 import '../../usage/presentation/usage_provider.dart';
 import 'profile_view_model.dart';
@@ -67,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => AppRoutes.pop(context, false),
             child: Text(
               context.l10n.cancel,
-              style: TextStyle(color: context.primaryColor),
+              style: TextStyle(color: context.colorScheme.onSurfaceVariant),
             ),
           ),
           TextButton(
@@ -77,6 +76,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 color:
                     context.isDark ? AppColors.darkError : AppColors.lightError,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -117,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => AppRoutes.pop(context, false),
             child: Text(
               context.l10n.cancel,
-              style: TextStyle(color: context.primaryColor),
+              style: TextStyle(color: context.colorScheme.onSurface),
             ),
           ),
           TextButton(
@@ -127,6 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 color:
                     context.isDark ? AppColors.darkError : AppColors.lightError,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -168,24 +169,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Top status bar inset; bottom is handled by Scaffold in compact or custom FAB spacing
+
+    final screenPadding = MediaQuery.paddingOf(context).top;
+
     // 1. Keep Provider above Scaffold to scope the ViewModel to the entire screen
     return ChangeNotifierProvider.value(
       value: _viewModel,
       child: Scaffold(
         body: SafeArea(
           top: false,
+          bottom: false,
           child: LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
               final height = constraints.maxHeight;
               if (height <= 550.0 || width < 600.0) {
                 return _buildCompactLayout(context,
-                    isShortHeight: height <= 550.0);
+                    isShortHeight: height <= 550.0,
+                    screenPadding: screenPadding);
               }
               if (width >= 840.0) {
-                return _buildExpandedLayout(context);
+                return _buildExpandedLayout(context, screenPadding);
               }
-              return _buildMediumLayout(context);
+              return _buildMediumLayout(context, screenPadding);
             },
           ),
         ),
@@ -197,10 +204,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildCompactLayout(
     BuildContext context, {
     required bool isShortHeight,
+    required double screenPadding,
   }) {
     // Dynamic vertical spacing: tightened on short-height displays to minimize vertical sprawl
-    final double verticalPadding =
-        isShortHeight ? 12.0 : context.verticalSpacing;
+
     final double sectionSpacing = isShortHeight ? 14.0 : 20.0;
     final double headerSpacing = isShortHeight ? 10.0 : 16.0;
 
@@ -208,7 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       physics: const ClampingScrollPhysics(),
       padding: EdgeInsets.symmetric(
         horizontal: context.horizontalPadding,
-        vertical: verticalPadding,
+        vertical: screenPadding,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +242,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ── 2. Medium Viewport (600dp <= width < 840dp && height > 550dp) ────────────
-  Widget _buildMediumLayout(BuildContext context) {
+  Widget _buildMediumLayout(BuildContext context, double screenPadding) {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640.0),
@@ -243,7 +250,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           physics: const ClampingScrollPhysics(),
           padding: EdgeInsets.symmetric(
             horizontal: context.horizontalPadding,
-            vertical: context.verticalSpacing,
+            vertical: screenPadding,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,23 +279,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ── 3. Expanded Viewport (width >= 840dp && height > 550dp) ──────────────────
-  Widget _buildExpandedLayout(BuildContext context) {
+  Widget _buildExpandedLayout(BuildContext context, double screenPadding) {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 1200.0),
         child: Padding(
           padding: EdgeInsets.symmetric(
-            horizontal: context.horizontalPadding,
-          ).copyWith(top: context.verticalSpacing),
+              horizontal: context.horizontalPadding, vertical: screenPadding),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Left Hero Pane: Identity, App Settings, Support & Account ─────────
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: 280.0,
-                  maxWidth: 360.0,
-                ),
+              Expanded(
+                flex: 4,
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
                   child: Column(
@@ -313,9 +316,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(width: 24.0),
-
               // ── Right Workspace Pane: AI Preferences & Vertical Intelligence Grid ─
               Expanded(
+                flex: 6,
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
                   child: ConstrainedBox(
@@ -357,12 +360,15 @@ class _ProfileTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Dynamic typography: step to headlineMedium on height-constrained viewports, headlineLarge on tablet
-    final titleStyle = isShortHeight
-        ? context.textTheme.headlineMedium
-        : (context.isTablet
-            ? context.textTheme.displayMedium
-                ?.copyWith(fontWeight: FontWeight.w700)
-            : context.textTheme.displaySmall);
+    final titleStyle = (context.isCompact
+            ? (isShortHeight
+                ? context.textTheme.headlineSmall
+                : context.textTheme.headlineMedium)
+            : context.textTheme.headlineLarge)
+        ?.copyWith(
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.5,
+    );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -398,16 +404,13 @@ class _ProfileHeaderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Using context.select so ONLY the header rebuilds when user changes:
-    final user =
-        context.select<AuthProvider, UserModel?>((auth) => auth.currentUser);
+    final user = context.watch<AuthProvider>().currentUser;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         _ProfileTopBar(isShortHeight: isShortHeight),
-        SizedBox(height: isShortHeight ? 4.0 : 8.0),
         if (user != null)
           ProfileHeader(user: user, isShortHeight: isShortHeight),
       ],

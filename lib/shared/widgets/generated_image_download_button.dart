@@ -10,6 +10,7 @@ import '../../core/extensions/build_context_extensions.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/services/analytics_service.dart';
 import '../../core/utils/status_message_utils.dart';
+import '../../core/utils/storage_permission_helper.dart';
 import '../../features/image_download/presentation/image_download_provider.dart';
 
 /// Reusable overlay download button for AI-generated images in chat.
@@ -66,11 +67,30 @@ class GeneratedImageDownloadButton extends StatelessWidget {
     BuildContext context,
     ImageDownloadProvider downloadProvider,
   ) async {
-    final sources = imageSources ??
-        (imageSource != null ? [imageSource!] : <String>[]);
+    final sources =
+        imageSources ?? (imageSource != null ? [imageSource!] : <String>[]);
     if (sources.isEmpty) return;
 
-    if (sources.length > 1) {
+    // 1. Request / verify storage permission before initiating download
+    final hasPermission =
+        await StoragePermissionHelper.requestDownloadPermission(
+      context,
+      isImage: true,
+    );
+    if (!hasPermission || !context.mounted) return;
+
+    // 2. Display localized high-contrast downloading SnackBar
+    final isBatch = sources.length > 1;
+    if (isBatch) {
+      context.showDownloadingSnackBar(
+        context.l10n.downloadingImagesCount(sources.length.toString()),
+      );
+    } else {
+      context.showDownloadingSnackBar(context.l10n.downloadingImage);
+    }
+
+    // 3. Await asynchronous download task
+    if (isBatch) {
       await downloadProvider.downloadAllImages(
         imageSources: sources,
         batchKey: imageKey,
@@ -84,24 +104,27 @@ class GeneratedImageDownloadButton extends StatelessWidget {
       );
     }
 
-    // Read result after awaiting — use the state that the provider has settled into
-    final finalState = downloadProvider.stateFor(imageKey);
-    final failure = downloadProvider.failureFor(imageKey);
-
     // Guard: avoid showing UI if the widget was disposed while downloading
     if (!context.mounted) return;
 
+    // 4. Cancel downloading SnackBar immediately to eliminate overlap
+    context.cancelDownloadingSnackBar();
+
+    // 5. Read result and show theme-styled completion Toast
+    final finalState = downloadProvider.stateFor(imageKey);
+    final failure = downloadProvider.failureFor(imageKey);
+
     if (finalState == ImageDownloadState.success ||
-        finalState == ImageDownloadState.idle && failure == null) {
-      // Success toast
+        (finalState == ImageDownloadState.idle && failure == null)) {
       final path = Platform.isIOS ? 'Photos' : 'Pictures/AI Voice Genie';
       if (sources.length > 1) {
-        context.showSuccessToast('Saved ${sources.length} images to $path');
+        context.showSuccessToast(
+          context.l10n.imagesSavedCount(sources.length.toString(), path),
+        );
       } else {
         context.showSuccessToast(context.l10n.imageSaved(path));
       }
     } else if (failure != null) {
-      // Failure toast with a specific message per failure reason
       final message = _failureMessage(context, failure);
       context.showErrorToast(message);
     }

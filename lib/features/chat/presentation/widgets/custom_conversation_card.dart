@@ -57,8 +57,10 @@ class CustomConversationCard extends StatelessWidget {
           color: context.colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? context.primaryColor : context.colorScheme.primary.withValues(alpha:
-            context.isDark ? 0.5 : 0.7),
+            color: isSelected
+                ? context.primaryColor
+                : context.colorScheme.primary
+                    .withValues(alpha: context.isDark ? 0.5 : 0.7),
             width: 1.2,
           ),
         ),

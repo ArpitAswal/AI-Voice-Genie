@@ -12,6 +12,7 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../../core/utils/app_validators.dart';
 import '../../../../core/utils/status_message_utils.dart';
+import '../../../../core/utils/storage_permission_helper.dart';
 import '../../../../core/preferences/ai_preferences_provider.dart';
 import '../../../../shared/widgets/chat_action_button.dart';
 import '../../../key_setup/presentation/api_key_provider.dart';
@@ -233,25 +234,43 @@ class _ChatInputBarState extends State<ChatInputBar> {
             ListTile(
               leading: const Icon(Icons.photo_library_rounded),
               title: Text(l10n.chooseFromGallery),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
+                final hasPermission =
+                    await StoragePermissionHelper.requestGalleryPermission(
+                  context,
+                );
+                if (hasPermission && mounted) {
+                  _pickImage(ImageSource.gallery);
+                }
               },
             ),
             ListTile(
               leading: const Icon(Icons.photo_camera_rounded),
               title: Text(l10n.takePhoto),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                _pickImage(ImageSource.camera);
+                final hasPermission =
+                    await StoragePermissionHelper.requestCameraPermission(
+                  context,
+                );
+                if (hasPermission && mounted) {
+                  _pickImage(ImageSource.camera);
+                }
               },
             ),
             ListTile(
               leading: const Icon(Icons.picture_as_pdf_rounded),
               title: Text(l10n.choosePdf),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                _pickPdf();
+                final hasPermission =
+                    await StoragePermissionHelper.requestDocumentPermission(
+                  context,
+                );
+                if (hasPermission && mounted) {
+                  _pickPdf();
+                }
               },
             ),
           ],
@@ -292,6 +311,11 @@ class _ChatInputBarState extends State<ChatInputBar> {
     String? promptTemplate,
   }) async {
     try {
+      final hasPermission = source == ImageSource.camera
+          ? await StoragePermissionHelper.requestCameraPermission(context)
+          : await StoragePermissionHelper.requestGalleryPermission(context);
+      if (!hasPermission || !mounted) return false;
+
       if (promptTemplate != null) {
         _applyPromptTemplate(promptTemplate, focus: false);
       }
@@ -372,6 +396,10 @@ class _ChatInputBarState extends State<ChatInputBar> {
 
   Future<bool> _pickPdf({String? promptTemplate}) async {
     try {
+      final hasPermission =
+          await StoragePermissionHelper.requestDocumentPermission(context);
+      if (!hasPermission || !mounted) return false;
+
       if (promptTemplate != null) {
         _applyPromptTemplate(promptTemplate, focus: false);
       }

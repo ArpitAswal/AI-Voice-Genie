@@ -21,9 +21,11 @@ import '../../../../core/localization/app_localizations.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/pdf_document_service.dart';
 import '../../../../core/utils/status_message_utils.dart';
+import '../../../../core/utils/storage_permission_helper.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../shared/model/image_model.dart';
 import '../../../../shared/widgets/full_screen_image_gallery.dart';
+import '../../../../shared/widgets/full_screen_pdf_gallery.dart';
 import '../../../../shared/widgets/generated_image_download_button.dart';
 import '../../../../shared/widgets/image_view.dart';
 import '../../../voice_speech/presentation/widgets/tts_play_button.dart';
@@ -95,7 +97,7 @@ class MessageBubble extends StatelessWidget {
         message.pdfInfo != null &&
         message.pdfInfo!.isNotEmpty) {
       return AppLocalizations.of(context)?.hereIsYourPdf ??
-          'Here is the required PDF as you requested.';
+          'Here is the document you requested.';
     }
     if (message.lastPrompt.trim().isEmpty &&
         (message.isUserCancelled || message.status == MessageStatus.partial)) {
@@ -139,12 +141,10 @@ class MessageBubble extends StatelessWidget {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width *
                   (context.isTablet
-                      ? (MediaQuery.sizeOf(context).width > 900 ? 0.65 : 0.75)
+                      ? (MediaQuery.sizeOf(context).width > 900 ? 0.55 : 0.65)
                       : 0.85),
             ),
-            padding: (message.imageUrls?.isNotEmpty ??
-                    message.pdfInfo?.isEmpty ??
-                    false)
+            padding: (message.imageUrls?.isNotEmpty ?? false)
                 ? EdgeInsets.symmetric(
                     horizontal: context.isCompact ? 4.0 : 8.0,
                     vertical: context.isCompact ? 4.0 : 6.0)
@@ -433,11 +433,11 @@ class _MessageBubbleContent extends StatelessWidget {
           isTablet: isTablet,
         ),
 
-      // 2. If PDFs are present, render the PDF cards.
+      // 2. If PDFs are present, render the adaptive PDF attachment collage.
       if (message.pdfInfo != null && message.pdfInfo!.isNotEmpty)
-        _PdfAttachmentCard(
-          pdfInfo: message.pdfInfo!,
-          isUser: isUser,
+        _ChatPdf(
+          pdfs: message.pdfInfo!,
+          messageId: message.messageId,
           isTablet: isTablet,
         ),
 
@@ -571,11 +571,17 @@ class _ChatImage extends StatelessWidget {
 }
 
 /// Builds an image widget without a download button (for user-attached images).
-Widget _buildImage(String url) {
+Widget _buildImage(
+  String url, {
+  double? width,
+  double? height,
+}) {
   final trimmed = url.trim();
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     return ImageView(
       image: ImageViewData.network(trimmed),
+      width: width,
+      height: height,
       fit: BoxFit.cover,
       alignment: Alignment.center,
       borderRadius: BorderRadius.circular(10),
@@ -584,7 +590,11 @@ Widget _buildImage(String url) {
       loadingBuilder: (_, __, ___) => const ShimmerLoading(borderRadius: 10),
     );
   }
-  return _SmartAsyncImageViewer(url: trimmed);
+  return _SmartAsyncImageViewer(
+    url: trimmed,
+    width: width,
+    height: height,
+  );
 }
 
 /// Builds an image wrapped in a [Stack] with a download button overlay.
@@ -598,8 +608,15 @@ Widget _buildImageWithDownload({
   int totalImages = 1,
 }) {
   return Stack(
+    fit: StackFit.expand,
     children: [
-      _buildImage(url),
+      Positioned.fill(
+        child: _buildImage(
+          url,
+          width: double.infinity,
+          height: double.infinity,
+        ),
+      ),
       Positioned(
         right: 0,
         top: 0,
@@ -615,7 +632,14 @@ Widget _buildImageWithDownload({
 
 class _SmartAsyncImageViewer extends StatefulWidget {
   final String url;
-  const _SmartAsyncImageViewer({required this.url});
+  final double? width;
+  final double? height;
+
+  const _SmartAsyncImageViewer({
+    required this.url,
+    this.width,
+    this.height,
+  });
 
   @override
   State<_SmartAsyncImageViewer> createState() => _SmartAsyncImageViewerState();
@@ -735,6 +759,8 @@ class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return ImageView(
         image: ImageViewData.network(url),
+        width: widget.width,
+        height: widget.height,
         fit: BoxFit.cover,
         alignment: Alignment.center,
         borderRadius: BorderRadius.circular(10),
@@ -750,6 +776,8 @@ class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
         final filePath = url.replaceFirst('file://', '');
         return ImageView(
           image: ImageViewData.file(filePath),
+          width: widget.width,
+          height: widget.height,
           fit: BoxFit.cover,
           alignment: Alignment.center,
           borderRadius: BorderRadius.circular(10),
@@ -764,6 +792,8 @@ class _SmartAsyncImageViewerState extends State<_SmartAsyncImageViewer> {
 
     return ImageView(
       image: ImageViewData.memory(_decodedBytes!),
+      width: widget.width,
+      height: widget.height,
       fit: BoxFit.cover,
       alignment: Alignment.center,
       borderRadius: BorderRadius.circular(10),
@@ -821,7 +851,6 @@ Widget _pdfView(
   BuildContext context,
   PdfAttachmentInfo pdfInfo, {
   bool isTablet = false,
-  bool isUser = true,
 }) {
   const spacing = 10.0;
 
@@ -837,79 +866,52 @@ Widget _pdfView(
   cardBg = context.isDark
       ? AppColors.pdfBackgroundDark
       : AppColors.pdfBackgroundLight;
-  borderColor = Colors.white.withValues(alpha: context.isDark ? 0.16 : 0.24);
+  borderColor = (context.isDark ? Colors.white : Colors.black)
+      .withValues(alpha: context.isDark ? 0.16 : 0.12);
   pdfForeground =
-      (context.isDark ? Colors.white : Colors.black).withValues(alpha: 0.85);
+      (context.isDark ? Colors.white : Colors.black87).withValues(alpha: 0.90);
 
-  final pdfView = Container(
-    width: 38,
-    height: 38,
-    decoration: BoxDecoration(
-      color: (isUser || context.isDark)
-          ? AppColors.darkError.withValues(alpha: 0.25)
-          : AppColors.lightError.withValues(alpha: 0.20),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Icon(
-      Icons.picture_as_pdf_rounded,
-      size: 24,
-      color: (isUser || context.isDark)
-          ? AppColors.lightError
-          : AppColors.darkError,
-    ),
+  final pdfView = Icon(
+    Icons.picture_as_pdf_rounded,
+    size: context.isCompact ? 24 : 32,
+    color: (context.isDark) ? AppColors.darkError : AppColors.lightError,
   );
 
-  final Widget shareButton;
-  if ((pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
-      pdfInfo.path.isNotEmpty)) {
-    shareButton = Material(
-      color: Colors.transparent,
-      child: Tooltip(
-        message: 'Share PDF',
-        child: InkWell(
-          onTap: () => _sharePdf(context, pdfInfo),
+  final Widget shareButton = Material(
+    color: Colors.transparent,
+    child: Tooltip(
+      message: 'Share PDF',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _sharePdf(context, pdfInfo),
+        child: Padding(
+          padding: const EdgeInsets.all(6.0),
           child: Icon(
             Icons.share_outlined,
             color: pdfForeground,
-            size: context.isCompact ? 18 : 21,
+            size: isTablet ? 18 : 15,
           ),
         ),
       ),
-    );
-  } else {
-    shareButton = const SizedBox.shrink();
-  }
+    ),
+  );
 
-  final Widget downloadButton;
-  if ((pdfInfo.url != null && pdfInfo.url!.isNotEmpty ||
-      pdfInfo.path.isNotEmpty)) {
-    downloadButton = Material(
-      color: Colors.transparent,
-      child: Tooltip(
-        message: 'Download PDF',
-        child: InkWell(
-          onTap: () => _downloadPdfToDevice(context, pdfInfo),
+  final Widget downloadButton = Material(
+    color: Colors.transparent,
+    child: Tooltip(
+      message: 'Download PDF',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _downloadPdfToDevice(context, pdfInfo),
+        child: Padding(
+          padding: const EdgeInsets.all(6.0),
           child: Icon(
             Icons.file_download_outlined,
             color: pdfForeground,
-            size: context.isCompact ? 18 : 21,
+            size: isTablet ? 21 : 18,
           ),
         ),
       ),
-    );
-  } else {
-    downloadButton = const SizedBox.shrink();
-  }
-
-  final actionRow = Padding(
-    padding: EdgeInsets.symmetric(horizontal: isTablet ? 16 : 8.0),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        shareButton,
-        SizedBox(width: isTablet ? 16 : 8.0),
-        downloadButton,
-      ],
     ),
   );
 
@@ -917,6 +919,10 @@ Widget _pdfView(
     color: Colors.transparent,
     child: InkWell(
       onTap: () => _openOrDownloadPdf(context, pdfInfo),
+      onLongPress: () => FullScreenPdfGallery.open(
+        context,
+        pdfs: [pdfInfo],
+      ),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         constraints: const BoxConstraints(minHeight: 56),
@@ -931,7 +937,7 @@ Widget _pdfView(
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             pdfView,
@@ -945,28 +951,43 @@ Widget _pdfView(
                     pdfInfo.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: (isTablet
-                            ? context.textTheme.bodyMedium
-                            : context.textTheme.bodySmall)
+                    style: (context.isCompact
+                            ? context.textTheme.bodySmall
+                            : context.textTheme.bodyMedium)
                         ?.copyWith(
                       color: pdfForeground,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (pdfInfo.fileSizeLabel.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      pdfInfo.fileSizeLabel,
-                      style: context.textTheme.labelSmall?.copyWith(
-                        color: pdfForeground,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  const SizedBox(height: 2),
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (pdfInfo.fileSizeLabel.isNotEmpty) ...[
+                          Text(
+                            pdfInfo.fileSizeLabel,
+                            style: (context.isCompact
+                                    ? context.textTheme.labelSmall
+                                    : context.textTheme.labelMedium)
+                                ?.copyWith(
+                              color: pdfForeground,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: spacing),
+                        shareButton,
+                        const SizedBox(width: spacing),
+                        downloadButton,
+                      ],
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
-            actionRow,
           ],
         ),
       ),
@@ -1044,29 +1065,19 @@ Future<void> _sharePdf(BuildContext context, PdfAttachmentInfo pdfInfo) async {
 
 Future<void> _downloadPdfToDevice(
     BuildContext context, PdfAttachmentInfo pdfInfo) async {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          const SizedBox(
-            width: 14,
-            height: 14,
-            child:
-                CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Downloading ${pdfInfo.name}...',
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-      duration: const Duration(seconds: 1),
-    ),
+  // 1. Request / check storage permission before proceeding
+  final hasPermission = await StoragePermissionHelper.requestDownloadPermission(
+    context,
+    isImage: false,
+  );
+  if (!hasPermission || !context.mounted) return;
+
+  // 2. Display localized high-contrast downloading SnackBar
+  context.showDownloadingSnackBar(
+    context.l10n.downloadingPdfFile(pdfInfo.name),
   );
 
+  // 3. Await bytes resolution
   final bytes = await PdfDocumentService.instance.resolvePdfBytes(pdfInfo);
   if (bytes == null || bytes.isEmpty) {
     unawaited(AnalyticsService.instance.logPdfDownload(
@@ -1075,16 +1086,13 @@ Future<void> _downloadPdfToDevice(
       failureReason: 'empty_bytes',
     ));
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to download ${pdfInfo.name}'),
-          backgroundColor: AppColors.darkError,
-        ),
-      );
+      context.cancelDownloadingSnackBar();
+      context.showErrorToast(context.l10n.pdfSaveFailed);
     }
     return;
   }
 
+  // 4. Await saving file to public Downloads
   final saved = await PdfDocumentService.instance.savePdfToPublicDownloads(
     bytes: bytes,
     fileName: pdfInfo.name,
@@ -1096,18 +1104,254 @@ Future<void> _downloadPdfToDevice(
     failureReason: saved ? '' : 'save_failed',
   ));
 
+  // 5. Cancel SnackBar and show completion Toast
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          saved
-              ? 'PDF saved to Downloads (${pdfInfo.name})'
-              : 'Failed to save PDF to Downloads',
+    context.cancelDownloadingSnackBar();
+    if (saved) {
+      context.showSuccessToast(context.l10n.pdfSavedToDownloads(pdfInfo.name));
+    } else {
+      context.showErrorToast(context.l10n.pdfSaveFailed);
+    }
+  }
+}
+
+Future<void> _downloadAllPdfsToDevice(
+    BuildContext context, List<PdfAttachmentInfo> pdfs) async {
+  if (pdfs.isEmpty) return;
+  if (pdfs.length == 1) {
+    return _downloadPdfToDevice(context, pdfs.first);
+  }
+
+  // 1. Request / check storage permission before proceeding
+  final hasPermission = await StoragePermissionHelper.requestDownloadPermission(
+    context,
+    isImage: false,
+  );
+  if (!hasPermission || !context.mounted) return;
+
+  // 2. Display localized high-contrast downloading SnackBar
+  context.showDownloadingSnackBar(
+    context.l10n.downloadingPdfsCount(pdfs.length.toString()),
+  );
+
+  // 3. Await saving all PDFs
+  int savedCount = 0;
+  for (final pdf in pdfs) {
+    try {
+      final bytes = await PdfDocumentService.instance.resolvePdfBytes(pdf);
+      if (bytes != null && bytes.isNotEmpty) {
+        final saved =
+            await PdfDocumentService.instance.savePdfToPublicDownloads(
+          bytes: bytes,
+          fileName: pdf.name,
+        );
+        if (saved) savedCount++;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error downloading PDF ${pdf.name}: $e');
+    }
+  }
+
+  // 4. Cancel SnackBar and show completion Toast
+  if (context.mounted) {
+    context.cancelDownloadingSnackBar();
+    if (savedCount > 0) {
+      context.showSuccessToast(
+        context.l10n.pdfsSavedToDownloads(savedCount.toString()),
+      );
+    } else {
+      context.showErrorToast(context.l10n.pdfsSaveFailed);
+    }
+  }
+}
+
+class _PdfBatchDownloadButton extends StatefulWidget {
+  final List<PdfAttachmentInfo> pdfs;
+
+  const _PdfBatchDownloadButton({required this.pdfs});
+
+  @override
+  State<_PdfBatchDownloadButton> createState() =>
+      _PdfBatchDownloadButtonState();
+}
+
+class _PdfBatchDownloadButtonState extends State<_PdfBatchDownloadButton> {
+  bool _isDownloading = false;
+
+  Future<void> _handleDownload() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+    try {
+      await _downloadAllPdfsToDevice(context, widget.pdfs);
+    } finally {
+      if (mounted) {
+        setState(() => _isDownloading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.isDark;
+    final bg = isDark ? Colors.black54 : Colors.white70;
+    final iconColor = isDark ? AppColors.white : context.primaryColor;
+
+    return Tooltip(
+      message: 'Download all ${widget.pdfs.length} PDFs',
+      child: IconButton(
+        constraints: BoxConstraints(
+          minWidth: context.isTablet ? 40 : 30,
+          minHeight: context.isTablet ? 40 : 30,
         ),
-        backgroundColor: saved ? AppColors.darkSuccess : AppColors.darkError,
-        duration: const Duration(seconds: 3),
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          backgroundColor: bg,
+          shape: const CircleBorder(),
+        ),
+        icon: _isDownloading
+            ? SizedBox(
+                width: context.isCompact ? 15 : 20,
+                height: context.isCompact ? 15 : 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: iconColor,
+                ),
+              )
+            : Icon(
+                Icons.download_rounded,
+                color: iconColor,
+                size: context.isCompact ? 18 : 22,
+              ),
+        onPressed: _handleDownload,
       ),
     );
+  }
+}
+
+Widget _buildOverflowPdfCard({
+  required BuildContext context,
+  required PdfAttachmentInfo pdfInfo,
+  required int extraCount,
+  required List<PdfAttachmentInfo> allPdfs,
+  required bool isTablet,
+}) {
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: () => FullScreenPdfGallery.open(
+        context,
+        pdfs: allPdfs,
+        initialIndex: 3,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Stack(
+        children: [
+          // Underlying 4th PDF card — maintains the exact same shape, borders, and layout
+          IgnorePointer(
+            child: _pdfView(
+              context,
+              pdfInfo,
+              isTablet: isTablet,
+            ),
+          ),
+
+          // Translucent black shade overlay matching the image attachment view
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.isDark
+                    ? Colors.black.withValues(alpha: 0.65)
+                    : Colors.black.withValues(alpha: 0.52),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withValues(
+                    alpha: context.isDark ? 0.16 : 0.24,
+                  ),
+                  width: 1,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  '+$extraCount',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isTablet ? 24 : 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.60),
+                        blurRadius: 6,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _ChatPdf extends StatelessWidget {
+  final List<PdfAttachmentInfo> pdfs;
+  final String? messageId;
+  final bool isTablet;
+
+  const _ChatPdf({
+    required this.pdfs,
+    this.messageId,
+    this.isTablet = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (pdfs.isEmpty) return const SizedBox.shrink();
+
+    final Widget collage;
+
+    switch (pdfs.length) {
+      case 1:
+        collage = _OneAttachmentView(
+          type: ChatAttachmentType.pdf,
+          pdf: pdfs.first,
+          msgId: messageId,
+          isTablet: isTablet,
+        );
+        break;
+
+      case 2:
+        collage = _TwoAttachmentView(
+          type: ChatAttachmentType.pdf,
+          pdfs: pdfs,
+          msgId: messageId,
+          isTablet: isTablet,
+        );
+        break;
+
+      case 3:
+        collage = _ThreeAttachmentView(
+          type: ChatAttachmentType.pdf,
+          pdfs: pdfs,
+          msgId: messageId,
+          isTablet: isTablet,
+        );
+        break;
+
+      default:
+        collage = _FourAttachmentView(
+          type: ChatAttachmentType.pdf,
+          pdfs: pdfs,
+          msgId: messageId,
+          isTablet: isTablet,
+        );
+        break;
+    }
+
+    return collage;
   }
 }
 
@@ -1180,7 +1424,13 @@ class _OneAttachmentView extends StatelessWidget {
                       provider: prov,
                       totalImages: totalImages,
                     )
-                  : _buildImage(img),
+                  : SizedBox.expand(
+                      child: _buildImage(
+                        img,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
             ),
           ),
         );
@@ -1188,7 +1438,11 @@ class _OneAttachmentView extends StatelessWidget {
     } else {
       final p = pdf;
       if (p != null) {
-        return _pdfView(context, p, isTablet: isTablet);
+        return _pdfView(
+          context,
+          p,
+          isTablet: isTablet,
+        );
       }
     }
     return const SizedBox.shrink();
@@ -1283,14 +1537,55 @@ class _TwoAttachmentView extends StatelessWidget {
     } else {
       final p = pdfs;
       if (p != null && p.length >= 2) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _pdfView(context, p[0], isTablet: isTablet),
-            const SizedBox(height: spacing),
-            _pdfView(context, p[1], isTablet: isTablet),
-          ],
+        final isShortHeight = context.screenHeight <= 550.0;
+
+        if (isTablet && !isShortHeight) {
+          return SizedBox(
+            width: double.infinity,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: _pdfView(
+                    context,
+                    p[0],
+                    isTablet: isTablet,
+                  ),
+                ),
+                const SizedBox(width: spacing),
+                Flexible(
+                  child: _pdfView(
+                    context,
+                    p[1],
+                    isTablet: isTablet,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Phone vertical column
+        return SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _pdfView(
+                context,
+                p[0],
+                isTablet: isTablet,
+              ),
+              const SizedBox(height: spacing),
+              _pdfView(
+                context,
+                p[1],
+                isTablet: isTablet,
+              ),
+            ],
+          ),
         );
       }
     }
@@ -1417,16 +1712,61 @@ class _ThreeAttachmentView extends StatelessWidget {
     } else {
       final p = pdfs;
       if (p != null && p.length >= 3) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _pdfView(context, p[0], isTablet: isTablet),
-            const SizedBox(height: spacing),
-            _pdfView(context, p[1], isTablet: isTablet),
-            const SizedBox(height: spacing),
-            _pdfView(context, p[2], isTablet: isTablet),
-          ],
+        final isShortHeight = context.screenHeight <= 550.0;
+
+        if (isTablet && !isShortHeight) {
+          return SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: _pdfView(
+                        context,
+                        p[0],
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: spacing),
+                    Flexible(
+                      child: _pdfView(
+                        context,
+                        p[1],
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: spacing),
+                _pdfView(
+                  context,
+                  p[2],
+                  isTablet: isTablet,
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Phone vertical column
+        return SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (int i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(height: spacing),
+                _pdfView(
+                  context,
+                  p[i],
+                  isTablet: isTablet,
+                ),
+              ],
+            ],
+          ),
         );
       }
     }
@@ -1621,53 +1961,92 @@ class _FourAttachmentView extends StatelessWidget {
     } else {
       final p = pdfs;
       if (p != null && p.length >= 4) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (int i = 0; i < p.length; i++) ...[
-              if (i > 0) const SizedBox(height: spacing),
-              _pdfView(context, p[i], isTablet: isTablet),
+        final isShortHeight = context.screenHeight <= 550.0;
+        final hasMore = p.length > 4;
+        final extraCount = p.length - 3;
+
+        final card4 = hasMore
+            ? _buildOverflowPdfCard(
+                context: context,
+                pdfInfo: p[3],
+                extraCount: extraCount,
+                allPdfs: p,
+                isTablet: isTablet,
+              )
+            : _pdfView(
+                context,
+                p[3],
+                isTablet: isTablet,
+              );
+
+        if (isTablet && !isShortHeight) {
+          return SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _pdfView(
+                        context,
+                        p[0],
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: spacing),
+                    Expanded(
+                      child: _pdfView(
+                        context,
+                        p[1],
+                        isTablet: isTablet,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: spacing),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _pdfView(
+                        context,
+                        p[2],
+                        isTablet: isTablet,
+                      ),
+                    ),
+                    const SizedBox(width: spacing),
+                    Expanded(
+                      child: card4,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Phone vertical column (exactly 4 uniform cards)
+        return SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (int i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(height: spacing),
+                _pdfView(
+                  context,
+                  p[i],
+                  isTablet: isTablet,
+                ),
+              ],
+              const SizedBox(height: spacing),
+              card4,
             ],
-          ],
+          ),
         );
       }
     }
     return const SizedBox.shrink();
-  }
-}
-
-class _PdfAttachmentCard extends StatelessWidget {
-  final List<PdfAttachmentInfo> pdfInfo;
-  final bool isUser;
-  final bool isTablet;
-
-  const _PdfAttachmentCard({
-    required this.pdfInfo,
-    required this.isUser,
-    this.isTablet = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (pdfInfo.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment:
-          isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        for (int i = 0; i < pdfInfo.length; i++) ...[
-          if (i > 0) const SizedBox(height: 8.0),
-          _pdfView(
-            context,
-            pdfInfo[i],
-            isTablet: isTablet,
-            isUser: isUser,
-          ),
-        ],
-      ],
-    );
   }
 }
 

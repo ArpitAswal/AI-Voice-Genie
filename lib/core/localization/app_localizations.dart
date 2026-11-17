@@ -259,10 +259,26 @@ class AppLocalizations {
       'image_generation_failed': 'Failed to generate image. Please try again.',
       'save_image': 'Save Image',
       'image_saved': 'Image saved to {0}',
+      'images_saved_count': 'Saved {0} images to {1}',
       'download_image': 'Download Image',
+      'downloading_image': 'Downloading image...',
+      'downloading_images_count': 'Downloading {0} images...',
+      'downloading_pdf_file': 'Downloading {0}...',
+      'downloading_pdfs_count': 'Downloading {0} PDFs...',
+      'pdf_saved_to_downloads': 'PDF saved to Downloads ({0})',
+      'pdfs_saved_to_downloads': 'Saved {0} PDFs to Downloads',
       'image_save_failed': 'Could not save image. Please try again.',
+      'images_save_failed': 'Failed to download images. Please try again.',
+      'pdf_save_failed': 'Failed to save PDF to Downloads',
+      'pdfs_save_failed': 'Failed to download PDFs. Please try again.',
       'image_save_permission_denied':
           'Storage permission denied. Please allow access in Settings.',
+      'storage_permission_required':
+          'Storage permission is required to save files.',
+      'storage_permission_denied_permanent':
+          'Storage permission is permanently denied. Please enable it in Settings to download files.',
+      'open_settings': 'Open Settings',
+      'permission_required': 'Permission Required',
       'image_save_no_space': 'Not enough storage space to save the image.',
       'image_download_failed':
           'Could not download image. Please check your connection.',
@@ -319,7 +335,7 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF uploaded.',
       'reading_pdf': 'Reading PDF...',
       'ask_about_pdf': 'Ask anything about this PDF...',
-      'here_is_your_pdf': 'Here is the required PDF as you requested.',
+      'here_is_your_pdf': 'Here is the document you requested.',
       'file_already_attached': 'This file is already attached.',
       'pdf_too_large': 'PDF is too large. Maximum size is 10MB.',
       'pdf_payload_too_large':
@@ -347,7 +363,6 @@ class AppLocalizations {
       'voice_output_stopped': 'Stopped.',
       'microphone_permission_denied':
           'Microphone permission is required for voice input.',
-      'open_settings': 'Open Settings',
       'speech_text_unavailable': 'Speech-to-text is not available.',
       'voice_assistant': 'Voice Assistant',
       // Tooltip shown on the Home mic button — guides users to tap for voice chat
@@ -530,8 +545,16 @@ class AppLocalizations {
       'permission_denied': 'Permission Denied',
       'camera_permission_denied':
           'Camera permission is required to take photos.',
+      'camera_permission_denied_permanent':
+          'Camera permission is permanently denied. Please enable it in Settings to take photos.',
       'gallery_permission_denied':
           'Gallery permission is required to choose photos.',
+      'gallery_permission_denied_permanent':
+          'Gallery permission is permanently denied. Please enable it in Settings to choose photos.',
+      'file_permission_required':
+          'Storage permission is required to select files.',
+      'file_permission_denied_permanent':
+          'Storage permission is permanently denied. Please enable it in Settings to select files.',
       'uploading_photo': 'Uploading photo...',
 
       // ── Validation ─────────────────────────────────────────────────────────
@@ -810,10 +833,27 @@ class AppLocalizations {
       'image_generation_failed': 'चित्र नहीं बन सका। पुनः प्रयास करें।',
       'save_image': 'चित्र सहेजें',
       'image_saved': 'चित्र {0} में सहेजा गया।',
+      'images_saved_count': '{0} चित्र {1} में सहेजे गए',
       'download_image': 'चित्र डाउनलोड करें',
+      'downloading_image': 'चित्र डाउनलोड हो रहा है...',
+      'downloading_images_count': '{0} चित्र डाउनलोड हो रहे हैं...',
+      'downloading_pdf_file': '{0} डाउनलोड हो रहा है...',
+      'downloading_pdfs_count': '{0} PDF डाउनलोड हो रहे हैं...',
+      'pdf_saved_to_downloads': 'PDF डाउनलोड्स में सहेजा गया ({0})',
+      'pdfs_saved_to_downloads': '{0} PDF डाउनलोड्स में सहेजे गए',
       'image_save_failed': 'चित्र सहेजा नहीं जा सका। पुनः प्रयास करें।',
+      'images_save_failed':
+          'चित्र डाउनलोड करने में विफल। कृपया पुनः प्रयास करें।',
+      'pdf_save_failed': 'PDF डाउनलोड्स में सहेजा नहीं जा सका',
+      'pdfs_save_failed': 'PDF डाउनलोड करने में विफल। कृपया पुनः प्रयास करें।',
       'image_save_permission_denied':
           'स्टोरेज अनुमति अस्वीकृत। सेटिंग्स में एक्सेस दें।',
+      'storage_permission_required':
+          'फ़ाइलें सहेजने के लिए स्टोरेज अनुमति आवश्यक है।',
+      'storage_permission_denied_permanent':
+          'स्टोरेज अनुमति स्थायी रूप से अस्वीकृत है। फ़ाइलें डाउनलोड करने के लिए कृपया इसे सेटिंग्स में सक्षम करें।',
+      'open_settings': 'सेटिंग्स खोलें',
+      'permission_required': 'अनुमति आवश्यक है',
       'image_save_no_space': 'चित्र सहेजने के लिए पर्याप्त स्टोरेज नहीं है।',
       'image_download_failed':
           'चित्र डाउनलोड नहीं हो सका। अपना कनेक्शन जांचें।',
@@ -868,7 +908,7 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF अपलोड हो गई।',
       'reading_pdf': 'PDF पढ़ी जा रही है...',
       'ask_about_pdf': 'इस PDF के बारे में कुछ भी पूछें...',
-      'here_is_your_pdf': 'यह रहा आपका अनुरोधित PDF दस्तावेज़।',
+      'here_is_your_pdf': 'यह रहा आपका अनुरोधित दस्तावेज़।',
       'file_already_attached': 'यह फ़ाइल पहले से ही जुड़ी हुई है।',
       'pdf_too_large': 'PDF बहुत बड़ी है। अधिकतम आकार 10MB है।',
       'pdf_payload_too_large':
@@ -897,7 +937,6 @@ class AppLocalizations {
       'voice_output_stopped': 'रुक गया।',
       'microphone_permission_denied':
           'वॉयस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
-      'open_settings': 'सेटिंग खोलें',
       'speech_text_unavailable': 'स्पीच-टू-टेक्स्ट उपलब्ध नहीं है।',
       'voice_assistant': 'वॉयस असिस्टेंट',
       // Tooltip shown on the Home mic button — guides users to tap for voice chat
@@ -1080,7 +1119,15 @@ class AppLocalizations {
       'gallery': 'गैलरी',
       'permission_denied': 'अनुमति अस्वीकृत',
       'camera_permission_denied': 'फोटो लेने के लिए कैमरा अनुमति आवश्यक है।',
+      'camera_permission_denied_permanent':
+          'फोटो लेने के लिए कैमरा अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स में सक्षम करें।',
       'gallery_permission_denied': 'फोटो चुनने के लिए गैलरी अनुमति आवश्यक है।',
+      'gallery_permission_denied_permanent':
+          'फोटो चुनने के लिए गैलरी अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स में सक्षम करें।',
+      'file_permission_required':
+          'फ़ाइलें चुनने के लिए स्टोरेज अनुमति आवश्यक है।',
+      'file_permission_denied_permanent':
+          'फ़ाइलें चुनने के लिए स्टोरेज अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स में सक्षम करें।',
       'uploading_photo': 'फोटो अपलोड हो रही है...',
 
       // ── Validation ─────────────────────────────────────────────────────────
@@ -1433,17 +1480,47 @@ class AppLocalizations {
   String get permissionDenied => translate('permission_denied');
   String get openSettings => translate('open_settings');
   String get cameraDeniedMessage => translate('camera_permission_denied');
+  String get cameraPermissionDeniedPermanent =>
+      translate('camera_permission_denied_permanent');
   String get galleryDeniedMessage => translate('gallery_permission_denied');
+  String get galleryPermissionDeniedPermanent =>
+      translate('gallery_permission_denied_permanent');
+  String get filePermissionRequired => translate('file_permission_required');
+  String get filePermissionDeniedPermanent =>
+      translate('file_permission_denied_permanent');
   String get uploadingPhoto => translate('uploading_photo');
   String get modelLimit => translate('model_rate_limit');
   String get pressBackAgainToExit => translate('press_back_again_to_exit');
-  // ── Image Download ─────────────────────────────────────────────────────────
+  // ── Image & Document Download ───────────────────────────────────────────────
   String get downloadImage => translate('download_image');
+  String get downloadingImage => translate('downloading_image');
+  String downloadingImagesCount(String count) =>
+      translate('downloading_images_count').replaceAll('{0}', count);
+  String downloadingPdfFile(String name) =>
+      translate('downloading_pdf_file').replaceAll('{0}', name);
+  String downloadingPdfsCount(String count) =>
+      translate('downloading_pdfs_count').replaceAll('{0}', count);
   String imageSaved(String path) =>
       translate('image_saved').replaceAll('{0}', path);
+  String imagesSavedCount(String count, String path) =>
+      translate('images_saved_count')
+          .replaceAll('{0}', count)
+          .replaceAll('{1}', path);
+  String pdfSavedToDownloads(String name) =>
+      translate('pdf_saved_to_downloads').replaceAll('{0}', name);
+  String pdfsSavedToDownloads(String count) =>
+      translate('pdfs_saved_to_downloads').replaceAll('{0}', count);
   String get imageSaveFailed => translate('image_save_failed');
+  String get imagesSaveFailed => translate('images_save_failed');
+  String get pdfSaveFailed => translate('pdf_save_failed');
+  String get pdfsSaveFailed => translate('pdfs_save_failed');
   String get imageSavePermissionDenied =>
       translate('image_save_permission_denied');
+  String get storagePermissionRequired =>
+      translate('storage_permission_required');
+  String get storagePermissionDeniedPermanent =>
+      translate('storage_permission_denied_permanent');
+  String get permissionRequired => translate('permission_required');
   String get imageSaveNoSpace => translate('image_save_no_space');
   String get imageDownloadFailed => translate('image_download_failed');
 

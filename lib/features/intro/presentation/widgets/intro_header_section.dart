@@ -71,7 +71,7 @@ class IntroHeaderSection extends StatelessWidget {
                         ? context.textTheme.bodyMedium
                         : context.textTheme.bodyLarge)
                     ?.copyWith(
-                  color: context.colorScheme.onSurfaceVariant,
+                  color: context.colorScheme.tertiary,
                 ),
               ),
             ],
