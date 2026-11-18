@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../features/chat/presentation/chat_detail_screen.dart';
 import '../../features/home/presentation/tab_bar_screen.dart';
 import '../../features/key_setup/presentation/key_setup_screen.dart';
+import '../../features/usage/presentation/usage_analytics_screen.dart';
 import '../enums/app_enums.dart';
 import '../services/analytics_service.dart';
 
@@ -89,6 +90,9 @@ class AppRoutes {
 
   /// Terms of Service
   static const String terms = '/about/terms-of-service';
+
+  /// Usage & Token Analytics dashboard
+  static const String usageAnalytics = '/usage-analytics';
 
   // ── Navigation Helpers ─────────────────────────────────────────────────────
 
@@ -250,10 +254,10 @@ class AppRoutes {
                   initialTitle: arguments.initialTitle),
               settings,
               TransitionType.fade,
-              const Duration(milliseconds: 700));
+              const Duration(milliseconds: 400));
         } else {
           return _buildRoute(const ChatDetailScreen(), settings,
-              TransitionType.fade, const Duration(milliseconds: 700));
+              TransitionType.fade, const Duration(milliseconds: 400));
         }
 
       // ── Profile Edit ───────────────────────────────────────────────────────
@@ -280,6 +284,19 @@ class AppRoutes {
           settings,
           TransitionType.slideUp,
         );
+
+      // ── Usage Analytics ────────────────────────────────────────────────────
+      case usageAnalytics:
+        final usageArgs =
+            arguments is UsageAnalyticsArguments ? arguments : null;
+        return _buildRoute(
+          UsageAnalyticsScreen(
+            initialProvider: usageArgs?.initialProvider,
+            initialMonthKey: usageArgs?.initialMonthKey,
+          ),
+          settings,
+          TransitionType.slide,
+        );
       // ── Exception / 404 ────────────────────────────────────────────────────
       default:
         return _buildErrorRoute(settings);
@@ -302,6 +319,7 @@ class AppRoutes {
       about => ('About App Screen', 'AboutScreen'),
       privacy => ('Privacy Policy Screen', 'LegalScreen'),
       terms => ('Terms of Service Screen', 'LegalScreen'),
+      usageAnalytics => ('Usage Analytics Screen', 'UsageAnalyticsScreen'),
       _ => (routeName, 'UnknownRoute'),
     };
 

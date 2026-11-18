@@ -213,11 +213,8 @@ class _AboutScreenState extends State<AboutScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Left Hero Pane: Identity, Status, Mission & Copyright ────────
-              ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: 320.0,
-                  maxWidth: 360.0,
-                ),
+              Expanded(
+                flex: 4,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -239,6 +236,7 @@ class _AboutScreenState extends State<AboutScreen> {
 
               // ── Right Workspace Pane: Legal Docs, Support & Licenses ──────────
               Expanded(
+                flex: 6,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 680.0),
                   child: Column(

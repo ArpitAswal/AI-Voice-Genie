@@ -80,11 +80,15 @@ class TypewriterText extends StatefulWidget {
     BuildContext context,
     TextStyle? defaultStyle,
   ) {
+    final isDark = context.isDark;
     final textColor = defaultStyle?.color ??
-        (context.isDark ? AppColors.white : AppColors.black);
+        (isDark ? AppColors.white : AppColors.lightTextPrimary);
 
     return MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-      p: defaultStyle,
+      p: defaultStyle?.copyWith(
+        color: textColor,
+        height: 1.55,
+      ),
       pPadding: EdgeInsets.zero,
       a: defaultStyle?.copyWith(
         color: context.primaryColor,
@@ -117,28 +121,32 @@ class TypewriterText extends StatefulWidget {
         color: textColor,
       ),
       listIndent: 16.0,
-      code: defaultStyle?.copyWith(
+      code: TextStyle(
         fontFamily: 'monospace',
-        backgroundColor: context.isDark
-            ? AppColors.white.withValues(alpha: 0.1)
-            : AppColors.black.withValues(alpha: 0.08),
+        fontSize: (defaultStyle?.fontSize != null
+            ? defaultStyle!.fontSize! - 1.0
+            : 13.0),
+        color: context.colorScheme.tertiary,
+        backgroundColor: Colors.transparent,
       ),
       codeblockDecoration: BoxDecoration(
-        color: context.isDark
-            ? AppColors.cardDark.withValues(alpha: 0.7)
-            : AppColors.cardLight.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(8),
+        // color: isDark ? const Color(0xFF0F172A) : const Color(0xFF1E293B),
+        color: context.theme.scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: context.isDark ? Colors.white10 : Colors.black12,
+          // color: isDark ? const Color(0xFF1E293B) : const Color(0xFF334155),
+          color: context.theme.scaffoldBackgroundColor,
+          width: 1,
         ),
       ),
-      codeblockPadding: const EdgeInsets.all(8),
+      codeblockPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       blockquote: defaultStyle?.copyWith(
         fontStyle: FontStyle.italic,
         color: textColor.withValues(alpha: 0.85),
       ),
       blockquoteDecoration: BoxDecoration(
-        color: context.isDark
+        color: isDark
             ? AppColors.primaryLight.withValues(alpha: 0.15)
             : AppColors.primaryDark.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
@@ -252,6 +260,7 @@ class _TypewriterTextState extends State<TypewriterText>
       data: textToShow,
       selectable:
           false, // Ensures link taps are not swallowed by text selection gesture arena
+      fitContent: true,
       onTapLink: (text, href, title) => TypewriterText.launchUrlSafely(href),
       styleSheet: TypewriterText.buildMarkdownStyleSheet(context, defaultStyle),
     );

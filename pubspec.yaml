@@ -1,7 +1,7 @@
 name: ai_voice_genie
 description: AI Voice Genie - Unified multi-model AI assistant mobile app with voice dictation, vision analysis, PDF parsing, and native media downloads.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.3.0+4
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

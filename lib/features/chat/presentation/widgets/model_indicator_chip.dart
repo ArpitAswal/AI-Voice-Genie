@@ -22,28 +22,37 @@ class ModelIndicatorChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, bgColor, icon) = _providerStyle(provider, context.isDark);
+    final textStyle = (isTablet
+            ? context.textTheme.labelMedium
+            : context.textTheme.labelSmall)
+        ?.copyWith(
+      color: color,
+      fontWeight: FontWeight.w600,
+    );
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isTablet ? 10 : 8,
-        vertical: isTablet ? 4 : 3,
+        horizontal: isTablet ? 12 : 8,
+        vertical: isTablet ? 5 : 3,
       ),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withValues(alpha: 0.15),
+          width: 0.8,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           FaIcon(icon,
-              size: context.textTheme.labelSmall?.fontSize, color: color),
-          const SizedBox(width: 4),
+              size: textStyle?.fontSize ?? (isTablet ? 12.0 : 11.0),
+              color: color),
+          const SizedBox(width: 5),
           Text(
             provider.displayName,
-            style: context.textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+            style: textStyle,
           ),
         ],
       ),

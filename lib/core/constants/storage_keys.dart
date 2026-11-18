@@ -57,6 +57,10 @@ class StorageKeys {
     return '${baseKey}_$providerId';
   }
 
+  // ── Permissions ───────────────────────────────────────────────────────────
+  // Tracks whether the user has previously denied storage/media download permission
+  static const String hasDeniedStoragePermission = 'hasDeniedStoragePermission';
+
   // ── Active Conversation Cache ──────────────────────────────────────────────
   // ID of the last open conversation (to restore on app resume)
   // static const String lastOpenConversationId = 'lastOpenConversationId';

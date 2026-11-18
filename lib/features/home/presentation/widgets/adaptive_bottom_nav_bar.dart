@@ -80,48 +80,43 @@ class AdaptiveBottomNavBar extends StatelessWidget {
       button: true,
       selected: isSelected,
       label: label,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => onTabSelected(index),
-          borderRadius: BorderRadius.circular(32),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            // Ensure minimum 48dp height for touch accessibility
-            constraints: const BoxConstraints(minHeight: 48, minWidth: 80),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? (context.isDark
-                      ? AppColors.cardDark.withValues(alpha: 0.5)
-                      : AppColors.cardLight.withValues(alpha: 0.5))
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(32),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: context.iconStandard,
-                  color: itemColor,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: itemColor,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
-                        letterSpacing: 0.5,
-                      ),
-                ),
-              ],
-            ),
+      child: InkWell(
+        onTap: () => onTabSelected(index),
+        borderRadius: BorderRadius.circular(24),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          // Ensure minimum 48dp height for touch accessibility
+          // constraints: const BoxConstraints(minHeight: 48, minWidth: 80),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (context.isDark ? Colors.black45 : Colors.white70)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: context.iconStandard,
+                color: itemColor,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: itemColor,
+                      fontWeight:
+                          isSelected ? FontWeight.w800 : FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+              ),
+            ],
           ),
         ),
       ),

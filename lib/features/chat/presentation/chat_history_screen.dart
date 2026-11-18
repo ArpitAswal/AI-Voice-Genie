@@ -136,18 +136,26 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     final count = _selectedConversationIds.length;
     if (count == 0) return;
 
+    final isTablet = context.isTablet;
+    final isDark = context.isDark;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AppAlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: AppColors.lightError, size: 28),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: isDark ? AppColors.darkError : AppColors.lightError,
+              size: isTablet ? 32 : 28,
+            ),
             const SizedBox(width: 12),
             Flexible(
               child: Text(
                 context.l10n.deleteSelectedConversations,
-                style: context.textTheme.titleLarge
+                style: (isTablet
+                        ? context.textTheme.headlineSmall
+                        : context.textTheme.titleLarge)
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
@@ -155,25 +163,28 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
         ),
         content: Text(
           context.l10n.deleteSelectedConfirm(count),
-          style: context.textTheme.bodyMedium?.copyWith(
+          style: (isTablet
+                  ? context.textTheme.bodyLarge
+                  : context.textTheme.bodyMedium)
+              ?.copyWith(
             height: 1.4,
           ),
         ),
-        actionsPadding:
-            const EdgeInsets.symmetric(vertical: 18.0, horizontal: 24.0),
         actions: [
           Row(
             children: [
               Expanded(
                 child: context.themedOutlinedButton(
                   label: context.l10n.cancel,
+                  height: isTablet ? 50.0 : 44.0,
                   onPressed: () => Navigator.of(context).pop(false),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: context.themedDangerButton(
                   label: context.l10n.delete,
+                  height: isTablet ? 50.0 : 44.0,
                   onPressed: () => Navigator.of(context).pop(true),
                 ),
               ),
@@ -247,6 +258,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final isTablet = context.isTablet;
+    final isShortHeight = context.screenHeight <= 550;
     final chatProvider = context.watch<ChatProvider>();
     final conversations = chatProvider.visibleConversations;
     final isSearching = chatProvider.searchQuery != null &&
@@ -284,13 +296,18 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 24),
                       if (_isSelectionMode) ...[
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.close_rounded),
+                              icon: Icon(
+                                Icons.close_rounded,
+                                size: context.isCompact ? 22.0 : 24.0,
+                              ),
                               tooltip: context.l10n.cancel,
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(48, 48),
+                              ),
                               onPressed: () {
                                 setState(() {
                                   _selectedConversationIds.clear();
@@ -302,35 +319,53 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                               child: Text(
                                 context.l10n.selectedCount(
                                     _selectedConversationIds.length),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
+                                style: (context.isCompact
+                                        ? context.textTheme.titleMedium
+                                        : context.textTheme.titleLarge)
                                     ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             IconButton(
+                              constraints: const BoxConstraints(
+                                  minHeight: 48, minWidth: 48),
                               icon: Icon(
                                 _areAllSelected(conversations)
                                     ? Icons.deselect_rounded
                                     : Icons.select_all_rounded,
                                 color: context.primaryColor,
+                                size: context.isCompact ? 22.0 : 26.0,
+                              ),
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(48, 48),
                               ),
                               tooltip: _areAllSelected(conversations)
                                   ? context.l10n.deselectAll
                                   : context.l10n.selectAll,
                               onPressed: () => _toggleSelectAll(conversations),
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline_rounded,
-                                color: AppColors.lightError,
+                            Tooltip(
+                              message: context.l10n.deleteSelectedConversations,
+                              child: IconButton(
+                                constraints: const BoxConstraints(
+                                    minHeight: 48, minWidth: 48),
+                                icon: Image.asset(
+                                  AppAssets.deleteIcon,
+                                  color: _selectedConversationIds.isEmpty
+                                      ? AppColors.lightError
+                                          .withValues(alpha: 0.38)
+                                      : AppColors.lightError,
+                                  height: context.isCompact ? 22.0 : 26.0,
+                                  width: context.isCompact ? 22.0 : 26.0,
+                                ),
+                                style: IconButton.styleFrom(
+                                  minimumSize: const Size(48, 48),
+                                ),
+                                onPressed: _selectedConversationIds.isEmpty
+                                    ? null
+                                    : _confirmDeleteSelected,
                               ),
-                              tooltip: context.l10n.deleteSelectedConversations,
-                              onPressed: _selectedConversationIds.isEmpty
-                                  ? null
-                                  : _confirmDeleteSelected,
                             ),
                           ],
                         ),
@@ -338,44 +373,89 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                       ] else ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
-                              child: Text(context.l10n.conversationHistory,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .displayMedium),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    context.l10n.conversationHistory,
+                                    style: (context.isCompact
+                                            ? (isShortHeight
+                                                ? context
+                                                    .textTheme.headlineSmall
+                                                : context
+                                                    .textTheme.headlineMedium)
+                                            : context.textTheme.headlineLarge)
+                                        ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    context.l10n.historySubtitle,
+                                    style: (context.isCompact
+                                            ? (isShortHeight
+                                                ? context.textTheme.bodySmall
+                                                : context.textTheme.bodyMedium)
+                                            : context.textTheme.bodyLarge)
+                                        ?.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            if (conversations.isNotEmpty || isSearching)
-                              SizedBox(
-                                height: 28,
-                                child: IconButton(
-                                  onPressed: () => AppRoutes.navigateTo(
-                                      context, AppRoutes.chat),
-                                  icon: const FaIcon(
-                                      FontAwesomeIcons.solidMessage),
-                                  tooltip: context.l10n.newConversation,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8.0, vertical: 0.0),
-                                  color: AppColors.info,
+                            if (conversations.isNotEmpty || isSearching) ...[
+                              const SizedBox(width: 16),
+                              IconButton(
+                                onPressed: () => AppRoutes.navigateTo(
+                                    context, AppRoutes.chat),
+                                icon: FaIcon(
+                                  FontAwesomeIcons.solidMessage,
+                                  size: isShortHeight ? 16.0 : 21.0,
+                                ),
+                                tooltip: context.l10n.newConversation,
+                                style: IconButton.styleFrom(
+                                  minimumSize: const Size(48, 48),
+                                  backgroundColor: context.primaryColor
+                                      .withValues(alpha: 0.12),
+                                  foregroundColor: context.primaryColor,
                                 ),
                               ),
+                            ],
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(context.l10n.historySubtitle,
-                            style: context.textTheme.bodyLarge),
 
                         // Search Container (Fixed)
                         Padding(
                           padding: EdgeInsets.symmetric(
-                              vertical: isTablet ? 24 : 16),
-                          child: context.themedTextField(
-                            enabled: !chatProvider.isLoadingMoreConversations &&
-                                    conversations.isNotEmpty ||
-                                isSearching,
-                            onChanged: _onSearchChanged,
-                            hint: context.l10n.searchPlaceholder,
-                            controller: _searchController,
+                            vertical:
+                                isShortHeight ? 8.0 : (isTablet ? 20.0 : 16.0),
+                          ),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  context.isExpanded ? 640.0 : double.infinity,
+                            ),
+                            child: context.themedTextField(
+                                enabled:
+                                    !chatProvider.isLoadingMoreConversations &&
+                                            conversations.isNotEmpty ||
+                                        isSearching,
+                                onChanged: _onSearchChanged,
+                                hint: context.l10n.searchPlaceholder,
+                                controller: _searchController,
+                                suffixIcon: IconButton(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _onSearchChanged('');
+                                    },
+                                    icon: Icon(Icons.clear_rounded,
+                                        color: context.colorScheme.tertiary))),
                           ),
                         ),
                       ],
@@ -389,7 +469,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                     controller: _scrollController,
                     slivers: [
                       if (conversations.isEmpty &&
-                          !isSearching &&
+                          isSearching &&
                           chatProvider.isLoadingMoreConversations)
                         _buildShimmerList()
                       else if (conversations.isEmpty && !isSearching)
@@ -400,34 +480,60 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                       else if (conversations.isEmpty && isSearching)
                         SliverFillRemaining(
                           hasScrollBody: false,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: context.screenWidth * 0.8,
-                                height: context.screenWidth * 0.8,
-                                child: Lottie.asset(
-                                  AppAssets.emptySearch,
-                                  reverse: true,
-                                  repeat: true,
-                                  fit: BoxFit.cover,
-                                  imageProviderFactory: (lottieImage) {
-                                    return const AssetImage(AppAssets.appLogo);
-                                  },
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 460),
+                              child: Padding(
+                                padding:
+                                    EdgeInsets.all(context.horizontalPadding),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: isShortHeight
+                                          ? 130.0
+                                          : (isTablet
+                                              ? 240.0
+                                              : (context.screenWidth * 0.55)
+                                                  .clamp(150.0, 200.0)),
+                                      height: isShortHeight
+                                          ? 130.0
+                                          : (isTablet
+                                              ? 240.0
+                                              : (context.screenWidth * 0.55)
+                                                  .clamp(150.0, 200.0)),
+                                      child: Lottie.asset(
+                                        AppAssets.emptySearch,
+                                        reverse: true,
+                                        repeat: true,
+                                        fit: BoxFit.contain,
+                                        imageProviderFactory: (lottieImage) {
+                                          return const AssetImage(
+                                              AppAssets.appLogo);
+                                        },
+                                      ),
+                                    ),
+                                    Text(
+                                      context.l10n.noConversationFound(
+                                          chatProvider.searchQuery ?? ''),
+                                      style: (context.isCompact
+                                              ? context.textTheme.titleMedium
+                                              : context.textTheme.titleLarge)
+                                          ?.copyWith(
+                                        color: context.colorScheme.onSurface,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              Text(
-                                context.l10n.noConversationFound(
-                                    chatProvider.searchQuery ?? ''),
-                                style: context.textTheme.bodyLarge,
-                              )
-                            ],
+                            ),
                           ),
                         )
                       else
-                        ..._buildGroupedLists(conversations),
+                        ..._buildGroupedLists(conversations, context),
                       if (chatProvider.isLoadingMoreConversations &&
                           conversations.isNotEmpty)
                         SliverToBoxAdapter(
@@ -449,7 +555,17 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     );
   }
 
-  List<Widget> _buildGroupedLists(List<ConversationModel> conversations) {
+  int _resolveCrossAxisCount(BuildContext context) {
+    if (context.isExpanded && context.screenWidth >= 1050.0) {
+      return 3;
+    } else if (context.isTablet) {
+      return 2;
+    }
+    return 1;
+  }
+
+  List<Widget> _buildGroupedLists(
+      List<ConversationModel> conversations, BuildContext context) {
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
     final yesterdayStr =
@@ -475,23 +591,17 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     final slivers = <Widget>[];
 
     if (today.isNotEmpty) {
-      slivers.add(_buildSectionHeader(context.l10n.today));
+      slivers.add(_buildSectionHeader(context.l10n.today, context));
       slivers.add(_buildListSliver(today));
     }
 
     if (yesterday.isNotEmpty) {
-      // if (today.isNotEmpty) {
-      //   slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
-      // }
-      slivers.add(_buildSectionHeader(context.l10n.yesterday));
+      slivers.add(_buildSectionHeader(context.l10n.yesterday, context));
       slivers.add(_buildListSliver(yesterday));
     }
 
     if (older.isNotEmpty) {
-      // if (today.isNotEmpty || yesterday.isNotEmpty) {
-      //   slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 24)));
-      // }
-      slivers.add(_buildSectionHeader(context.l10n.older));
+      slivers.add(_buildSectionHeader(context.l10n.older, context));
       slivers.add(_buildListSliver(older));
     }
 
@@ -501,17 +611,97 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     return slivers;
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, BuildContext context) {
+    final isShortHeight = context.screenHeight <= 550.0;
     return SliverToBoxAdapter(
       child: Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: context.horizontalPadding, vertical: 8),
-        child: Text(title, style: context.textTheme.bodyLarge),
+        padding: EdgeInsets.only(
+          left: context.horizontalPadding,
+          right: context.horizontalPadding,
+          top: 0.0,
+          bottom: 10.0,
+        ),
+        child: Text(
+          title,
+          style: (context.isCompact
+                  ? (isShortHeight
+                      ? context.textTheme.titleSmall
+                      : context.textTheme.titleMedium)
+                  : context.textTheme.titleLarge)
+              ?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: context.colorScheme.tertiary),
+        ),
       ),
     );
   }
 
+  Future<void> _handleConversationTap(
+    ConversationModel conversation,
+    bool isSelected,
+  ) async {
+    if (_isSelectionMode) {
+      setState(() {
+        if (isSelected) {
+          _selectedConversationIds.remove(conversation.id);
+        } else {
+          _selectedConversationIds.add(conversation.id);
+        }
+      });
+      return;
+    }
+    final result = await AppRoutes.navigateTo(
+      context,
+      AppRoutes.chatDetail,
+      arguments: ChatDetailArguments(
+        conversationId: conversation.id,
+        initialTitle: conversation.title,
+      ),
+    );
+    // Reload list when a conversation was deleted inside the detail screen
+    if (result == true && mounted) {
+      _loadInitialConversations();
+    }
+  }
+
   Widget _buildListSliver(List<ConversationModel> items) {
+    final crossAxisCount = _resolveCrossAxisCount(context);
+
+    if (crossAxisCount > 1) {
+      return SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+        sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 16.0,
+            crossAxisSpacing: 16.0,
+            mainAxisExtent: (155.0).clamp(120.0, 180.0),
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final conversation = items[index];
+              final isSelected =
+                  _selectedConversationIds.contains(conversation.id);
+              return CustomConversationCard(
+                conversation: conversation,
+                isSelectionMode: _isSelectionMode,
+                isSelected: isSelected,
+                onLongPress: () {
+                  if (!_isSelectionMode) {
+                    setState(() {
+                      _selectedConversationIds.add(conversation.id);
+                    });
+                  }
+                },
+                onTap: () => _handleConversationTap(conversation, isSelected),
+              );
+            },
+            childCount: items.length,
+          ),
+        ),
+      );
+    }
+
     return SliverPadding(
       padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
       sliver: SliverList(
@@ -533,30 +723,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                     });
                   }
                 },
-                onTap: () async {
-                  if (_isSelectionMode) {
-                    setState(() {
-                      if (isSelected) {
-                        _selectedConversationIds.remove(conversation.id);
-                      } else {
-                        _selectedConversationIds.add(conversation.id);
-                      }
-                    });
-                    return;
-                  }
-                  final result = await AppRoutes.navigateTo(
-                    context,
-                    AppRoutes.chatDetail,
-                    arguments: ChatDetailArguments(
-                      conversationId: conversation.id,
-                      initialTitle: conversation.title,
-                    ),
-                  );
-                  // Reload list when a conversation was deleted inside the detail screen
-                  if (result == true && mounted) {
-                    _loadInitialConversations();
-                  }
-                },
+                onTap: () => _handleConversationTap(conversation, isSelected),
               ),
             );
           },
@@ -566,57 +733,103 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
     );
   }
 
+  Widget _buildShimmerItem() {
+    final isTablet = context.isTablet;
+    final badgeSize = isTablet ? 32.0 : 24.0;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  DynamicShimmer(
+                    height: isTablet ? 22.0 : 18.0,
+                    width: (context.screenWidth * 0.4).clamp(100.0, 180.0),
+                    borderRadius: 6,
+                  ),
+                  const DynamicShimmer(
+                    height: 16,
+                    width: 20,
+                    borderRadius: 4,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              DynamicShimmer(
+                height: isTablet ? 16.0 : 14.0,
+                width: double.infinity,
+                borderRadius: 4,
+              ),
+              const SizedBox(height: 6),
+              DynamicShimmer(
+                height: isTablet ? 16.0 : 14.0,
+                width: 240,
+                borderRadius: 4,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              DynamicShimmer(
+                height: badgeSize,
+                width: badgeSize,
+                borderRadius: badgeSize * 0.35,
+              ),
+              const SizedBox(width: 8),
+              DynamicShimmer(
+                height: isTablet ? 14.0 : 12.0,
+                width: 180,
+                borderRadius: 4,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildShimmerList() {
+    final crossAxisCount = _resolveCrossAxisCount(context);
+
+    if (crossAxisCount > 1) {
+      return SliverPadding(
+        padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
+        sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 16.0,
+            crossAxisSpacing: 16.0,
+            mainAxisExtent: (155.0).clamp(120.0, 180.0),
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildShimmerItem(),
+            childCount: (context.isExpanded ? 12 : 8),
+          ),
+        ),
+      );
+    }
+
     return SliverPadding(
       padding: EdgeInsets.symmetric(horizontal: context.horizontalPadding),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color:
-                      context.isDark ? AppColors.cardDark : AppColors.cardLight,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        DynamicShimmer(
-                            height: 24,
-                            width: (MediaQuery.of(context).size.width / 2),
-                            borderRadius: 6),
-                        const DynamicShimmer(
-                          height: 18,
-                          width: 24,
-                          borderRadius: 8,
-                        )
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const DynamicShimmer(
-                        height: 16, width: double.infinity, borderRadius: 4),
-                    const SizedBox(height: 6),
-                    const DynamicShimmer(
-                        height: 16, width: 200, borderRadius: 4),
-                    const SizedBox(height: 16),
-                    const Row(
-                      children: [
-                        DynamicShimmer(height: 18, width: 80, borderRadius: 6),
-                        SizedBox(width: 12),
-                        DynamicShimmer(height: 18, width: 120, borderRadius: 4),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+          (context, index) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildShimmerItem(),
+          ),
           childCount: 6,
         ),
       ),

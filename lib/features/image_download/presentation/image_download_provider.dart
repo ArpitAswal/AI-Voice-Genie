@@ -85,6 +85,50 @@ class ImageDownloadProvider extends ChangeNotifier {
     }
   }
 
+  /// Initiates the download-and-save pipeline for a batch of generated images.
+  ///
+  /// State is tracked on [batchKey] (typically "{messageId}_all").
+  Future<void> downloadAllImages({
+    required List<String> imageSources,
+    required String batchKey,
+    String provider = 'unknown',
+  }) async {
+    if (stateFor(batchKey) == ImageDownloadState.loading) return;
+
+    _setState(batchKey, ImageDownloadState.loading);
+    _failures.remove(batchKey);
+
+    bool allSuccess = true;
+    DeviceImageSaveResult? lastFailure;
+
+    for (final source in imageSources) {
+      final result = await _repository.downloadAndSave(
+        imageSource: source,
+        provider: provider,
+      );
+      if (result != DeviceImageSaveResult.success) {
+        allSuccess = false;
+        lastFailure = result;
+      }
+    }
+
+    if (allSuccess) {
+      _setState(batchKey, ImageDownloadState.success);
+      await Future.delayed(const Duration(seconds: 1));
+      if (stateFor(batchKey) == ImageDownloadState.success) {
+        _setState(batchKey, ImageDownloadState.idle);
+      }
+    } else {
+      _failures[batchKey] = lastFailure ?? DeviceImageSaveResult.unknown;
+      _setState(batchKey, ImageDownloadState.failed);
+      await Future.delayed(const Duration(seconds: 1));
+      if (stateFor(batchKey) == ImageDownloadState.failed) {
+        _failures.remove(batchKey);
+        _setState(batchKey, ImageDownloadState.idle);
+      }
+    }
+  }
+
   // ── Internal ───────────────────────────────────────────────────────────────
 
   void _setState(String key, ImageDownloadState state) {

@@ -49,7 +49,6 @@ class _IntroScreenState extends State<IntroScreen> {
   Widget build(BuildContext context) {
     // Top status bar inset; bottom is handled by Scaffold in compact or custom FAB spacing
     final topPadding = MediaQuery.paddingOf(context).top;
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return SafeArea(
       top:
@@ -66,7 +65,6 @@ class _IntroScreenState extends State<IntroScreen> {
             return _buildCompactLayout(
               context,
               topPadding: topPadding,
-              keyboardInset: keyboardInset,
               isShortHeight: height <= 550.0,
             );
           }
@@ -76,7 +74,6 @@ class _IntroScreenState extends State<IntroScreen> {
           return _buildTabletLayout(
             context,
             topPadding: topPadding,
-            keyboardInset: keyboardInset,
             isExpanded: width >= 840.0,
           );
         },
@@ -88,18 +85,15 @@ class _IntroScreenState extends State<IntroScreen> {
   Widget _buildCompactLayout(
     BuildContext context, {
     required double topPadding,
-    required double keyboardInset,
     required bool isShortHeight,
   }) {
     final verticalSpacing = isShortHeight ? 16.0 : 26.0;
 
     return SingleChildScrollView(
       physics: const ClampingScrollPhysics(),
-      padding: EdgeInsets.only(
-        top: topPadding + (isShortHeight ? 10.0 : 16.0),
-        bottom: 24.0 + keyboardInset,
-        left: context.horizontalPadding,
-        right: context.horizontalPadding,
+      padding: EdgeInsets.symmetric(
+        vertical: topPadding + (isShortHeight ? 10.0 : 16.0),
+        horizontal: context.horizontalPadding,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -132,19 +126,15 @@ class _IntroScreenState extends State<IntroScreen> {
   Widget _buildTabletLayout(
     BuildContext context, {
     required double topPadding,
-    required double keyboardInset,
     required bool isExpanded,
   }) {
     final horizontalPadding = isExpanded ? 32.0 : context.horizontalPadding;
 
     return SingleChildScrollView(
       physics: const ClampingScrollPhysics(),
-      padding: EdgeInsets.only(
-        top: topPadding + 20.0,
-        // Extra bottom clearance so content never gets obscured under the floating action button
-        bottom: keyboardInset + 40.0,
-        left: horizontalPadding,
-        right: horizontalPadding,
+      padding: EdgeInsets.symmetric(
+        vertical: topPadding + 20.0,
+        horizontal: horizontalPadding,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

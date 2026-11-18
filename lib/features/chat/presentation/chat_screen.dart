@@ -180,32 +180,10 @@ class _ChatScreenState extends State<ChatScreen> {
     _chatInputController.setPrompt(l10n.analyzeImagePrompt);
   }
 
-  Future<void> _handleSummarizePdf() async {
-    final l10n = AppLocalizations.of(context)!;
-    final success =
-        await _chatInputController.pickPdfWithPrompt(l10n.summarizePdfPrompt);
-    if (success) {
-      _hideSuggestions();
-    } else {
-      _showSuggestionsState();
-    }
-  }
-
   void _handleGeneratePdf() {
     _hideSuggestions();
     final l10n = AppLocalizations.of(context)!;
     _chatInputController.setPrompt(l10n.generatePdfPrompt);
-  }
-
-  Future<void> _handleAnalyzeImage() async {
-    final l10n = AppLocalizations.of(context)!;
-    final success =
-        await _chatInputController.pickImageWithPrompt(l10n.analyzeImagePrompt);
-    if (success) {
-      _hideSuggestions();
-    } else {
-      _showSuggestionsState();
-    }
   }
 
   void _handleGenerateCode() {
@@ -223,133 +201,193 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final isTablet = context.isTablet;
+    final isShortHeight = context.screenHeight <= 550.0;
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-        body: SafeArea(
-      bottom: false,
-      child: Column(
-        children: [
-          // ── Minimal Custom Top Bar ─────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(l10n.newConversation,
-                      style: context.textTheme.headlineMedium),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Scrollable Welcome Content ─────────────────────────────────
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // ── Minimal Custom Top Bar ─────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.horizontalPadding,
+                vertical: isShortHeight ? 2.0 : 6.0,
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.arrow_back,
+                      size: context.isCompact ? 22.0 : 24.0,
                     ),
-                    child: Center(
-                      child: _WelcomeContent(
-                        isTablet: isTablet,
-                        showSuggestions: _showSuggestions,
-                        onSummarizePdf: _handleSummarizePdf,
-                        onGeneratePdf: _handleGeneratePdf,
-                        onGenerateCode: _handleGenerateCode,
-                        onAnalyzeImage: _handleAnalyzeImage,
-                        onCreateImage: _handleCreateImage,
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.newConversation,
+                      style: (context.isCompact
+                              ? (isShortHeight
+                                  ? context.textTheme.titleSmall
+                                  : context.textTheme.titleMedium)
+                              : context.textTheme.headlineSmall)
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Scrollable Welcome Content ─────────────────────────────────
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
                       ),
+                      child: Center(
+                        child: _WelcomeContent(
+                          isTablet: isTablet,
+                          isShortHeight: isShortHeight,
+                          showSuggestions: _showSuggestions,
+                          onSummarizePdf: _handleSummarizePdfPrompt,
+                          onGeneratePdf: _handleGeneratePdf,
+                          onGenerateCode: _handleGenerateCode,
+                          onAnalyzeImage: _handleAnalyzeImagePrompt,
+                          onCreateImage: _handleCreateImage,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // ── Input Bar with Background Container ────────────────────────
+            Consumer2<ApiKeyProvider, AiPreferencesProvider>(
+              builder: (
+                _,
+                apiKeyProvider,
+                preferences,
+                __,
+              ) {
+                final selectedProvider = preferences.preferredProvider;
+                final bool isFloatingCard = isTablet && !isShortHeight;
+                final double inputMaxWidth = isTablet ? 840.0 : double.infinity;
+
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: inputMaxWidth),
+                    margin: isFloatingCard
+                        ? EdgeInsets.only(
+                            left: 16.0,
+                            right: 16.0,
+                            bottom: 16.0 + context.bottomPadding,
+                          )
+                        : EdgeInsets.zero,
+                    decoration: BoxDecoration(
+                      color: context.theme.cardTheme.color ??
+                          (context.isDark
+                              ? AppColors.cardDark
+                              : AppColors.cardLight),
+                      borderRadius: isFloatingCard
+                          ? BorderRadius.circular(24)
+                          : const BorderRadius.vertical(
+                              top: Radius.circular(20),
+                            ),
+                      border: Border.all(
+                        color: context.theme.dividerTheme.color ??
+                            (context.isDark
+                                ? AppColors.darkDivider
+                                : AppColors.lightDivider),
+                        width: 1,
+                      ),
+                      boxShadow: isFloatingCard
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(
+                                  alpha: context.isDark ? 0.35 : 0.08,
+                                ),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      14.0,
+                      isShortHeight ? 6.0 : 10.0,
+                      14.0,
+                      isFloatingCard
+                          ? 10.0
+                          : (isShortHeight ? 6.0 : 10.0) +
+                              context.bottomPadding,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ChatModelSelectorDropdown(
+                          providers: AiProviderId.values,
+                          selectedProvider: selectedProvider,
+                          isEnabled: (_chatProvider?.isGenerating == true)
+                              ? false
+                              : true,
+                          onChanged: (provider) {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            preferences.setPreferredProvider(provider);
+
+                            if (!apiKeyProvider.validProviders
+                                .contains(provider)) {
+                              MessageUtils.showErrorToast(
+                                context,
+                                context.l10n.noKeyForModel,
+                              );
+                            } else {
+                              final usageProvider =
+                                  context.read<UsageProvider>();
+                              final summary =
+                                  usageProvider.summaryFor(provider);
+                              if (summary != null && summary.isExceeded()) {
+                                MessageUtils.showErrorToast(
+                                  context,
+                                  context.l10n.chatProviderLimitReached(
+                                      provider.displayName),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 4.0),
+                        // The Input Component itself
+                        Flexible(
+                          child: ChatInputBar(
+                            controller: _chatInputController,
+                            onUserInteracted: _hideSuggestions,
+                            onSend: _handleSend,
+                            onEmptyInput: _showSuggestionsState,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
               },
             ),
-          ),
-
-          // ── Input Bar with Background Container ────────────────────────
-          Consumer2<ApiKeyProvider, AiPreferencesProvider>(
-            builder: (
-              _,
-              apiKeyProvider,
-              preferences,
-              __,
-            ) {
-              final selectedProvider = preferences.preferredProvider;
-
-              return Container(
-                  decoration: BoxDecoration(
-                    color: context.theme.cardTheme.color,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(context.isTablet ? 30 : 20),
-                    ),
-                    border: Border.all(
-                      color: context.theme.dividerTheme.color!,
-                      width: 1,
-                    ),
-                  ),
-                  padding: EdgeInsets.symmetric(
-                      horizontal: context.horizontalPadding / 2,
-                      vertical: context.verticalSpacing / 2),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ChatModelSelectorDropdown(
-                        providers: AiProviderId.values,
-                        selectedProvider: selectedProvider,
-                        isEnabled: (_chatProvider?.isGenerating == true)
-                            ? false
-                            : true,
-                        onChanged: (provider) {
-                          FocusManager.instance.primaryFocus?.unfocus();
-                          preferences.setPreferredProvider(provider);
-
-                          if (!apiKeyProvider.validProviders
-                              .contains(provider)) {
-                            MessageUtils.showErrorToast(
-                              context,
-                              context.l10n.noKeyForModel,
-                            );
-                          } else {
-                            final usageProvider = context.read<UsageProvider>();
-                            final summary = usageProvider.summaryFor(provider);
-                            if (summary != null && summary.isExceeded()) {
-                              MessageUtils.showErrorToast(
-                                context,
-                                context.l10n.chatProviderLimitReached(
-                                    provider.displayName),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 4.0),
-                      // The Input Component itself
-                      Flexible(
-                        child: ChatInputBar(
-                          controller: _chatInputController,
-                          onUserInteracted: _hideSuggestions,
-                          onSend: _handleSend,
-                          onEmptyInput: _showSuggestionsState,
-                        ),
-                      ),
-                    ],
-                  ));
-            },
-          ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 }
 
@@ -359,6 +397,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
 class _WelcomeContent extends StatelessWidget {
   final bool isTablet;
+  final bool isShortHeight;
   final bool showSuggestions;
   final VoidCallback onSummarizePdf;
   final VoidCallback onGeneratePdf;
@@ -368,6 +407,7 @@ class _WelcomeContent extends StatelessWidget {
 
   const _WelcomeContent({
     required this.isTablet,
+    required this.isShortHeight,
     required this.showSuggestions,
     required this.onSummarizePdf,
     required this.onGeneratePdf,
@@ -380,54 +420,81 @@ class _WelcomeContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // App Logo Box
-        Container(
-          decoration: BoxDecoration(
+    final logoSize = isShortHeight
+        ? 64.0
+        : (isTablet ? 120.0 : (context.screenWidth * 0.25).clamp(80.0, 100.0));
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: context.horizontalPadding,
+        vertical: isShortHeight ? 12.0 : 20.0,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // App Logo Box
+          Container(
+            width: logoSize,
+            height: logoSize,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: context.isDark
                   ? AppColors.primaryGradientDark
-                  : AppColors.primaryGradientLight),
-          child: ImageView(
-            image: const ImageViewData.asset(AppAssets.appLogo),
-            width: context.screenWidth / 4,
-            height: context.screenWidth / 4,
-            filterQuality: FilterQuality.high,
-            fit: BoxFit.cover,
-          ),
-        ),
-
-        SizedBox(height: context.isTablet ? 24 : 12),
-        Text(
-          l10n.startConversation,
-          style: context.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w500, fontStyle: FontStyle.italic),
-          textAlign: TextAlign.center,
-        ),
-
-        SizedBox(height: isTablet ? 48 : 30),
-
-        // Suggestion actions are visible only while this is a fresh chat.
-        AnimatedSwitcher(
-          duration: AppConstants.mediumDuration,
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SizeTransition(
-              sizeFactor: animation,
-              child: child,
+                  : AppColors.primaryGradientLight,
+              boxShadow: [
+                BoxShadow(
+                  color: context.primaryColor.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: ImageView(
+                image: const ImageViewData.asset(AppAssets.appLogo),
+                width: logoSize * 0.85,
+                height: logoSize * 0.85,
+                filterQuality: FilterQuality.high,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
-          child: showSuggestions
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+
+          SizedBox(height: isShortHeight ? 10.0 : (isTablet ? 20.0 : 14.0)),
+          Text(
+            l10n.startConversation,
+            style: (context.isCompact
+                    ? (isShortHeight
+                        ? context.textTheme.titleSmall
+                        : context.textTheme.titleMedium)
+                    : context.textTheme.headlineSmall)
+                ?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: context.colorScheme.onSurface,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          SizedBox(height: isShortHeight ? 14.0 : (isTablet ? 32.0 : 22.0)),
+
+          // Suggestion actions are visible only while this is a fresh chat.
+          AnimatedSwitcher(
+            duration: AppConstants.mediumDuration,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SizeTransition(
+                sizeFactor: animation,
+                child: child,
+              ),
+            ),
+            child: showSuggestions
+                ? Center(
                     child: _SuggestionGrid(
                       key: const ValueKey('chat_suggestions'),
                       isTablet: isTablet,
+                      isShortHeight: isShortHeight,
                       actions: [
                         _SuggestionAction(
                           icon: FontAwesomeIcons.fileLines,
@@ -456,14 +523,11 @@ class _WelcomeContent extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-                )
-              : const SizedBox.shrink(key: ValueKey('chat_suggestions_gone')),
-        ),
-
-        SizedBox(
-            height: context.bottomPadding > 0 ? context.bottomPadding : 20),
-      ],
+                  )
+                : const SizedBox.shrink(key: ValueKey('chat_suggestions_gone')),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -482,38 +546,49 @@ class _SuggestionAction {
 
 class _SuggestionGrid extends StatelessWidget {
   final bool isTablet;
+  final bool isShortHeight;
   final List<_SuggestionAction> actions;
 
   const _SuggestionGrid({
     super.key,
     required this.isTablet,
+    required this.isShortHeight,
     required this.actions,
   });
 
   @override
   Widget build(BuildContext context) {
-    final maxWidth = isTablet ? 760.0 : 420.0;
-    final itemWidth =
-        isTablet ? (maxWidth - (3 * 12)) / 4 : (maxWidth - 12) / 2;
-    final itemHeight = isTablet ? 48.0 : 44.0;
+    final maxGridWidth = isTablet ? 680.0 : 420.0;
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 12,
-        runSpacing: 12,
-        children: actions.map((action) {
-          return SizedBox(
-            width: itemWidth,
-            height: itemHeight,
-            child: _SuggestionActionCard(
-              icon: action.icon,
-              label: action.label,
-              onTap: action.onTap,
-            ),
+      constraints: BoxConstraints(maxWidth: maxGridWidth),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final availableWidth = constraints.maxWidth;
+          final bool isMultiColumn = isTablet || availableWidth >= 480.0;
+          final double itemWidth = isMultiColumn
+              ? ((availableWidth - (2 * 12.0)) / 3).clamp(160.0, 240.0)
+              : ((availableWidth - 10.0) / 2).clamp(130.0, 200.0);
+          final double itemHeight = isShortHeight ? 44.0 : 48.0;
+
+          return Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 10.0,
+            runSpacing: 10.0,
+            children: actions.map((action) {
+              return SizedBox(
+                width: itemWidth,
+                height: itemHeight,
+                child: _SuggestionActionCard(
+                  icon: action.icon,
+                  label: action.label,
+                  onTap: action.onTap,
+                  isShortHeight: isShortHeight,
+                ),
+              );
+            }).toList(),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -523,50 +598,66 @@ class _SuggestionActionCard extends StatelessWidget {
   final FaIconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool isShortHeight;
 
   const _SuggestionActionCard({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.isShortHeight = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
-      child: Container(
-        alignment: Alignment.center,
-        // padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: context.theme.dividerTheme.color!),
-            gradient: context.isDark
-                ? AppColors.primaryGradientDark
-                : AppColors.primaryGradientLight),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FaIcon(icon,
-                size: 20,
-                color: context.isDark
-                    ? AppColors.darkTextTertiary
-                    : AppColors.lightTextPrimary),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: context.isDark
-                        ? AppColors.darkTextTertiary
-                        : AppColors.lightTextPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+    final borderColor =
+        context.isDark ? AppColors.darkDivider : AppColors.lightDivider;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: context.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(30),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: borderColor, width: 1.0),
             ),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FaIcon(
+                  icon,
+                  size: isShortHeight ? 15.0 : (context.isTablet ? 18.0 : 16.0),
+                  color: context.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: (context.isCompact
+                            ? (isShortHeight
+                                ? context.textTheme.labelMedium
+                                : context.textTheme.labelLarge)
+                            : context.textTheme.titleSmall)
+                        ?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: context.colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

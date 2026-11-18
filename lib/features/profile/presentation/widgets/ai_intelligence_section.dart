@@ -78,7 +78,7 @@ class ProfileAiIntelligenceSection extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             if (cards.isEmpty)
               _ActivationPanel(inactiveProviders: inactiveProviders)
             else
@@ -142,6 +142,7 @@ class _ModelIntelligenceCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
+                    flex: 2,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -169,8 +170,8 @@ class _ModelIntelligenceCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   // Spend badge wrapped flexibly to eliminate overflow risk
-                  Flexible(
-                    flex: 0,
+                  Expanded(
+                    flex: 1,
                     child: _SpendBadge(
                       spent: spent,
                       summary: summary,
@@ -282,27 +283,7 @@ class _SpendBadge extends StatelessWidget {
       );
     }
 
-    // When no budget is set, display the current spend amount so the user always knows "What did it cost?"
-    final formattedSpent = '\$${spent.toStringAsFixed(2)}';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        context.l10n.usageSpentBadge(formattedSpent),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: (context.isCompact
-                ? context.textTheme.labelMedium
-                : context.textTheme.labelLarge)
-            ?.copyWith(
-          color: context.isDark ? Colors.white : color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
 

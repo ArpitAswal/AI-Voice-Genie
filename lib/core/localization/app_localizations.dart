@@ -259,10 +259,26 @@ class AppLocalizations {
       'image_generation_failed': 'Failed to generate image. Please try again.',
       'save_image': 'Save Image',
       'image_saved': 'Image saved to {0}',
+      'images_saved_count': 'Saved {0} images to {1}',
       'download_image': 'Download Image',
+      'downloading_image': 'Downloading image...',
+      'downloading_images_count': 'Downloading {0} images...',
+      'downloading_pdf_file': 'Downloading {0}...',
+      'downloading_pdfs_count': 'Downloading {0} PDFs...',
+      'pdf_saved_to_downloads': 'PDF saved to Downloads ({0})',
+      'pdfs_saved_to_downloads': 'Saved {0} PDFs to Downloads',
       'image_save_failed': 'Could not save image. Please try again.',
+      'images_save_failed': 'Failed to download images. Please try again.',
+      'pdf_save_failed': 'Failed to save PDF to Downloads',
+      'pdfs_save_failed': 'Failed to download PDFs. Please try again.',
       'image_save_permission_denied':
           'Storage permission denied. Please allow access in Settings.',
+      'storage_permission_required':
+          'Storage permission is required to save files.',
+      'storage_permission_denied_permanent':
+          'Storage permission is permanently denied. Please enable it in Settings to download files.',
+      'open_settings': 'Open Settings',
+      'permission_required': 'Permission Required',
       'image_save_no_space': 'Not enough storage space to save the image.',
       'image_download_failed':
           'Could not download image. Please check your connection.',
@@ -319,7 +335,7 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF uploaded.',
       'reading_pdf': 'Reading PDF...',
       'ask_about_pdf': 'Ask anything about this PDF...',
-      'here_is_your_pdf': 'Here is the required PDF as you requested.',
+      'here_is_your_pdf': 'Here is the document you requested.',
       'file_already_attached': 'This file is already attached.',
       'pdf_too_large': 'PDF is too large. Maximum size is 10MB.',
       'pdf_payload_too_large':
@@ -347,7 +363,6 @@ class AppLocalizations {
       'voice_output_stopped': 'Stopped.',
       'microphone_permission_denied':
           'Microphone permission is required for voice input.',
-      'open_settings': 'Open Settings',
       'speech_text_unavailable': 'Speech-to-text is not available.',
       'voice_assistant': 'Voice Assistant',
       // Tooltip shown on the Home mic button — guides users to tap for voice chat
@@ -419,7 +434,7 @@ class AppLocalizations {
       // ── Usage Tracking ─────────────────────────────────────────────────────
       'usage_this_month': 'Estimated usage this month',
       'usage_spent_badge': '{0} spent',
-      'usage_tokens': 'tokens',
+      'usage_tokens': 'Tokens',
       'usage_requests': 'requests',
       'usage_images': 'images',
       'usage_pdfs': 'PDFs',
@@ -464,6 +479,49 @@ class AppLocalizations {
       'waiting_to_sync_tooltip': 'Waiting to sync',
       // Usage error
       'usage_load_failed': 'Failed to load usage data.',
+      'usage_analytics': 'Usage Analytics',
+
+      // ── Usage Analytics & Telemetry ─────────────────────────────────────────
+      'all_models': 'All Models',
+      'all_modalities': 'All Modalities',
+      'text_generation': 'Text Generation',
+      'image_generation': 'Image Generation',
+      'image_analysis': 'Image Analysis',
+      'pdf_analysis': 'PDF Analysis',
+      'pdf_generation': 'PDF Generation',
+      'total_tokens': 'Total Tokens',
+      'est_spend': 'Est. Spend',
+      'est_billing_cost': 'Est. billing cost',
+      'total_reqs': 'Total Reqs',
+      'total_ai_completions': 'Total AI completions',
+      'in_out_ratio': 'In / Out Ratio',
+      'prompt_efficiency': 'Prompt efficiency',
+      'daily_activity_trends': 'Daily Activity Trends',
+      'daily_token_usage': 'Daily token usage across billing period',
+      'peak_badge': 'Peak: {0}',
+      'overview_models_tab': 'Overview & Models',
+      'model_distribution': 'Model Distribution',
+      'workload_share_by_ai': 'Workload share by AI provider',
+      'no_model_activity': 'No Model Activity Recorded',
+      'feature_modality_breakdown': 'Feature & Modality Breakdown',
+      'workload_distribution_capabilities':
+          'Workload distribution across AI capabilities',
+      'loading_monthly_data': 'Analysing data...',
+      'chat_prompt_completions': 'Chat & prompt completions',
+      'dalle_visual_synthesis': 'DALL-E & visual synthesis',
+      'multimodal_vision_understanding': 'Multimodal vision understanding',
+      'document_parsing_reading': 'Document parsing & reading',
+      'report_document_creation': 'Report & document creation',
+      'select_month_year': 'Select Month & Year',
+      'select_year': 'Select Year',
+      'select_month': 'Select Month',
+      'spend_badge': 'Spend',
+      'ratio_badge': 'Ratio',
+      'tokens_badge': 'Tokens',
+      'reqs_badge': 'Reqs',
+      'current_month': 'Current Month',
+      'refresh_analytics': 'Refresh analytics',
+      'day_prefix': 'Day {0}',
       'about_app': 'About AI Voice Genie',
       'development_build': 'Development Build',
       'production_build': 'Production Ready',
@@ -530,8 +588,16 @@ class AppLocalizations {
       'permission_denied': 'Permission Denied',
       'camera_permission_denied':
           'Camera permission is required to take photos.',
+      'camera_permission_denied_permanent':
+          'Camera permission is permanently denied. Please enable it in Settings to take photos.',
       'gallery_permission_denied':
           'Gallery permission is required to choose photos.',
+      'gallery_permission_denied_permanent':
+          'Gallery permission is permanently denied. Please enable it in Settings to choose photos.',
+      'file_permission_required':
+          'Storage permission is required to select files.',
+      'file_permission_denied_permanent':
+          'Storage permission is permanently denied. Please enable it in Settings to select files.',
       'uploading_photo': 'Uploading photo...',
 
       // ── Validation ─────────────────────────────────────────────────────────
@@ -810,10 +876,27 @@ class AppLocalizations {
       'image_generation_failed': 'चित्र नहीं बन सका। पुनः प्रयास करें।',
       'save_image': 'चित्र सहेजें',
       'image_saved': 'चित्र {0} में सहेजा गया।',
+      'images_saved_count': '{0} चित्र {1} में सहेजे गए',
       'download_image': 'चित्र डाउनलोड करें',
+      'downloading_image': 'चित्र डाउनलोड हो रहा है...',
+      'downloading_images_count': '{0} चित्र डाउनलोड हो रहे हैं...',
+      'downloading_pdf_file': '{0} डाउनलोड हो रहा है...',
+      'downloading_pdfs_count': '{0} PDF डाउनलोड हो रहे हैं...',
+      'pdf_saved_to_downloads': 'PDF डाउनलोड्स में सहेजा गया ({0})',
+      'pdfs_saved_to_downloads': '{0} PDF डाउनलोड्स में सहेजे गए',
       'image_save_failed': 'चित्र सहेजा नहीं जा सका। पुनः प्रयास करें।',
+      'images_save_failed':
+          'चित्र डाउनलोड करने में विफल। कृपया पुनः प्रयास करें।',
+      'pdf_save_failed': 'PDF डाउनलोड्स में सहेजा नहीं जा सका',
+      'pdfs_save_failed': 'PDF डाउनलोड करने में विफल। कृपया पुनः प्रयास करें।',
       'image_save_permission_denied':
           'स्टोरेज अनुमति अस्वीकृत। सेटिंग्स में एक्सेस दें।',
+      'storage_permission_required':
+          'फ़ाइलें सहेजने के लिए स्टोरेज अनुमति आवश्यक है।',
+      'storage_permission_denied_permanent':
+          'स्टोरेज अनुमति स्थायी रूप से अस्वीकृत है। फ़ाइलें डाउनलोड करने के लिए कृपया इसे सेटिंग्स में सक्षम करें।',
+      'open_settings': 'सेटिंग्स खोलें',
+      'permission_required': 'अनुमति आवश्यक है',
       'image_save_no_space': 'चित्र सहेजने के लिए पर्याप्त स्टोरेज नहीं है।',
       'image_download_failed':
           'चित्र डाउनलोड नहीं हो सका। अपना कनेक्शन जांचें।',
@@ -868,7 +951,7 @@ class AppLocalizations {
       'pdf_uploaded': 'PDF अपलोड हो गई।',
       'reading_pdf': 'PDF पढ़ी जा रही है...',
       'ask_about_pdf': 'इस PDF के बारे में कुछ भी पूछें...',
-      'here_is_your_pdf': 'यह रहा आपका अनुरोधित PDF दस्तावेज़।',
+      'here_is_your_pdf': 'यह रहा आपका अनुरोधित दस्तावेज़।',
       'file_already_attached': 'यह फ़ाइल पहले से ही जुड़ी हुई है।',
       'pdf_too_large': 'PDF बहुत बड़ी है। अधिकतम आकार 10MB है।',
       'pdf_payload_too_large':
@@ -897,7 +980,6 @@ class AppLocalizations {
       'voice_output_stopped': 'रुक गया।',
       'microphone_permission_denied':
           'वॉयस इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
-      'open_settings': 'सेटिंग खोलें',
       'speech_text_unavailable': 'स्पीच-टू-टेक्स्ट उपलब्ध नहीं है।',
       'voice_assistant': 'वॉयस असिस्टेंट',
       // Tooltip shown on the Home mic button — guides users to tap for voice chat
@@ -995,6 +1077,49 @@ class AppLocalizations {
       'waiting_to_sync_tooltip': 'सिंक की प्रतीक्षा',
       // Usage error
       'usage_load_failed': 'उपयोग डेटा लोड नहीं हो सका।',
+      'usage_analytics': 'उपयोग एनालिटिक्स',
+
+      // ── Usage Analytics & Telemetry ─────────────────────────────────────────
+      'all_models': 'सभी मॉडल',
+      'all_modalities': 'सभी मोडालिटी',
+      'text_generation': 'टेक्स्ट जेनरेशन',
+      'image_generation': 'इमेज जेनरेशन',
+      'image_analysis': 'इमेज विश्लेषण',
+      'pdf_analysis': 'PDF विश्लेषण',
+      'pdf_generation': 'PDF जेनरेशन',
+      'total_tokens': 'कुल टोकन',
+      'est_spend': 'अनुमानित खर्च',
+      'est_billing_cost': 'अनुमानित बिलिंग लागत',
+      'total_reqs': 'कुल अनुरोध',
+      'total_ai_completions': 'कुल AI पूर्णताएं',
+      'in_out_ratio': 'इन / आउट अनुपात',
+      'prompt_efficiency': 'प्रॉम्प्ट दक्षता',
+      'daily_activity_trends': 'दैनिक गतिविधि रुझान',
+      'daily_token_usage': 'बिलिंग अवधि में दैनिक टोकन उपयोग',
+      'peak_badge': 'शीर्ष: {0}',
+      'overview_models_tab': 'अवलोकन और मॉडल',
+      'model_distribution': 'मॉडल वितरण',
+      'workload_share_by_ai': 'AI प्रदाता द्वारा कार्यभार हिस्सा',
+      'no_model_activity': 'कोई मॉडल गतिविधि दर्ज नहीं',
+      'feature_modality_breakdown': 'सुविधा और मोडालिटी विवरण',
+      'workload_distribution_capabilities':
+          'AI क्षमताओं में कार्यभार वितरण',
+      'loading_monthly_data': 'डेटा का विश्लेषण किया जा रहा है...',
+      'chat_prompt_completions': 'चैट और प्रॉम्प्ट पूर्णताएं',
+      'dalle_visual_synthesis': 'DALL-E और दृश्य निर्माण',
+      'multimodal_vision_understanding': 'मल्टीमॉडल विज़न समझ',
+      'document_parsing_reading': 'दस्तावेज़ पार्सिंग और पठन',
+      'report_document_creation': 'रिपोर्ट और दस्तावेज़ निर्माण',
+      'select_month_year': 'माह और वर्ष चुनें',
+      'select_year': 'वर्ष चुनें',
+      'select_month': 'माह चुनें',
+      'spend_badge': 'खर्च',
+      'ratio_badge': 'अनुपात',
+      'tokens_badge': 'टोकन',
+      'reqs_badge': 'अनुरोध',
+      'current_month': 'वर्तमान माह',
+      'refresh_analytics': 'एनालिटिक्स रीफ्रेश करें',
+      'day_prefix': 'दिन {0}',
       'support': 'सहायता',
       'edit_profile': 'प्रोफ़ाइल संपादित करें',
       'display_name': 'डिस्प्ले नाम',
@@ -1080,7 +1205,15 @@ class AppLocalizations {
       'gallery': 'गैलरी',
       'permission_denied': 'अनुमति अस्वीकृत',
       'camera_permission_denied': 'फोटो लेने के लिए कैमरा अनुमति आवश्यक है।',
+      'camera_permission_denied_permanent':
+          'फोटो लेने के लिए कैमरा अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स में सक्षम करें।',
       'gallery_permission_denied': 'फोटो चुनने के लिए गैलरी अनुमति आवश्यक है।',
+      'gallery_permission_denied_permanent':
+          'फोटो चुनने के लिए गैलरी अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स में सक्षम करें।',
+      'file_permission_required':
+          'फ़ाइलें चुनने के लिए स्टोरेज अनुमति आवश्यक है।',
+      'file_permission_denied_permanent':
+          'फ़ाइलें चुनने के लिए स्टोरेज अनुमति स्थायी रूप से अस्वीकृत है। कृपया इसे सेटिंग्स में सक्षम करें।',
       'uploading_photo': 'फोटो अपलोड हो रही है...',
 
       // ── Validation ─────────────────────────────────────────────────────────
@@ -1366,6 +1499,52 @@ class AppLocalizations {
   String get syncFailedTooltip => translate('sync_failed_tooltip');
   String get waitingToSyncTooltip => translate('waiting_to_sync_tooltip');
   String get usageLoadFailed => translate('usage_load_failed');
+  String get usageAnalytics => translate('usage_analytics');
+
+  // ── Usage Analytics Getters ────────────────────────────────────────────────
+  String get allModels => translate('all_models');
+  String get allModalities => translate('all_modalities');
+  String get textGeneration => translate('text_generation');
+  String get imageGeneration => translate('image_generation');
+  String get imageAnalysis => translate('image_analysis');
+  String get pdfAnalysis => translate('pdf_analysis');
+  String get pdfGeneration => translate('pdf_generation');
+  String get totalTokens => translate('total_tokens');
+  String get estSpend => translate('est_spend');
+  String get estBillingCost => translate('est_billing_cost');
+  String get totalReqs => translate('total_reqs');
+  String get totalAiCompletions => translate('total_ai_completions');
+  String get inOutRatio => translate('in_out_ratio');
+  String get promptEfficiency => translate('prompt_efficiency');
+  String get dailyActivityTrends => translate('daily_activity_trends');
+  String get dailyTokenUsage => translate('daily_token_usage');
+  String get overViewModels => translate('overview_models_tab');
+  String peakBadge(String date) =>
+      translate('peak_badge').replaceAll('{0}', date);
+  String get modelDistribution => translate('model_distribution');
+  String get workloadShareByAi => translate('workload_share_by_ai');
+  String get noModelActivity => translate('no_model_activity');
+  String get featureModalityBreakdown =>
+      translate('feature_modality_breakdown');
+  String get workloadDistributionCapabilities =>
+      translate('workload_distribution_capabilities');
+  String get loadingMonthlyData => translate('loading_monthly_data');
+  String get chatPromptCompletions => translate('chat_prompt_completions');
+  String get dalleVisualSynthesis => translate('dalle_visual_synthesis');
+  String get multimodalVisionUnderstanding =>
+      translate('multimodal_vision_understanding');
+  String get documentParsingReading => translate('document_parsing_reading');
+  String get reportDocumentCreation => translate('report_document_creation');
+  String get selectMonthYear => translate('select_month_year');
+  String get selectYear => translate('select_year');
+  String get selectMonth => translate('select_month');
+  String get spendBadge => translate('spend_badge');
+  String get ratioBadge => translate('ratio_badge');
+  String get tokensBadge => translate('tokens_badge');
+  String get reqsBadge => translate('reqs_badge');
+  String get currentMonth => translate('current_month');
+  String get refreshAnalytics => translate('refresh_analytics');
+  String dayPrefix(String day) => translate('day_prefix').replaceAll('{0}', day);
   String get support => translate('support');
 
   String get theme => translate('theme');
@@ -1433,17 +1612,47 @@ class AppLocalizations {
   String get permissionDenied => translate('permission_denied');
   String get openSettings => translate('open_settings');
   String get cameraDeniedMessage => translate('camera_permission_denied');
+  String get cameraPermissionDeniedPermanent =>
+      translate('camera_permission_denied_permanent');
   String get galleryDeniedMessage => translate('gallery_permission_denied');
+  String get galleryPermissionDeniedPermanent =>
+      translate('gallery_permission_denied_permanent');
+  String get filePermissionRequired => translate('file_permission_required');
+  String get filePermissionDeniedPermanent =>
+      translate('file_permission_denied_permanent');
   String get uploadingPhoto => translate('uploading_photo');
   String get modelLimit => translate('model_rate_limit');
   String get pressBackAgainToExit => translate('press_back_again_to_exit');
-  // ── Image Download ─────────────────────────────────────────────────────────
+  // ── Image & Document Download ───────────────────────────────────────────────
   String get downloadImage => translate('download_image');
+  String get downloadingImage => translate('downloading_image');
+  String downloadingImagesCount(String count) =>
+      translate('downloading_images_count').replaceAll('{0}', count);
+  String downloadingPdfFile(String name) =>
+      translate('downloading_pdf_file').replaceAll('{0}', name);
+  String downloadingPdfsCount(String count) =>
+      translate('downloading_pdfs_count').replaceAll('{0}', count);
   String imageSaved(String path) =>
       translate('image_saved').replaceAll('{0}', path);
+  String imagesSavedCount(String count, String path) =>
+      translate('images_saved_count')
+          .replaceAll('{0}', count)
+          .replaceAll('{1}', path);
+  String pdfSavedToDownloads(String name) =>
+      translate('pdf_saved_to_downloads').replaceAll('{0}', name);
+  String pdfsSavedToDownloads(String count) =>
+      translate('pdfs_saved_to_downloads').replaceAll('{0}', count);
   String get imageSaveFailed => translate('image_save_failed');
+  String get imagesSaveFailed => translate('images_save_failed');
+  String get pdfSaveFailed => translate('pdf_save_failed');
+  String get pdfsSaveFailed => translate('pdfs_save_failed');
   String get imageSavePermissionDenied =>
       translate('image_save_permission_denied');
+  String get storagePermissionRequired =>
+      translate('storage_permission_required');
+  String get storagePermissionDeniedPermanent =>
+      translate('storage_permission_denied_permanent');
+  String get permissionRequired => translate('permission_required');
   String get imageSaveNoSpace => translate('image_save_no_space');
   String get imageDownloadFailed => translate('image_download_failed');
 

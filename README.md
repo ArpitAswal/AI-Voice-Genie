@@ -1,20 +1,21 @@
 > *Note: Click on the logo to download the latest release APK file directly to your Android device.*
 
 <p align="left">
-  <a href="https://github.com/ArpitAswal/AI-Voice-Genie/releases/download/v1.2.0/app-arm64-v8a-release.apk">
+  <a href="https://github.com/ArpitAswal/AI-Voice-Genie/releases/download/v1.3.0/voice-genie-v8a-release.apk">
     <img src="assets/images/app_logo.png" alt="AI Voice Genie Logo" width="180" height="180" align="left" />
   </a>
 </p>
 <br>
 
 <h3>&nbsp;&nbsp;AI Voice Genie</h3>
-<p>&nbsp;&nbsp;&nbsp;<b>Enterprise-Grade, Unified Multi-Model AI Assistant Engine for Mobile</b></p>
+<p>&nbsp;&nbsp;&nbsp;<b>Enterprise-Grade, Unified Multi-Model AI Assistant Engine for Mobile & Tablet</b></p>
 <br clear="left"/>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.38.2-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter 3.38.2" />
   <img src="https://img.shields.io/badge/Dart-3.10.0-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart 3.10.0" />
-  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-brightgreen?style=for-the-badge&logo=android&logoColor=white" alt="Android & iOS" />
+  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20iPad-brightgreen?style=for-the-badge&logo=android&logoColor=white" alt="Android, iOS & iPad OS" />
+  <img src="https://img.shields.io/badge/Adaptive_UI-Phone%20%7C%20Tablet-blueviolet?style=for-the-badge" alt="Adaptive UI" />
   <img src="https://img.shields.io/badge/Architecture-Feature--First%20MVVM-blue?style=for-the-badge" alt="Feature-First MVVM" />
   <img src="https://img.shields.io/badge/Cloud-Firestore%20%7C%20Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white" alt="Cloud Firestore & Firebase" />
   <img src="https://img.shields.io/badge/Firebase-Analytics%20%7C%20Crashlytics-E65100?style=for-the-badge&logo=firebase&logoColor=white" alt="Firebase Analytics & Crashlytics" />
@@ -24,6 +25,7 @@
   <img src="https://img.shields.io/badge/Local_Engine-Hive_NoSQL-orange?style=for-the-badge" alt="Hive Storage" />
   <img src="https://img.shields.io/badge/Sync-Offline--First_Outbox-teal?style=for-the-badge" alt="Offline Outbox" />
   <img src="https://img.shields.io/badge/Document_Engine-On--Device_PDF-darkred?style=for-the-badge" alt="On-Device PDF Engine" />
+  <img src="https://img.shields.io/badge/Telemetry-5--Modality_Usage_Analytics-indigo?style=for-the-badge" alt="Usage Analytics" />
   <img src="https://img.shields.io/badge/Storage-Native_Scoped_Media-brightgreen?style=for-the-badge" alt="Native Scoped Media" />
   <img src="https://img.shields.io/badge/Security-FLAG__SECURE%20Protected-green?style=for-the-badge&logo=shield" alt="Screen Protected" />
 </p>
@@ -34,8 +36,8 @@
 
 > [!IMPORTANT]
 > **Device & Platform Compatibility**
-> - **Platform Tested & Supported**: Fully tested and running on both **Android** and **iOS** physical devices and environments.
-> - **Form Factor Focus**: Engineered and optimized specifically for **mobile phone form factors**. Dedicated **tablet device UI layouts** will be available in a new release mode.
+> - **Platform Tested & Supported**: Fully tested and running on both **Android** and **iOS / iPad OS** physical devices and environments.
+> - **Full Adaptive Form Factors**: Built with dynamic Material 3 Window Size Class adaptations supporting **Compact Mobile Phones** (`<600dp`), **Medium Foldables & Tablet Portrait** (`600dp–839dp`), and **Expanded Tablets in Landscape & Desktop** (`>=840dp`).
 
 **AI Voice Genie** is an enterprise-grade mobile application that consolidates the world's most advanced AI ecosystems into a single, high-performance interface. Rather than forcing users to juggle fragmented subscriptions across siloed applications, AI Voice Genie unites **OpenAI**, **Google Gemini**, and **Anthropic Claude** within a private, local-first mobile client.
 
@@ -54,12 +56,11 @@ Meticulously crafted with responsive, adaptive Light and Dark themes:
 
 | Light Theme | Dark Theme |
 |:---:|:---:|
-| **Home Discovery**<br><img width="250" alt="Light_Home_Discovery" src="https://github.com/user-attachments/assets/f02baf14-196d-42fc-9627-c79ad07d7417" /> | **Home Discovery**<br><img width="250" alt="Dark_Home_Discovery" src="https://github.com/user-attachments/assets/00977ab7-80b1-41d2-b385-014226e30f3d" /> |
-| **Interactive Chat**<br><img width="250" alt="Light_Chat_Interactive" src="https://github.com/user-attachments/assets/7719bf50-20d5-40f3-95af-e8ba2b96b712" /> | **Interactive Chat**<br> <img width="250" alt="Dark_Chat_Interactive" src="https://github.com/user-attachments/assets/606593b3-7215-405e-85ca-9c7e14721884" /> |
-| **Intelligence & Settings**<br><img width="250" alt="Light_Intelligence" src="https://github.com/user-attachments/assets/661bec01-056d-4958-9394-6c6e00b1beaa" /> | **Intelligence & Settings**<br><img width="250" alt="Dark_Intelligence" src="https://github.com/user-attachments/assets/4dcacff7-dadc-4d72-b2fa-f99f5f02b65d" /> |
-| **BYOK Key Management**<br><img width="250" alt="Light_KeySetup_Management" src="https://github.com/user-attachments/assets/21004280-8725-40fe-bf2a-6b7aca88b2fb" /> | **BYOK Key Management**<br><img width="250" alt="Dark_KeySetup_Management" src="https://github.com/user-attachments/assets/a9e42846-96eb-4f5d-9ea2-603460f8f855" /> |
-| **Conversation History**<br><img width="250" alt="Light_History_Conversation" src="https://github.com/user-attachments/assets/b4383c3c-5656-4feb-a1c8-7a81ff557b38" /> | **Conversation History**<br><img width="250" alt="Dark_History_Conversation" src="https://github.com/user-attachments/assets/ff766144-26f4-4756-b26a-d16351ce07da" /> |
-
+| **Authentication**<br> <img width="320" height="640" alt="Screenshot_20261118_233229" src="https://github.com/user-attachments/assets/3b9a3301-dbca-4885-b302-50cad018342a" />| **Authentication**<br> <img width="1200" height="720" alt="Screenshot_20261118_233233" src="https://github.com/user-attachments/assets/ba6fa5a7-cadc-4715-baec-1e6706a70041" /> |
+| **Home Discovery**<br> <img width="320" height="640" alt="Screenshot_20261118_232852" src="https://github.com/user-attachments/assets/cca2dd23-2f26-4e51-8c84-96e8e24c762c" /> | **Home Discovery**<br> <img width="1200" height="720" alt="Screenshot_20261118_232910" src="https://github.com/user-attachments/assets/d890661f-da8d-4452-8f80-1dafb2be0361" /> |
+| **Interactive Chat**<br> <img width="320" height="640" alt="Screenshot_20261118_233028" src="https://github.com/user-attachments/assets/5b81e2fa-926f-4760-8969-8dc2e30c7e6f" /> | **Interactive Chat**<br> <img width="1200" height="720" alt="Screenshot_20261118_233035" src="https://github.com/user-attachments/assets/53f87532-f374-4674-adfc-95d5a22a7045" /> |
+| **Conversation History**<br> <img width="320" height="640" alt="Screenshot_20261118_232920" src="https://github.com/user-attachments/assets/248d028b-1c5f-41d9-aeb6-da1c011cbaaf" /> | **Conversation History**<br> <img width="1200" height="720" alt="Screenshot_20261118_232927" src="https://github.com/user-attachments/assets/60a29581-f5e9-4bb9-b134-350be42aae24" /> |
+| **Usage Analytics**<br> <img width="320" height="640" alt="Screenshot_20261118_233103" src="https://github.com/user-attachments/assets/987c0b02-1025-44fd-a2a9-16b68f418288" /> | **Usage Analytics**<br> <img width="1200" height="720" alt="Screenshot_20261118_233108" src="https://github.com/user-attachments/assets/51d8bcff-66ef-40ff-a38a-bdd025549c99" /> |
 | **Voice Assistant Demonstration** |
 |:---:|
 | https://github.com/user-attachments/assets/7a4f6b07-e389-4baf-9940-1a2515f3ae66 |
@@ -68,16 +69,16 @@ Meticulously crafted with responsive, adaptive Light and Dark themes:
 
 ## 🤖 Model Portfolio & Capability Matrix
 
-AI Voice Genie standardizes disparate provider schemas through an intelligent orchestration engine (`AiOrchestrator`):
+AI Voice Genie standardizes disparate provider schemas through an intelligent orchestration engine (`AiOrchestrator`). Token expenditures and request costs are calculated dynamically in real-time based on active provider pricing:
 
-| Provider | Model Identifier | Primary Modalities & Capabilities | Cost Metrics (1M Tokens / Image) |
-|---|---|---|---|
-| **OpenAI** | `gpt-6-luna` | Text Synthesis, Vision Analysis, Document Parsing, PDF Generation | $2.50 prompt / $10.00 completion |
-| **OpenAI** | `gpt-image-2.5-flare` | Visual Synthesis with Standard & HD Quality Tiers | $0.011 – $0.167 per generated image |
-| **Google** | `gemini-3.5-flash-lite` | High-Speed Text, Multimodal Vision, Real-Time Inline PDF Ingestion | $0.075 prompt / $0.30 completion |
-| **Google** | `gemini-3.1-flash-lite-image` | Visual Generation (`1:1`, `16:9`, `9:16`) across `1K`, `2K`, and `4K` Tiers | $0.020 per generated image |
-| **Google** | `gemini-3.8-flash` | Deep Multi-Step Logic with Configurable Thinking Depth (`low`, `medium`, `high`) | $0.15 prompt / $0.60 completion |
-| **Anthropic** | `claude-haiku-4-5-20251001` | Technical Code Generation, Rigorous Logic, Complex Document Synthesis | $3.00 prompt / $15.00 completion |
+| Provider | Model Identifier | Primary Modalities & Capabilities |
+|---|---|---|
+| **OpenAI** | `gpt-6-luna` | Text Synthesis, Vision Analysis, Document Parsing, PDF Generation |
+| **OpenAI** | `gpt-image-2.5-flare` | Visual Synthesis with Standard & HD Quality Tiers |
+| **Google** | `gemini-3.5-flash-lite` | High-Speed Text, Multimodal Vision, Real-Time Inline PDF Ingestion |
+| **Google** | `gemini-3.1-flash-lite-image` | Visual Generation (`1:1`, `16:9`, `9:16`) across `1K`, `2K`, and `4K` Tiers |
+| **Google** | `gemini-3.8-flash` | Deep Multi-Step Logic with Configurable Thinking Depth (`low`, `medium`, `high`) |
+| **Anthropic** | `claude-haiku-4-5-20251001` | Technical Code Generation, Rigorous Logic, Complex Document Synthesis |
 
 ---
 
@@ -114,22 +115,16 @@ Security is architected as a core pillar across the device, network, and cloud l
 - 🔐 **OAuth Verification**: Google OAuth sign-in integrates SHA-256 cryptographic nonces (`crypto`) to eliminate replay attacks.
 - 🗑️ **Atomic Account Destruction**: Account deletion permanently purges remote cloud records, wipes encrypted keys, resets local Hive storage, and deletes the authentication profile.
 
----
+### 🛡️ Runtime Permissions & Storage Architecture (Android 13+ & iOS Compliance)
 
-## ✨ Strategic Capabilities
+To ensure privacy, compliance with Google Play / Apple App Store policies, and an optimal user experience, AI Voice Genie adopts modern platform security standards:
 
-- 🤖 **Multi-Model BYOK Ecosystem**: Native client-side support for OpenAI (`gpt-6-luna`, `gpt-image-2.5-flare`), Google Gemini (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite-image`, `gemini-3.8-flash`), and Anthropic Claude (`claude-haiku-4-5-20251001`).
-- ⚡ **Local-First Zero-Latency UI**: Hive NoSQL database delivers instant application startup and immediate message rendering.
-- 🗂️ **Batch & Granular Conversation Management**: Select multiple conversations with bulk deletion or clear individual sessions atomically across local Hive and Cloud Firestore.
-- 🔄 **Durable Offline Outbox Sync**: Mutations performed offline are durably enqueued as `ChatOutboxTask` items and processed with exponential backoff when connectivity returns.
-- 📜 **Cursor-Based Infinite Pagination**: Memory-efficient pagination ($O(1)$ RAM footprint) ensures 60–120fps scrolling even with extensive conversation archives.
-- 📄 **On-Device Compiled PDF Reports**: Compiles structured AI markdown into publication-quality binary PDFs (`PdfDocumentService`) with native document preview and public Downloads export.
-- 💡 **Curated Action Starters**: One-tap conversation starters for PDF Summarization, PDF Report Generation, Code Writing, Image Analysis, and Visual Creation.
-- 🎙️ **Continuous Speech-to-Text (STT) & Auto-TTS**: High-accuracy on-device continuous microphone dictation with automatic grammar and punctuation formatting, plus text-to-speech audio synthesis.
-- 🖼️ **Multimodal Vision & PDF Ingestion**: Native image analysis and direct base64 PDF document streaming across Gemini, Claude, and OpenAI.
-- 💾 **Native Scoped Gallery Saving**: Scoped MethodChannels (`Pictures/AI Voice Genie` on Android MediaStore API 29+, `Photos` on iOS) save images without broad permissions.
-- 🔔 **Dynamic Status Messaging**: Layered notification system (`StatusMessageUtils`) with severity priority (Error > Warning > Success), deduplication, and swipe gestures.
-- 🌐 **Multilingual & Theming**: Instant localization (English and Hindi) alongside adaptive Light, Dark, and System display modes.
+| User Action | Android 13+ (API 33+) | Legacy Android (API <= 32) | iOS (14+) | System Prompt Shown? |
+|---|---|---|---|:---:|
+| **Attach Photo from Gallery** | `READ_MEDIA_IMAGES` ("Photos and Videos") | `READ_EXTERNAL_STORAGE` | `NSPhotoLibraryUsageDescription` | **Yes** (on first use or after revocation) |
+| **Capture Photo with Camera** | `CAMERA` | `CAMERA` | `NSCameraUsageDescription` | **Yes** (on first use or after revocation) |
+| **Download AI Generated Image** | `READ_MEDIA_IMAGES` / MediaStore | `WRITE_EXTERNAL_STORAGE` | `NSPhotoLibraryAddUsageDescription` | **Yes** (checks photo/storage permission) |
+| **Download Generated PDF Document** | **MediaStore Scoped Storage** (`Downloads/`) | **MediaStore / Storage** | **App Documents Directory** | **No Prompt Needed** (Zero-friction native write) |
 
 ---
 

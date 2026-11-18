@@ -184,6 +184,37 @@ class UsageFirestoreDao {
     });
   }
 
+  // ── Event Queries ──────────────────────────────────────────────────────────
+
+  /// Fetches all granular [UsageEventDto] records for a specific billing month ('YYYY-MM').
+  ///
+  /// Partitioned by [FirebaseCollections.usageFieldMonthKey] to minimize Firestore read counts.
+  /// Sorts by `createdAt` ascending in-memory, avoiding composite index requirements.
+  Future<List<UsageEventDto>> getEventsForMonth({
+    required String uid,
+    required String monthKey,
+  }) async {
+    try {
+      final colRef = _firestore
+          .collection(FirebaseCollections.usageEventsCollection(uid))
+          .where(FirebaseCollections.usageFieldMonthKey, isEqualTo: monthKey);
+
+      final snapshot = await colRef.get();
+      final events = snapshot.docs
+          .where((doc) => doc.data().isNotEmpty)
+          .map((doc) => UsageEventDto.fromFirestore(doc.id, doc.data()))
+          .toList();
+
+      // Sort client-side by creation timestamp (ascending: oldest to newest for time-series chart)
+      events.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return events;
+    } catch (e) {
+      debugPrint(
+          '⚠️ UsageFirestoreDao: Failed to query events for month [$monthKey]: $e');
+      return const [];
+    }
+  }
+
   // ── Budget Management ──────────────────────────────────────────────────────
 
   /// Updates budget settings (monthlyBudgetUsd, alreadyUsedUsd) on the summary document.

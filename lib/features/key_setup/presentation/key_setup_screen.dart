@@ -166,12 +166,12 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final height = constraints.maxHeight;
-            // debugPrint("constraint width: $width, height: $height");
+            final bool isShortHeight = height <= 540;
 
             // Material 3 Responsive Viewport Dispatching:
             // 1. Phone landscape or severely height-constrained (< 500dp height): scrollable single column
             if (height < 540.0 && width < 600) {
-              return _buildCompactLayout(context);
+              return _buildCompactLayout(context, isShortHeight);
             }
             // 2. Expanded viewport (>= 840dp width): 2-pane master-detail workspace
             if (width >= 840.0) {
@@ -182,7 +182,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
               return _buildMediumLayout(context);
             }
             // 4. Compact viewport (< 600dp width): phone portrait layout
-            return _buildCompactLayout(context);
+            return _buildCompactLayout(context, isShortHeight);
           },
         ),
       ),
@@ -191,7 +191,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
 
   // ── 1. Compact Viewport (< 600dp, Mobile Phone Portrait) ─────────────────────
 
-  Widget _buildCompactLayout(BuildContext context) {
+  Widget _buildCompactLayout(BuildContext context, bool isShortHeight) {
     return SingleChildScrollView(
       physics: const ClampingScrollPhysics(),
       padding: EdgeInsets.symmetric(
@@ -205,9 +205,9 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
           _SetupAndTrustHubCard(onProviderTap: _scrollToProvider),
           const SizedBox(height: 20.0),
           _ProviderCardsList(
-            autoFocusProvider: widget.initialFocusProvider,
-            cardKeys: _cardKeys,
-          ),
+              autoFocusProvider: widget.initialFocusProvider,
+              cardKeys: _cardKeys,
+              isShortHeight: isShortHeight),
           SizedBox(height: context.viewPadding.bottom + 16.0),
         ],
       ),
@@ -324,10 +324,12 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
 class _ProviderCardsList extends StatelessWidget {
   final AiProviderId? autoFocusProvider;
   final Map<AiProviderId, GlobalKey>? cardKeys;
+  final bool isShortHeight;
 
   const _ProviderCardsList({
     this.autoFocusProvider,
     this.cardKeys,
+    this.isShortHeight = false,
   });
 
   @override
@@ -344,6 +346,7 @@ class _ProviderCardsList extends StatelessWidget {
             key: cardKeys?[provider] ?? ValueKey(provider),
             provider: provider,
             autoFocus: autoFocusProvider == provider,
+            isShortHeight: isShortHeight,
           ),
         );
       }).toList(),
@@ -777,11 +780,13 @@ class _DockedActionBar extends StatelessWidget {
 class _ModernProviderCard extends StatefulWidget {
   final AiProviderId provider;
   final bool autoFocus;
+  final bool isShortHeight;
 
   const _ModernProviderCard({
     super.key,
     required this.provider,
     this.autoFocus = false,
+    this.isShortHeight = false,
   });
 
   @override
@@ -850,7 +855,9 @@ class _ModernProviderCardState extends State<_ModernProviderCard> {
             onPressed: () => AppRoutes.pop(context, false),
             child: Text(
               context.l10n.cancel,
-              style: context.buttonLabelStyle(),
+              style: context.buttonLabelStyle()?.copyWith(
+                    color: context.colorScheme.onSurface,
+                  ),
             ),
           ),
           TextButton(
@@ -861,6 +868,7 @@ class _ModernProviderCardState extends State<_ModernProviderCard> {
                     color: context.isDark
                         ? AppColors.darkError
                         : AppColors.lightError,
+                    fontWeight: FontWeight.bold,
                   ),
             ),
           ),
@@ -994,7 +1002,12 @@ class _ModernProviderCardState extends State<_ModernProviderCard> {
                   Expanded(
                     child: Text(
                       widget.provider.displayName,
-                      style: context.textTheme.headlineSmall?.copyWith(
+                      style: (context.isCompact
+                              ? (widget.isShortHeight
+                                  ? context.textTheme.headlineSmall
+                                  : context.textTheme.headlineMedium)
+                              : context.textTheme.headlineLarge)
+                          ?.copyWith(
                         color: brandColor,
                       ),
                     ),
@@ -1028,7 +1041,7 @@ class _ModernProviderCardState extends State<_ModernProviderCard> {
                         ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
-                          vertical: 6,
+                          vertical: 0,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1393,13 +1406,10 @@ class _CapabilityTagCloud extends StatelessWidget {
                 child: Text(
                   tag,
                   style: context.textTheme.labelSmall?.copyWith(
-                    color: isGap
-                        ? gapColor
-                        : (context.isDark
-                            ? AppColors.darkTextSecondary
-                            : AppColors.lightTextSecondary),
+                    color: isGap ? gapColor : context.colorScheme.tertiary,
                     fontWeight: isGap ? FontWeight.w600 : FontWeight.w500,
                     height: 1.3,
+                    wordSpacing: 1.5,
                   ),
                 ),
               ),

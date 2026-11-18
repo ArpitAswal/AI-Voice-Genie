@@ -560,6 +560,64 @@ class MessageUtils {
   }
 
   // --------------------------------------------------------------------------
+  // DOWNLOADING PROGRESS SNACKBAR
+  // --------------------------------------------------------------------------
+
+  /// Show a high-contrast floating downloading SnackBar with a progress spinner.
+  static void showDownloadingSnackBar(
+    BuildContext context,
+    String message,
+  ) {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1E293B),
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF334155), width: 1),
+        ),
+        margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+        duration: const Duration(seconds: 30),
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF60A5FA)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Color(0xFFF8FAFC),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Cancels and dismisses any active downloading SnackBar immediately.
+  static void cancelDownloadingSnackBar(BuildContext context) {
+    ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+  }
+
+  // --------------------------------------------------------------------------
   // INTERNAL
   // --------------------------------------------------------------------------
 
@@ -686,5 +744,17 @@ extension MessageExtensions on BuildContext {
   /// Show warning toast
   void showWarningToast(String message) {
     MessageUtils.showWarningToast(this, message);
+  }
+
+  // ---------- Downloading SnackBar ----------
+
+  /// Show downloading progress snackbar
+  void showDownloadingSnackBar(String message) {
+    MessageUtils.showDownloadingSnackBar(this, message);
+  }
+
+  /// Cancel downloading progress snackbar
+  void cancelDownloadingSnackBar() {
+    MessageUtils.cancelDownloadingSnackBar(this);
   }
 }

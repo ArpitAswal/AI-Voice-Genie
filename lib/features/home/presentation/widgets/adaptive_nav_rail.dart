@@ -29,24 +29,25 @@ class AdaptiveNavRail extends StatelessWidget {
         context.isDark ? AppColors.primaryLight : AppColors.primaryDark;
 
     return Container(
-      width: 96,
+      width: context.screenWidth * 0.1,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            (context.isDark ? AppColors.tealAccent : AppColors.cyanAccent)
-                .withValues(alpha: 0.28),
-            Colors.transparent,
-          ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        border: Border(
-          right: BorderSide(
-            color: context.theme.dividerColor.withValues(alpha: 0.15),
-            width: 1,
+          gradient: LinearGradient(
+            colors: [
+              Colors.transparent,
+              (context.isDark ? AppColors.tealAccent : AppColors.cyanAccent)
+                  .withValues(alpha: 0.3),
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-        ),
-      ),
+          border: Border(
+            right: BorderSide(
+              color: context.theme.dividerColor,
+              width: 5,
+            ),
+          ),
+          borderRadius:
+              const BorderRadius.horizontal(right: Radius.circular(21))),
       child: SafeArea(
         top: topPadding > 0,
         bottom: true,

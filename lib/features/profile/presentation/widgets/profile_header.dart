@@ -26,11 +26,13 @@ class ProfileHeader extends StatelessWidget {
     final state = user.state != null ? user.state! : '';
 
     return LayoutBuilder(builder: (context, constraints) {
-      final imgSize = constraints.maxWidth <= 360 && context.isExpanded
-          ? 100.0
-          : isShortHeight
-              ? 64.0
-              : 80.0;
+      final imgSize = (context.isCompact
+          ? isShortHeight
+              ? 60.0
+              : 90.0
+          : (context.isExpanded)
+              ? 120.0
+              : 140.0);
       return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           mainAxisSize: MainAxisSize.max,
@@ -46,60 +48,74 @@ class ProfileHeader extends StatelessWidget {
                       Text(
                         displayName,
                         textAlign: TextAlign.left,
-                        style: (isShortHeight
-                                ? context.textTheme.titleMedium
+                        style: (context.isCompact
+                                ? (isShortHeight
+                                    ? context.textTheme.titleSmall
+                                    : context.textTheme.titleMedium)
                                 : context.textTheme.titleLarge)
                             ?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: context.colorScheme.tertiary),
+                                color: context.colorScheme.onSurface),
                       ),
                     if (email.isNotEmpty)
                       Text(
                         email,
-                        style: (isShortHeight
-                                ? context.textTheme.bodyLarge
-                                : context.textTheme.bodyMedium)
+                        style: (context.isCompact
+                                ? (isShortHeight
+                                    ? context.textTheme.bodySmall
+                                    : context.textTheme.bodyMedium)
+                                : context.textTheme.bodyLarge)
                             ?.copyWith(color: context.colorScheme.tertiary),
                       ),
                     if (create.isNotEmpty)
                       Text(
                         "${context.l10n.activeUser}, $create",
-                        style: (isShortHeight
-                                ? context.textTheme.bodyLarge
-                                : context.textTheme.bodyMedium)
+                        style: (context.isCompact
+                                ? (isShortHeight
+                                    ? context.textTheme.bodySmall
+                                    : context.textTheme.bodyMedium)
+                                : context.textTheme.bodyLarge)
                             ?.copyWith(color: context.colorScheme.tertiary),
                       ),
                     if (country.isNotEmpty && state.isNotEmpty) ...[
                       Text(
                         "$country, $state",
-                        style: (isShortHeight
-                                ? context.textTheme.bodyLarge
-                                : context.textTheme.bodyMedium)
+                        style: (context.isCompact
+                                ? (isShortHeight
+                                    ? context.textTheme.bodySmall
+                                    : context.textTheme.bodyMedium)
+                                : context.textTheme.bodyLarge)
                             ?.copyWith(color: context.colorScheme.tertiary),
                       ),
                     ] else if (country.isNotEmpty) ...[
                       Text(
                         country,
-                        style: (isShortHeight
-                                ? context.textTheme.bodyLarge
-                                : context.textTheme.bodyMedium)
+                        style: (context.isCompact
+                                ? (isShortHeight
+                                    ? context.textTheme.bodySmall
+                                    : context.textTheme.bodyMedium)
+                                : context.textTheme.bodyLarge)
                             ?.copyWith(color: context.colorScheme.tertiary),
                       ),
                     ] else if (state.isNotEmpty) ...[
                       Text(
                         state,
-                        style: (isShortHeight
-                                ? context.textTheme.bodyLarge
-                                : context.textTheme.bodyMedium)
+                        style: (context.isCompact
+                                ? (isShortHeight
+                                    ? context.textTheme.bodySmall
+                                    : context.textTheme.bodyMedium)
+                                : context.textTheme.bodyLarge)
                             ?.copyWith(color: context.colorScheme.tertiary),
                       ),
                     ],
                     if (user.isNewUser)
                       Text(
                         context.l10n.newUser,
-                        style: (context.isTablet
-                                ? context.textTheme.labelMedium
-                                : context.textTheme.labelSmall)
+                        style: (context.isCompact
+                                ? (isShortHeight
+                                    ? context.textTheme.labelSmall
+                                    : context.textTheme.labelMedium)
+                                : context.textTheme.labelLarge)
                             ?.copyWith(
                           color: context.primaryColor,
                           fontWeight: FontWeight.w600,

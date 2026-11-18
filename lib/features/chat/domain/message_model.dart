@@ -294,7 +294,7 @@ class MessageModel {
   }) {
     final bool isPdf = response.capability == AiCapability.pdfGeneration;
     final String promptText = (isPdf && pdfInfo != null && pdfInfo.isNotEmpty)
-        ? 'Here is the required PDF as you requested.'
+        ? 'Here is the document you requested.'
         : (response.text ?? '');
 
     // If explicit imageUrls are provided, use them.

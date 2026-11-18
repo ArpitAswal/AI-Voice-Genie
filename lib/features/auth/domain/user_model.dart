@@ -152,10 +152,40 @@ class UserModel {
       identical(this, other) ||
       other is UserModel &&
           runtimeType == other.runtimeType &&
-          uid == other.uid;
+          uid == other.uid &&
+          displayName == other.displayName &&
+          email == other.email &&
+          photoUrl == other.photoUrl &&
+          authProvider == other.authProvider &&
+          isNewUser == other.isNewUser &&
+          onboardingDone == other.onboardingDone &&
+          keySetupDone == other.keySetupDone &&
+          termsAccepted == other.termsAccepted &&
+          dateOfBirth == other.dateOfBirth &&
+          age == other.age &&
+          gender == other.gender &&
+          country == other.country &&
+          state == other.state &&
+          lastUpdatedAt == other.lastUpdatedAt;
 
   @override
-  int get hashCode => uid.hashCode;
+  int get hashCode => Object.hash(
+        uid,
+        displayName,
+        email,
+        photoUrl,
+        authProvider,
+        isNewUser,
+        onboardingDone,
+        keySetupDone,
+        termsAccepted,
+        dateOfBirth,
+        age,
+        gender,
+        country,
+        state,
+        lastUpdatedAt,
+      );
 
   @override
   String toString() =>

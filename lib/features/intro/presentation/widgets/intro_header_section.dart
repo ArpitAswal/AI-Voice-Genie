@@ -53,7 +53,9 @@ class IntroHeaderSection extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: (context.isCompact
-                        ? context.textTheme.headlineMedium
+                        ? (isShortHeight
+                            ? context.textTheme.headlineSmall
+                            : context.textTheme.headlineMedium)
                         : context.textTheme.headlineLarge)
                     ?.copyWith(
                   fontWeight: FontWeight.w700,
@@ -69,7 +71,7 @@ class IntroHeaderSection extends StatelessWidget {
                         ? context.textTheme.bodyMedium
                         : context.textTheme.bodyLarge)
                     ?.copyWith(
-                  color: context.colorScheme.onSurfaceVariant,
+                  color: context.colorScheme.tertiary,
                 ),
               ),
             ],

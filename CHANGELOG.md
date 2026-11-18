@@ -7,13 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - Adaptive UI for Mobile & Tablet/iPad, Monthly Usage Analytics & 5-Modality Telemetry
+**Release Date**: November 18, 2026
+
+### 🚀 Added
+- **Full Adaptive Layout System across Android & iOS/iPadOS**:
+  - **Compact Viewport** (`<600dp` / `height ≤ 550dp`): Pinned top controls, zero scroll void, and smooth horizontal page swipe with animated progress indicator.
+  - **Medium Viewport** (`600dp–839dp`): Unified scrollable dashboard for tablet portrait and foldables with a full-width trend chart and responsive multi-column lower panes.
+  - **Expanded Viewport** (`≥840dp`): Two-column split-grid dashboard optimized for tablet landscape and desktop, centered within an ergonomic max-width constraint.
+  - **iPad Landscape & Multitasking**: Full `UISupportedInterfaceOrientations~ipad` support in `Info.plist` for portrait, upside-down, and landscape flexibility.
+- **Monthly Usage Analytics & Telemetry**:
+  - **Firestore Partitioned Queries**: Monthly-partitioned usage documents with client-side caching to eliminate unnecessary network re-fetches.
+  - **5-Modality Feature Breakdown**: Granular tracking across Text Generation, Image Generation, Image Analysis, PDF Analysis, and PDF Generation with progress bars, token counts, and cost shares.
+  - **Interactive Token Trend Chart**: Cubic spline trend chart with peak burst annotation, adaptive scale guides, and interactive day scrubbing.
+  - **Dynamic Tablet Day Intervals**: X-axis calendar markers adapt automatically between weekly intervals on mobile and shorter intervals on tablet.
+  - **Month-Year Calendar Picker**: Compact modal dialog with year navigation, current month shortcut, and future month guards.
+- **Full Hindi & English Localization**: Typed localization keys for all analytics strings, capability labels, and telemetry metrics in both English and Hindi.
+
+### 🔄 Changed
+- **Model Distribution Donut Baseline**: Replaced the default track circle with a refined neutral slate track for a cleaner empty-state presentation in both light and dark themes.
+- **Mobile Viewport Optimization**: Pinned filter controls at the top of the mobile screen so users never lose context when changing months or filtering by model/modality.
+
+### 🐛 Fixed
+- **Mobile Viewport Blank Space**: Eliminated the empty void space at the bottom of the mobile scroll view caused by scroll physics boundary behaviour.
+- **Trend Line Rendering**: Fixed backwards grid line drawing on ultra-narrow viewports.
+- **Overflow Prevention**: Wrapped telemetry count labels in `Expanded` with text ellipsis to prevent horizontal layout overflows.
+
+---
+
 ## [1.2.0] - Unified Multi-Model Engine, Local-First Outbox Sync, On-Device PDF & Batch Management
 **Release Date**: October 19, 2026
 
 ### 🚀 Added
 - **Frontier Multi-Model Portfolio**:
   - **OpenAI**: Integrated `gpt-6-luna` for advanced text synthesis, vision, and document analysis, alongside `gpt-image-2.5-flare` for visual generation.
-  - **Google Gemini**: Integrated `gemini-3.5-flash-lite` for multimodal intelligence, `gemini-3.1-flash-lite-image` with aspect-ratio controls (`1:1`, `16:9`, `9:16`) and quality tiers (`1K`, `2K`, `4K`), and `gemini-3.8-flash` with configurable thinking depth (`low`, `medium`, `high`).
+  - **Google Gemini**: Integrated `gemini-3.5-flash-lite` for multimodal intelligence, `gemini-3.1-flash-lite-image` with configurable aspect ratios and quality tiers, and `gemini-3.8-flash` with configurable thinking depth (`low`, `medium`, `high`).
   - **Anthropic Claude**: Integrated `claude-haiku-4-5-20251001` for complex code synthesis and document analysis.
 - **On-Device PDF Document Compiler**: Pure-Dart client-side PDF document compiler (`PdfDocumentService`) transforms AI responses into styled, publication-ready PDFs with direct in-app preview, public Downloads export, and base64 document ingestion.
 - **Durable Local-First Outbox Sync**: Sub-millisecond local rendering via Hive NoSQL paired with an autonomous background outbox queue (`ChatOutboxStore`, `ChatSyncService`) that syncs offline mutations (messages, deletions, title changes) to Cloud Firestore using exponential backoff.
@@ -70,5 +98,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API Key Encryption**: All keys are encrypted at rest using AES-GCM via `flutter_secure_storage`.
 - **Memory Obfuscation**: Keys are visually masked in the UI to prevent shoulder surfing.
 
-### 📦 Assets Included Below:
-Please download the APK that matches your Android device architecture (`arm64-v8a` is the most common for modern devices).
+### 📦 Release Artifacts
+See the [GitHub Releases page](https://github.com/ArpitAswal/AIVoiceGenie/releases) for APK downloads. Install the build matching your device architecture (`arm64-v8a` for most modern Android devices).

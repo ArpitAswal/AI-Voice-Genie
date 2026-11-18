@@ -1,4 +1,4 @@
 name = "document"
 description = "Generates or updates project documentation: logs architectural decisions in context.md (under 150 lines), updates README.md with new features, and appends version entries to CHANGELOG.md following Keep-a-Changelog format."
-instructions_file = "skills/context-and-decisions/SKILL.md"
+instructions_file = "personas/documentation-writer.md"
 workflow_file = ".agent/workflows/document.md"
