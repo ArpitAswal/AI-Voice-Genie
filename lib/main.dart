@@ -1,3 +1,4 @@
+import 'package:ai_voice_genie/features/usage/presentation/usage_analytics_provider.dart';
 import 'package:ai_voice_genie/features/usage/presentation/usage_provider.dart';
 import 'package:ai_voice_genie/features/voice_speech/presentation/voice_speech_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -228,6 +229,9 @@ class AiVoiceGenieApp extends StatelessWidget {
         lazy: false,
       ),
       ChangeNotifierProvider<UsageProvider>(create: (_) => UsageProvider()),
+      ChangeNotifierProvider<UsageAnalyticsProvider>(
+        create: (_) => UsageAnalyticsProvider(),
+      ),
       // ImageDownloadProvider — manages per-image download state for generated images.
       // Uses DeviceImageSaveServiceImpl which calls the native MethodChannel.
       ChangeNotifierProvider<ImageDownloadProvider>(

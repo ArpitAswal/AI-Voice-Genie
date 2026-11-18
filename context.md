@@ -40,10 +40,10 @@
 | 2026-11 | `flutter_secure_storage` for API keys | Hardware-backed encryption; mandatory for production key storage |
 | 2026-11 | `no_screenshot` on key screens | Prevent clipboard/screenshot key exposure on shared devices |
 | 2026-11 | Firebase for backend | Auth + Firestore + Crashlytics in one SDK; reduces backend maintenance |
-| 2026-11 | Scoped Storage & Granular Media | Android 13+ removes monolithic storage; PDF downloads use MediaStore with zero prompt; Photos & Camera use granular permissions |
-| 2026-11 | Adaptive Dialog & Overlay System | Unified AppAlertDialog & LoadingOverlay across mobile & tablet with max-width clamping (380dp/460dp), M3 button overflow wrapping, and >=44-48dp touch targets |
+| 2026-11 | Scoped Storage & Granular Media | Android 13+ mandates granular media permissions; adopted MediaStore for PDF downloads and READ_MEDIA_* permissions for image picker to stay compliant without legacy storage flags |
+| 2026-11 | Adaptive M3 Layouts | Enforced Material 3 Window Size Classes across all screens, dialogs, and dashboards to ensure native scaling across mobile and tablet/iPadOS |
+| 2026-11 | Firestore Partitioned Telemetry | Monthly-partitioned Firestore documents for usage analytics; avoids unbounded collection growth and keeps per-user reads O(1) regardless of history length |
 
 ## Current Focus
-- Stabilise voice capture → AI response pipeline (`voice_speech` + `chat` features).
-- Ensure usage tracking (`usage` module) correctly reflects per-model token counts in Firestore.
-- Responsive UI audit for tablet portrait layouts (target breakpoint `width >= 600`).
+- Release v1.3.0 deployment with multi-ABI APK distribution on GitHub Releases.
+- Continuous cross-platform verification across Android and iOS/iPadOS viewports.

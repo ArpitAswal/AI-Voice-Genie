@@ -10,6 +10,7 @@ import '../../../core/utils/loading_overlay.dart';
 import '../../../core/utils/status_message_utils.dart';
 import '../../../core/widgets/app_alert_dialog.dart';
 import '../../auth/presentation/auth_provider.dart';
+import '../../key_setup/presentation/api_key_provider.dart';
 import '../../usage/presentation/usage_provider.dart';
 import 'profile_view_model.dart';
 import 'widgets/account_panel.dart';
@@ -66,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => AppRoutes.pop(context, false),
             child: Text(
               context.l10n.cancel,
-              style: TextStyle(color: context.colorScheme.onSurfaceVariant),
+              style: TextStyle(color: context.colorScheme.onSurface),
             ),
           ),
           TextButton(
@@ -446,13 +447,92 @@ class _AiPreferencesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Condition: Show Analytics button ONLY if:
+    // 1. At least one API key is actively configured.
+    // 2. AND at least one of those active keys has recorded actual lifetime usage.
+    final keyProvider = context.watch<ApiKeyProvider>();
+    final usageProvider = context.watch<UsageProvider>();
+
+    final validProviders = keyProvider.validProviders;
+    final hasActiveKeyUsage = validProviders.isNotEmpty &&
+        validProviders.any((p) {
+          final summary = usageProvider.summaryFor(p);
+          return summary != null && summary.hasAnyActivity;
+        });
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        ProfileSectionTitle(
-            label: context.l10n.aiPreferences, isShortHeight: isShortHeight),
-        const SizedBox(height: 14.0),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: ProfileSectionTitle(
+                  label: context.l10n.aiPreferences, isShortHeight: isShortHeight),
+            ),
+            if (hasActiveKeyUsage)
+              if (context.isCompact)
+                IconButton(
+                  tooltip: context.l10n.usageAnalytics,
+                  constraints:
+                      const BoxConstraints(minWidth: 48.0, minHeight: 48.0),
+                  icon: Icon(
+                    Icons.insights_rounded,
+                    size: 21,
+                    color: context.isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.lightTextPrimary,
+                  ),
+                  onPressed: () => AppRoutes.navigateTo(
+                    context,
+                    AppRoutes.usageAnalytics,
+                  ),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: () => AppRoutes.navigateTo(
+                    context,
+                    AppRoutes.usageAnalytics,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    minimumSize: const Size(32, 32),
+                    side: BorderSide(
+                      color: context.theme.dividerTheme.color ??
+                          (context.isDark
+                              ? AppColors.darkDivider
+                              : AppColors.lightDivider),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.insights_rounded,
+                    size: 20,
+                    color: context.isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.lightTextPrimary,
+                  ),
+                  label: Text(
+                    context.l10n.usageAnalytics,
+                    style: context.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: context.isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.lightTextPrimary,
+                    ),
+                  ),
+                ),
+          ],
+        ),
+        const SizedBox(height: 14),
         const ProfileAiPreferencesPanel(),
       ],
     );

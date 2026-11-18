@@ -42,6 +42,15 @@ abstract interface class UsageRepository {
     required String uid,
   });
 
+  /// Fetches all granular [UsageEventModel] telemetry records for a specific billing month ('YYYY-MM').
+  ///
+  /// Used by the Usage Analytics screen to compute daily time-series trends, peak days,
+  /// and modality distribution without touching the local database schema.
+  Future<List<UsageEventModel>> getEventsForMonth({
+    required String uid,
+    required String monthKey,
+  });
+
   /// Saves (creates or overwrites) global budget settings for a provider.
   Future<void> updateGlobalSettings({
     required String uid,

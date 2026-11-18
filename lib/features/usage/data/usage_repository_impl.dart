@@ -95,6 +95,25 @@ class UsageRepositoryImpl implements UsageRepository {
         .map((dtos) => dtos.map((dto) => dto.toDomain()).toList());
   }
 
+  // ── Event Queries ──────────────────────────────────────────────────────────
+
+  @override
+  Future<List<UsageEventModel>> getEventsForMonth({
+    required String uid,
+    required String monthKey,
+  }) async {
+    try {
+      // 1. Fetch raw event DTOs for the requested partition month
+      final dtos = await _dao.getEventsForMonth(uid: uid, monthKey: monthKey);
+
+      // 2. Transform defensively from DTOs to pure Domain Entities
+      return dtos.map((dto) => dto.toDomain()).toList();
+    } catch (e) {
+      debugPrint('⚠️ UsageRepositoryImpl.getEventsForMonth failed: $e');
+      return const [];
+    }
+  }
+
   // ── Budget Configuration ───────────────────────────────────────────────────
 
   @override

@@ -78,7 +78,7 @@ class ProfileAiIntelligenceSection extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             if (cards.isEmpty)
               _ActivationPanel(inactiveProviders: inactiveProviders)
             else
@@ -142,6 +142,7 @@ class _ModelIntelligenceCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
+                    flex: 2,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -169,8 +170,8 @@ class _ModelIntelligenceCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   // Spend badge wrapped flexibly to eliminate overflow risk
-                  Flexible(
-                    flex: 0,
+                  Expanded(
+                    flex: 1,
                     child: _SpendBadge(
                       spent: spent,
                       summary: summary,

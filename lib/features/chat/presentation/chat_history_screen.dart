@@ -442,14 +442,20 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                                   context.isExpanded ? 640.0 : double.infinity,
                             ),
                             child: context.themedTextField(
-                              enabled:
-                                  !chatProvider.isLoadingMoreConversations &&
-                                          conversations.isNotEmpty ||
-                                      isSearching,
-                              onChanged: _onSearchChanged,
-                              hint: context.l10n.searchPlaceholder,
-                              controller: _searchController,
-                            ),
+                                enabled:
+                                    !chatProvider.isLoadingMoreConversations &&
+                                            conversations.isNotEmpty ||
+                                        isSearching,
+                                onChanged: _onSearchChanged,
+                                hint: context.l10n.searchPlaceholder,
+                                controller: _searchController,
+                                suffixIcon: IconButton(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      _onSearchChanged('');
+                                    },
+                                    icon: Icon(Icons.clear_rounded,
+                                        color: context.colorScheme.tertiary))),
                           ),
                         ),
                       ],
@@ -471,7 +477,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                           hasScrollBody: false,
                           child: EmptyHistoryView(isTablet: isTablet),
                         )
-                      else if (conversations.isEmpty && !isSearching)
+                      else if (conversations.isEmpty && isSearching)
                         SliverFillRemaining(
                           hasScrollBody: false,
                           child: Center(
@@ -516,8 +522,7 @@ class _ConversationHistoryScreenState extends State<ConversationHistoryScreen> {
                                               ? context.textTheme.titleMedium
                                               : context.textTheme.titleLarge)
                                           ?.copyWith(
-                                        color: context
-                                            .colorScheme.onSurfaceVariant,
+                                        color: context.colorScheme.onSurface,
                                       ),
                                       textAlign: TextAlign.center,
                                     ),

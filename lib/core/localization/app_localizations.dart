@@ -434,7 +434,7 @@ class AppLocalizations {
       // ── Usage Tracking ─────────────────────────────────────────────────────
       'usage_this_month': 'Estimated usage this month',
       'usage_spent_badge': '{0} spent',
-      'usage_tokens': 'tokens',
+      'usage_tokens': 'Tokens',
       'usage_requests': 'requests',
       'usage_images': 'images',
       'usage_pdfs': 'PDFs',
@@ -479,6 +479,49 @@ class AppLocalizations {
       'waiting_to_sync_tooltip': 'Waiting to sync',
       // Usage error
       'usage_load_failed': 'Failed to load usage data.',
+      'usage_analytics': 'Usage Analytics',
+
+      // ── Usage Analytics & Telemetry ─────────────────────────────────────────
+      'all_models': 'All Models',
+      'all_modalities': 'All Modalities',
+      'text_generation': 'Text Generation',
+      'image_generation': 'Image Generation',
+      'image_analysis': 'Image Analysis',
+      'pdf_analysis': 'PDF Analysis',
+      'pdf_generation': 'PDF Generation',
+      'total_tokens': 'Total Tokens',
+      'est_spend': 'Est. Spend',
+      'est_billing_cost': 'Est. billing cost',
+      'total_reqs': 'Total Reqs',
+      'total_ai_completions': 'Total AI completions',
+      'in_out_ratio': 'In / Out Ratio',
+      'prompt_efficiency': 'Prompt efficiency',
+      'daily_activity_trends': 'Daily Activity Trends',
+      'daily_token_usage': 'Daily token usage across billing period',
+      'peak_badge': 'Peak: {0}',
+      'overview_models_tab': 'Overview & Models',
+      'model_distribution': 'Model Distribution',
+      'workload_share_by_ai': 'Workload share by AI provider',
+      'no_model_activity': 'No Model Activity Recorded',
+      'feature_modality_breakdown': 'Feature & Modality Breakdown',
+      'workload_distribution_capabilities':
+          'Workload distribution across AI capabilities',
+      'loading_monthly_data': 'Analysing data...',
+      'chat_prompt_completions': 'Chat & prompt completions',
+      'dalle_visual_synthesis': 'DALL-E & visual synthesis',
+      'multimodal_vision_understanding': 'Multimodal vision understanding',
+      'document_parsing_reading': 'Document parsing & reading',
+      'report_document_creation': 'Report & document creation',
+      'select_month_year': 'Select Month & Year',
+      'select_year': 'Select Year',
+      'select_month': 'Select Month',
+      'spend_badge': 'Spend',
+      'ratio_badge': 'Ratio',
+      'tokens_badge': 'Tokens',
+      'reqs_badge': 'Reqs',
+      'current_month': 'Current Month',
+      'refresh_analytics': 'Refresh analytics',
+      'day_prefix': 'Day {0}',
       'about_app': 'About AI Voice Genie',
       'development_build': 'Development Build',
       'production_build': 'Production Ready',
@@ -1034,6 +1077,49 @@ class AppLocalizations {
       'waiting_to_sync_tooltip': 'सिंक की प्रतीक्षा',
       // Usage error
       'usage_load_failed': 'उपयोग डेटा लोड नहीं हो सका।',
+      'usage_analytics': 'उपयोग एनालिटिक्स',
+
+      // ── Usage Analytics & Telemetry ─────────────────────────────────────────
+      'all_models': 'सभी मॉडल',
+      'all_modalities': 'सभी मोडालिटी',
+      'text_generation': 'टेक्स्ट जेनरेशन',
+      'image_generation': 'इमेज जेनरेशन',
+      'image_analysis': 'इमेज विश्लेषण',
+      'pdf_analysis': 'PDF विश्लेषण',
+      'pdf_generation': 'PDF जेनरेशन',
+      'total_tokens': 'कुल टोकन',
+      'est_spend': 'अनुमानित खर्च',
+      'est_billing_cost': 'अनुमानित बिलिंग लागत',
+      'total_reqs': 'कुल अनुरोध',
+      'total_ai_completions': 'कुल AI पूर्णताएं',
+      'in_out_ratio': 'इन / आउट अनुपात',
+      'prompt_efficiency': 'प्रॉम्प्ट दक्षता',
+      'daily_activity_trends': 'दैनिक गतिविधि रुझान',
+      'daily_token_usage': 'बिलिंग अवधि में दैनिक टोकन उपयोग',
+      'peak_badge': 'शीर्ष: {0}',
+      'overview_models_tab': 'अवलोकन और मॉडल',
+      'model_distribution': 'मॉडल वितरण',
+      'workload_share_by_ai': 'AI प्रदाता द्वारा कार्यभार हिस्सा',
+      'no_model_activity': 'कोई मॉडल गतिविधि दर्ज नहीं',
+      'feature_modality_breakdown': 'सुविधा और मोडालिटी विवरण',
+      'workload_distribution_capabilities':
+          'AI क्षमताओं में कार्यभार वितरण',
+      'loading_monthly_data': 'डेटा का विश्लेषण किया जा रहा है...',
+      'chat_prompt_completions': 'चैट और प्रॉम्प्ट पूर्णताएं',
+      'dalle_visual_synthesis': 'DALL-E और दृश्य निर्माण',
+      'multimodal_vision_understanding': 'मल्टीमॉडल विज़न समझ',
+      'document_parsing_reading': 'दस्तावेज़ पार्सिंग और पठन',
+      'report_document_creation': 'रिपोर्ट और दस्तावेज़ निर्माण',
+      'select_month_year': 'माह और वर्ष चुनें',
+      'select_year': 'वर्ष चुनें',
+      'select_month': 'माह चुनें',
+      'spend_badge': 'खर्च',
+      'ratio_badge': 'अनुपात',
+      'tokens_badge': 'टोकन',
+      'reqs_badge': 'अनुरोध',
+      'current_month': 'वर्तमान माह',
+      'refresh_analytics': 'एनालिटिक्स रीफ्रेश करें',
+      'day_prefix': 'दिन {0}',
       'support': 'सहायता',
       'edit_profile': 'प्रोफ़ाइल संपादित करें',
       'display_name': 'डिस्प्ले नाम',
@@ -1413,6 +1499,52 @@ class AppLocalizations {
   String get syncFailedTooltip => translate('sync_failed_tooltip');
   String get waitingToSyncTooltip => translate('waiting_to_sync_tooltip');
   String get usageLoadFailed => translate('usage_load_failed');
+  String get usageAnalytics => translate('usage_analytics');
+
+  // ── Usage Analytics Getters ────────────────────────────────────────────────
+  String get allModels => translate('all_models');
+  String get allModalities => translate('all_modalities');
+  String get textGeneration => translate('text_generation');
+  String get imageGeneration => translate('image_generation');
+  String get imageAnalysis => translate('image_analysis');
+  String get pdfAnalysis => translate('pdf_analysis');
+  String get pdfGeneration => translate('pdf_generation');
+  String get totalTokens => translate('total_tokens');
+  String get estSpend => translate('est_spend');
+  String get estBillingCost => translate('est_billing_cost');
+  String get totalReqs => translate('total_reqs');
+  String get totalAiCompletions => translate('total_ai_completions');
+  String get inOutRatio => translate('in_out_ratio');
+  String get promptEfficiency => translate('prompt_efficiency');
+  String get dailyActivityTrends => translate('daily_activity_trends');
+  String get dailyTokenUsage => translate('daily_token_usage');
+  String get overViewModels => translate('overview_models_tab');
+  String peakBadge(String date) =>
+      translate('peak_badge').replaceAll('{0}', date);
+  String get modelDistribution => translate('model_distribution');
+  String get workloadShareByAi => translate('workload_share_by_ai');
+  String get noModelActivity => translate('no_model_activity');
+  String get featureModalityBreakdown =>
+      translate('feature_modality_breakdown');
+  String get workloadDistributionCapabilities =>
+      translate('workload_distribution_capabilities');
+  String get loadingMonthlyData => translate('loading_monthly_data');
+  String get chatPromptCompletions => translate('chat_prompt_completions');
+  String get dalleVisualSynthesis => translate('dalle_visual_synthesis');
+  String get multimodalVisionUnderstanding =>
+      translate('multimodal_vision_understanding');
+  String get documentParsingReading => translate('document_parsing_reading');
+  String get reportDocumentCreation => translate('report_document_creation');
+  String get selectMonthYear => translate('select_month_year');
+  String get selectYear => translate('select_year');
+  String get selectMonth => translate('select_month');
+  String get spendBadge => translate('spend_badge');
+  String get ratioBadge => translate('ratio_badge');
+  String get tokensBadge => translate('tokens_badge');
+  String get reqsBadge => translate('reqs_badge');
+  String get currentMonth => translate('current_month');
+  String get refreshAnalytics => translate('refresh_analytics');
+  String dayPrefix(String day) => translate('day_prefix').replaceAll('{0}', day);
   String get support => translate('support');
 
   String get theme => translate('theme');
