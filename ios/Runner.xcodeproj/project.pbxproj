@@ -760,8 +760,6 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
-
-
 /* Begin XCSwiftPackageProductDependency section */
 		2B1C63323077F7F3009A57B4 /* FlutterGeneratedPluginSwiftPackage */ = {
 			isa = XCSwiftPackageProductDependency;

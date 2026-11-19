@@ -564,7 +564,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width *
                   (context.isTablet
-                      ? (MediaQuery.sizeOf(context).width > 900 ? 0.65 : 0.7)
+                      ? (MediaQuery.sizeOf(context).width > 1100 ? 0.7 : 0.75)
                       : double.infinity),
             ),
             child: Column(

@@ -162,6 +162,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
             )
           : null,
       body: SafeArea(
+        bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
@@ -217,9 +218,10 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
   // ── 2. Medium Viewport (600dp <= width < 840dp, Tablet Portrait) ─────────────
 
   Widget _buildMediumLayout(BuildContext context) {
-    return Center(
+    return Align(
+      alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 650.0),
+        constraints: const BoxConstraints(maxWidth: 720.0),
         child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
           padding: EdgeInsets.symmetric(
@@ -227,7 +229,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
             vertical: context.verticalSpacing,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _ContextAwareHeader(isInitialSetup: widget.isInitialSetup),
               _SetupAndTrustHubCard(onProviderTap: _scrollToProvider),
@@ -244,7 +246,7 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
                   onTap: _handleContinue,
                 ),
               ),
-              const SizedBox(height: 20.0),
+              SizedBox(height: context.viewPadding.bottom + 16.0),
             ],
           ),
         ),
@@ -255,64 +257,70 @@ class _KeySetupScreenState extends State<KeySetupScreen> {
   // ── 3. Expanded Viewport (width >= 840dp, Tablet Landscape / Desktop) ───────
 
   Widget _buildExpandedLayout(BuildContext context) {
+    // Anchors dual-pane layout to top-center with max reading width of 1200dp
+    final size = MediaQuery.of(context).size;
+    final isWidePortrait = size.width >= 840.0 && size.height > size.width;
     return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1180.0),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.horizontalPadding,
-            vertical: context.verticalSpacing,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ── Left Pane: Sticky Trust & Progress Hub (360dp) ─────────
-              SizedBox(
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(minWidth: 300, maxWidth: 400),
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ContextAwareHeader(
-                            isInitialSetup: widget.isInitialSetup),
-                        _SetupAndTrustHubCard(onProviderTap: _scrollToProvider),
-                        const SizedBox(height: 24.0),
-                        Consumer<ApiKeyProvider>(
-                          builder: (context, keyProvider, _) => _ContinueButton(
-                            isLoading: keyProvider.isCompletingSetup,
-                            hasKeys: keyProvider.hasAtLeastOneValidKey,
-                            onTap: _handleContinue,
-                          ),
+        child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: isWidePortrait ? 840 : 1200.0),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: context.horizontalPadding,
+          vertical: context.verticalSpacing,
+        ),
+        child: isWidePortrait
+            ? _buildMediumLayout(context)
+            : Row(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // ── Left Pane: Sticky Trust & Progress Hub (360dp) ─────────
+                  SizedBox(
+                    child: ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(minWidth: 300, maxWidth: 400),
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _ContextAwareHeader(
+                                isInitialSetup: widget.isInitialSetup),
+                            _SetupAndTrustHubCard(
+                                onProviderTap: _scrollToProvider),
+                            const SizedBox(height: 24.0),
+                            Consumer<ApiKeyProvider>(
+                              builder: (context, keyProvider, _) =>
+                                  _ContinueButton(
+                                isLoading: keyProvider.isCompletingSetup,
+                                hasKeys: keyProvider.hasAtLeastOneValidKey,
+                                onTap: _handleContinue,
+                              ),
+                            ),
+                            const SizedBox(height: 20.0),
+                          ],
                         ),
-                        const SizedBox(height: 20.0),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 32.0),
+                  const SizedBox(width: 32.0),
 
-              // ── Right Pane: Fluid Scrollable Provider Workspace ────────
-              Expanded(
-                flex: 1,
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: _ProviderCardsList(
-                    autoFocusProvider: widget.initialFocusProvider,
-                    cardKeys: _cardKeys,
+                  // ── Right Pane: Fluid Scrollable Provider Workspace ────────
+                  Expanded(
+                    flex: 1,
+                    child: SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: _ProviderCardsList(
+                        autoFocusProvider: widget.initialFocusProvider,
+                        cardKeys: _cardKeys,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
       ),
-    );
+    ));
   }
 }
 
@@ -1003,9 +1011,7 @@ class _ModernProviderCardState extends State<_ModernProviderCard> {
                     child: Text(
                       widget.provider.displayName,
                       style: (context.isCompact
-                              ? (widget.isShortHeight
-                                  ? context.textTheme.headlineSmall
-                                  : context.textTheme.headlineMedium)
+                              ? context.textTheme.headlineSmall
                               : context.textTheme.headlineLarge)
                           ?.copyWith(
                         color: brandColor,

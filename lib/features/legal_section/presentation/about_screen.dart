@@ -159,7 +159,7 @@ class _AboutScreenState extends State<AboutScreen> {
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640.0),
+        constraints: const BoxConstraints(maxWidth: 720.0),
         child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
           padding: EdgeInsets.symmetric(
@@ -199,61 +199,66 @@ class _AboutScreenState extends State<AboutScreen> {
     BuildContext context,
   ) {
     // Anchors dual-pane layout to top-center with max reading width of 1200dp
+    final size = MediaQuery.of(context).size;
+    final isWidePortrait = size.width >= 840.0 && size.height > size.width;
+
     return Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200.0),
+        constraints: BoxConstraints(maxWidth: isWidePortrait ? 840 : 1200.0),
         child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
           padding: EdgeInsets.symmetric(
             horizontal: context.horizontalPadding,
             vertical: context.verticalSpacing,
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Left Hero Pane: Identity, Status, Mission & Copyright ────────
-              Expanded(
-                flex: 4,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+          child: isWidePortrait
+              ? _buildMediumLayout(context)
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AboutHero(size: 96.0),
-                    const SizedBox(height: 16.0),
-                    _buildStatusChips(context),
-                    const SizedBox(height: 20.0),
-                    AboutInfoPanel(
-                      title: context.l10n.aboutMissionTitle,
-                      body: context.l10n.aboutMissionBody,
-                      icon: Icons.auto_awesome_rounded,
+                    // ── Left Hero Pane: Identity, Status, Mission & Copyright ────────
+                    Expanded(
+                      flex: 4,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const AboutHero(size: 96.0),
+                          const SizedBox(height: 16.0),
+                          _buildStatusChips(context),
+                          const SizedBox(height: 20.0),
+                          AboutInfoPanel(
+                            title: context.l10n.aboutMissionTitle,
+                            body: context.l10n.aboutMissionBody,
+                            icon: Icons.auto_awesome_rounded,
+                          ),
+                          const SizedBox(height: 24.0),
+                          _buildFooter(context),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 24.0),
-                    _buildFooter(context),
+                    const SizedBox(width: 32.0),
+
+                    // ── Right Workspace Pane: Legal Docs, Support & Licenses ──────────
+                    Expanded(
+                      flex: 6,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 680.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLegalCard(context),
+                            const SizedBox(height: 20.0),
+                            _buildSupportCard(context),
+                            const SizedBox(height: 20.0),
+                            _buildLicensesCard(context),
+                            SizedBox(height: context.viewInsets.bottom + 16.0),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 32.0),
-
-              // ── Right Workspace Pane: Legal Docs, Support & Licenses ──────────
-              Expanded(
-                flex: 6,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 680.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildLegalCard(context),
-                      const SizedBox(height: 20.0),
-                      _buildSupportCard(context),
-                      const SizedBox(height: 20.0),
-                      _buildLicensesCard(context),
-                      SizedBox(height: context.viewInsets.bottom + 16.0),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

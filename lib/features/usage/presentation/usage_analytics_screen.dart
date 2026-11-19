@@ -402,7 +402,7 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen> {
         ),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800.0),
+            constraints: const BoxConstraints(maxWidth: 720.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -473,6 +473,9 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen> {
   ) {
     final analytics = provider.analytics;
     final activeSummary = _resolveSummary(context, provider.selectedProvider);
+    // Anchors dual-pane layout to top-center with max reading width of 1200dp
+    final size = MediaQuery.of(context).size;
+    final isWidePortrait = size.width >= 840.0 && size.height > size.width;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -493,66 +496,70 @@ class _UsageAnalyticsScreenState extends State<UsageAnalyticsScreen> {
         ),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1400.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Left Pane (38% width): Distribution & Modality Breakdown
-                Expanded(
-                  flex: 4,
-                  child: Column(
+            constraints:
+                BoxConstraints(maxWidth: isWidePortrait ? 840 : 1200.0),
+            child: isWidePortrait
+                ? _buildMediumTabletDashboard(
+                    context, provider, uid, constraints)
+                : Row(
+                    mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Model Distribution Donut (Fixed to overall monthly baseline)
-                      ModelDistributionChart(
-                        data: provider.overallMonthData,
-                        selectedProvider: provider.selectedProvider,
-                        onProviderSelected: provider.setProviderFilter,
-                      ),
-                      const SizedBox(height: 20.0),
+                      // Left Pane (38% width): Distribution & Modality Breakdown
+                      Expanded(
+                        flex: 4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Model Distribution Donut (Fixed to overall monthly baseline)
+                            ModelDistributionChart(
+                              data: provider.overallMonthData,
+                              selectedProvider: provider.selectedProvider,
+                              onProviderSelected: provider.setProviderFilter,
+                            ),
+                            const SizedBox(height: 20.0),
 
-                      // Feature & Metric Breakdown (Model-specific, modality-agnostic)
-                      FeatureMetricBreakdown(
-                        data: provider.modelTrendData,
-                        isTablet: true,
+                            // Feature & Metric Breakdown (Model-specific, modality-agnostic)
+                            FeatureMetricBreakdown(
+                              data: provider.modelTrendData,
+                              isTablet: true,
+                            ),
+                            SizedBox(height: context.viewPadding.bottom + 24.0),
+                          ],
+                        ),
                       ),
-                      SizedBox(height: context.viewPadding.bottom + 24.0),
+                      const SizedBox(width: 24.0),
+
+                      // Right Pane (62% width): Scope Controls, KPI Row, Trend Chart
+                      Expanded(
+                        flex: 6,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Month Picker & Filter Controls
+                            UsageScopeHeader(provider: provider, uid: uid),
+                            const SizedBox(height: 18.0),
+
+                            // High-Level KPI Summary Cards (1x4 Row on tablet/desktop)
+                            UsageMetricCards(
+                              data: analytics,
+                              activeSummary: activeSummary,
+                              isTablet: true,
+                            ),
+                            const SizedBox(height: 20.0),
+
+                            // Large Interactive Trend Chart (Model-specific, modality-agnostic)
+                            UsageTrendChart(
+                              data: provider.modelTrendData,
+                              isTablet: true,
+                            ),
+                            SizedBox(height: context.viewPadding.bottom),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 24.0),
-
-                // Right Pane (62% width): Scope Controls, KPI Row, Trend Chart
-                Expanded(
-                  flex: 6,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Month Picker & Filter Controls
-                      UsageScopeHeader(provider: provider, uid: uid),
-                      const SizedBox(height: 18.0),
-
-                      // High-Level KPI Summary Cards (1x4 Row on tablet/desktop)
-                      UsageMetricCards(
-                        data: analytics,
-                        activeSummary: activeSummary,
-                        isTablet: true,
-                      ),
-                      const SizedBox(height: 20.0),
-
-                      // Large Interactive Trend Chart (Model-specific, modality-agnostic)
-                      UsageTrendChart(
-                        data: provider.modelTrendData,
-                        isTablet: true,
-                      ),
-                      SizedBox(height: context.viewPadding.bottom),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

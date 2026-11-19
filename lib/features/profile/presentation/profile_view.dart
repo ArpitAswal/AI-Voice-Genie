@@ -244,9 +244,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── 2. Medium Viewport (600dp <= width < 840dp && height > 550dp) ────────────
   Widget _buildMediumLayout(BuildContext context, double screenPadding) {
-    return Center(
+    return Align(
+      alignment: Alignment.topCenter,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640.0),
+        constraints: const BoxConstraints(maxWidth: 720.0),
         child: SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
           padding: EdgeInsets.symmetric(
@@ -254,7 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             vertical: screenPadding,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const _ProfileHeaderSection(),
               const SizedBox(height: 20.0),
@@ -281,68 +282,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ── 3. Expanded Viewport (width >= 840dp && height > 550dp) ──────────────────
   Widget _buildExpandedLayout(BuildContext context, double screenPadding) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200.0),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-              horizontal: context.horizontalPadding, vertical: screenPadding),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Left Hero Pane: Identity, App Settings, Support & Account ─────────
-              Expanded(
-                flex: 4,
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: Column(
+    // Anchors dual-pane layout to top-center with max reading width of 1200dp
+    final size = MediaQuery.of(context).size;
+    final isWidePortrait = size.width >= 840.0 && size.height > size.width;
+    return Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWidePortrait ? 840 : 1200.0),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+                horizontal: context.horizontalPadding, vertical: screenPadding),
+            child: isWidePortrait
+                ? _buildMediumLayout(context, screenPadding)
+                : Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _ProfileHeaderSection(),
-                      const SizedBox(height: 20.0),
-                      // App Settings placed above AppSupport in the left pane
-                      const _AppSettingsSection(),
-                      const SizedBox(height: 20.0),
-                      // AppSupport section
-                      const _SupportSection(),
-                      const SizedBox(height: 20.0),
-                      // Account section
-                      _AccountSection(
-                        onLogout: () => _handleLogout(),
-                        onDeleteAccount: () => _handleDeleteAccount(),
+                      // ── Left Hero Pane: Identity, App Settings, Support & Account ─────────
+                      Expanded(
+                        flex: 4,
+                        child: SingleChildScrollView(
+                          physics: const ClampingScrollPhysics(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _ProfileHeaderSection(),
+                              const SizedBox(height: 20.0),
+                              // App Settings placed above AppSupport in the left pane
+                              const _AppSettingsSection(),
+                              const SizedBox(height: 20.0),
+                              // AppSupport section
+                              const _SupportSection(),
+                              const SizedBox(height: 20.0),
+                              // Account section
+                              _AccountSection(
+                                onLogout: () => _handleLogout(),
+                                onDeleteAccount: () => _handleDeleteAccount(),
+                              ),
+                              SizedBox(
+                                  height: context.viewInsets.bottom + 16.0),
+                            ],
+                          ),
+                        ),
                       ),
-                      SizedBox(height: context.viewInsets.bottom + 16.0),
+                      const SizedBox(width: 24.0),
+                      // ── Right Workspace Pane: AI Preferences & Vertical Intelligence Grid ─
+                      Expanded(
+                        flex: 6,
+                        child: SingleChildScrollView(
+                          physics: const ClampingScrollPhysics(),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 620.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // AI Preferences
+                                const _AiPreferencesSection(),
+                                const SizedBox(height: 20.0),
+                                // AI Intelligence with all cards stacked vertically
+                                const ProfileAiIntelligenceSection(),
+                                SizedBox(
+                                    height: context.viewInsets.bottom + 16.0),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(width: 24.0),
-              // ── Right Workspace Pane: AI Preferences & Vertical Intelligence Grid ─
-              Expanded(
-                flex: 6,
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 620.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // AI Preferences
-                        const _AiPreferencesSection(),
-                        const SizedBox(height: 20.0),
-                        // AI Intelligence with all cards stacked vertically
-                        const ProfileAiIntelligenceSection(),
-                        SizedBox(height: context.viewInsets.bottom + 16.0),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
-        ),
-      ),
-    );
+        ));
   }
 }
 
@@ -412,6 +420,7 @@ class _ProfileHeaderSection extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _ProfileTopBar(isShortHeight: isShortHeight),
+        SizedBox(height: isShortHeight ? 10.0 : 16.0),
         if (user != null)
           ProfileHeader(user: user, isShortHeight: isShortHeight),
       ],
@@ -471,7 +480,8 @@ class _AiPreferencesSection extends StatelessWidget {
           children: [
             Expanded(
               child: ProfileSectionTitle(
-                  label: context.l10n.aiPreferences, isShortHeight: isShortHeight),
+                  label: context.l10n.aiPreferences,
+                  isShortHeight: isShortHeight),
             ),
             if (hasActiveKeyUsage)
               if (context.isCompact)
@@ -525,8 +535,8 @@ class _AiPreferencesSection extends StatelessWidget {
                     style: context.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: context.isDark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.lightTextPrimary,
+                          ? AppColors.darkTextPrimary
+                          : AppColors.lightTextPrimary,
                     ),
                   ),
                 ),

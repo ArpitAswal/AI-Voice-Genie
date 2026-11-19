@@ -141,7 +141,7 @@ class MessageBubble extends StatelessWidget {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width *
                   (context.isTablet
-                      ? (MediaQuery.sizeOf(context).width > 900 ? 0.55 : 0.65)
+                      ? (MediaQuery.sizeOf(context).width > 1100 ? 0.6 : 0.65)
                       : 0.85),
             ),
             padding: (message.imageUrls?.isNotEmpty ?? false)

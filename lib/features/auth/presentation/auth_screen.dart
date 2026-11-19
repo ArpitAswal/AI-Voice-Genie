@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -317,16 +315,16 @@ class _AuthActions extends StatelessWidget {
             authType: SocialAuthProvider.google,
             isBorder: isTablet,
           ),
-          if (Platform.isIOS) ...[
-            const SizedBox(height: 16),
-            _SocialAuthButton(
-              constraints: constraints,
-              label: context.l10n.signInWithApple,
-              onTap: () {},
-              authType: SocialAuthProvider.apple,
-              isBorder: isTablet,
-            ),
-          ],
+          // if (Platform.isIOS) ...[
+          //   const SizedBox(height: 16),
+          //   _SocialAuthButton(
+          //     constraints: constraints,
+          //     label: context.l10n.signInWithApple,
+          //     onTap: () {},
+          //     authType: SocialAuthProvider.apple,
+          //     isBorder: isTablet,
+          //   ),
+          // ],
         ],
       ),
     );

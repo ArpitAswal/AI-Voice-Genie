@@ -31,7 +31,7 @@ class UsageScopeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-
+    final isTablet = context.isTablet;
     final selectedMonthKey = provider.selectedMonthKey;
     final availableMonths = provider.availableMonths;
     final selectedProvider = provider.selectedProvider;
@@ -43,8 +43,8 @@ class UsageScopeHeader extends StatelessWidget {
       children: [
         // ── Month Selector Row ───────────────────────────────────────────────
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Month Calendar Picker Interactive Pill
             Material(
               color: Colors.transparent,
               child: InkWell(
@@ -75,12 +75,11 @@ class UsageScopeHeader extends StatelessWidget {
                       },
                 borderRadius: BorderRadius.circular(20.0),
                 child: Container(
-                  constraints: const BoxConstraints(minHeight: 48.0),
+                  constraints: const BoxConstraints(minHeight: 44.0),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14.0,
+                    horizontal: 16.0,
                     vertical: 8.0,
                   ),
-                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.cardDark : AppColors.cardLight,
                     borderRadius: BorderRadius.circular(20.0),
@@ -96,21 +95,23 @@ class UsageScopeHeader extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.calendar_month_rounded,
-                        size: context.isCompact ? 16.0 : 21,
+                        size: context.isCompact ? 16.0 : 20.0,
                         color: isDark
                             ? AppColors.primaryDark
                             : AppColors.primaryLight,
                       ),
                       const SizedBox(width: 8.0),
-                      Text(_formatMonthKey(selectedMonthKey),
-                          style: (context.isCompact
-                                  ? context.textTheme.bodyMedium
-                                  : context.textTheme.bodyLarge)
-                              ?.copyWith(fontWeight: FontWeight.w600)),
+                      Text(
+                        _formatMonthKey(selectedMonthKey),
+                        style: (context.isCompact
+                                ? context.textTheme.bodyMedium
+                                : context.textTheme.bodyLarge)
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
                       const SizedBox(width: 6.0),
                       Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        size: context.isCompact ? 16.0 : 21.0,
+                        size: context.isCompact ? 16.0 : 20.0,
                       ),
                     ],
                   ),
@@ -119,119 +120,197 @@ class UsageScopeHeader extends StatelessWidget {
             ),
           ],
         ),
+
         const SizedBox(height: 12.0),
 
         // ── Model Filter Chips Row ───────────────────────────────────────────
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: [
-              // All Models chip
-              _buildModelChip(
-                label: context.l10n.allModels,
-                isSelected: selectedProvider == null,
-                color: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-                onTap: () => provider.setProviderFilter(null),
-                isDark: isDark,
-                ctx: context,
-              ),
-              const SizedBox(width: 8.0),
-
-              // Individual Providers
-              ...AiProviderId.values.map((p) {
-                final isSelected = selectedProvider == p;
-                final color = _getProviderColor(p);
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: _buildModelChip(
-                    label: p.displayName,
-                    isSelected: isSelected,
-                    color: color,
-                    onTap: () => provider.setProviderFilter(p),
+        isTablet
+            ? Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: [
+                  _buildModelChip(
+                    label: context.l10n.allModels,
+                    isSelected: selectedProvider == null,
+                    color:
+                        isDark ? AppColors.primaryDark : AppColors.primaryLight,
+                    onTap: () => provider.setProviderFilter(null),
                     isDark: isDark,
                     ctx: context,
                   ),
-                );
-              }),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8.0),
+                  ...AiProviderId.values.map((p) {
+                    final isSelected = selectedProvider == p;
+                    final color = _getProviderColor(p);
+                    return _buildModelChip(
+                      label: p.displayName,
+                      isSelected: isSelected,
+                      color: color,
+                      onTap: () => provider.setProviderFilter(p),
+                      isDark: isDark,
+                      ctx: context,
+                    );
+                  }),
+                ],
+              )
+            : SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildModelChip(
+                      label: context.l10n.allModels,
+                      isSelected: selectedProvider == null,
+                      color: isDark
+                          ? AppColors.primaryDark
+                          : AppColors.primaryLight,
+                      onTap: () => provider.setProviderFilter(null),
+                      isDark: isDark,
+                      ctx: context,
+                    ),
+                    ...AiProviderId.values.map((p) {
+                      final isSelected = selectedProvider == p;
+                      final color = _getProviderColor(p);
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: _buildModelChip(
+                          label: p.displayName,
+                          isSelected: isSelected,
+                          color: color,
+                          onTap: () => provider.setProviderFilter(p),
+                          isDark: isDark,
+                          ctx: context,
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+
+        const SizedBox(height: 10.0),
 
         // ── Modality / Capability Filter Chips Row ────────────────────────────
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: [
-              // All Modalities chip
-              _buildModalityChip(
-                label: context.l10n.allModalities,
-                isSelected: selectedCapability == null,
-                onTap: () => provider.setCapabilityFilter(null),
-                isDark: isDark,
-                ctx: context,
+        isTablet
+            ? Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: [
+                  _buildModalityChip(
+                    label: context.l10n.allModalities,
+                    isSelected: selectedCapability == null,
+                    onTap: () => provider.setCapabilityFilter(null),
+                    isDark: isDark,
+                    ctx: context,
+                  ),
+                  _buildModalityChip(
+                    label: context.l10n.textGeneration,
+                    isSelected:
+                        selectedCapability == AiCapability.textGeneration,
+                    onTap: () => provider
+                        .setCapabilityFilter(AiCapability.textGeneration),
+                    isDark: isDark,
+                    ctx: context,
+                  ),
+                  _buildModalityChip(
+                    label: context.l10n.imageGeneration,
+                    isSelected:
+                        selectedCapability == AiCapability.imageGeneration,
+                    onTap: () => provider
+                        .setCapabilityFilter(AiCapability.imageGeneration),
+                    isDark: isDark,
+                    ctx: context,
+                  ),
+                  _buildModalityChip(
+                    label: context.l10n.imageAnalysis,
+                    isSelected:
+                        selectedCapability == AiCapability.imageUnderstanding,
+                    onTap: () => provider
+                        .setCapabilityFilter(AiCapability.imageUnderstanding),
+                    isDark: isDark,
+                    ctx: context,
+                  ),
+                  _buildModalityChip(
+                    label: context.l10n.pdfAnalysis,
+                    isSelected: selectedCapability == AiCapability.pdfParsing,
+                    onTap: () =>
+                        provider.setCapabilityFilter(AiCapability.pdfParsing),
+                    isDark: isDark,
+                    ctx: context,
+                  ),
+                  _buildModalityChip(
+                    label: context.l10n.pdfGeneration,
+                    isSelected:
+                        selectedCapability == AiCapability.pdfGeneration,
+                    onTap: () => provider
+                        .setCapabilityFilter(AiCapability.pdfGeneration),
+                    isDark: isDark,
+                    ctx: context,
+                  ),
+                ],
+              )
+            : SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildModalityChip(
+                      label: context.l10n.allModalities,
+                      isSelected: selectedCapability == null,
+                      onTap: () => provider.setCapabilityFilter(null),
+                      isDark: isDark,
+                      ctx: context,
+                    ),
+                    const SizedBox(width: 8.0),
+                    _buildModalityChip(
+                      label: context.l10n.textGeneration,
+                      isSelected:
+                          selectedCapability == AiCapability.textGeneration,
+                      onTap: () => provider
+                          .setCapabilityFilter(AiCapability.textGeneration),
+                      isDark: isDark,
+                      ctx: context,
+                    ),
+                    const SizedBox(width: 8.0),
+                    _buildModalityChip(
+                      label: context.l10n.imageGeneration,
+                      isSelected:
+                          selectedCapability == AiCapability.imageGeneration,
+                      onTap: () => provider
+                          .setCapabilityFilter(AiCapability.imageGeneration),
+                      isDark: isDark,
+                      ctx: context,
+                    ),
+                    const SizedBox(width: 8.0),
+                    _buildModalityChip(
+                      label: context.l10n.imageAnalysis,
+                      isSelected:
+                          selectedCapability == AiCapability.imageUnderstanding,
+                      onTap: () => provider
+                          .setCapabilityFilter(AiCapability.imageUnderstanding),
+                      isDark: isDark,
+                      ctx: context,
+                    ),
+                    const SizedBox(width: 8.0),
+                    _buildModalityChip(
+                      label: context.l10n.pdfAnalysis,
+                      isSelected: selectedCapability == AiCapability.pdfParsing,
+                      onTap: () =>
+                          provider.setCapabilityFilter(AiCapability.pdfParsing),
+                      isDark: isDark,
+                      ctx: context,
+                    ),
+                    const SizedBox(width: 8.0),
+                    _buildModalityChip(
+                      label: context.l10n.pdfGeneration,
+                      isSelected:
+                          selectedCapability == AiCapability.pdfGeneration,
+                      onTap: () => provider
+                          .setCapabilityFilter(AiCapability.pdfGeneration),
+                      isDark: isDark,
+                      ctx: context,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 8.0),
-
-              // Text / Chat Generation
-              _buildModalityChip(
-                label: context.l10n.textGeneration,
-                isSelected: selectedCapability == AiCapability.textGeneration,
-                onTap: () =>
-                    provider.setCapabilityFilter(AiCapability.textGeneration),
-                isDark: isDark,
-                ctx: context,
-              ),
-              const SizedBox(width: 8.0),
-
-              // Image Generation
-              _buildModalityChip(
-                label: context.l10n.imageGeneration,
-                isSelected: selectedCapability == AiCapability.imageGeneration,
-                onTap: () =>
-                    provider.setCapabilityFilter(AiCapability.imageGeneration),
-                isDark: isDark,
-                ctx: context,
-              ),
-              const SizedBox(width: 8.0),
-
-              // Image Analysis / Understanding
-              _buildModalityChip(
-                label: context.l10n.imageAnalysis,
-                isSelected:
-                    selectedCapability == AiCapability.imageUnderstanding,
-                onTap: () => provider
-                    .setCapabilityFilter(AiCapability.imageUnderstanding),
-                isDark: isDark,
-                ctx: context,
-              ),
-              const SizedBox(width: 8.0),
-
-              // PDF Analysis / Reading
-              _buildModalityChip(
-                label: context.l10n.pdfAnalysis,
-                isSelected: selectedCapability == AiCapability.pdfParsing,
-                onTap: () =>
-                    provider.setCapabilityFilter(AiCapability.pdfParsing),
-                isDark: isDark,
-                ctx: context,
-              ),
-              const SizedBox(width: 8.0),
-
-              // PDF Generation
-              _buildModalityChip(
-                label: context.l10n.pdfGeneration,
-                isSelected: selectedCapability == AiCapability.pdfGeneration,
-                onTap: () =>
-                    provider.setCapabilityFilter(AiCapability.pdfGeneration),
-                isDark: isDark,
-                ctx: context,
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -245,34 +324,42 @@ class UsageScopeHeader extends StatelessWidget {
     required bool isDark,
     required BuildContext ctx,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20.0),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        constraints: const BoxConstraints(minHeight: 44.0),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 6.0),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? color.withValues(alpha: isDark ? 0.25 : 0.15)
-              : (isDark ? AppColors.cardDark : AppColors.cardLight),
-          borderRadius: BorderRadius.circular(20.0),
-          border: Border.all(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20.0),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          constraints: const BoxConstraints(minHeight: 40.0),
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+          decoration: BoxDecoration(
             color: isSelected
-                ? color
-                : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
-            width: isSelected ? 1.4 : 0.8,
+                ? color.withValues(alpha: isDark ? 0.25 : 0.15)
+                : (isDark ? AppColors.cardDark : AppColors.cardLight),
+            borderRadius: BorderRadius.circular(20.0),
+            border: Border.all(
+              color: isSelected
+                  ? color
+                  : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
+              width: isSelected ? 1.4 : 0.8,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: (ctx.isCompact
-                  ? ctx.textTheme.labelMedium
-                  : ctx.textTheme.labelLarge)
-              ?.copyWith(
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? color : ctx.colorScheme.tertiary,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: (ctx.isCompact
+                        ? ctx.textTheme.labelMedium
+                        : ctx.textTheme.labelLarge)
+                    ?.copyWith(
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? color : ctx.colorScheme.tertiary,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -289,34 +376,42 @@ class UsageScopeHeader extends StatelessWidget {
   }) {
     final activeColor = isDark ? AppColors.primaryDark : AppColors.primaryLight;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20.0),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        constraints: const BoxConstraints(minHeight: 44.0),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 13.0, vertical: 6.0),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? activeColor.withValues(alpha: isDark ? 0.25 : 0.15)
-              : (isDark ? AppColors.cardDark : AppColors.cardLight),
-          borderRadius: BorderRadius.circular(20.0),
-          border: Border.all(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20.0),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          constraints: const BoxConstraints(minHeight: 40.0),
+          padding: const EdgeInsets.symmetric(horizontal: 13.0, vertical: 8.0),
+          decoration: BoxDecoration(
             color: isSelected
-                ? activeColor
-                : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
-            width: isSelected ? 1.4 : 0.8,
+                ? activeColor.withValues(alpha: isDark ? 0.25 : 0.15)
+                : (isDark ? AppColors.cardDark : AppColors.cardLight),
+            borderRadius: BorderRadius.circular(20.0),
+            border: Border.all(
+              color: isSelected
+                  ? activeColor
+                  : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
+              width: isSelected ? 1.4 : 0.8,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: (ctx.isCompact
-                  ? ctx.textTheme.labelMedium
-                  : ctx.textTheme.labelLarge)
-              ?.copyWith(
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? activeColor : ctx.colorScheme.tertiary,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: (ctx.isCompact
+                        ? ctx.textTheme.labelMedium
+                        : ctx.textTheme.labelLarge)
+                    ?.copyWith(
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? activeColor : ctx.colorScheme.tertiary,
+                ),
+              ),
+            ],
           ),
         ),
       ),
